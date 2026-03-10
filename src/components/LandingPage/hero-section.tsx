@@ -1,9 +1,10 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import Image from "next/image";
-import { ArrowRight } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { ArrowRight } from 'lucide-react'
+import Image from 'next/image'
+import Link from 'next/link'
+
+import { buttonVariants } from '@/components/ui/button'
 
 export function HeroSection() {
   return (
@@ -12,22 +13,21 @@ export function HeroSection() {
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="space-y-6">
             <h1 className="line-clamp-4 text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl lg:text-6xl">
-              Find the Right <span className="text-primary">Supervisor</span> to
-              Guide Your Professional Journey
+              Find the Right <span className="text-primary">Supervisor</span> to Guide Your
+              Professional Journey
             </h1>
             <p className="max-w-lg text-lg text-muted-foreground">
-              Connect with licensed medical and mental-health supervisors who
-              can support your clinical hours, career growth, and long-term
-              success.
+              Connect with licensed medical and mental-health supervisors who can support your
+              clinical hours, career growth, and long-term success.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Link href="/login" className={buttonVariants({ size: "lg" })}>
+              <Link href="/login" className={buttonVariants({ size: 'lg' })}>
                 Find My Supervisor
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
               <a
                 href="#how-it-works"
-                className={buttonVariants({ size: "lg", variant: "outline" })}
+                className={buttonVariants({ size: 'lg', variant: 'outline' })}
               >
                 See How It Works
               </a>
@@ -47,5 +47,5 @@ export function HeroSection() {
         </div>
       </div>
     </section>
-  );
+  )
 }

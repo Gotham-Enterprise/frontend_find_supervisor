@@ -1,10 +1,10 @@
 export { useLogin, useLogout } from './useAuth'
 export {
-  useMatchingRequests,
-  useCreateMatchingRequest,
-  useUpdateMatchingRequestStatus,
   matchingKeys,
+  useCreateMatchingRequest,
+  useMatchingRequests,
+  useUpdateMatchingRequestStatus,
 } from './useMatchingRequests'
-export { useSupervisees, superviseeKeys } from './useSupervisees'
-export { useSupervisor, supervisorDetailKeys } from './useSupervisor'
-export { useSupervisors, supervisorKeys } from './useSupervisors'
+export { superviseeKeys, useSupervisees } from './useSupervisees'
+export { supervisorDetailKeys, useSupervisor } from './useSupervisor'
+export { supervisorKeys, useSupervisors } from './useSupervisors'

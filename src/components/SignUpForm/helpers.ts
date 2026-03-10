@@ -1,4 +1,4 @@
-import type { SupervisorFormValues, SuperviseeFormValues } from './schema'
+import type { SuperviseeFormValues, SupervisorFormValues } from './schema'
 
 export const supervisorDefaultValues: Partial<SupervisorFormValues> = {
   license: '',

@@ -1,10 +1,12 @@
-import type { Metadata } from 'next'
 import './globals.css'
-import { Providers } from '@/app/providers'
-import { Geist } from "next/font/google";
-import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+import type { Metadata } from 'next'
+import { Geist } from 'next/font/google'
+
+import { Providers } from '@/app/providers'
+import { cn } from '@/lib/utils'
+
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' })
 
 export const metadata: Metadata = {
   title: 'Find A Supervisor',
@@ -16,7 +18,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
+    <html lang="en" className={cn('font-sans', geist.variable)}>
       <body className="antialiased">
         <Providers>{children}</Providers>
       </body>

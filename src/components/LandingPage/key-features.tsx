@@ -2,8 +2,7 @@ const features = [
   {
     number: '1',
     title: 'Verified Supervisor Directory',
-    description:
-      'All supervisors are credential-checked and reviewed by our team.',
+    description: 'All supervisors are credential-checked and reviewed by our team.',
   },
   {
     number: '2',
@@ -14,20 +13,17 @@ const features = [
   {
     number: '3',
     title: 'Flexible Options',
-    description:
-      'Choose between in-person, hybrid, or virtual supervision.',
+    description: 'Choose between in-person, hybrid, or virtual supervision.',
   },
   {
     number: '4',
     title: 'Transparent Pricing',
-    description:
-      'No surprises—see supervision rates, payment options, and availability upfront.',
+    description: 'No surprises—see supervision rates, payment options, and availability upfront.',
   },
   {
     number: '5',
     title: 'Communication Tools Built In',
-    description:
-      'Chat, schedule sessions, and track supervision hours—all in one place.',
+    description: 'Chat, schedule sessions, and track supervision hours—all in one place.',
   },
 ]
 
@@ -62,20 +58,16 @@ export function KeyFeatures() {
                   <div className="mt-1 h-3 w-40 rounded bg-muted-foreground/10" />
                 </div>
                 <div className="space-y-3">
-                  {[
-                    'First Name',
-                    'Last Name',
-                    'Discipline',
-                    'License Type',
-                    'Email',
-                  ].map((label) => (
-                    <div key={label} className="flex flex-col gap-1">
-                      <span className="text-[10px] font-medium text-muted-foreground">
-                        {label}
-                      </span>
-                      <div className="h-8 rounded-md border border-border bg-muted/30" />
-                    </div>
-                  ))}
+                  {['First Name', 'Last Name', 'Discipline', 'License Type', 'Email'].map(
+                    (label) => (
+                      <div key={label} className="flex flex-col gap-1">
+                        <span className="text-[10px] font-medium text-muted-foreground">
+                          {label}
+                        </span>
+                        <div className="h-8 rounded-md border border-border bg-muted/30" />
+                      </div>
+                    ),
+                  )}
                 </div>
                 <div className="flex gap-2 pt-2">
                   <div className="h-9 flex-1 rounded-md border border-border bg-muted/20" />

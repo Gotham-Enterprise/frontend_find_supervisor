@@ -1,4 +1,5 @@
 import type * as React from 'react'
+
 import { cn } from '@/lib/utils'
 
 function Table({ className, ...props }: React.ComponentProps<'table'>) {
@@ -22,11 +23,16 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
 }
 
 function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
-  return <th className={cn('h-10 px-2 text-left align-middle font-medium whitespace-nowrap', className)} {...props} />
+  return (
+    <th
+      className={cn('h-10 px-2 text-left align-middle font-medium whitespace-nowrap', className)}
+      {...props}
+    />
+  )
 }
 
 function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
   return <td className={cn('p-2 align-middle whitespace-nowrap', className)} {...props} />
 }
 
-export { Table, TableHeader, TableBody, TableRow, TableHead, TableCell }
+export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow }

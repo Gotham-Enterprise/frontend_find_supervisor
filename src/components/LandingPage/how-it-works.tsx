@@ -3,16 +3,12 @@ function StepVisual({ index }: { index: number }) {
     return (
       <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
         <div className="space-y-2">
-          {['Discipline', 'License Type', 'Supervision Requirements'].map(
-            (label) => (
-              <div key={label} className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {label} *
-                </span>
-                <div className="h-9 rounded-md border border-border bg-background" />
-              </div>
-            )
-          )}
+          {['Discipline', 'License Type', 'Supervision Requirements'].map((label) => (
+            <div key={label} className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-muted-foreground">{label} *</span>
+              <div className="h-9 rounded-md border border-border bg-background" />
+            </div>
+          ))}
         </div>
         <div className="h-9 w-full rounded-md bg-primary/20" />
       </div>
@@ -22,9 +18,7 @@ function StepVisual({ index }: { index: number }) {
     return (
       <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-muted-foreground">
-            Select date
-          </span>
+          <span className="text-xs font-medium text-muted-foreground">Select date</span>
           <div className="h-6 w-20 rounded border border-border" />
         </div>
         <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-muted-foreground">
@@ -34,9 +28,7 @@ function StepVisual({ index }: { index: number }) {
           {Array.from({ length: 28 }).map((_, i) => (
             <div
               key={i}
-              className={`rounded py-1 ${
-                i === 14 ? 'bg-primary text-primary-foreground' : ''
-              }`}
+              className={`rounded py-1 ${i === 14 ? 'bg-primary text-primary-foreground' : ''}`}
             >
               {i + 1}
             </div>
@@ -73,14 +65,12 @@ function StepVisual({ index }: { index: number }) {
 const steps = [
   {
     title: 'Create Your Profile',
-    description:
-      'Tell us your discipline, license type, and supervision requirements.',
+    description: 'Tell us your discipline, license type, and supervision requirements.',
     visualLabel: 'Create Your Profile',
   },
   {
     title: 'Match with Qualified Supervisors',
-    description:
-      'Browse vetted professionals based on specialty, location, schedule, and budget.',
+    description: 'Browse vetted professionals based on specialty, location, schedule, and budget.',
     visualLabel: 'Schedule a Session',
   },
   {
@@ -104,28 +94,28 @@ export function HowItWorks() {
           {steps.map((step, index) => {
             const textFirst = index % 2 === 0
             return (
-            <div
-              key={step.title}
-              className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12"
-            >
-              <div className={textFirst ? 'lg:order-1' : 'lg:order-2'}>
-                <h3 className="text-xl font-semibold text-foreground">
-                  {step.title}
-                </h3>
-                <p className="mt-3 text-muted-foreground">{step.description}</p>
+              <div key={step.title} className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
+                <div className={textFirst ? 'lg:order-1' : 'lg:order-2'}>
+                  <div className="mb-3 flex items-center gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+                      {index + 1}
+                    </div>
+                    <h3 className="text-xl font-semibold text-foreground">{step.title}</h3>
+                  </div>
+                  <p className="pl-11 text-muted-foreground">{step.description}</p>
+                </div>
+                <div
+                  className={`rounded-xl border bg-background p-6 shadow-sm ${
+                    textFirst ? 'lg:order-2' : 'lg:order-1'
+                  }`}
+                >
+                  <p className="mb-4 text-sm font-medium text-muted-foreground">
+                    {step.visualLabel}
+                  </p>
+                  <StepVisual index={index} />
+                </div>
               </div>
-              <div
-                className={`rounded-xl border bg-background p-6 shadow-sm ${
-                  textFirst ? 'lg:order-2' : 'lg:order-1'
-                }`}
-              >
-                <p className="mb-4 text-sm font-medium text-muted-foreground">
-                  {step.visualLabel}
-                </p>
-                <StepVisual index={index} />
-              </div>
-            </div>
-            );
+            )
           })}
         </div>
       </div>

@@ -2,11 +2,20 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
+
 import { Button } from '@/components/ui/button'
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { useLogin } from '@/lib/hooks'
-import { loginSchema, loginFormDefaultValues, type LoginFormValues } from './helpers'
+
+import { loginFormDefaultValues, type LoginFormValues, loginSchema } from './helpers'
 
 export function LoginForm() {
   const { mutate: login, isPending, error } = useLogin()
@@ -44,14 +53,23 @@ export function LoginForm() {
             <FormItem>
               <FormLabel>Password</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="••••••••" autoComplete="current-password" {...field} />
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        {error && <p className="text-sm font-medium text-destructive">Invalid email or password. Please try again.</p>}
+        {error && (
+          <p className="text-sm font-medium text-destructive">
+            Invalid email or password. Please try again.
+          </p>
+        )}
 
         <Button type="submit" className="w-full" disabled={isPending}>
           {isPending ? 'Signing in…' : 'Sign in'}

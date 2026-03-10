@@ -1,8 +1,9 @@
 'use client'
 
-import Link from 'next/link'
+import { ArrowRight, Facebook, Instagram, Twitter, Youtube } from 'lucide-react'
 import Image from 'next/image'
-import { ArrowRight, Facebook, Twitter, Youtube, Instagram } from 'lucide-react'
+import Link from 'next/link'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -41,10 +42,7 @@ export function PublicFooter() {
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-6">
           <div className="lg:col-span-2">
-            <Link
-              href="/"
-              className="flex items-center gap-2 font-semibold text-foreground"
-            >
+            <Link href="/" className="flex items-center gap-2 font-semibold text-foreground">
               <Image
                 src="/logo.png"
                 alt="Find A Supervisor"
@@ -54,22 +52,22 @@ export function PublicFooter() {
               />
             </Link>
             <p className="mt-3 text-sm text-muted-foreground">
-              The leading platform for connecting mental health and healthcare
-              professionals with licensed supervisors.
+              The leading platform for connecting mental health and healthcare professionals with
+              licensed supervisors.
             </p>
             <form
-              className="mt-4 flex gap-0 overflow-hidden rounded-lg border"
+              className="mt-4 flex gap-0 overflow-hidden rounded-lg border bg-card"
               onSubmit={(e) => e.preventDefault()}
             >
               <Input
                 type="email"
-                placeholder="Enter Your Email Address"
-                className="h-10 flex-1 border-0 text-sm"
+                placeholder="Enter your email address"
+                className="h-10 flex-1 rounded-none border-0 bg-transparent text-sm"
               />
               <Button
                 type="submit"
-                size="sm"
-                className="h-10 shrink-0 rounded-none bg-primary px-4 text-primary-foreground hover:bg-primary/90"
+                size="icon"
+                className="h-10 w-10 shrink-0 rounded-none bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 <ArrowRight className="h-4 w-4" />
               </Button>
@@ -78,9 +76,7 @@ export function PublicFooter() {
 
           {footerColumns.map(({ heading, links }) => (
             <div key={heading}>
-              <p className="mb-3 text-sm font-semibold text-foreground">
-                {heading}
-              </p>
+              <p className="mb-3 text-sm font-semibold text-foreground">{heading}</p>
               <ul className="space-y-2">
                 {links.map(({ label, href }) => (
                   <li key={label}>
@@ -97,9 +93,7 @@ export function PublicFooter() {
           ))}
 
           <div>
-            <p className="mb-3 text-sm font-semibold text-foreground">
-              Download Our App
-            </p>
+            <p className="mb-3 text-sm font-semibold text-foreground">Download Our App</p>
             <div className="flex flex-col gap-2">
               <a
                 href="#"
@@ -133,8 +127,8 @@ export function PublicFooter() {
 
         <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t pt-6 sm:flex-row">
           <p className="text-xs text-muted-foreground">
-            ©{new Date().getFullYear()} All Rights Reserved. Find A Supervisor is
-            a registered trademark.
+            ©{new Date().getFullYear()} All Rights Reserved. Find A Supervisor is a registered
+            trademark.
           </p>
           <div className="flex gap-4">
             {[

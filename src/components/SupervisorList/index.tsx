@@ -1,4 +1,5 @@
 import Link from 'next/link'
+
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -32,7 +33,11 @@ export function SupervisorList({ supervisors, isLoading }: SupervisorListProps) 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {supervisors.map((supervisor) => (
-        <Link key={supervisor.id} href={`/user/${supervisor.id}`} className="block transition-opacity hover:opacity-90">
+        <Link
+          key={supervisor.id}
+          href={`/user/${supervisor.id}`}
+          className="block transition-opacity hover:opacity-90"
+        >
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between gap-2">

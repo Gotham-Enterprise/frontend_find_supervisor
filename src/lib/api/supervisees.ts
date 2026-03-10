@@ -1,5 +1,6 @@
-import { apiClient } from './client'
 import type { PaginatedResponse, Supervisee } from '@/types'
+
+import { apiClient } from './client'
 
 export interface GetSuperviseesParams {
   page?: number

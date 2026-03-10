@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Sidebar } from './sidebar'
+import { useEffect } from 'react'
+
 import { TOKEN_KEY } from '@/lib/api/client'
+
+import { Sidebar } from './sidebar'
 
 interface ShellLayoutProps {
   children: React.ReactNode

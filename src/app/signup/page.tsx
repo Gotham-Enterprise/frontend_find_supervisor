@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+
 import { SignUpForm } from '@/components/SignUpForm'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function SignUpPage() {
   return (
@@ -17,9 +18,7 @@ export default function SignUpPage() {
         <Card className="border-border bg-card shadow-sm">
           <CardHeader className="space-y-1">
             <CardTitle className="text-xl">Sign up</CardTitle>
-            <CardDescription>
-              Choose your role and complete the form to get started
-            </CardDescription>
+            <CardDescription>Choose your role and complete the form to get started</CardDescription>
           </CardHeader>
           <CardContent>
             <SignUpForm />

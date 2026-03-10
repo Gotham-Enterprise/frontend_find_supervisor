@@ -1,5 +1,6 @@
-import { apiClient } from './client'
 import type { ApiResponse, AuthToken, LoginCredentials, User } from '@/types'
+
+import { apiClient } from './client'
 
 export async function login(credentials: LoginCredentials): Promise<AuthToken> {
   const { data } = await apiClient.post<ApiResponse<AuthToken>>('/auth/login', credentials)

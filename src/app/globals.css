@@ -2,13 +2,15 @@
 @import 'tw-animate-css';
 @import '@fontsource-variable/geist';
 @import '../styles/theme.css';
-@import "shadcn/tailwind.css";
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-brand-primary: var(--brand-primary);
   --color-brand-secondary: var(--brand-secondary);
+  --color-brand-light: var(--brand-light);
+  --color-brand-muted: var(--brand-muted);
   --color-background-default: var(--background-default);
   --color-background-subtle: var(--background-subtle);
   --color-hero-bg: var(--hero-bg);
@@ -84,8 +86,8 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: #f9fafb;
+  --foreground: #181818;
   --chart-1: oklch(0.809 0.105 251.813);
   --chart-2: oklch(0.623 0.214 259.815);
   --chart-3: oklch(0.546 0.245 262.881);

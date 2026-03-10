@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
+
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -13,8 +14,9 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { UploadFile } from '@/components/ui/upload-file'
-import { supervisorSchema, type SupervisorFormValues } from './schema'
+
 import { supervisorDefaultValues } from './helpers'
+import { type SupervisorFormValues, supervisorSchema } from './schema'
 
 export function SupervisorForm() {
   const form = useForm<SupervisorFormValues>({
@@ -23,7 +25,7 @@ export function SupervisorForm() {
   })
 
   function onSubmit(values: SupervisorFormValues) {
-    console.log('Supervisor signup:', values)
+    void values // TODO: implement API call
   }
 
   return (

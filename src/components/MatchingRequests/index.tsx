@@ -1,14 +1,18 @@
 'use client'
 
 import { useState } from 'react'
+
+import { MatchingRequestForm } from '@/components/MatchingRequestForm'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { MatchingRequestForm } from '@/components/MatchingRequestForm'
 import { useMatchingRequests } from '@/lib/hooks'
 import type { MatchingStatus } from '@/types'
 
-const statusVariantMap: Record<MatchingStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+const statusVariantMap: Record<
+  MatchingStatus,
+  'default' | 'secondary' | 'destructive' | 'outline'
+> = {
   pending: 'secondary',
   accepted: 'default',
   rejected: 'destructive',
@@ -25,9 +29,13 @@ export function MatchingRequestsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Matching Requests</h1>
-          <p className="text-sm text-muted-foreground">Manage supervisor–supervisee pairing requests</p>
+          <p className="text-sm text-muted-foreground">
+            Manage supervisor–supervisee pairing requests
+          </p>
         </div>
-        <Button onClick={() => setShowForm((prev) => !prev)}>{showForm ? 'Cancel' : 'New Request'}</Button>
+        <Button onClick={() => setShowForm((prev) => !prev)}>
+          {showForm ? 'Cancel' : 'New Request'}
+        </Button>
       </div>
 
       {showForm && (

@@ -1,15 +1,10 @@
 'use client'
 
-import {
-  File as FileIcon,
-  FileImage,
-  FileText,
-  Upload,
-  X,
-} from 'lucide-react'
+import { File as FileIcon, FileImage, FileText, Upload, X } from 'lucide-react'
 import { type Ref, useId, useRef } from 'react'
-import { cn } from '@/lib/utils'
+
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 type UploadFileProps = {
   id?: string
@@ -33,7 +28,7 @@ function isFile(value: unknown): value is File {
 function getFileCategory(file: File): 'image' | 'docs' | 'file' {
   const mime = file.type.toLowerCase()
   const name = file.name.toLowerCase()
-  const extension = name.includes('.') ? name.split('.').pop() ?? '' : ''
+  const extension = name.includes('.') ? (name.split('.').pop() ?? '') : ''
 
   if (mime.startsWith('image/')) return 'image'
 
@@ -89,8 +84,7 @@ export function UploadFile({
   const localInputRef = useRef<HTMLInputElement | null>(null)
   const selectedFile = isFile(value) ? value : undefined
   const fileCategory = selectedFile ? getFileCategory(selectedFile) : null
-  const fileSizeLabel =
-    selectedFile && showFileSize ? formatFileSize(selectedFile.size) : null
+  const fileSizeLabel = selectedFile && showFileSize ? formatFileSize(selectedFile.size) : null
 
   const setRefs = (node: HTMLInputElement | null) => {
     localInputRef.current = node
@@ -102,11 +96,7 @@ export function UploadFile({
   }
 
   const UploadedFileIcon =
-    fileCategory === 'image'
-      ? FileImage
-      : fileCategory === 'docs'
-        ? FileText
-        : FileIcon
+    fileCategory === 'image' ? FileImage : fileCategory === 'docs' ? FileText : FileIcon
 
   return (
     <div className={cn('space-y-3', className)}>

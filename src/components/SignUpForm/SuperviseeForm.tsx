@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
+
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -12,9 +13,17 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { superviseeSchema, howSoonOptions, type SuperviseeFormValues } from './schema'
+
 import { superviseeDefaultValues } from './helpers'
+import { howSoonOptions, type SuperviseeFormValues, superviseeSchema } from './schema'
 
 export function SuperviseeForm() {
   const form = useForm<SuperviseeFormValues>({
@@ -23,7 +32,7 @@ export function SuperviseeForm() {
   })
 
   function onSubmit(values: SuperviseeFormValues) {
-    console.log('Supervisee signup:', values)
+    void values // TODO: implement API call
   }
 
   return (
@@ -36,10 +45,7 @@ export function SuperviseeForm() {
             <FormItem>
               <FormLabel>Type of supervisor you are looking for</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="e.g. LMFT, LCSW, LPC"
-                  {...field}
-                />
+                <Input placeholder="e.g. LMFT, LCSW, LPC" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -84,19 +90,23 @@ export function SuperviseeForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>How soon are you looking for a supervisor?</FormLabel>
-              <FormControl>
-                <select
-                  {...field}
-                  className="h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="">Select an option</option>
+              <Select
+                value={field.value || undefined}
+                onValueChange={(v) => field.onChange(v ?? '')}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an option" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
                   {howSoonOptions.map((opt) => (
-                    <option key={opt} value={opt}>
+                    <SelectItem key={opt} value={opt}>
                       {opt}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
-              </FormControl>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

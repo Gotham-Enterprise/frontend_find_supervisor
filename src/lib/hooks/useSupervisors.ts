@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+
 import { getSupervisors, type GetSupervisorsParams } from '@/lib/api/supervisors'
 
 export const supervisorKeys = {

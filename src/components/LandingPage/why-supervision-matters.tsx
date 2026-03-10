@@ -1,17 +1,12 @@
-import {
-  FileCheck,
-  UserCheck,
-  MessageCircle,
-  Calendar,
-} from 'lucide-react'
+import { Calendar, FileCheck, MessageCircle, UserCheck } from 'lucide-react'
+
 import { Card, CardContent } from '@/components/ui/card'
 
 const cards = [
   {
     icon: FileCheck,
     title: 'Verified, licensed supervisors',
-    description:
-      'Work with fully vetted, qualified professionals.',
+    description: 'Work with fully vetted, qualified professionals.',
     iconColor: 'text-primary',
     iconBg: 'bg-primary/10',
   },
@@ -47,16 +42,16 @@ export function WhySupervisionMatters() {
             Why Supervision Matters
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-            Whether you&apos;re completing clinical hours, starting your first
-            residency, or advancing your mental-health career, supervision
-            ensures you&apos;re supported, compliant, and empowered.
+            Whether you&apos;re completing clinical hours, starting your first residency, or
+            advancing your mental-health career, supervision ensures you&apos;re supported,
+            compliant, and empowered.
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {cards.map(({ icon: Icon, title, description, iconColor, iconBg }) => (
             <Card
               key={title}
-              className="border-border/60 bg-background shadow-sm transition-shadow hover:shadow-md"
+              className="border-border bg-card shadow-sm transition-shadow hover:shadow-md"
             >
               <CardContent className="p-6">
                 <div className="mb-4 flex justify-center">

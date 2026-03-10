@@ -1,7 +1,8 @@
 'use client'
 
+import { Minus, Plus } from 'lucide-react'
 import { useState } from 'react'
-import { Plus, Minus } from 'lucide-react'
+
 import { cn } from '@/lib/utils'
 
 const faqs = [
@@ -50,15 +51,15 @@ export function FaqSection() {
                 className={cn(
                   'overflow-hidden rounded-xl border shadow-sm transition-colors',
                   isOpen
-                    ? 'border-primary bg-primary'
-                    : 'border-border bg-background'
+                    ? 'border-primary bg-brand-light'
+                    : 'border-border bg-card hover:border-border/80',
                 )}
               >
                 <button
                   onClick={() => setOpenIndex(isOpen ? null : index)}
                   className={cn(
                     'flex w-full items-center justify-between gap-4 px-6 py-4 text-left text-sm font-medium transition-colors',
-                    isOpen ? 'text-white' : 'text-foreground hover:text-primary'
+                    isOpen ? 'text-primary' : 'text-foreground hover:text-primary',
                   )}
                   aria-expanded={isOpen}
                 >
@@ -72,15 +73,10 @@ export function FaqSection() {
                 <div
                   className={cn(
                     'overflow-hidden transition-all duration-200',
-                    isOpen ? 'max-h-96' : 'max-h-0'
+                    isOpen ? 'max-h-96' : 'max-h-0',
                   )}
                 >
-                  <p
-                    className={cn(
-                      'px-6 pb-4 text-sm leading-relaxed',
-                      isOpen ? 'text-white/90' : 'text-muted-foreground'
-                    )}
-                  >
+                  <p className="px-6 pb-4 text-sm leading-relaxed text-muted-foreground">
                     {faq.answer}
                   </p>
                 </div>

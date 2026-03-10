@@ -1,0 +1,23 @@
+# Dependencies
+node_modules
+
+# Build outputs
+.next
+out
+build
+dist
+
+# Package manager
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lock
+
+# Generated / cache
+coverage
+.turbo
+.vercel
+
+# Misc
+*.min.js
+*.min.css

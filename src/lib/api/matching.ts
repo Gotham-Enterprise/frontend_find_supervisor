@@ -1,10 +1,11 @@
-import { apiClient } from './client'
 import type {
   ApiResponse,
   CreateMatchingRequestDto,
   MatchingRequest,
   PaginatedResponse,
 } from '@/types'
+
+import { apiClient } from './client'
 
 export interface GetMatchingRequestsParams {
   page?: number

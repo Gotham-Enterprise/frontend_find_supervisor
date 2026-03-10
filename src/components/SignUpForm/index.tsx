@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
 import { UserCircle, Users } from 'lucide-react'
+import { useState } from 'react'
+
 import { cn } from '@/lib/utils'
-import { SupervisorForm } from './SupervisorForm'
+
 import { SuperviseeForm } from './SuperviseeForm'
+import { SupervisorForm } from './SupervisorForm'
 
 type SignUpRole = 'supervisor' | 'supervisee'
 

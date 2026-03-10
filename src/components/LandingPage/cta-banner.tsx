@@ -1,7 +1,8 @@
 'use client'
 
-import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
+import Link from 'next/link'
+
 import { buttonVariants } from '@/components/ui/button'
 
 export function CtaBanner() {
@@ -17,8 +18,8 @@ export function CtaBanner() {
           Start Your Supervision Journey Today
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-base text-white/80">
-          Join thousands of medical and mental-health professionals finding the
-          support they need to grow.
+          Join thousands of medical and mental-health professionals finding the support they need to
+          grow.
         </p>
         <div className="mt-8">
           <Link

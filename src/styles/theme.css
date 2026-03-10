@@ -1,9 +1,11 @@
 :root {
   --brand-primary: #006d36;
   --brand-secondary: #181818;
+  --brand-light: #e6f4ec;
+  --brand-muted: #d1ead9;
   --white: #ffffff;
-  --background-default: #ffffff;
-  --background-subtle: #f8f8f8;
+  --background-default: #f9fafb;
+  --background-subtle: #f4f6f8;
   --hero-bg: #f0f8f5;
   --accent-orange: #ff8c4b;
   --border-default: #e5e7eb;

@@ -1,4 +1,5 @@
-import { Users, UserCheck, GitPullRequestArrow, CheckCircle } from 'lucide-react'
+import { CheckCircle, GitPullRequestArrow, UserCheck, Users } from 'lucide-react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const stats = [
