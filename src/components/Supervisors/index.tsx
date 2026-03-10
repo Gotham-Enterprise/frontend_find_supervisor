@@ -1,6 +1,6 @@
 'use client'
 
-import { SupervisorList } from '@/components/supervisor-list'
+import { SupervisorList } from '@/components/SupervisorList'
 import { useSupervisors } from '@/lib/hooks'
 
 export function SupervisorsPage() {

@@ -1,4 +1,4 @@
-import { UserPage } from '@/components/user'
+import { UserPage } from '@/components/User'
 
 interface UserRoutePageProps {
   params: Promise<{ userId: string }>

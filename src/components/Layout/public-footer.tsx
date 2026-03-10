@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Facebook, Twitter, Youtube, Instagram } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -103,15 +103,29 @@ export function PublicFooter() {
             <div className="flex flex-col gap-2">
               <a
                 href="#"
-                className="flex items-center justify-center gap-2 rounded-lg bg-brand-secondary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-secondary/90"
+                className="inline-block transition-opacity hover:opacity-90"
+                aria-label="Download on the App Store"
               >
-                <span>Available on the App Store</span>
+                <Image
+                  src="/app-store.png"
+                  alt="Download on the App Store"
+                  width={135}
+                  height={40}
+                  className="h-10 w-auto"
+                />
               </a>
               <a
                 href="#"
-                className="flex items-center justify-center gap-2 rounded-lg bg-brand-secondary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-secondary/90"
+                className="inline-block transition-opacity hover:opacity-90"
+                aria-label="Get it on Google Play"
               >
-                <span>GET IT ON Google Play</span>
+                <Image
+                  src="/play-store.png"
+                  alt="Get it on Google Play"
+                  width={135}
+                  height={40}
+                  className="h-10 w-auto"
+                />
               </a>
             </div>
           </div>
@@ -122,15 +136,20 @@ export function PublicFooter() {
             ©{new Date().getFullYear()} All Rights Reserved. Find A Supervisor is
             a registered trademark.
           </p>
-          <div className="flex gap-6">
-            {['Facebook', 'Twitter', 'YouTube', 'Instagram'].map((name) => (
+          <div className="flex gap-4">
+            {[
+              { Icon: Facebook, label: 'Facebook' },
+              { Icon: Twitter, label: 'Twitter' },
+              { Icon: Youtube, label: 'YouTube' },
+              { Icon: Instagram, label: 'Instagram' },
+            ].map(({ Icon, label }) => (
               <a
-                key={name}
+                key={label}
                 href="#"
                 className="text-muted-foreground transition-colors hover:text-foreground"
-                aria-label={name}
+                aria-label={label}
               >
-                <span className="text-sm">{name}</span>
+                <Icon className="h-5 w-5" />
               </a>
             ))}
           </div>

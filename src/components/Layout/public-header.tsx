@@ -36,7 +36,7 @@ export function PublicHeader() {
           <Link href="/login" className={buttonVariants({ size: 'sm' })}>
             Book a Demo
           </Link>
-          <Link href="/login" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+          <Link href="/signup" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
             Sign Up
           </Link>
         </div>
@@ -66,7 +66,7 @@ export function PublicHeader() {
             <Link href="/login" onClick={() => setMobileOpen(false)} className={buttonVariants({ size: 'sm' })}>
               Book a Demo
             </Link>
-            <Link href="/login" onClick={() => setMobileOpen(false)} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+            <Link href="/signup" onClick={() => setMobileOpen(false)} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
               Sign Up
             </Link>
           </div>

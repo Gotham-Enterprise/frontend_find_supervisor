@@ -1,4 +1,4 @@
-import { MatchingRequestsPage } from '@/components/matching-requests'
+import { MatchingRequestsPage } from '@/components/MatchingRequests'
 
 export default function MatchingRoutePage() {
   return <MatchingRequestsPage />

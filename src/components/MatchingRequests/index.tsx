@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { MatchingRequestForm } from '@/components/matching-request-form'
+import { MatchingRequestForm } from '@/components/MatchingRequestForm'
 import { useMatchingRequests } from '@/lib/hooks'
 import type { MatchingStatus } from '@/types'
 

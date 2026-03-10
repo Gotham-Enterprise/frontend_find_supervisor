@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { useCreateMatchingRequest } from '@/lib/hooks'
 
 const matchingRequestSchema = z.object({
@@ -59,8 +60,8 @@ export function MatchingRequestForm({ onSuccess }: MatchingRequestFormProps) {
             <FormItem>
               <FormLabel>Message</FormLabel>
               <FormControl>
-                <textarea
-                  className="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-[100px] w-full rounded-md border px-3 py-2 text-sm"
+                <Textarea
+                  className="min-h-[100px]"
                   placeholder="Introduce yourself and explain why you'd like this supervisor…"
                   {...field}
                 />
