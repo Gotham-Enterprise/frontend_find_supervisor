@@ -1,0 +1,14 @@
+:root {
+  --brand-primary: #006d36;
+  --brand-secondary: #181818;
+  --white: #ffffff;
+  --background-default: #ffffff;
+  --background-subtle: #f8f8f8;
+  --hero-bg: #f0f8f5;
+  --accent-orange: #ff8c4b;
+  --border-default: #e5e7eb;
+  --text-primary: #181818;
+  --text-inverse: #ffffff;
+  --text-muted: #6b7280;
+  --ring-default: #006d36;
+}
