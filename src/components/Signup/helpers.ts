@@ -1,0 +1,40 @@
+import type { SuperviseeFormValues, SupervisorFormValues } from './schema'
+
+export const supervisorDefaultValues: Partial<SupervisorFormValues> = {
+  fullName: '',
+  email: '',
+  password: '',
+  contactNumber: '',
+  city: '',
+  state: '',
+  zipcode: '',
+  licenseType: '',
+  licenseNumber: '',
+  licenseExpiration: '',
+  npiNumber: '',
+  certifications: [],
+  yearsOfExperience: '',
+  patientPopulation: [],
+  supervisionFormat: 'virtual',
+  availability: '',
+  acceptingNewSupervisees: true,
+  bio: '',
+  termsAccepted: false,
+}
+
+export const superviseeDefaultValues: Partial<SuperviseeFormValues> = {
+  fullName: '',
+  email: '',
+  password: '',
+  contactNumber: '',
+  city: '',
+  state: '',
+  zipcode: '',
+  typeOfSupervisor: '',
+  howSoon: '',
+  preferredFormat: 'virtual',
+  budgetRange: '',
+  availability: '',
+  description: '',
+  termsAccepted: false,
+}

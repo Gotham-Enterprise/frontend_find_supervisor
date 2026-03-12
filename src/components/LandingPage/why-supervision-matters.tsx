@@ -21,15 +21,15 @@ const cards = [
     icon: MessageCircle,
     title: 'Transparent rates & availability',
     description: 'View clear pricing and open slots upfront.',
-    iconColor: 'text-accent-orange',
-    iconBg: 'bg-accent-orange/10',
+    iconColor: 'text-primary',
+    iconBg: 'bg-primary/10',
   },
   {
     icon: Calendar,
     title: 'Virtual or in-person supervision options',
     description: 'Choose online, in-person, or hybrid supervision.',
-    iconColor: 'text-accent-orange',
-    iconBg: 'bg-accent-orange/10',
+    iconColor: 'text-primary',
+    iconBg: 'bg-primary/10',
   },
 ]
 
