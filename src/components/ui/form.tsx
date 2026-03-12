@@ -63,10 +63,8 @@ function FormItem({ className, ...props }: React.HTMLAttributes<HTMLDivElement>)
 }
 
 function FormLabel({ className, ...props }: React.ComponentPropsWithoutRef<typeof Label>) {
-  const { error, formItemId } = useFormField()
-  return (
-    <Label className={cn(error && 'text-destructive', className)} htmlFor={formItemId} {...props} />
-  )
+  const { formItemId } = useFormField()
+  return <Label className={cn(className)} htmlFor={formItemId} {...props} />
 }
 
 function FormControl({ ...props }: React.ComponentPropsWithoutRef<'div'>) {
@@ -103,11 +101,7 @@ function FormMessage({
   if (!body) return null
 
   return (
-    <p
-      id={formMessageId}
-      className={cn('text-[0.8rem] font-medium text-destructive', className)}
-      {...props}
-    >
+    <p id={formMessageId} className={cn('text-[0.7rem] text-destructive', className)} {...props}>
       {body}
     </p>
   )
