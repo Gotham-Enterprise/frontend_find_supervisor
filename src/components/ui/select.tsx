@@ -87,9 +87,15 @@ function SelectContent({
           )}
           {...props}
         >
-          <SelectScrollUpButton />
-          <SelectPrimitive.List>{children}</SelectPrimitive.List>
-          <SelectScrollDownButton />
+          {React.Children.count(children) === 0 ? (
+            <p className="px-3 py-2 text-sm text-muted-foreground">No options available.</p>
+          ) : (
+            <>
+              <SelectScrollUpButton />
+              <SelectPrimitive.List>{children}</SelectPrimitive.List>
+              <SelectScrollDownButton />
+            </>
+          )}
         </SelectPrimitive.Popup>
       </SelectPrimitive.Positioner>
     </SelectPrimitive.Portal>

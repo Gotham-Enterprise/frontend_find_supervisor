@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import '@fontsource-variable/geist';
+@import 'sonner/dist/styles.css';
 @import '../styles/theme.css';
 @import 'shadcn/tailwind.css';
 
