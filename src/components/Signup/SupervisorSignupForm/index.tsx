@@ -3,21 +3,18 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 
 import { FormatSelector } from '@/components/Signup/FormatSelector'
 import { FormSection } from '@/components/Signup/FormSection'
 import { supervisorDefaultValues } from '@/components/Signup/helpers'
 import {
-  availabilityOptions,
-  licenseTypeOptions,
+  supervisionFeeTypeOptions,
   type SupervisorFormValues,
   supervisorSchema,
-  US_STATES,
   yearsOfExperienceOptions,
 } from '@/components/Signup/schema'
-import { TagInput } from '@/components/Signup/TagInput'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -29,6 +26,8 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { PhoneInput } from '@/components/ui/PhoneInput'
+import { ProfilePhotoUpload } from '@/components/ui/profile-photo-upload'
 import {
   Select,
   SelectContent,
@@ -37,58 +36,146 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
 import { UploadFile } from '@/components/ui/upload-file'
-
-const CERTIFICATION_SUGGESTIONS = [
-  'CSCS',
-  'OCS',
-  'SCS',
-  'ATC',
-  'CHT',
-  'GCS',
-  'NCS',
-  'PCS',
-  'WCS',
-  'FAAOMPT',
-  'MTC',
-  'CPI',
-]
-
-const PATIENT_POPULATION_SUGGESTIONS = [
-  'Adults',
-  'Children',
-  'Adolescents',
-  'Seniors',
-  'Groups',
-  'Veterans',
-  'LGBTQ+',
-  'Athletes',
-  'Post-surgical',
-  'Pediatrics',
-]
+import {
+  useCitiesOptions,
+  useStatesOptions,
+  useSupervisorFormOptions,
+  useSupervisorSignup,
+  useUserSnackbar,
+} from '@/lib/hooks'
+import { parseApiError } from '@/lib/utils/error-parser'
+import { validateAddressForSignup } from '@/lib/utils/validate-address'
 
 export function SupervisorSignupForm() {
   const [showPassword, setShowPassword] = useState(false)
+  const [isValidatingAddress, setIsValidatingAddress] = useState(false)
+  const { showSuccess, showError, showInfo } = useUserSnackbar()
+  const { mutate: signup, isPending } = useSupervisorSignup()
+
+  const {
+    certificates: { data: certificateOptions = [], isLoading: certificatesLoading },
+    patientPopulations: {
+      data: patientPopulationOptions = [],
+      isLoading: patientPopulationsLoading,
+    },
+    licenseTypes: { data: licenseTypeOptions = [], isLoading: licenseTypesLoading },
+    availability: { data: availabilityOptions = [], isLoading: availabilityLoading },
+    isError: optionsError,
+  } = useSupervisorFormOptions()
 
   const form = useForm<SupervisorFormValues>({
     resolver: zodResolver(supervisorSchema),
     defaultValues: supervisorDefaultValues,
   })
 
-  const bioValue = useWatch({ control: form.control, name: 'bio' }) ?? ''
-  const termsValue = useWatch({ control: form.control, name: 'termsAccepted' })
+  const stateValue = useWatch({ control: form.control, name: 'state' }) ?? ''
+  const {
+    data: stateOptions = [],
+    isLoading: statesLoading,
+    isError: statesError,
+  } = useStatesOptions()
+  const {
+    data: cityOptions = [],
+    isLoading: citiesLoading,
+    isError: citiesError,
+  } = useCitiesOptions(stateValue)
 
-  function onSubmit(values: SupervisorFormValues) {
-    console.warn('[SupervisorSignupForm] submit:', values)
-    // TODO: connect to API
+  const professionalSummaryValue =
+    useWatch({ control: form.control, name: 'professionalSummary' }) ?? ''
+  const describeYourselfValue = useWatch({ control: form.control, name: 'describeYourself' }) ?? ''
+  const agreedToPost = useWatch({ control: form.control, name: 'agreedToPost' })
+  const agreedToTerms = useWatch({ control: form.control, name: 'agreedToTerms' })
+  const canSubmit = agreedToPost && agreedToTerms
+
+  useEffect(() => {
+    form.setValue('city', '')
+  }, [stateValue, form])
+
+  const locationOptionsError = statesError || citiesError
+
+  async function onSubmit(values: SupervisorFormValues) {
+    setIsValidatingAddress(true)
+    let addressResult
+    try {
+      addressResult = await validateAddressForSignup({
+        city: values.city,
+        state: values.state,
+        zipcode: values.zipcode,
+      })
+    } finally {
+      setIsValidatingAddress(false)
+    }
+
+    if (!addressResult.valid) {
+      showError(addressResult.message ?? 'Please check your address and try again.')
+      return
+    }
+
+    if (addressResult.message) {
+      showInfo(addressResult.message)
+    }
+
+    const payload: SupervisorFormValues = {
+      ...values,
+      ...(addressResult.suggestedCity && { city: addressResult.suggestedCity }),
+      ...(addressResult.suggestedState && { state: addressResult.suggestedState }),
+    }
+
+    signup(payload, {
+      onSuccess: () => {
+        showSuccess(
+          'Your account has been created. Please check your email to verify your address before logging in.',
+        )
+      },
+      onError: (error) => {
+        showError(parseApiError(error))
+      },
+    })
   }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {optionsError && (
+          <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">
+            Some options failed to load. Please refresh the page.
+          </p>
+        )}
+        {locationOptionsError && (
+          <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">
+            {statesError
+              ? 'Unable to load states right now.'
+              : 'Unable to load cities for the selected state.'}{' '}
+            Please refresh the page.
+          </p>
+        )}
+
         {/* ── ACCOUNT ─────────────────────────────────────────────── */}
         <FormSection title="Account">
+          {/* Profile photo — above all other account fields */}
+          <FormField
+            control={form.control}
+            name="uploadProfilePhoto"
+            render={({ field: { value, onChange, onBlur, ref } }) => (
+              <FormItem className="flex flex-col items-center">
+                <FormControl>
+                  <ProfilePhotoUpload
+                    value={value}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    inputRef={ref}
+                    accept=".jpg,.jpeg,.png"
+                    size="md"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
@@ -162,7 +249,12 @@ export function SupervisorSignupForm() {
                     Contact Number <span className="text-destructive">*</span>
                   </FormLabel>
                   <FormControl>
-                    <Input type="tel" placeholder="+1 (555) 000-0000" {...field} />
+                    <PhoneInput
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -173,39 +265,84 @@ export function SupervisorSignupForm() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-[1fr_1fr_120px]">
             <FormField
               control={form.control}
-              name="city"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    City <span className="text-destructive">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="City" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="state"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
                     State <span className="text-destructive">*</span>
                   </FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={statesLoading}
+                    itemToStringLabel={(val) =>
+                      stateOptions.find((o) => o.value === val)?.label ?? val
+                    }
+                  >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select state" />
+                        <SelectValue placeholder={statesLoading ? 'Loading…' : 'Select state'} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {US_STATES.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
-                      ))}
+                      {stateOptions.length === 0 && !statesLoading && !statesError ? (
+                        <p className="px-3 py-2 text-sm text-muted-foreground">
+                          No states available.
+                        </p>
+                      ) : (
+                        stateOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    City <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={!stateValue || citiesLoading}
+                    itemToStringLabel={(val) =>
+                      cityOptions.find((o) => o.value === val)?.label ?? val
+                    }
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            !stateValue
+                              ? 'Select a state first'
+                              : citiesLoading
+                                ? 'Loading…'
+                                : 'Select city'
+                          }
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {stateValue && cityOptions.length === 0 && !citiesLoading && !citiesError ? (
+                        <p className="px-3 py-2 text-sm text-muted-foreground">
+                          No cities available for this state.
+                        </p>
+                      ) : (
+                        cityOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -241,16 +378,22 @@ export function SupervisorSignupForm() {
                   <FormLabel>
                     License Type <span className="text-destructive">*</span>
                   </FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={licenseTypesLoading}
+                  >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue
+                          placeholder={licenseTypesLoading ? 'Loading…' : 'Select type'}
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {licenseTypeOptions.map((opt) => (
-                        <SelectItem key={opt} value={opt}>
-                          {opt}
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -286,7 +429,7 @@ export function SupervisorSignupForm() {
                     License Expiration <span className="text-destructive">*</span>
                   </FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input type="date" min={new Date().toISOString().slice(0, 10)} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -322,10 +465,11 @@ export function SupervisorSignupForm() {
                 </FormLabel>
                 <FormControl>
                   <TagInput
+                    options={certificateOptions}
                     value={field.value ?? []}
                     onChange={field.onChange}
-                    placeholder="Add certification (e.g. CSCS)"
-                    suggestions={CERTIFICATION_SUGGESTIONS}
+                    placeholder={certificatesLoading ? 'Loading…' : 'Add certification (e.g. CSCS)'}
+                    disabled={certificatesLoading}
                   />
                 </FormControl>
                 <FormMessage />
@@ -374,9 +518,9 @@ export function SupervisorSignupForm() {
                       onChange={onChange}
                       onBlur={onBlur}
                       inputRef={ref}
-                      accept=".pdf,.jpg,.jpeg,.png"
+                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                       uploadTitle="Upload file"
-                      uploadHint="PDF, JPG, PNG · up to 10 MB"
+                      uploadHint="PDF, JPG, PNG, DOC · up to 5 MB"
                       removeFileAriaLabel="Remove license document"
                     />
                   </FormControl>
@@ -385,6 +529,27 @@ export function SupervisorSignupForm() {
               )}
             />
           </div>
+
+          <FormField
+            control={form.control}
+            name="stateOfLicensure"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  State(s) of Licensure <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <TagInput
+                    options={stateOptions}
+                    value={field.value ?? []}
+                    onChange={field.onChange}
+                    placeholder="Add a state (e.g. CA)"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </FormSection>
 
         {/* ── PRACTICE DETAILS ────────────────────────────────────── */}
@@ -399,10 +564,13 @@ export function SupervisorSignupForm() {
                 </FormLabel>
                 <FormControl>
                   <TagInput
+                    options={patientPopulationOptions}
                     value={field.value ?? []}
                     onChange={field.onChange}
-                    placeholder="Add population (e.g. Adults)"
-                    suggestions={PATIENT_POPULATION_SUGGESTIONS}
+                    placeholder={
+                      patientPopulationsLoading ? 'Loading…' : 'Add population (e.g. Adults)'
+                    }
+                    disabled={patientPopulationsLoading}
                   />
                 </FormControl>
                 <FormMessage />
@@ -435,16 +603,25 @@ export function SupervisorSignupForm() {
                   <FormLabel>
                     Availability <span className="text-destructive">*</span>
                   </FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={availabilityLoading}
+                    itemToStringLabel={(val) =>
+                      availabilityOptions.find((o) => o.value === val)?.label ?? val
+                    }
+                  >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select availability" />
+                        <SelectValue
+                          placeholder={availabilityLoading ? 'Loading…' : 'Select availability'}
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {availabilityOptions.map((opt) => (
-                        <SelectItem key={opt} value={opt}>
-                          {opt}
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -473,13 +650,63 @@ export function SupervisorSignupForm() {
             />
           </div>
 
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="supervisionFeeType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Fee Type <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Hourly or Monthly" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {supervisionFeeTypeOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="supervisionFeeAmount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Fee Amount ($) <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      placeholder="e.g. 100"
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
           <FormField
             control={form.control}
-            name="bio"
+            name="professionalSummary"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  Bio / Professional Summary <span className="text-destructive">*</span>
+                  Professional Summary <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
                   <Textarea
@@ -491,7 +718,33 @@ export function SupervisorSignupForm() {
                 </FormControl>
                 <div className="flex justify-end">
                   <span className="text-xs text-muted-foreground">
-                    {bioValue.length} / 500 characters
+                    {professionalSummaryValue.length} / 500 characters
+                  </span>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="describeYourself"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Describe Yourself <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={4}
+                    placeholder="Share your background, approach to supervision, and what makes your practice unique..."
+                    maxLength={500}
+                    {...field}
+                  />
+                </FormControl>
+                <div className="flex justify-end">
+                  <span className="text-xs text-muted-foreground">
+                    {describeYourselfValue.length} / 500 characters
                   </span>
                 </div>
                 <FormMessage />
@@ -504,7 +757,7 @@ export function SupervisorSignupForm() {
         <div className="space-y-4 border-t border-border pt-6">
           <FormField
             control={form.control}
-            name="termsAccepted"
+            name="agreedToPost"
             render={({ field }) => (
               <FormItem>
                 <div className="flex items-start gap-3">
@@ -516,15 +769,11 @@ export function SupervisorSignupForm() {
                     />
                   </FormControl>
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    I agree to the{' '}
-                    <Link href="/terms" className="font-medium text-primary hover:underline">
-                      Terms of Service
-                    </Link>{' '}
-                    and{' '}
-                    <Link href="/privacy" className="font-medium text-primary hover:underline">
-                      Privacy Policy
-                    </Link>
-                    . I confirm that all license information provided is accurate and up to date.
+                    I agree to post my profile on{' '}
+                    <span className="font-semibold text-primary">Gotham Enterprises Ltd</span> and
+                    agree to be contacted by a prospective supervisee via email, messages on{' '}
+                    <span className="font-semibold text-primary">Gotham Enterprises Ltd</span>, SMS
+                    text, and phone.
                   </p>
                 </div>
                 <FormMessage />
@@ -532,8 +781,40 @@ export function SupervisorSignupForm() {
             )}
           />
 
-          <Button type="submit" size="lg" className="w-full" disabled={!termsValue}>
-            Sign Up as Supervisor →
+          <FormField
+            control={form.control}
+            name="agreedToTerms"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-start gap-3">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="mt-0.5 shrink-0"
+                    />
+                  </FormControl>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    I agree to all of the terms and conditions of use on{' '}
+                    <span className="font-semibold text-primary">Gotham Enterprises Ltd</span>.
+                  </p>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            disabled={!canSubmit || isPending || isValidatingAddress}
+          >
+            {isValidatingAddress
+              ? 'Verifying address…'
+              : isPending
+                ? 'Creating your account…'
+                : 'Sign Up as Supervisor →'}
           </Button>
 
           <p className="text-center text-sm text-muted-foreground">

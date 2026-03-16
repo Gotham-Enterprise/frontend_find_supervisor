@@ -1,72 +1,8 @@
 import { z } from 'zod'
 
+import { isValidUSPhoneNumber } from '@/lib/utils/phone'
+
 // ─── Shared options ──────────────────────────────────────────────────────────
-
-export const US_STATES = [
-  'AL',
-  'AK',
-  'AZ',
-  'AR',
-  'CA',
-  'CO',
-  'CT',
-  'DE',
-  'FL',
-  'GA',
-  'HI',
-  'ID',
-  'IL',
-  'IN',
-  'IA',
-  'KS',
-  'KY',
-  'LA',
-  'ME',
-  'MD',
-  'MA',
-  'MI',
-  'MN',
-  'MS',
-  'MO',
-  'MT',
-  'NE',
-  'NV',
-  'NH',
-  'NJ',
-  'NM',
-  'NY',
-  'NC',
-  'ND',
-  'OH',
-  'OK',
-  'OR',
-  'PA',
-  'RI',
-  'SC',
-  'SD',
-  'TN',
-  'TX',
-  'UT',
-  'VT',
-  'VA',
-  'WA',
-  'WV',
-  'WI',
-  'WY',
-  'DC',
-] as const
-
-export const licenseTypeOptions = [
-  'PT — Physical Therapist',
-  'OT — Occupational Therapist',
-  'LCSW — Licensed Clinical Social Worker',
-  'LMFT — Licensed Marriage & Family Therapist',
-  'LPC — Licensed Professional Counselor',
-  'LMHC — Licensed Mental Health Counselor',
-  'SLP — Speech Language Pathologist',
-  'RN — Registered Nurse',
-  'Other',
-] as const
 
 export const yearsOfExperienceOptions = [
   '0 – 2 years',
@@ -76,53 +12,16 @@ export const yearsOfExperienceOptions = [
   '15+ years',
 ] as const
 
-export const supervisionFormatOptions = [
-  { value: 'virtual', label: 'Virtual' },
-  { value: 'in-person', label: 'In-Person' },
-  { value: 'hybrid', label: 'Hybrid' },
-] as const
-
-export const availabilityOptions = [
-  'Weekdays & Evenings',
-  'Weekday mornings',
-  'Weekday afternoons',
-  'Weekends',
-  'Flexible',
-] as const
-
-export const howSoonOptions = [
-  'As soon as possible',
-  'Within 1 month',
-  'Within 3 months',
-  'Just exploring',
-] as const
-
-export const budgetRangeOptions = [
-  '$50 – $100 / session',
-  '$100 – $150 / session',
-  '$150 – $200 / session',
-  '$200+ / session',
-  'Open to discussion',
-] as const
-
-export const supervisorTypeOptions = [
-  'Licensed Clinical Social Worker',
-  'Marriage & Family Therapist',
-  'Licensed Professional Counselor',
-  'Physical Therapist',
-  'Occupational Therapist',
-  'Speech Language Pathologist',
-  'Registered Nurse',
-  'Other',
-] as const
-
 // ─── Shared sub-schemas ───────────────────────────────────────────────────────
 
 const accountSchema = z.object({
   fullName: z.string().min(1, 'Full name is required').max(100),
   email: z.string().min(1, 'Email is required').email('Please enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters').max(128),
-  contactNumber: z.string().min(1, 'Contact number is required').max(20),
+  contactNumber: z
+    .string()
+    .min(1, 'Contact number is required')
+    .refine(isValidUSPhoneNumber, 'Please enter a valid US phone number.'),
   city: z.string().min(1, 'City is required').max(100),
   state: z.string().min(1, 'State is required'),
   zipcode: z
@@ -132,19 +31,37 @@ const accountSchema = z.object({
     .regex(/^\d{5}(-\d{4})?$/, 'Enter a valid US zipcode'),
 })
 
+export const supervisionFeeTypeOptions = [
+  { value: 'HOURLY', label: 'Hourly' },
+  { value: 'MONTHLY', label: 'Monthly' },
+] as const
+
 // ─── Supervisor schema ─────────────────────────────────────────────────────────
 
 export const supervisorSchema = accountSchema.extend({
   // License & credentials
   licenseType: z.string().min(1, 'License type is required'),
   licenseNumber: z.string().min(1, 'License number is required').max(50),
-  licenseExpiration: z.string().min(1, 'Expiration date is required'),
+  licenseExpiration: z
+    .string()
+    .min(1, 'Expiration date is required')
+    .refine(
+      (val) => {
+        const date = new Date(val)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        date.setHours(0, 0, 0, 0)
+        return date >= today
+      },
+      { message: 'License expiration cannot be a past date' },
+    ),
   npiNumber: z.string().max(20).optional(),
   certifications: z.array(z.string()).min(1, 'Add at least one certification'),
   yearsOfExperience: z.string().min(1, 'Years of experience is required'),
   licenseDoc: z
     .any()
     .refine((val) => val instanceof File, 'Please upload your license or verification doc'),
+  stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
 
   // Practice details
   patientPopulation: z.array(z.string()).min(1, 'Add at least one patient population'),
@@ -153,17 +70,37 @@ export const supervisorSchema = accountSchema.extend({
   }),
   availability: z.string().min(1, 'Availability is required'),
   acceptingNewSupervisees: z.boolean(),
-  bio: z
+  professionalSummary: z
     .string()
-    .min(20, 'Bio must be at least 20 characters')
-    .max(500, 'Bio must be 500 characters or less'),
+    .min(20, 'Professional summary must be at least 20 characters')
+    .max(500, 'Professional summary must be 500 characters or less'),
+  describeYourself: z
+    .string()
+    .min(20, 'Describe yourself must be at least 20 characters')
+    .max(500, 'Describe yourself must be 500 characters or less'),
 
-  termsAccepted: z.boolean().refine((val) => val === true, 'You must accept the terms to continue'),
+  // Fee
+  supervisionFeeType: z.enum(['HOURLY', 'MONTHLY'], {
+    message: 'Please select a fee type',
+  }),
+  supervisionFeeAmount: z
+    .number({ message: 'Fee amount is required' })
+    .min(1, 'Fee amount must be at least 1'),
+
+  // Profile photo
+  uploadProfilePhoto: z.any().refine((val) => val instanceof File, 'Please upload a profile photo'),
+
+  agreedToPost: z.boolean().refine((val) => val === true, 'You must agree to post your profile'),
+  agreedToTerms: z
+    .boolean()
+    .refine((val) => val === true, 'You must agree to the terms and conditions'),
 })
 
 // ─── Supervisee schema ─────────────────────────────────────────────────────────
 
 export const superviseeSchema = accountSchema.extend({
+  stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
+  stateTheyAreLookingIn: z.string().min(1, 'Please select the state you are looking in'),
   typeOfSupervisor: z.string().min(1, 'Please select a supervisor type'),
   howSoon: z.string().min(1, 'Please select how soon you need a supervisor'),
   preferredFormat: z.enum(['virtual', 'in-person', 'hybrid'], {
@@ -176,7 +113,13 @@ export const superviseeSchema = accountSchema.extend({
     .min(20, 'Description must be at least 20 characters')
     .max(500, 'Must be 500 characters or less'),
 
-  termsAccepted: z.boolean().refine((val) => val === true, 'You must accept the terms to continue'),
+  // Profile photo
+  uploadProfilePhoto: z.any().refine((val) => val instanceof File, 'Please upload a profile photo'),
+
+  agreedToPost: z.boolean().refine((val) => val === true, 'You must agree to post your profile'),
+  agreedToTerms: z
+    .boolean()
+    .refine((val) => val === true, 'You must agree to the terms and conditions'),
 })
 
 export type SupervisorFormValues = z.infer<typeof supervisorSchema>

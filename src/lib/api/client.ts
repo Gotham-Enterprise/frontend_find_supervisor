@@ -2,7 +2,7 @@ import axios from 'axios'
 
 export const TOKEN_KEY = 'auth_token'
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? '/api/v1'
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:5000/api'
 
 export const apiClient = axios.create({
   baseURL: apiBaseUrl,
