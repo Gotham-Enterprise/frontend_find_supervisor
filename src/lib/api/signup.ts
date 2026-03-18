@@ -59,7 +59,7 @@ export function buildSupervisorFormData(values: SupervisorFormValues): FormData 
   fd.append('licenseNumber', values.licenseNumber)
   fd.append('licenseExpiration', values.licenseExpiration)
   // Backend field is singular: yearOfExperience
-  fd.append('yearOfExperience', values.yearsOfExperience)
+  fd.append('yearsOfExperience', values.yearsOfExperience)
   if (values.npiNumber) fd.append('npiNumber', values.npiNumber)
   // Backend field is singular: certification
   values.certifications.forEach((cert) => fd.append('certification', cert))
@@ -131,11 +131,18 @@ export function buildSuperviseeFormData(values: SuperviseeFormValues): FormData 
 
 // ─── Response types ───────────────────────────────────────────────────────────
 
+export interface SignupUser {
+  fullName: string
+  email: string
+  role: 'SUPERVISOR' | 'SUPERVISEE'
+  emailVerified: boolean
+}
+
 export interface SignupSuccessResponse {
   success: true
   message: string
   data: {
-    user: Record<string, unknown>
+    user: SignupUser
     activationToken: string
   }
 }

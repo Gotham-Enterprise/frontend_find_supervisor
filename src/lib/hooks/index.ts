@@ -1,5 +1,5 @@
 export { useLogin, useLogout } from './useAuth'
-export { useCitiesOptions, useStatesOptions } from './useLocationOptions'
+export { useCitiesOptions, useMultiStateCityOptions, useStatesOptions } from './useLocationOptions'
 export {
   matchingKeys,
   useCreateMatchingRequest,

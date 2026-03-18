@@ -683,13 +683,14 @@ export function SupervisorSignupForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Fee Amount ($) <span className="text-destructive">*</span>
+                    Fee Amount <span className="text-destructive">*</span>
                   </FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       min={1}
                       placeholder="e.g. 100"
+                      startAdornment="$"
                       {...field}
                       onChange={(e) => field.onChange(e.target.valueAsNumber)}
                     />
