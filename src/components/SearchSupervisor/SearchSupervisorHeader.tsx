@@ -38,7 +38,7 @@ export function SearchSupervisorHeader({
         </p>
 
         <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Find Your Supervisor
+          Find A Supervisor
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Browse verified supervisors matched to your license, location, and goals.

@@ -1,6 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { fetchOptions, type OptionsParam, type SelectOption } from '@/lib/api/options'
+import {
+  fetchOptions,
+  fetchSpecialtiesByOccupation,
+  type OptionsParam,
+  type SelectOption,
+} from '@/lib/api/options'
 
 // Options rarely change — cache for 10 minutes
 const STALE_TIME = 10 * 60 * 1000
@@ -41,6 +46,24 @@ export function useSalaryRangesOptions() {
   return useSignupOption('salaryRanges')
 }
 
+export function useOccupationOptions() {
+  return useSignupOption('occupation')
+}
+
+/**
+ * Fetches specialty options for a given occupation.
+ * Mirrors the job_finder dependency pattern: disabled/empty until an
+ * occupationId is selected, then re-queries automatically.
+ */
+export function useSpecialtiesByOccupation(occupationId: string) {
+  return useQuery<SelectOption[]>({
+    queryKey: ['signup-options', 'specialty', occupationId],
+    queryFn: () => fetchSpecialtiesByOccupation(occupationId),
+    enabled: occupationId.length > 0,
+    staleTime: STALE_TIME,
+  })
+}
+
 // ─── Composite hooks ──────────────────────────────────────────────────────────
 
 export type SignupOptionsResult<T extends Record<string, ReturnType<typeof useSignupOption>>> =
@@ -54,22 +77,26 @@ export function useSupervisorFormOptions() {
   const patientPopulations = usePatientPopulationOptions()
   const licenseTypes = useLicenseTypeOptions()
   const availability = useAvailabilityOptions()
+  const occupations = useOccupationOptions()
 
   return {
     certificates,
     patientPopulations,
     licenseTypes,
     availability,
+    occupations,
     isLoading:
       certificates.isLoading ||
       patientPopulations.isLoading ||
       licenseTypes.isLoading ||
-      availability.isLoading,
+      availability.isLoading ||
+      occupations.isLoading,
     isError:
       certificates.isError ||
       patientPopulations.isError ||
       licenseTypes.isError ||
-      availability.isError,
+      availability.isError ||
+      occupations.isError,
   }
 }
 

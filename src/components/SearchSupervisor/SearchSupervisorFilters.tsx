@@ -9,19 +9,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { TagInput } from '@/components/ui/tag-input'
 import { useMultiStateCityOptions, useStatesOptions, useSupervisorFormOptions } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 
 import { ActiveFilterChips } from './ActiveFilterChips'
+import type { ChipOptions } from './helpers'
 import {
   DEFAULT_FILTERS,
   getActiveChips,
   hasActiveFilters,
+  RADIUS_MAX,
+  RADIUS_MIN,
+  RADIUS_STEP,
   removeChip,
   YEARS_OF_EXPERIENCE_OPTIONS,
 } from './helpers'
+import { MOCK_OCCUPATION_OPTIONS, MOCK_SPECIALTIES_BY_OCCUPATION } from './mock-data'
 import type { SupervisorSearchFilters } from './types'
 
 interface SearchSupervisorFiltersProps {
@@ -51,6 +57,12 @@ export function SearchSupervisorFilters({ filters, onChange }: SearchSupervisorF
     },
   } = useSupervisorFormOptions()
 
+  // ── Occupation & specialty (mock data for demo) ──────────────────────────────
+  const occupationOptions = MOCK_OCCUPATION_OPTIONS
+  const specialtyOptions = filters.occupationId
+    ? (MOCK_SPECIALTIES_BY_OCCUPATION[filters.occupationId] ?? [])
+    : []
+
   // ── Location options ────────────────────────────────────────────────────────
   const {
     data: stateOptions = [],
@@ -67,11 +79,20 @@ export function SearchSupervisorFilters({ filters, onChange }: SearchSupervisorF
   const hasStates = filters.states.length > 0
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
-  const chips = getActiveChips(filters)
+  const chipOptions: ChipOptions = {
+    occupationOptions,
+    specialtyOptions,
+  }
+  const chips = getActiveChips(filters, chipOptions)
   const anyActive = hasActiveFilters(filters)
 
   function set<K extends keyof SupervisorSearchFilters>(key: K, value: SupervisorSearchFilters[K]) {
     onChange({ ...filters, [key]: value })
+  }
+
+  /** When occupation changes, clear specialty — options depend on occupation. */
+  function handleOccupationChange(occupationId: string) {
+    onChange({ ...filters, occupationId, specialtyId: '' })
   }
 
   /** When states change, clear all selected cities — they may no longer be valid. */
@@ -121,6 +142,61 @@ export function SearchSupervisorFilters({ filters, onChange }: SearchSupervisorF
         <ActiveFilterChips chips={chips} onRemove={(key) => onChange(removeChip(filters, key))} />
       )}
 
+      {/* Occupation — single-select (mock data for demo) */}
+      <div>
+        <FilterLabel>Occupation</FilterLabel>
+        <Select
+          value={filters.occupationId || '_any'}
+          onValueChange={(v) => handleOccupationChange(v === '_any' || v == null ? '' : v)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Any">
+              {(value) =>
+                value && value !== '_any'
+                  ? (occupationOptions.find((o) => o.value === value)?.label ?? value)
+                  : null
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_any">Any</SelectItem>
+            {occupationOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Specialty — single-select, depends on occupation (mock data for demo) */}
+      <div>
+        <FilterLabel>Specialty</FilterLabel>
+        <Select
+          value={filters.specialtyId || '_any'}
+          onValueChange={(v) => set('specialtyId', v === '_any' || v == null ? '' : v)}
+          disabled={!filters.occupationId}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={!filters.occupationId ? 'Select occupation first' : 'Any'}>
+              {(value) =>
+                value && value !== '_any'
+                  ? (specialtyOptions.find((o) => o.value === value)?.label ?? value)
+                  : null
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_any">Any</SelectItem>
+            {specialtyOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* State License — multi-select, API-backed */}
       <div>
         <FilterLabel>State License</FilterLabel>
@@ -160,6 +236,24 @@ export function SearchSupervisorFilters({ filters, onChange }: SearchSupervisorF
         {hasStates && citiesError && (
           <FilterError message="Unable to load cities for the selected state." />
         )}
+      </div>
+
+      {/* Radius */}
+      <div>
+        <FilterLabel>Radius</FilterLabel>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-foreground">Within {filters.radiusMiles} miles</span>
+          </div>
+          <Slider
+            value={filters.radiusMiles}
+            min={RADIUS_MIN}
+            max={RADIUS_MAX}
+            step={RADIUS_STEP}
+            onChange={(v) => set('radiusMiles', v)}
+            aria-label="Search radius in miles"
+          />
+        </div>
       </div>
 
       {/* Format */}

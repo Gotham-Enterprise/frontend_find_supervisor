@@ -1,10 +1,20 @@
+import type { SelectOption } from '@/lib/api/options'
+
 import type { SupervisionFormat, SupervisorSearchFilters } from './types'
+
+export const RADIUS_MIN = 5
+export const RADIUS_MAX = 100
+export const RADIUS_STEP = 5
+export const RADIUS_DEFAULT = 25
 
 export const DEFAULT_FILTERS: SupervisorSearchFilters = {
   keyword: '',
+  occupationId: '',
+  specialtyId: '',
   stateLicenses: [],
   cities: [],
   states: [],
+  radiusMiles: RADIUS_DEFAULT,
   formatVirtual: false,
   formatInPerson: false,
   formatHybrid: false,
@@ -60,8 +70,30 @@ export interface ActiveChip {
   label: string
 }
 
-export function getActiveChips(filters: SupervisorSearchFilters): ActiveChip[] {
+export interface ChipOptions {
+  occupationOptions?: SelectOption[]
+  specialtyOptions?: SelectOption[]
+}
+
+export function getActiveChips(
+  filters: SupervisorSearchFilters,
+  chipOptions?: ChipOptions,
+): ActiveChip[] {
   const chips: ActiveChip[] = []
+
+  if (filters.occupationId && chipOptions?.occupationOptions) {
+    const label = chipOptions.occupationOptions.find((o) => o.value === filters.occupationId)?.label
+    if (label) chips.push({ key: 'occupationId', label })
+  }
+
+  if (filters.specialtyId && chipOptions?.specialtyOptions) {
+    const label = chipOptions.specialtyOptions.find((o) => o.value === filters.specialtyId)?.label
+    if (label) chips.push({ key: 'specialtyId', label })
+  }
+
+  if (filters.radiusMiles !== RADIUS_DEFAULT) {
+    chips.push({ key: 'radiusMiles', label: `Within ${filters.radiusMiles} miles` })
+  }
 
   filters.stateLicenses.forEach((sl) => chips.push({ key: `sl_${sl}`, label: `License: ${sl}` }))
   filters.states.forEach((st) => chips.push({ key: `st_${st}`, label: st }))
@@ -116,6 +148,13 @@ export function removeChip(
     next.yearsOfExperience = ''
   } else if (chipKey === 'acceptingOnly') {
     next.acceptingOnly = false
+  } else if (chipKey === 'radiusMiles') {
+    next.radiusMiles = RADIUS_DEFAULT
+  } else if (chipKey === 'occupationId') {
+    next.occupationId = ''
+    next.specialtyId = ''
+  } else if (chipKey === 'specialtyId') {
+    next.specialtyId = ''
   } else if (chipKey.startsWith('pop_')) {
     const pop = chipKey.slice(4)
     next.patientPopulation = next.patientPopulation.filter((p) => p !== pop)

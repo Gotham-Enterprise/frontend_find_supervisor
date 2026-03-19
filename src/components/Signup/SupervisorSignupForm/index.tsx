@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 
+import { ProfilePhotoField } from '@/components/profile-photo/ProfilePhotoField'
 import { FormatSelector } from '@/components/Signup/FormatSelector'
 import { FormSection } from '@/components/Signup/FormSection'
 import { supervisorDefaultValues } from '@/components/Signup/helpers'
@@ -27,7 +28,6 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/PhoneInput'
-import { ProfilePhotoUpload } from '@/components/ui/profile-photo-upload'
 import {
   Select,
   SelectContent,
@@ -41,6 +41,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { UploadFile } from '@/components/ui/upload-file'
 import {
   useCitiesOptions,
+  useSpecialtiesByOccupation,
   useStatesOptions,
   useSupervisorFormOptions,
   useSupervisorSignup,
@@ -63,6 +64,7 @@ export function SupervisorSignupForm() {
     },
     licenseTypes: { data: licenseTypeOptions = [], isLoading: licenseTypesLoading },
     availability: { data: availabilityOptions = [], isLoading: availabilityLoading },
+    occupations: { data: occupationOptions = [], isLoading: occupationsLoading },
     isError: optionsError,
   } = useSupervisorFormOptions()
 
@@ -71,7 +73,12 @@ export function SupervisorSignupForm() {
     defaultValues: supervisorDefaultValues,
   })
 
+  const occupationIdValue = useWatch({ control: form.control, name: 'occupationId' }) ?? ''
   const stateValue = useWatch({ control: form.control, name: 'state' }) ?? ''
+  // Specialty options depend on the selected occupation — mirrors job_finder behavior
+  const { data: specialtyOptions = [], isLoading: specialtiesLoading } =
+    useSpecialtiesByOccupation(occupationIdValue)
+
   const {
     data: stateOptions = [],
     isLoading: statesLoading,
@@ -89,6 +96,11 @@ export function SupervisorSignupForm() {
   const agreedToPost = useWatch({ control: form.control, name: 'agreedToPost' })
   const agreedToTerms = useWatch({ control: form.control, name: 'agreedToTerms' })
   const canSubmit = agreedToPost && agreedToTerms
+
+  // Reset specialty when occupation changes — mirrors job_finder behavior
+  useEffect(() => {
+    form.setValue('specialtyId', '')
+  }, [occupationIdValue, form])
 
   useEffect(() => {
     form.setValue('city', '')
@@ -160,15 +172,16 @@ export function SupervisorSignupForm() {
             control={form.control}
             name="uploadProfilePhoto"
             render={({ field: { value, onChange, onBlur, ref } }) => (
-              <FormItem className="flex flex-col items-center">
+              <FormItem>
+                <FormLabel>
+                  Profile Photo <span className="text-destructive">*</span>
+                </FormLabel>
                 <FormControl>
-                  <ProfilePhotoUpload
-                    value={value}
+                  <ProfilePhotoField
+                    ref={ref}
+                    value={value instanceof File ? value : null}
                     onChange={onChange}
                     onBlur={onBlur}
-                    inputRef={ref}
-                    accept=".jpg,.jpeg,.png"
-                    size="md"
                   />
                 </FormControl>
                 <FormMessage />
@@ -265,45 +278,6 @@ export function SupervisorSignupForm() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-[1fr_1fr_120px]">
             <FormField
               control={form.control}
-              name="state"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    State <span className="text-destructive">*</span>
-                  </FormLabel>
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    disabled={statesLoading}
-                    itemToStringLabel={(val) =>
-                      stateOptions.find((o) => o.value === val)?.label ?? val
-                    }
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={statesLoading ? 'Loading…' : 'Select state'} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {stateOptions.length === 0 && !statesLoading && !statesError ? (
-                        <p className="px-3 py-2 text-sm text-muted-foreground">
-                          No states available.
-                        </p>
-                      ) : (
-                        stateOptions.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="city"
               render={({ field }) => (
                 <FormItem>
@@ -351,6 +325,45 @@ export function SupervisorSignupForm() {
             />
             <FormField
               control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    State <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={statesLoading}
+                    itemToStringLabel={(val) =>
+                      stateOptions.find((o) => o.value === val)?.label ?? val
+                    }
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={statesLoading ? 'Loading…' : 'Select state'} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {stateOptions.length === 0 && !statesLoading && !statesError ? (
+                        <p className="px-3 py-2 text-sm text-muted-foreground">
+                          No states available.
+                        </p>
+                      ) : (
+                        stateOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="zipcode"
               render={({ field }) => (
                 <FormItem className="col-span-2 sm:col-span-1">
@@ -365,10 +378,116 @@ export function SupervisorSignupForm() {
               )}
             />
           </div>
+
+          <FormField
+            control={form.control}
+            name="website"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Website{' '}
+                  <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="url"
+                    placeholder="https://example.com"
+                    {...field}
+                    value={field.value ?? ''}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </FormSection>
 
         {/* ── LICENSE & CREDENTIALS ───────────────────────────────── */}
         <FormSection title="License & Credentials">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="occupationId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Occupation <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={occupationsLoading}
+                    itemToStringLabel={(val) =>
+                      occupationOptions.find((o) => o.value === val)?.label ?? val
+                    }
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={occupationsLoading ? 'Loading…' : 'Select occupation'}
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {occupationOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="specialtyId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Specialty{' '}
+                    <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+                  </FormLabel>
+                  <Select
+                    value={field.value ?? ''}
+                    onValueChange={field.onChange}
+                    disabled={
+                      !occupationIdValue || specialtiesLoading || specialtyOptions.length === 0
+                    }
+                    itemToStringLabel={(val) =>
+                      specialtyOptions.find((o) => o.value === val)?.label ?? val
+                    }
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            !occupationIdValue
+                              ? 'Select an occupation first'
+                              : specialtiesLoading
+                                ? 'Loading…'
+                                : specialtyOptions.length === 0
+                                  ? 'No specialties available'
+                                  : 'Select specialty'
+                          }
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {specialtyOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
@@ -659,7 +778,14 @@ export function SupervisorSignupForm() {
                   <FormLabel>
                     Fee Type <span className="text-destructive">*</span>
                   </FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    items={supervisionFeeTypeOptions.map((o) => ({
+                      value: o.value,
+                      label: o.label,
+                    }))}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Hourly or Monthly" />

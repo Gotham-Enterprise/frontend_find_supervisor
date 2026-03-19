@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 
+import { ProfilePhotoField } from '@/components/profile-photo/ProfilePhotoField'
 import { FormatSelector } from '@/components/Signup/FormatSelector'
 import { FormSection } from '@/components/Signup/FormSection'
 import { superviseeDefaultValues } from '@/components/Signup/helpers'
@@ -22,7 +23,6 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { PhoneInput } from '@/components/ui/PhoneInput'
-import { ProfilePhotoUpload } from '@/components/ui/profile-photo-upload'
 import {
   Select,
   SelectContent,
@@ -148,15 +148,16 @@ export function SuperviseeSignupForm() {
             control={form.control}
             name="uploadProfilePhoto"
             render={({ field: { value, onChange, onBlur, ref } }) => (
-              <FormItem className="flex flex-col items-center">
+              <FormItem>
+                <FormLabel>
+                  Profile Photo <span className="text-destructive">*</span>
+                </FormLabel>
                 <FormControl>
-                  <ProfilePhotoUpload
-                    value={value}
+                  <ProfilePhotoField
+                    ref={ref}
+                    value={value instanceof File ? value : null}
                     onChange={onChange}
                     onBlur={onBlur}
-                    inputRef={ref}
-                    accept=".jpg,.jpeg,.png"
-                    size="md"
                   />
                 </FormControl>
                 <FormMessage />
@@ -253,45 +254,6 @@ export function SuperviseeSignupForm() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-[1fr_1fr_120px]">
             <FormField
               control={form.control}
-              name="state"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    State <span className="text-destructive">*</span>
-                  </FormLabel>
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    disabled={statesLoading}
-                    itemToStringLabel={(val) =>
-                      stateOptions.find((o) => o.value === val)?.label ?? val
-                    }
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={statesLoading ? 'Loading…' : 'Select state'} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {stateOptions.length === 0 && !statesLoading && !statesError ? (
-                        <p className="px-3 py-2 text-sm text-muted-foreground">
-                          No states available.
-                        </p>
-                      ) : (
-                        stateOptions.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="city"
               render={({ field }) => (
                 <FormItem>
@@ -326,6 +288,45 @@ export function SuperviseeSignupForm() {
                         </p>
                       ) : (
                         cityOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    State <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={statesLoading}
+                    itemToStringLabel={(val) =>
+                      stateOptions.find((o) => o.value === val)?.label ?? val
+                    }
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={statesLoading ? 'Loading…' : 'Select state'} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {stateOptions.length === 0 && !statesLoading && !statesError ? (
+                        <p className="px-3 py-2 text-sm text-muted-foreground">
+                          No states available.
+                        </p>
+                      ) : (
+                        stateOptions.map((opt) => (
                           <SelectItem key={opt.value} value={opt.value}>
                             {opt.label}
                           </SelectItem>
@@ -455,7 +456,7 @@ export function SuperviseeSignupForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    How Soon Do You Need One? <span className="text-destructive">*</span>
+                    How Soon Do You Need Supervision? <span className="text-destructive">*</span>
                   </FormLabel>
                   <Select
                     value={field.value}
@@ -537,39 +538,68 @@ export function SuperviseeSignupForm() {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="budgetRange"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  Budget Range{' '}
-                  <span className="font-normal text-muted-foreground">(per session)</span>
-                </FormLabel>
-                <Select
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  disabled={salaryRangesLoading}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue
-                        placeholder={salaryRangesLoading ? 'Loading…' : 'Select budget'}
-                      />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {salaryRangeOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="feeType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Fee Type <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    items={[
+                      { value: 'per-session', label: 'Per Session' },
+                      { value: 'monthly', label: 'Monthly' },
+                    ]}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select fee type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="per-session">Per Session</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="budgetRange"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Budget Range</FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={salaryRangesLoading}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={salaryRangesLoading ? 'Loading…' : 'Select budget'}
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {salaryRangeOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
           <FormField
             control={form.control}
