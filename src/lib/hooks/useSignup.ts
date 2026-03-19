@@ -11,8 +11,13 @@ export function useSupervisorSignup() {
 
   return useMutation({
     mutationFn: (values: SupervisorFormValues) => registerSupervisor(values),
-    onSuccess: () => {
-      router.push('/login?registered=supervisor')
+    onSuccess: (data) => {
+      const params = new URLSearchParams({
+        fullName: data.data.user.fullName,
+        email: data.data.user.email,
+        role: 'Supervisor',
+      })
+      router.push(`/email-verification?${params.toString()}`)
     },
   })
 }
@@ -22,8 +27,13 @@ export function useSuperviseeSignup() {
 
   return useMutation({
     mutationFn: (values: SuperviseeFormValues) => registerSupervisee(values),
-    onSuccess: () => {
-      router.push('/login?registered=supervisee')
+    onSuccess: (data) => {
+      const params = new URLSearchParams({
+        fullName: data.data.user.fullName,
+        email: data.data.user.email,
+        role: 'Supervisee',
+      })
+      router.push(`/email-verification?${params.toString()}`)
     },
   })
 }
