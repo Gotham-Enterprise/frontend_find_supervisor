@@ -1,8 +1,11 @@
 export interface SupervisorSearchFilters {
   keyword: string
+  occupationId: string
+  specialtyId: string
   stateLicenses: string[]
   cities: string[]
   states: string[]
+  radiusMiles: number
   formatVirtual: boolean
   formatInPerson: boolean
   formatHybrid: boolean

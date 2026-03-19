@@ -1,4 +1,49 @@
+import type { SelectOption } from '@/lib/api/options'
+
 import type { SupervisorSearchResult } from './types'
+
+/** Mock occupation options for demo — aligns with mock supervisor license types */
+export const MOCK_OCCUPATION_OPTIONS: SelectOption[] = [
+  { label: 'Physical Therapist', value: 'physical_therapist' },
+  { label: 'Licensed Clinical Social Worker', value: 'lcsw' },
+  { label: 'Occupational Therapist', value: 'occupational_therapist' },
+  { label: 'Licensed Marriage & Family Therapist', value: 'lmft' },
+  { label: 'Licensed Psychologist', value: 'psychologist' },
+]
+
+/** Mock specialty options by occupation ID — for demo purposes */
+export const MOCK_SPECIALTIES_BY_OCCUPATION: Record<string, SelectOption[]> = {
+  physical_therapist: [
+    { label: 'Orthopedics', value: 'orthopedics' },
+    { label: 'Sports Rehab', value: 'sports_rehab' },
+    { label: 'Adults', value: 'adults' },
+    { label: 'Post-Surgical', value: 'post_surgical' },
+  ],
+  lcsw: [
+    { label: 'Trauma-Informed', value: 'trauma_informed' },
+    { label: 'Anxiety & Depression', value: 'anxiety_depression' },
+    { label: 'CBT', value: 'cbt' },
+    { label: 'DBT', value: 'dbt' },
+  ],
+  occupational_therapist: [
+    { label: 'Pediatrics', value: 'pediatrics' },
+    { label: 'Sensory Integration', value: 'sensory_integration' },
+    { label: 'School-Based', value: 'school_based' },
+    { label: 'Family-Centered', value: 'family_centered' },
+  ],
+  lmft: [
+    { label: 'Couples Therapy', value: 'couples_therapy' },
+    { label: 'Family Systems', value: 'family_systems' },
+    { label: 'Cultural Humility', value: 'cultural_humility' },
+    { label: 'Gottman Method', value: 'gottman_method' },
+  ],
+  psychologist: [
+    { label: 'Neuropsychology', value: 'neuropsychology' },
+    { label: 'Assessment', value: 'assessment' },
+    { label: 'Community Mental Health', value: 'community_mental_health' },
+    { label: 'Multicultural', value: 'multicultural' },
+  ],
+}
 
 export const MOCK_SUPERVISORS: SupervisorSearchResult[] = [
   {

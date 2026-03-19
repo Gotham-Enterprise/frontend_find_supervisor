@@ -54,6 +54,11 @@ export function buildSupervisorFormData(values: SupervisorFormValues): FormData 
   fd.append('state', values.state)
   fd.append('zipcode', values.zipcode)
 
+  // Occupation & specialty
+  fd.append('occupationId', values.occupationId)
+  if (values.specialtyId) fd.append('specialtyId', values.specialtyId)
+  if (values.website) fd.append('website', values.website)
+
   // License & credentials
   fd.append('licenseType', values.licenseType)
   fd.append('licenseNumber', values.licenseNumber)

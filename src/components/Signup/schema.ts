@@ -1,7 +1,5 @@
 import { z } from 'zod'
 
-import { isValidUSPhoneNumber } from '@/lib/utils/phone'
-
 // ─── Shared options ──────────────────────────────────────────────────────────
 
 export const yearsOfExperienceOptions = [
@@ -18,10 +16,8 @@ const accountSchema = z.object({
   fullName: z.string().min(1, 'Full name is required').max(100),
   email: z.string().min(1, 'Email is required').email('Please enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters').max(128),
-  contactNumber: z
-    .string()
-    .min(1, 'Contact number is required')
-    .refine(isValidUSPhoneNumber, 'Please enter a valid US phone number.'),
+  contactNumber: z.string().min(1, 'Contact number is required'),
+  // .refine(isValidUSPhoneNumber, 'Please enter a valid US phone number.'),
   city: z.string().min(1, 'City is required').max(100),
   state: z.string().min(1, 'State is required'),
   zipcode: z
@@ -39,6 +35,10 @@ export const supervisionFeeTypeOptions = [
 // ─── Supervisor schema ─────────────────────────────────────────────────────────
 
 export const supervisorSchema = accountSchema.extend({
+  // Occupation & specialty
+  occupationId: z.string().min(1, 'Occupation is required'),
+  specialtyId: z.string().optional(),
+
   // License & credentials
   licenseType: z.string().min(1, 'License type is required'),
   licenseNumber: z.string().min(1, 'License number is required').max(50),
@@ -90,6 +90,15 @@ export const supervisorSchema = accountSchema.extend({
   // Profile photo
   uploadProfilePhoto: z.any().refine((val) => val instanceof File, 'Please upload a profile photo'),
 
+  // Optional
+  website: z
+    .string()
+    .max(200)
+    .optional()
+    .refine((v) => !v || v.length === 0 || /^https?:\/\/\S+/.test(v), {
+      message: 'Please enter a valid URL (e.g. https://example.com)',
+    }),
+
   agreedToPost: z.boolean().refine((val) => val === true, 'You must agree to post your profile'),
   agreedToTerms: z
     .boolean()
@@ -106,6 +115,7 @@ export const superviseeSchema = accountSchema.extend({
   preferredFormat: z.enum(['virtual', 'in-person', 'hybrid'], {
     message: 'Please select a preferred format',
   }),
+  feeType: z.enum(['per-session', 'monthly'], { message: 'Please select a fee type' }),
   budgetRange: z.string().min(1, 'Please select a budget range'),
   availability: z.string().min(1, 'Availability is required'),
   description: z
