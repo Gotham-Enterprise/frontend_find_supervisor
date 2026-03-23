@@ -3,6 +3,7 @@
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
+import { AuthPageFooter } from '@/components/Layout/auth-page-footer'
 import { PublicHeader } from '@/components/Layout/public-header'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -13,12 +14,6 @@ import type { VerificationPageData } from '../types'
 interface Props {
   data: VerificationPageData
 }
-
-const footerLinks = [
-  { label: 'Privacy Policy', href: '/privacy' },
-  { label: 'Terms of Service', href: '/terms' },
-  { label: 'Contact Us', href: '/contact' },
-]
 
 export function EmailVerificationPage({ data }: Props) {
   return (
@@ -40,19 +35,7 @@ export function EmailVerificationPage({ data }: Props) {
         </Link>
       </main>
 
-      <footer className="border-t border-border py-5 text-center">
-        <nav className="flex items-center justify-center gap-6">
-          {footerLinks.map(({ label, href }) => (
-            <a
-              key={href}
-              href={href}
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              {label}
-            </a>
-          ))}
-        </nav>
-      </footer>
+      <AuthPageFooter />
     </div>
   )
 }
