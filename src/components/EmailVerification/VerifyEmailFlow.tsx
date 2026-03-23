@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
+import { AuthPageFooter } from '@/components/Layout/auth-page-footer'
 import { PublicHeader } from '@/components/Layout/public-header'
 import { TOKEN_KEY } from '@/lib/api/client'
 import { AUTO_REDIRECT_MS, getPostVerificationFallbackPath } from '@/lib/email-verification/config'
@@ -116,6 +117,8 @@ export function VerifyEmailFlow() {
           </p>
         )}
       </main>
+
+      <AuthPageFooter />
     </div>
   )
 }
