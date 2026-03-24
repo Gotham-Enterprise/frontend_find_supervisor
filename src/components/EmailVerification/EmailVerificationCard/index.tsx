@@ -60,7 +60,7 @@ export function EmailVerificationCard({ data }: Props) {
         {hasData && <VerificationSummary data={data} />}
 
         {/* ── Action Buttons ────────────────────────────────────────── */}
-        <VerificationActions email={data.email} />
+        <VerificationActions email={data.email} token={data.token} />
 
         {/* ── Helper Tips ───────────────────────────────────────────── */}
         <div className="w-full rounded-lg border border-border bg-muted/30 px-4 py-4">

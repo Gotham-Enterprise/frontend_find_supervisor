@@ -9,6 +9,7 @@ interface Props {
     fullName?: string
     email?: string
     role?: string
+    activationToken?: string
   }>
 }
 
@@ -29,6 +30,7 @@ function VerifyEmailFallback() {
 export default async function Page({ searchParams }: Props) {
   const params = await searchParams
 
+  // token in the URL means the user clicked the verification link from their email
   if (params.token) {
     return (
       <Suspense fallback={<VerifyEmailFallback />}>
@@ -37,12 +39,14 @@ export default async function Page({ searchParams }: Props) {
     )
   }
 
+  // No token — show the "check your email" page with resend option
   return (
     <EmailVerificationPage
       data={{
         fullName: params.fullName ?? '',
         email: params.email ?? '',
         role: params.role ?? '',
+        token: params.activationToken ?? '',
       }}
     />
   )

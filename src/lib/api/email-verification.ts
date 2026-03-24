@@ -5,19 +5,23 @@ import { parseApiError } from '@/lib/utils/error-parser'
 
 import { apiClient } from './client'
 
-type BackendVerifyResponse = {
+type ActivateAccountResponse = {
+  isAuthenticated?: boolean
   success?: boolean
   data?: {
-    accessToken?: string
-    expiresAt?: string
-    email?: string
     id?: string
+    email?: string
+    fullName?: string
+    role?: string
+    status?: string
   }
+  token?: string
+  refreshToken?: string
 }
 
 /**
- * Live verification call — enable with `NEXT_PUBLIC_ENABLE_EMAIL_VERIFICATION_API=true`.
- * Backend route (expected): `GET /auth/email-verification/:activationToken`
+ * Calls `GET /supervision/activate/:activationToken` to verify and activate the account.
+ * Returns the access token and user role on success.
  */
 export async function verifyEmailWithApi(activationToken: string): Promise<VerifyEmailResult> {
   const token = activationToken.trim()
@@ -30,20 +34,15 @@ export async function verifyEmailWithApi(activationToken: string): Promise<Verif
   }
 
   try {
-    const { data: body } = await apiClient.get<BackendVerifyResponse>(
-      `/auth/email-verification/${encodeURIComponent(token)}`,
+    const { data: body } = await apiClient.get<ActivateAccountResponse>(
+      `/supervision/activate/${encodeURIComponent(token)}`,
     )
 
-    const payload = body?.data
-    if (payload?.accessToken) {
-      return {
-        kind: 'success',
-        accessToken: payload.accessToken,
-        expiresAt: payload.expiresAt,
-      }
+    return {
+      kind: 'success',
+      accessToken: body?.token,
+      role: body?.data?.role,
     }
-
-    return { kind: 'success' }
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
       const status = error.response?.status
@@ -52,19 +51,36 @@ export async function verifyEmailWithApi(activationToken: string): Promise<Verif
       if (status === 410) {
         const lower = msg.toLowerCase()
         if (lower.includes('expired')) {
-          return { kind: 'error', code: 'expired', message: msg }
+          return {
+            kind: 'error',
+            code: 'expired',
+            message: 'This verification link has expired. Please request a new verification email.',
+          }
         }
-        return { kind: 'error', code: 'invalid', message: msg }
+        return {
+          kind: 'error',
+          code: 'invalid',
+          message: 'This verification link is invalid or has expired.',
+        }
       }
       if (status === 400) {
         const lower = msg.toLowerCase()
         if (lower.includes('already') || lower.includes('verified')) {
-          return { kind: 'error', code: 'already_verified', message: msg }
+          return {
+            kind: 'error',
+            code: 'already_verified',
+            message: 'This email has already been verified. You can sign in now.',
+          }
         }
         return { kind: 'error', code: 'invalid', message: msg }
       }
       if (status === 404) {
-        return { kind: 'error', code: 'invalid', message: msg }
+        return {
+          kind: 'error',
+          code: 'invalid',
+          message:
+            'This verification link is invalid or has expired. Please request a new verification email.',
+        }
       }
       if (!error.response) {
         return {

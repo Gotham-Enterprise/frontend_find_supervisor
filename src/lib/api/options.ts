@@ -48,7 +48,6 @@ export type OptionsParam =
   | 'howSoon'
   | 'supervisorType'
   | 'salaryRanges'
-  | 'occupation'
 
 export async function fetchOptions(param: OptionsParam): Promise<SelectOption[]> {
   const { data: res } = await apiClient.get<{ success: boolean; data: RawOption[] }>(
@@ -59,14 +58,15 @@ export async function fetchOptions(param: OptionsParam): Promise<SelectOption[]>
 }
 
 /**
- * Fetches specialties filtered by occupation ID.
- * Mirrors the job_finder pattern where specialty options depend on the
- * selected occupation.
+ * GET /api/categories/specialties/occupation/:id — same source as frontend_job_finder
+ * (`fetchSpecialtiesByOccupationApi`).
  */
 export async function fetchSpecialtiesByOccupation(occupationId: string): Promise<SelectOption[]> {
-  const { data: res } = await apiClient.get<{ success: boolean; data: RawOption[] }>(
-    '/supervision/options',
-    { params: { param: 'specialty', occupationId } },
-  )
-  return Array.isArray(res.data) ? res.data.map(normalizeOption) : []
+  if (!occupationId) return []
+  const { data: body } = await apiClient.get<{
+    success: boolean
+    data: { specialty: { id: number; name: string }[] }
+  }>(`/categories/specialties/occupation/${occupationId}`)
+  const list = body.data?.specialty ?? []
+  return list.map((s) => ({ label: s.name, value: String(s.id) }))
 }

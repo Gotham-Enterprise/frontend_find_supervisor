@@ -16,6 +16,7 @@ export function useSupervisorSignup() {
         fullName: data.data.user.fullName,
         email: data.data.user.email,
         role: 'Supervisor',
+        activationToken: data.data.activationToken,
       })
       router.push(`/email-verification?${params.toString()}`)
     },
@@ -32,6 +33,7 @@ export function useSuperviseeSignup() {
         fullName: data.data.user.fullName,
         email: data.data.user.email,
         role: 'Supervisee',
+        activationToken: data.data.activationToken,
       })
       router.push(`/email-verification?${params.toString()}`)
     },

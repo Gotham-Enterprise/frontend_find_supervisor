@@ -1,41 +1,53 @@
 'use client'
 
-import { LogIn, RefreshCw } from 'lucide-react'
+import { Clock, LogIn, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
 
 import { Button, buttonVariants } from '@/components/ui/button'
-import { useUserSnackbar } from '@/lib/hooks'
+import { useResendVerificationEmail } from '@/lib/hooks/useResendVerificationEmail'
 import { cn } from '@/lib/utils'
 
 interface Props {
   email: string
+  token?: string
 }
 
-export function VerificationActions({ email: _email }: Props) {
-  const [isResending, setIsResending] = useState(false)
-  const { showSuccess, showError } = useUserSnackbar()
+export function VerificationActions({ email: _email, token }: Props) {
+  const { resend, isPending, isOnCooldown, countdown, isDisabled } =
+    useResendVerificationEmail(token)
 
-  async function handleResend() {
-    setIsResending(true)
-    try {
-      // TODO: wire up resend endpoint when available
-      // e.g. await resendVerificationEmail({ email })
-      await new Promise((resolve) => setTimeout(resolve, 900))
-      showSuccess('Verification email resent. Please check your inbox.')
-    } catch {
-      showError('Failed to resend. Please try again later.')
-    } finally {
-      setIsResending(false)
-    }
-  }
+  const hasToken = Boolean(token?.trim())
 
   return (
     <div className="flex w-full flex-col gap-3">
-      <Button size="lg" className="w-full gap-2" onClick={handleResend} disabled={isResending}>
-        <RefreshCw className={cn('h-4 w-4', isResending && 'animate-spin')} />
-        {isResending ? 'Sending…' : 'Resend Verification Email'}
-      </Button>
+      <div className="flex flex-col gap-1.5">
+        <Button size="lg" className="w-full gap-2" onClick={resend} disabled={isDisabled}>
+          {isPending ? (
+            <RefreshCw className="h-4 w-4 animate-spin" />
+          ) : isOnCooldown ? (
+            <Clock className="h-4 w-4" />
+          ) : (
+            <RefreshCw className="h-4 w-4" />
+          )}
+          {isPending
+            ? 'Sending…'
+            : isOnCooldown
+              ? `Resend available in ${countdown}`
+              : 'Resend Verification Email'}
+        </Button>
+
+        {isOnCooldown && (
+          <p className="text-center text-xs text-muted-foreground">
+            Please wait before requesting another email.
+          </p>
+        )}
+
+        {!hasToken && (
+          <p className="text-center text-xs text-muted-foreground">
+            We couldn&apos;t find the verification details for this request.
+          </p>
+        )}
+      </div>
 
       <Link
         href="/login"

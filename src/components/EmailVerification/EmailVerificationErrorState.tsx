@@ -1,23 +1,27 @@
 'use client'
 
-import { AlertTriangle, ArrowLeft, RefreshCw } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, Clock, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
-import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { headlineForVerificationError } from '@/lib/email-verification/error-copy'
 import type { EmailVerificationErrorCode } from '@/lib/email-verification/types'
+import { useResendVerificationEmail } from '@/lib/hooks/useResendVerificationEmail'
 
 interface Props {
   code: EmailVerificationErrorCode
   message: string
+  /** The activation token from the URL, used to call the resend endpoint. */
+  token?: string | null
   onBackToLogin: () => void
 }
 
-export function EmailVerificationErrorState({ code, message, onBackToLogin }: Props) {
+export function EmailVerificationErrorState({ code, message, token, onBackToLogin }: Props) {
   const headline = headlineForVerificationError(code)
+  const { resend, isPending, isOnCooldown, countdown, isDisabled } =
+    useResendVerificationEmail(token)
 
   const badgeLabel =
     code === 'expired'
@@ -25,14 +29,6 @@ export function EmailVerificationErrorState({ code, message, onBackToLogin }: Pr
       : code === 'already_verified'
         ? 'Already verified'
         : 'Link issue'
-
-  function handleResend() {
-    // TODO: replace with POST/GET to resend endpoint once backend exposes it (e.g. /auth/resend-verification)
-    toast.message('Verification email API not connected yet', {
-      description:
-        'Once the backend is ready, this will resend a verification email. For now, use the latest message in your inbox or contact support.',
-    })
-  }
 
   return (
     <Card className="w-full max-w-[560px] shadow-lg">
@@ -58,14 +54,40 @@ export function EmailVerificationErrorState({ code, message, onBackToLogin }: Pr
         </div>
 
         <div className="flex w-full flex-col gap-2.5">
-          <Button
-            type="button"
-            className="h-11 w-full gap-2 bg-[#006D36] text-white hover:bg-[#006D36]/90"
-            onClick={handleResend}
-          >
-            <RefreshCw className="h-4 w-4" />
-            Resend verification email
-          </Button>
+          <div className="flex flex-col gap-1.5">
+            <Button
+              type="button"
+              className="h-11 w-full gap-2 bg-[#006D36] text-white hover:bg-[#006D36]/90"
+              onClick={resend}
+              disabled={isDisabled}
+            >
+              {isPending ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : isOnCooldown ? (
+                <Clock className="h-4 w-4" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              {isPending
+                ? 'Sending…'
+                : isOnCooldown
+                  ? `Resend available in ${countdown}`
+                  : 'Resend verification email'}
+            </Button>
+
+            {isOnCooldown && (
+              <p className="text-center text-xs text-muted-foreground">
+                Please wait before requesting another email.
+              </p>
+            )}
+
+            {!token && (
+              <p className="text-center text-xs text-muted-foreground">
+                We couldn&apos;t find the verification details for this request.
+              </p>
+            )}
+          </div>
+
           <Button
             type="button"
             variant="outline"
@@ -85,7 +107,7 @@ export function EmailVerificationErrorState({ code, message, onBackToLogin }: Pr
             {[
               'Open the most recent verification email from us.',
               'Copy the full link—some clients break long URLs.',
-              'Request a new email with the button above once the feature is live.',
+              'Use the button above to request a fresh verification email.',
             ].map((line) => (
               <li key={line} className="flex items-start gap-2.5">
                 <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-amber-600" />

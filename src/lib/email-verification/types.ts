@@ -9,9 +9,10 @@ export type EmailVerificationErrorCode =
 
 export type VerifyEmailSuccess = {
   kind: 'success'
-  /** Present when the backend returns a session (optional; many flows only verify email) */
   accessToken?: string
   expiresAt?: string
+  /** User role returned by the activation endpoint (e.g. "SUPERVISOR", "SUPERVISEE") */
+  role?: string
 }
 
 export type VerifyEmailFailure = {
