@@ -1,4 +1,6 @@
 export { useLogin, useLogout } from './useAuth'
+export { categoryKeys, useOccupations } from './useCategories'
+export { useCooldownTimer } from './useCooldownTimer'
 export { useCitiesOptions, useMultiStateCityOptions, useStatesOptions } from './useLocationOptions'
 export {
   matchingKeys,
@@ -6,6 +8,7 @@ export {
   useMatchingRequests,
   useUpdateMatchingRequestStatus,
 } from './useMatchingRequests'
+export { useResendVerificationEmail } from './useResendVerificationEmail'
 export { useSuperviseeSignup, useSupervisorSignup } from './useSignup'
 export {
   useAvailabilityOptions,

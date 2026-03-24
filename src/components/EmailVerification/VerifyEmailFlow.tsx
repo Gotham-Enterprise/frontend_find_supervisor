@@ -20,6 +20,11 @@ import {
 
 type Phase = 'loading' | 'success' | 'error'
 
+function resolveRedirectPath(role?: string): string {
+  if (role === 'SUPERVISOR' || role === 'supervisor') return '/dashboard'
+  return getPostVerificationFallbackPath()
+}
+
 export function VerifyEmailFlow() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -60,12 +65,10 @@ export function VerifyEmailFlow() {
         return
       }
 
-      let path = getPostVerificationFallbackPath()
       if (result.accessToken) {
         localStorage.setItem(TOKEN_KEY, result.accessToken)
-        path = '/dashboard'
       }
-      setRedirectPath(path)
+      setRedirectPath(resolveRedirectPath(result.role))
       setPhase('success')
     }
 
@@ -104,18 +107,12 @@ export function VerifyEmailFlow() {
           <EmailVerificationErrorState
             code={error.code}
             message={error.message}
+            token={token}
             onBackToLogin={handleBackToLogin}
           />
         )}
 
         <VerifyEmailBackLink />
-
-        {process.env.NODE_ENV === 'development' && (
-          <p className="mt-8 max-w-md text-center text-[10px] text-muted-foreground/80">
-            Dev: API disabled — set NEXT_PUBLIC_ENABLE_EMAIL_VERIFICATION_API=true when the backend
-            is ready. Use stub tokens stub-expired, stub-invalid, stub-used to preview errors.
-          </p>
-        )}
       </main>
 
       <AuthPageFooter />

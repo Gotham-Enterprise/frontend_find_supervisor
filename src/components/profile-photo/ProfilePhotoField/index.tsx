@@ -3,7 +3,7 @@
 
 import { Camera } from 'lucide-react'
 import * as React from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { cn } from '@/lib/utils'
 
@@ -46,23 +46,29 @@ export const ProfilePhotoField = React.forwardRef<HTMLButtonElement, ProfilePhot
       }
     }, [])
 
-    // If the form resets (value cleared externally), revoke blob URL and clear preview.
-    useEffect(() => {
-      if (!(value instanceof File) && activeUrlRef.current) {
-        URL.revokeObjectURL(activeUrlRef.current)
-        activeUrlRef.current = null
-        queueMicrotask(() => setPreviewUrl(null))
+    // Keep preview in sync with RHF `value` (File). Required when the field remounts
+    // (e.g. multi-step form): the File is still in form state but local preview was lost.
+    /* eslint-disable react-hooks/set-state-in-effect -- blob URL must follow File identity; deferred setState breaks first paint */
+    useLayoutEffect(() => {
+      if (!(value instanceof File)) {
+        if (activeUrlRef.current) {
+          URL.revokeObjectURL(activeUrlRef.current)
+          activeUrlRef.current = null
+        }
+        setPreviewUrl(null)
+        return
       }
+      if (activeUrlRef.current) {
+        URL.revokeObjectURL(activeUrlRef.current)
+      }
+      const url = URL.createObjectURL(value)
+      activeUrlRef.current = url
+      setPreviewUrl(url)
     }, [value])
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     // ── Save handler ──────────────────────────────────────────────────────────
     function handleSave(file: File) {
-      // Revoke any existing blob URL before creating a new one.
-      if (activeUrlRef.current) URL.revokeObjectURL(activeUrlRef.current)
-      const url = URL.createObjectURL(file)
-      activeUrlRef.current = url
-      setPreviewUrl(url)
-
       onChange(file)
       onBlur?.()
     }

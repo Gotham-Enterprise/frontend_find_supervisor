@@ -6,6 +6,7 @@ import {
   type OptionsParam,
   type SelectOption,
 } from '@/lib/api/options'
+import { useOccupations } from '@/lib/hooks/useCategories'
 
 // Options rarely change — cache for 10 minutes
 const STALE_TIME = 10 * 60 * 1000
@@ -46,8 +47,15 @@ export function useSalaryRangesOptions() {
   return useSignupOption('salaryRanges')
 }
 
+/**
+ * Occupation dropdown options from GET /api/categories/occupations (same as job_finder `useOccupations`).
+ */
 export function useOccupationOptions() {
-  return useSignupOption('occupation')
+  const q = useOccupations({ limit: 0 })
+  return {
+    ...q,
+    data: q.data?.data?.map((o) => ({ label: o.name, value: String(o.id) })),
+  }
 }
 
 /**

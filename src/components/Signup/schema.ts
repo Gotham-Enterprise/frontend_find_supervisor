@@ -134,3 +134,160 @@ export const superviseeSchema = accountSchema.extend({
 
 export type SupervisorFormValues = z.infer<typeof supervisorSchema>
 export type SuperviseeFormValues = z.infer<typeof superviseeSchema>
+
+// ─── Supervisor multi-step (same rules as supervisorSchema, split by step) ───
+
+export const supervisorStep1Schema = supervisorSchema.pick({
+  uploadProfilePhoto: true,
+  fullName: true,
+  email: true,
+  password: true,
+  contactNumber: true,
+  city: true,
+  state: true,
+  zipcode: true,
+  website: true,
+})
+
+export const supervisorStep2Schema = supervisorSchema.pick({
+  occupationId: true,
+  specialtyId: true,
+  licenseType: true,
+  licenseNumber: true,
+  licenseExpiration: true,
+  npiNumber: true,
+  certifications: true,
+  yearsOfExperience: true,
+  licenseDoc: true,
+  stateOfLicensure: true,
+})
+
+export const supervisorStep3Schema = supervisorSchema.pick({
+  patientPopulation: true,
+  supervisionFormat: true,
+  availability: true,
+  acceptingNewSupervisees: true,
+  supervisionFeeType: true,
+  supervisionFeeAmount: true,
+  professionalSummary: true,
+  describeYourself: true,
+  agreedToPost: true,
+  agreedToTerms: true,
+})
+
+export const SUPERVISOR_SIGNUP_STEP_SCHEMAS = [
+  supervisorStep1Schema,
+  supervisorStep2Schema,
+  supervisorStep3Schema,
+] as const
+
+/** Field names validated on each step (for clearing errors before re-validation). */
+export const SUPERVISOR_SIGNUP_STEP_FIELDS = [
+  [
+    'uploadProfilePhoto',
+    'fullName',
+    'email',
+    'password',
+    'contactNumber',
+    'city',
+    'state',
+    'zipcode',
+    'website',
+  ],
+  [
+    'occupationId',
+    'specialtyId',
+    'licenseType',
+    'licenseNumber',
+    'licenseExpiration',
+    'npiNumber',
+    'certifications',
+    'yearsOfExperience',
+    'licenseDoc',
+    'stateOfLicensure',
+  ],
+  [
+    'patientPopulation',
+    'supervisionFormat',
+    'availability',
+    'acceptingNewSupervisees',
+    'supervisionFeeType',
+    'supervisionFeeAmount',
+    'professionalSummary',
+    'describeYourself',
+    'agreedToPost',
+    'agreedToTerms',
+  ],
+] as const satisfies ReadonlyArray<ReadonlyArray<keyof SupervisorFormValues>>
+
+export const SUPERVISOR_SIGNUP_STEP_META = [
+  { title: 'Account', stepLabel: 'Step 1' },
+  { title: 'License & Credentials', stepLabel: 'Step 2' },
+  { title: 'Practice Details', stepLabel: 'Step 3' },
+] as const
+
+// ─── Supervisee multi-step (same rules as superviseeSchema, split by step) ─────
+
+export const superviseeStep1Schema = superviseeSchema.pick({
+  uploadProfilePhoto: true,
+  fullName: true,
+  email: true,
+  password: true,
+  contactNumber: true,
+  city: true,
+  state: true,
+  zipcode: true,
+})
+
+export const superviseeStep2Schema = superviseeSchema.pick({
+  stateOfLicensure: true,
+  stateTheyAreLookingIn: true,
+  typeOfSupervisor: true,
+  howSoon: true,
+  preferredFormat: true,
+  feeType: true,
+  budgetRange: true,
+  availability: true,
+})
+
+export const superviseeStep3Schema = superviseeSchema.pick({
+  description: true,
+  agreedToPost: true,
+  agreedToTerms: true,
+})
+
+export const SUPERVISEE_SIGNUP_STEP_SCHEMAS = [
+  superviseeStep1Schema,
+  superviseeStep2Schema,
+  superviseeStep3Schema,
+] as const
+
+export const SUPERVISEE_SIGNUP_STEP_FIELDS = [
+  [
+    'uploadProfilePhoto',
+    'fullName',
+    'email',
+    'password',
+    'contactNumber',
+    'city',
+    'state',
+    'zipcode',
+  ],
+  [
+    'stateOfLicensure',
+    'stateTheyAreLookingIn',
+    'typeOfSupervisor',
+    'howSoon',
+    'preferredFormat',
+    'feeType',
+    'budgetRange',
+    'availability',
+  ],
+  ['description', 'agreedToPost', 'agreedToTerms'],
+] as const satisfies ReadonlyArray<ReadonlyArray<keyof SuperviseeFormValues>>
+
+export const SUPERVISEE_SIGNUP_STEP_META = [
+  { title: 'Account', stepLabel: 'Step 1' },
+  { title: 'Supervision Needs', stepLabel: 'Step 2' },
+  { title: 'Profile & Terms', stepLabel: 'Step 3' },
+] as const

@@ -1,7 +1,7 @@
 'use client'
 
 import { File as FileIcon, FileImage, FileText, Upload, X } from 'lucide-react'
-import { type Ref, useId, useRef } from 'react'
+import { type MutableRefObject, type Ref, useCallback, useId, useRef } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -18,6 +18,8 @@ type UploadFileProps = {
   removeFileAriaLabel?: string
   hideUploadSectionWhenFileSelected?: boolean
   showFileSize?: boolean
+  /** Trailing control in the empty state (e.g. “Browse”). Set `null` to hide. */
+  browseButtonLabel?: string | null
   className?: string
 }
 
@@ -65,6 +67,15 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 }
 
+function assignRef<T>(ref: Ref<T> | undefined, node: T | null) {
+  if (!ref) return
+  if (typeof ref === 'function') {
+    ref(node)
+  } else {
+    ;(ref as MutableRefObject<T | null>).current = node
+  }
+}
+
 export function UploadFile({
   id,
   value,
@@ -77,6 +88,7 @@ export function UploadFile({
   removeFileAriaLabel = 'Remove uploaded file',
   hideUploadSectionWhenFileSelected = true,
   showFileSize = true,
+  browseButtonLabel = 'Browse',
   className,
 }: UploadFileProps) {
   const generatedId = useId()
@@ -86,17 +98,20 @@ export function UploadFile({
   const fileCategory = selectedFile ? getFileCategory(selectedFile) : null
   const fileSizeLabel = selectedFile && showFileSize ? formatFileSize(selectedFile.size) : null
 
-  const setRefs = (node: HTMLInputElement | null) => {
-    localInputRef.current = node
-
-    if (!inputRef) return
-    if (typeof inputRef === 'function') {
-      inputRef(node)
-    }
-  }
+  const setRefs = useCallback(
+    (node: HTMLInputElement | null) => {
+      localInputRef.current = node
+      assignRef(inputRef, node)
+    },
+    [inputRef],
+  )
 
   const UploadedFileIcon =
     fileCategory === 'image' ? FileImage : fileCategory === 'docs' ? FileText : FileIcon
+
+  function clearInputElement() {
+    if (localInputRef.current) localInputRef.current.value = ''
+  }
 
   return (
     <div className={cn('space-y-3', className)}>
@@ -106,20 +121,38 @@ export function UploadFile({
         accept={accept}
         ref={setRefs}
         onBlur={onBlur}
-        onChange={(e) => onChange(e.target.files?.[0])}
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          onChange(file)
+          e.currentTarget.value = ''
+        }}
         className="sr-only"
       />
 
       {(!hideUploadSectionWhenFileSelected || !selectedFile) && (
-        <div className="relative rounded-xl border border-dashed border-input bg-muted/30 p-4 transition-colors hover:border-primary/50 hover:bg-muted/50">
-          <label htmlFor={inputId} className="flex cursor-pointer items-start gap-3">
-            <div className="rounded-lg bg-primary/10 p-2 text-primary">
-              <Upload className="h-5 w-5" />
+        <div
+          className={cn(
+            'rounded-xl border-2 border-dashed border-input bg-muted/30 px-4 py-3 transition-colors',
+            'hover:border-primary/50 hover:bg-primary/5',
+            'focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
+          )}
+        >
+          <label htmlFor={inputId} className="flex cursor-pointer items-center gap-3 text-left">
+            <div
+              aria-hidden
+              className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-muted-foreground/20 bg-background"
+            >
+              <Upload className="size-4 text-muted-foreground" />
             </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium">{uploadTitle}</p>
-              <p className="text-xs text-muted-foreground">{uploadHint}</p>
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <p className="text-sm font-medium leading-tight text-foreground">{uploadTitle}</p>
+              <p className="text-xs leading-tight text-muted-foreground">{uploadHint}</p>
             </div>
+            {browseButtonLabel != null && browseButtonLabel !== '' ? (
+              <span className="pointer-events-none shrink-0 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm">
+                {browseButtonLabel}
+              </span>
+            ) : null}
           </label>
         </div>
       )}
@@ -140,7 +173,10 @@ export function UploadFile({
             variant="ghost"
             size="icon-sm"
             className="text-muted-foreground hover:text-destructive"
-            onClick={() => onChange(undefined)}
+            onClick={() => {
+              onChange(undefined)
+              clearInputElement()
+            }}
             aria-label={removeFileAriaLabel}
           >
             <X className="h-4 w-4" />
