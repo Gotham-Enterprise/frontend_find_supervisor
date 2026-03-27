@@ -25,5 +25,7 @@ export {
 } from './useSignupOptions'
 export { superviseeKeys, useSupervisees } from './useSupervisees'
 export { supervisorDetailKeys, useSupervisor } from './useSupervisor'
+export { useSupervisorProfile } from './useSupervisorProfile'
 export { supervisorKeys, useSupervisors } from './useSupervisors'
+export { useUser } from '@/lib/contexts/UserContext'
 export { useUserSnackbar } from '@/lib/contexts/UserSnackbarContext'

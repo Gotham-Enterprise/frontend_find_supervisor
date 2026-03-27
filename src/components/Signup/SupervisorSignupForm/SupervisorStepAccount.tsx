@@ -217,11 +217,13 @@ export function SupervisorStepAccount({
                       No cities available for this state.
                     </p>
                   ) : (
-                    cityOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))
+                    cityOptions
+                      .sort((a, b) => a.label.localeCompare(b.label))
+                      .map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))
                   )}
                 </SelectContent>
               </Select>
