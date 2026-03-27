@@ -51,7 +51,7 @@ export function SupervisorStepPracticeDetails({
               </FormLabel>
               <FormControl>
                 <TagInput
-                  options={patientPopulationOptions}
+                  options={patientPopulationOptions.sort((a, b) => a.label.localeCompare(b.label))}
                   value={field.value ?? []}
                   onChange={(v) => {
                     field.onChange(v)

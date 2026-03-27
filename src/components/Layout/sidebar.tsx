@@ -33,7 +33,6 @@ export function Sidebar() {
           height={32}
           className="h-8 w-auto"
         />
-        <span className="text-lg font-semibold text-sidebar-foreground">Find A Supervisor</span>
       </Link>
 
       <nav className="flex flex-1 flex-col gap-1 p-4">

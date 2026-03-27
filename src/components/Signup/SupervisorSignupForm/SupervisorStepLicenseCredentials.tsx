@@ -123,11 +123,13 @@ export function SupervisorStepLicenseCredentials({
                   </FormControl>
                   <SelectContent>
                     <SelectItem value={SPECIALTY_NONE_VALUE}>None</SelectItem>
-                    {specialtyOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
+                    {specialtyOptions
+                      .sort((a, b) => a.label.localeCompare(b.label))
+                      .map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -167,11 +169,13 @@ export function SupervisorStepLicenseCredentials({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {licenseTypeOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
+                  {licenseTypeOptions
+                    .sort((a, b) => a.label.localeCompare(b.label))
+                    .map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -275,7 +279,7 @@ export function SupervisorStepLicenseCredentials({
             </FormLabel>
             <FormControl>
               <TagInput
-                options={certificateOptions}
+                options={certificateOptions.sort((a, b) => a.label.localeCompare(b.label))}
                 value={field.value ?? []}
                 onChange={(v) => {
                   field.onChange(v)

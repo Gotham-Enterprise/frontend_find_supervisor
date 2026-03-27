@@ -1,0 +1,88 @@
+export type VerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+export type VisibilityStatus = 'HIDDEN' | 'VISIBLE'
+export type SupervisionFormat = 'IN_PERSON' | 'VIRTUAL' | 'HYBRID'
+export type SubscriptionStatus =
+  | 'INACTIVE'
+  | 'TRIALING'
+  | 'ACTIVE'
+  | 'PAST_DUE'
+  | 'CANCELED'
+  | 'UNPAID'
+
+export interface SubscriptionPlan {
+  id: string
+  name: string
+  description?: string | null
+  priceInCents: number
+  billingCycle: string
+  stripePriceId?: string | null
+}
+
+export interface Subscription {
+  id: string
+  status: SubscriptionStatus
+  stripeSubscriptionId?: string | null
+  currentPeriodStart: string | null
+  currentPeriodEnd: string | null
+  cancelAtPeriodEnd?: boolean
+  createdAt?: string
+  plan: SubscriptionPlan
+}
+
+export interface SupervisorProfileUser {
+  id: string
+  email: string
+  userName?: string
+  role?: string
+  firstName?: string | null
+  lastName?: string | null
+  fullName: string | null
+  contactNumber?: string | null
+  city: string | null
+  state: string | null
+  zipcode?: string | null
+  profilePhotoUrl: string | null
+  emailVerified: boolean
+  status?: string
+  subscriptions: Subscription[]
+  /** Fetched via user relation, not SupervisorProfile */
+  occupation?: { id: number; name: string } | null
+  specialty?: { id: number; name: string } | null
+}
+
+export interface SupervisorProfileData {
+  id: string
+  userId: string
+
+  licenseType: string | null
+  profession: string | null
+  professionOther?: string | null
+  licenseNumber: string | null
+  stateLicense: string | null
+  licenseExpiration?: string | null
+
+  yearsOfExperience: string | null
+  npiNumber?: string | null
+  certification?: string[]
+  patientPopulation?: string[]
+  supervisionFormat: SupervisionFormat | null
+  availability: string | null
+  acceptingSupervisees: boolean
+  describeYourself?: string | null
+
+  supervisionFeeType: string | null
+  /** Fee stored in cents, e.g. 11000 = $110 */
+  supervisionFeeAmount: number | null
+  professionalSummary?: string | null
+  website?: string | null
+
+  verificationStatus: VerificationStatus
+  verificationNotes?: string | null
+  visibilityStatus: VisibilityStatus
+  totalCompletedSupervision?: number
+
+  createdAt: string
+  updatedAt: string
+
+  user: SupervisorProfileUser
+}

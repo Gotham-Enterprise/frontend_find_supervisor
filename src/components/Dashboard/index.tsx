@@ -1,6 +1,10 @@
+'use client'
+
 import { CheckCircle, GitPullRequestArrow, UserCheck, Users } from 'lucide-react'
 
+import { SupervisorDashboard } from '@/components/SupervisorDashboard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useUser } from '@/lib/hooks'
 
 const stats = [
   { title: 'Total Supervisors', value: '—', icon: Users },
@@ -9,7 +13,7 @@ const stats = [
   { title: 'Matched Pairs', value: '—', icon: CheckCircle },
 ]
 
-export function DashboardPage() {
+function DefaultDashboard() {
   return (
     <div className="space-y-6">
       <div>
@@ -31,4 +35,17 @@ export function DashboardPage() {
       </div>
     </div>
   )
+}
+
+export function DashboardPage() {
+  const { user, isLoading } = useUser()
+
+  // Don't flash the wrong dashboard while user is still loading
+  if (isLoading) return null
+
+  const isSupervisor = user?.role?.toUpperCase() === 'SUPERVISOR'
+
+  if (isSupervisor) return <SupervisorDashboard />
+
+  return <DefaultDashboard />
 }

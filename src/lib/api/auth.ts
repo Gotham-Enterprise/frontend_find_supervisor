@@ -1,9 +1,17 @@
-import type { ApiResponse, AuthToken, LoginCredentials, User } from '@/types'
+import type { ApiResponse, LoginCredentials, User } from '@/types'
 
 import { apiClient } from './client'
 
-export async function login(credentials: LoginCredentials): Promise<AuthToken> {
-  const { data } = await apiClient.post<ApiResponse<AuthToken>>('/auth/login', credentials)
+interface LoginResponse {
+  success: boolean
+  isAuthenticated: boolean
+  data: User
+  token: string
+  refreshToken: string
+}
+
+export async function login(credentials: LoginCredentials): Promise<User> {
+  const { data } = await apiClient.post<LoginResponse>('/supervision/login', credentials)
   return data.data
 }
 
@@ -12,6 +20,6 @@ export async function logout(): Promise<void> {
 }
 
 export async function getMe(): Promise<User> {
-  const { data } = await apiClient.get<ApiResponse<User>>('/auth/me')
+  const { data } = await apiClient.get<ApiResponse<User>>('/supervision/me')
   return data.data
 }

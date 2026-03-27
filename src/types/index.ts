@@ -3,3 +3,11 @@ export type { AuthToken, LoginCredentials, User } from './auth'
 export type { CreateMatchingRequestDto, MatchingRequest, MatchingStatus } from './matching'
 export type { Supervisee } from './supervisee'
 export type { Supervisor } from './supervisor'
+export type {
+  Subscription,
+  SubscriptionPlan,
+  SupervisorProfileData,
+  SupervisorProfileUser,
+  VerificationStatus,
+  VisibilityStatus,
+} from './supervisor-profile'

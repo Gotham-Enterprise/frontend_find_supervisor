@@ -9,17 +9,8 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-})
-
-apiClient.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem(TOKEN_KEY)
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-  }
-
-  return config
+  // Required so the browser sends the httpOnly auth cookie with every request
+  withCredentials: true,
 })
 
 apiClient.interceptors.response.use(
@@ -28,7 +19,8 @@ apiClient.interceptors.response.use(
     if (
       typeof window !== 'undefined' &&
       axios.isAxiosError(error) &&
-      error.response?.status === 401
+      error.response?.status === 401 &&
+      !error.config?.url?.includes('/supervision/login')
     ) {
       localStorage.removeItem(TOKEN_KEY)
       window.location.href = '/login'
