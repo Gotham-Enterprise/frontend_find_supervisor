@@ -38,6 +38,7 @@ export const superviseeDefaultValues: Partial<SuperviseeFormValues> = {
   city: '',
   state: '',
   zipcode: '',
+  occupationId: '',
   stateOfLicensure: [],
   stateTheyAreLookingIn: '',
   typeOfSupervisor: '',

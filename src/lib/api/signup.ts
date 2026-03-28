@@ -18,13 +18,14 @@ const HOW_SOON_MAP: Record<string, string> = {
   'Just exploring': 'WITHIN_6_MONTHS',
 }
 
-interface BudgetParsed {
-  budgetRangeType: 'HOURLY' | 'MONTHLY'
-  budgetRangeStart: number
-  budgetRangeEnd: number
+/** Matches `validateSuperviseeRegister` — only `PER_SESSION` and `MONTHLY` are allowed. */
+function feeTypeToBudgetRangeType(
+  feeType: SuperviseeFormValues['feeType'],
+): 'PER_SESSION' | 'MONTHLY' {
+  return feeType === 'monthly' ? 'MONTHLY' : 'PER_SESSION'
 }
 
-function parseBudgetRange(budgetRange: string): BudgetParsed {
+function parseBudgetRange(budgetRange: string): { start: number; end: number } {
   const map: Record<string, { start: number; end: number }> = {
     '$0 - $50': { start: 0, end: 50 },
     '$51 - $100': { start: 51, end: 100 },
@@ -35,8 +36,7 @@ function parseBudgetRange(budgetRange: string): BudgetParsed {
     '$200+ / session': { start: 200, end: 500 },
     'Open to discussion': { start: 0, end: 0 },
   }
-  const parsed = map[budgetRange] ?? { start: 0, end: 0 }
-  return { budgetRangeType: 'HOURLY', budgetRangeStart: parsed.start, budgetRangeEnd: parsed.end }
+  return map[budgetRange] ?? { start: 0, end: 0 }
 }
 
 // ─── FormData builders ────────────────────────────────────────────────────────
@@ -106,6 +106,8 @@ export function buildSuperviseeFormData(values: SuperviseeFormValues): FormData 
   fd.append('state', values.state)
   fd.append('zipcode', values.zipcode)
 
+  fd.append('occupation', values.occupationId)
+
   // Supervision needs
   values.stateOfLicensure.forEach((s) => fd.append('stateOfLicensure', s))
   fd.append('stateTheyAreLookingIn', values.stateTheyAreLookingIn)
@@ -118,11 +120,11 @@ export function buildSuperviseeFormData(values: SuperviseeFormValues): FormData 
   // Backend field: idealSupervisor
   fd.append('idealSupervisor', values.description)
 
-  // Budget — split string into type + start + end
+  // Budget — backend `budgetRangeType` must be PER_SESSION | MONTHLY (see supervision_validator)
   const budget = parseBudgetRange(values.budgetRange)
-  fd.append('budgetRangeType', budget.budgetRangeType)
-  fd.append('budgetRangeStart', String(budget.budgetRangeStart))
-  fd.append('budgetRangeEnd', String(budget.budgetRangeEnd))
+  fd.append('budgetRangeType', feeTypeToBudgetRangeType(values.feeType))
+  fd.append('budgetRangeStart', String(budget.start))
+  fd.append('budgetRangeEnd', String(budget.end))
 
   // Terms
   fd.append('agreedToTerms', String(values.agreedToTerms))

@@ -113,18 +113,25 @@ export function useSuperviseeFormOptions() {
   const howSoon = useHowSoonOptions()
   const supervisorTypes = useSupervisorTypeOptions()
   const salaryRanges = useSalaryRangesOptions()
+  const occupations = useOccupationOptions()
 
   return {
     availability,
     howSoon,
     supervisorTypes,
     salaryRanges,
+    occupations,
     isLoading:
       availability.isLoading ||
       howSoon.isLoading ||
       supervisorTypes.isLoading ||
-      salaryRanges.isLoading,
+      salaryRanges.isLoading ||
+      occupations.isLoading,
     isError:
-      availability.isError || howSoon.isError || supervisorTypes.isError || salaryRanges.isError,
+      availability.isError ||
+      howSoon.isError ||
+      supervisorTypes.isError ||
+      salaryRanges.isError ||
+      occupations.isError,
   }
 }

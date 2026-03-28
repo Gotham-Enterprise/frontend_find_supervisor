@@ -1,7 +1,5 @@
 'use client'
 
-import { Eye, EyeOff } from 'lucide-react'
-import { useState } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
 
 import { ProfilePhotoField } from '@/components/profile-photo/ProfilePhotoField'
@@ -9,15 +7,9 @@ import { FormSection } from '@/components/Signup/FormSection'
 import { type SupervisorFormValues } from '@/components/Signup/schema'
 import { supervisorFieldRules } from '@/components/Signup/supervisorFieldRules'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
+import { FormInputField } from '@/components/ui/form-input-field'
+import { FormSelectField } from '@/components/ui/form-select-field'
 import { PhoneInput } from '@/components/ui/PhoneInput'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import type { SelectOption } from '@/lib/api/options'
 
 type SupervisorStepAccountProps = {
@@ -27,6 +19,7 @@ type SupervisorStepAccountProps = {
   citiesLoading: boolean
   statesError: boolean
   citiesError: boolean
+  isSubmitting: boolean
 }
 
 export function SupervisorStepAccount({
@@ -36,9 +29,9 @@ export function SupervisorStepAccount({
   citiesLoading,
   statesError,
   citiesError,
+  isSubmitting,
 }: SupervisorStepAccountProps) {
   const { control } = useFormContext<SupervisorFormValues>()
-  const [showPassword, setShowPassword] = useState(false)
   const stateValue = useWatch({ control, name: 'state' }) ?? ''
 
   return (
@@ -60,6 +53,7 @@ export function SupervisorStepAccount({
                   onChange(file)
                 }}
                 onBlur={onBlur}
+                disabled={isSubmitting}
               />
             </FormControl>
             <FormMessage />
@@ -68,87 +62,37 @@ export function SupervisorStepAccount({
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormField
+        <FormInputField
           control={control}
           name="fullName"
+          label="Full Name"
           rules={supervisorFieldRules('fullName')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Full Name <span className="text-destructive">*</span>
-              </FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Jane Smith"
-                  {...field}
-                  onChange={(e) => {
-                    field.onChange(e)
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          placeholder="Jane Smith"
+          isSubmitting={isSubmitting}
+          required
         />
-        <FormField
+        <FormInputField
           control={control}
           name="email"
+          label="Email Address"
           rules={supervisorFieldRules('email')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Email Address <span className="text-destructive">*</span>
-              </FormLabel>
-              <FormControl>
-                <Input
-                  type="email"
-                  placeholder="jane@example.com"
-                  {...field}
-                  onChange={(e) => {
-                    field.onChange(e)
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          type="email"
+          placeholder="jane@example.com"
+          isSubmitting={isSubmitting}
+          required
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormField
+        <FormInputField
           control={control}
           name="password"
+          label="Password"
           rules={supervisorFieldRules('password')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Password <span className="text-destructive">*</span>
-              </FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <Input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Min. 8 characters"
-                    className="pr-10"
-                    {...field}
-                    onChange={(e) => {
-                      field.onChange(e)
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowPassword((p) => !p)}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          placeholder="Min. 8 characters"
+          passwordToggle
+          isSubmitting={isSubmitting}
+          required
         />
         <FormField
           control={control}
@@ -167,6 +111,7 @@ export function SupervisorStepAccount({
                   }}
                   onBlur={field.onBlur}
                   ref={field.ref}
+                  disabled={isSubmitting}
                 />
               </FormControl>
               <FormMessage />
@@ -176,150 +121,79 @@ export function SupervisorStepAccount({
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-[1fr_1fr_120px]">
-        <FormField
+        <FormSelectField
           control={control}
           name="city"
+          label="City"
           rules={supervisorFieldRules('city')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                City <span className="text-destructive">*</span>
-              </FormLabel>
-              <Select
-                key={stateValue || 'no-state'}
-                value={field.value ?? ''}
-                onValueChange={(v) => {
-                  field.onChange(v ?? '')
-                  field.onBlur()
-                }}
-                disabled={!stateValue || citiesLoading}
-                itemToStringLabel={(val) => {
-                  if (val == null || val === '') return ''
-                  return cityOptions.find((o) => o.value === val)?.label ?? String(val)
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger ref={field.ref} onBlur={field.onBlur}>
-                    <SelectValue
-                      placeholder={
-                        !stateValue
-                          ? 'Select a state first'
-                          : citiesLoading
-                            ? 'Loading…'
-                            : 'Select city'
-                      }
-                    />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {stateValue && cityOptions.length === 0 && !citiesLoading && !citiesError ? (
+          options={cityOptions}
+          placeholder={
+            !stateValue ? 'Select a state first' : citiesLoading ? 'Loading…' : 'Select city'
+          }
+          disabled={!stateValue || citiesLoading}
+          selectKey={stateValue || 'no-state'}
+          sortOptions
+          required
+          isSubmitting={isSubmitting}
+          emptyState={
+            stateValue && cityOptions.length === 0 && !citiesLoading && !citiesError
+              ? {
+                  when: true,
+                  children: (
                     <p className="px-3 py-2 text-sm text-muted-foreground">
                       No cities available for this state.
                     </p>
-                  ) : (
-                    cityOptions
-                      .sort((a, b) => a.label.localeCompare(b.label))
-                      .map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))
-                  )}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+                  ),
+                }
+              : undefined
+          }
         />
-        <FormField
+        <FormSelectField
           control={control}
           name="state"
+          label="State"
           rules={supervisorFieldRules('state')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                State <span className="text-destructive">*</span>
-              </FormLabel>
-              <Select
-                value={field.value ?? ''}
-                onValueChange={(v) => {
-                  field.onChange(v ?? '')
-                  field.onBlur()
-                }}
-                disabled={statesLoading}
-                itemToStringLabel={(val) => {
-                  if (val == null || val === '') return ''
-                  return stateOptions.find((o) => o.value === val)?.label ?? String(val)
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger ref={field.ref} onBlur={field.onBlur}>
-                    <SelectValue placeholder={statesLoading ? 'Loading…' : 'Select state'} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {stateOptions.length === 0 && !statesLoading && !statesError ? (
+          options={stateOptions}
+          placeholder="Select state"
+          loading={statesLoading}
+          required
+          isSubmitting={isSubmitting}
+          emptyState={
+            stateOptions.length === 0 && !statesLoading && !statesError
+              ? {
+                  when: true,
+                  children: (
                     <p className="px-3 py-2 text-sm text-muted-foreground">No states available.</p>
-                  ) : (
-                    stateOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+                  ),
+                }
+              : undefined
+          }
         />
-        <FormField
+        <FormInputField
           control={control}
           name="zipcode"
+          label="Zipcode"
           rules={supervisorFieldRules('zipcode')}
-          render={({ field }) => (
-            <FormItem className="col-span-2 sm:col-span-1">
-              <FormLabel>
-                Zipcode <span className="text-destructive">*</span>
-              </FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="ZIP"
-                  {...field}
-                  onChange={(e) => {
-                    field.onChange(e)
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          placeholder="ZIP"
+          formItemClassName="col-span-2 sm:col-span-1"
+          isSubmitting={isSubmitting}
+          required
         />
       </div>
 
-      <FormField
+      <FormInputField
         control={control}
         name="website"
+        label={
+          <>
+            Website <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+          </>
+        }
         rules={supervisorFieldRules('website')}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>
-              Website <span className="text-muted-foreground text-xs font-normal">(optional)</span>
-            </FormLabel>
-            <FormControl>
-              <Input
-                type="url"
-                placeholder="https://example.com"
-                {...field}
-                value={field.value ?? ''}
-                onChange={(e) => {
-                  field.onChange(e)
-                }}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
+        type="url"
+        placeholder="https://example.com"
+        normalizeEmptyToString
+        isSubmitting={isSubmitting}
       />
     </FormSection>
   )
