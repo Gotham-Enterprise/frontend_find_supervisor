@@ -20,8 +20,11 @@ import {
 
 type Phase = 'loading' | 'success' | 'error'
 
-function resolveRedirectPath(role?: string): string {
-  if (role === 'SUPERVISOR' || role === 'supervisor') return '/dashboard'
+/** Both roles use the same shell `/dashboard` (see `DashboardPage`). */
+function resolveRedirectPath(role: string | undefined, hasAccessToken: boolean): string {
+  const r = role?.toUpperCase()
+  if (r === 'SUPERVISOR' || r === 'SUPERVISEE') return '/dashboard'
+  if (hasAccessToken) return '/dashboard'
   return getPostVerificationFallbackPath()
 }
 
@@ -68,7 +71,7 @@ export function VerifyEmailFlow() {
       if (result.accessToken) {
         localStorage.setItem(TOKEN_KEY, result.accessToken)
       }
-      setRedirectPath(resolveRedirectPath(result.role))
+      setRedirectPath(resolveRedirectPath(result.role, Boolean(result.accessToken)))
       setPhase('success')
     }
 

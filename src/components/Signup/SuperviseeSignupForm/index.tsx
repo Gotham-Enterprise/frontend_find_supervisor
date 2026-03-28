@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { useForm, useFormState, useWatch } from 'react-hook-form'
 
 import { superviseeDefaultValues } from '@/components/Signup/helpers'
 import { type SuperviseeFormValues, superviseeSchema } from '@/components/Signup/schema'
@@ -42,6 +42,7 @@ export function SuperviseeSignupForm() {
     howSoon: { data: howSoonOptions = [], isLoading: howSoonLoading },
     supervisorTypes: { data: supervisorTypeOptions = [], isLoading: supervisorTypesLoading },
     salaryRanges: { data: salaryRangeOptions = [], isLoading: salaryRangesLoading },
+    occupations: { data: occupationOptions = [], isLoading: occupationsLoading },
     isError: optionsError,
   } = useSuperviseeFormOptions()
 
@@ -69,6 +70,8 @@ export function SuperviseeSignupForm() {
 
   const canSubmit = Boolean(agreedToPost && agreedToTerms)
   const locationOptionsError = statesError || citiesError
+  const { isSubmitting: formIsSubmitting } = useFormState({ control: form.control })
+  const isSubmitting = formIsSubmitting || isPending
 
   useEffect(() => {
     form.setValue('city', '')
@@ -178,10 +181,13 @@ export function SuperviseeSignupForm() {
             citiesLoading={citiesLoading}
             statesError={statesError}
             citiesError={citiesError}
+            isSubmitting={isSubmitting}
           />
         )}
         {step === 1 && (
           <SuperviseeStepSupervisionNeeds
+            occupationOptions={occupationOptions}
+            occupationsLoading={occupationsLoading}
             stateOptions={stateOptions}
             supervisorTypeOptions={supervisorTypeOptions}
             howSoonOptions={howSoonOptions}
@@ -192,9 +198,10 @@ export function SuperviseeSignupForm() {
             howSoonLoading={howSoonLoading}
             availabilityLoading={availabilityLoading}
             salaryRangesLoading={salaryRangesLoading}
+            isSubmitting={isSubmitting}
           />
         )}
-        {step === 2 && <SuperviseeStepProfileTerms />}
+        {step === 2 && <SuperviseeStepProfileTerms isSubmitting={isSubmitting} />}
 
         <SuperviseeStepNavigation
           step={step}
@@ -202,6 +209,7 @@ export function SuperviseeSignupForm() {
           onNext={handleNext}
           isAdvancing={isAdvancing}
           isPending={isPending}
+          isSubmitting={isSubmitting}
           isValidatingAddress={isValidatingAddress}
           canSubmit={canSubmit}
         />

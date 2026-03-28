@@ -108,6 +108,8 @@ export const supervisorSchema = accountSchema.extend({
 // ─── Supervisee schema ─────────────────────────────────────────────────────────
 
 export const superviseeSchema = accountSchema.extend({
+  occupationId: z.string().min(1, 'Occupation is required'),
+
   stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
   stateTheyAreLookingIn: z.string().min(1, 'Please select the state you are looking in'),
   typeOfSupervisor: z.string().min(1, 'Please select a supervisor type'),
@@ -240,6 +242,7 @@ export const superviseeStep1Schema = superviseeSchema.pick({
 })
 
 export const superviseeStep2Schema = superviseeSchema.pick({
+  occupationId: true,
   stateOfLicensure: true,
   stateTheyAreLookingIn: true,
   typeOfSupervisor: true,
@@ -274,6 +277,7 @@ export const SUPERVISEE_SIGNUP_STEP_FIELDS = [
     'zipcode',
   ],
   [
+    'occupationId',
     'stateOfLicensure',
     'stateTheyAreLookingIn',
     'typeOfSupervisor',

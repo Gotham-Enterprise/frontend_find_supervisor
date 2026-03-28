@@ -6,20 +6,19 @@ import { FormSection } from '@/components/Signup/FormSection'
 import { type SupervisorFormValues, yearsOfExperienceOptions } from '@/components/Signup/schema'
 import { supervisorFieldRules } from '@/components/Signup/supervisorFieldRules'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { FormInputField } from '@/components/ui/form-input-field'
+import { FormSelectField } from '@/components/ui/form-select-field'
 import { TagInput } from '@/components/ui/tag-input'
 import { UploadFile } from '@/components/ui/upload-file'
 import type { SelectOption } from '@/lib/api/options'
 
-/** Radix Select does not allow `SelectItem value=""`; map to empty `specialtyId` in the form. */
+/** Select does not allow `SelectItem value=""`; map to empty `specialtyId` in the form. */
 const SPECIALTY_NONE_VALUE = '__none__'
+
+const yearsOfExperienceSelectOptions: SelectOption[] = yearsOfExperienceOptions.map((v) => ({
+  value: v,
+  label: v,
+}))
 
 type SupervisorStepLicenseCredentialsProps = {
   occupationOptions: SelectOption[]
@@ -31,6 +30,7 @@ type SupervisorStepLicenseCredentialsProps = {
   specialtiesLoading: boolean
   licenseTypesLoading: boolean
   certificatesLoading: boolean
+  isSubmitting: boolean
 }
 
 export function SupervisorStepLicenseCredentials({
@@ -43,6 +43,7 @@ export function SupervisorStepLicenseCredentials({
   specialtiesLoading,
   licenseTypesLoading,
   certificatesLoading,
+  isSubmitting,
 }: SupervisorStepLicenseCredentialsProps) {
   const { control, clearErrors } = useFormContext<SupervisorFormValues>()
   const occupationId = useWatch({ control, name: 'occupationId' }) ?? ''
@@ -51,221 +52,87 @@ export function SupervisorStepLicenseCredentials({
   return (
     <FormSection title="License & Credentials">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormField
+        <FormSelectField
           control={control}
           name="occupationId"
+          label="Occupation"
           rules={supervisorFieldRules('occupationId')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Occupation <span className="text-destructive">*</span>
-              </FormLabel>
-              <Select
-                value={field.value ?? ''}
-                onValueChange={(v) => {
-                  field.onChange(v ?? '')
-                  field.onBlur()
-                }}
-                disabled={occupationsLoading}
-                itemToStringLabel={(val) => {
-                  if (val == null || val === '') return ''
-                  return occupationOptions.find((o) => o.value === val)?.label ?? String(val)
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger ref={field.ref} onBlur={field.onBlur}>
-                    <SelectValue
-                      placeholder={occupationsLoading ? 'Loading…' : 'Select occupation'}
-                    />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {occupationOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          options={occupationOptions}
+          placeholder="Select occupation"
+          loading={occupationsLoading}
+          isSubmitting={isSubmitting}
+          required
         />
-        <FormField
+        <FormSelectField
           control={control}
           name="specialtyId"
+          label="Specialty"
           rules={supervisorFieldRules('specialtyId')}
-          render={({ field }) => {
-            const selectValue = field.value ? field.value : SPECIALTY_NONE_VALUE
-            return (
-              <FormItem>
-                <FormLabel>Specialty</FormLabel>
-                <Select
-                  value={selectValue}
-                  onValueChange={(v) => {
-                    field.onChange(v === SPECIALTY_NONE_VALUE ? '' : (v ?? ''))
-                    field.onBlur()
-                  }}
-                  disabled={specialtyDisabled}
-                  itemToStringLabel={(val) => {
-                    if (val == null || val === '' || val === SPECIALTY_NONE_VALUE) return 'None'
-                    return specialtyOptions.find((o) => o.value === val)?.label ?? String(val)
-                  }}
-                >
-                  <FormControl>
-                    <SelectTrigger ref={field.ref} onBlur={field.onBlur}>
-                      <SelectValue
-                        placeholder={
-                          specialtiesLoading ? 'Loading…' : 'Select specialty (optional)'
-                        }
-                      />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value={SPECIALTY_NONE_VALUE}>None</SelectItem>
-                    {specialtyOptions
-                      .sort((a, b) => a.label.localeCompare(b.label))
-                      .map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )
-          }}
+          options={specialtyOptions}
+          placeholder="Select specialty (optional)"
+          loading={specialtiesLoading}
+          disabled={specialtyDisabled}
+          isSubmitting={isSubmitting}
+          emptySentinel={{ value: SPECIALTY_NONE_VALUE, label: 'None' }}
+          sortOptions
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormField
+        <FormSelectField
           control={control}
           name="licenseType"
+          label="License Type"
           rules={supervisorFieldRules('licenseType')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                License Type <span className="text-destructive">*</span>
-              </FormLabel>
-              <Select
-                value={field.value ?? ''}
-                onValueChange={(v) => {
-                  field.onChange(v ?? '')
-                  field.onBlur()
-                }}
-                disabled={licenseTypesLoading}
-                itemToStringLabel={(val) => {
-                  if (val == null || val === '') return ''
-                  return licenseTypeOptions.find((o) => o.value === val)?.label ?? String(val)
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger ref={field.ref} onBlur={field.onBlur}>
-                    <SelectValue
-                      placeholder={licenseTypesLoading ? 'Loading…' : 'Select license type'}
-                    />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {licenseTypeOptions
-                    .sort((a, b) => a.label.localeCompare(b.label))
-                    .map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          options={licenseTypeOptions}
+          placeholder="Select license type"
+          loading={licenseTypesLoading}
+          sortOptions
+          isSubmitting={isSubmitting}
+          required
         />
-        <FormField
+        <FormInputField
           control={control}
           name="licenseNumber"
+          label="License Number"
           rules={supervisorFieldRules('licenseNumber')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                License Number <span className="text-destructive">*</span>
-              </FormLabel>
-              <FormControl>
-                <Input placeholder="License number" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          placeholder="License number"
+          isSubmitting={isSubmitting}
+          required
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormField
+        <FormInputField
           control={control}
           name="licenseExpiration"
+          label="License Expiration"
           rules={supervisorFieldRules('licenseExpiration')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                License Expiration <span className="text-destructive">*</span>
-              </FormLabel>
-              <FormControl>
-                <Input type="date" {...field} value={field.value ?? ''} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          type="date"
+          normalizeEmptyToString
+          isSubmitting={isSubmitting}
+          required
         />
-        <FormField
+        <FormInputField
           control={control}
           name="npiNumber"
+          label="NPI Number"
           rules={supervisorFieldRules('npiNumber')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>NPI Number</FormLabel>
-              <FormControl>
-                <Input placeholder="Optional" maxLength={20} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          placeholder="Optional"
+          maxLength={20}
+          isSubmitting={isSubmitting}
         />
       </div>
 
-      <FormField
+      <FormSelectField
         control={control}
         name="yearsOfExperience"
+        label="Years of Experience"
         rules={supervisorFieldRules('yearsOfExperience')}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>
-              Years of Experience <span className="text-destructive">*</span>
-            </FormLabel>
-            <Select
-              value={field.value ?? ''}
-              onValueChange={(v) => {
-                field.onChange(v ?? '')
-                field.onBlur()
-              }}
-              itemToStringLabel={(val) => (val == null || val === '' ? '' : String(val))}
-            >
-              <FormControl>
-                <SelectTrigger ref={field.ref} onBlur={field.onBlur}>
-                  <SelectValue placeholder="Select years of experience" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {yearsOfExperienceOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
+        options={yearsOfExperienceSelectOptions}
+        placeholder="Select years of experience"
+        isSubmitting={isSubmitting}
+        required
       />
 
       <FormField
@@ -286,7 +153,7 @@ export function SupervisorStepLicenseCredentials({
                   clearErrors(field.name)
                 }}
                 placeholder={certificatesLoading ? 'Loading…' : 'Add certification (e.g. BLS)'}
-                disabled={certificatesLoading}
+                disabled={certificatesLoading || isSubmitting}
               />
             </FormControl>
             <FormMessage />
@@ -312,6 +179,7 @@ export function SupervisorStepLicenseCredentials({
                   clearErrors(field.name)
                 }}
                 placeholder="Add a state (e.g. CA)"
+                disabled={isSubmitting}
               />
             </FormControl>
             <FormMessage />
@@ -338,6 +206,7 @@ export function SupervisorStepLicenseCredentials({
                 uploadTitle="Upload license or verification document"
                 uploadHint="PDF, JPG, or PNG · Click to browse"
                 removeFileAriaLabel="Remove license document"
+                disabled={isSubmitting}
               />
             </FormControl>
             <FormMessage />

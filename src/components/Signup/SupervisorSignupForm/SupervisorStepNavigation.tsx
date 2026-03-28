@@ -13,6 +13,8 @@ type SupervisorStepNavigationProps = {
   onNext: () => void
   isAdvancing: boolean
   isPending: boolean
+  /** RHF submitting and/or signup mutation in flight — disables nav and fields consistently. */
+  isSubmitting: boolean
   isValidatingAddress: boolean
   canSubmit: boolean
 }
@@ -23,10 +25,11 @@ export function SupervisorStepNavigation({
   onNext,
   isAdvancing,
   isPending,
+  isSubmitting,
   isValidatingAddress,
   canSubmit,
 }: SupervisorStepNavigationProps) {
-  const busy = isAdvancing || isPending
+  const busy = isAdvancing || isSubmitting
 
   return (
     <div className={cn('flex flex-col gap-4', step === 2 ? 'mt-4' : 'border-t border-border pt-6')}>
@@ -62,7 +65,7 @@ export function SupervisorStepNavigation({
             type="submit"
             size="lg"
             className="w-full sm:w-auto sm:min-w-[200px]"
-            disabled={!canSubmit || isPending || isAdvancing}
+            disabled={!canSubmit || isAdvancing || isSubmitting}
           >
             {isPending ? 'Creating your account…' : 'Sign Up as Supervisor →'}
           </Button>

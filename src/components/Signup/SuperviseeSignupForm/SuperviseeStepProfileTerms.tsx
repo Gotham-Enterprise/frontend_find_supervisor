@@ -9,7 +9,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
 
-export function SuperviseeStepProfileTerms() {
+type SuperviseeStepProfileTermsProps = {
+  isSubmitting: boolean
+}
+
+export function SuperviseeStepProfileTerms({ isSubmitting }: SuperviseeStepProfileTermsProps) {
   const { control } = useFormContext<SuperviseeFormValues>()
   const descriptionValue = useWatch({ control, name: 'description' }) ?? ''
 
@@ -29,6 +33,7 @@ export function SuperviseeStepProfileTerms() {
                 rows={4}
                 placeholder="Looking for a licensed LCSW with experience in trauma-informed care and CBT. I prefer someone who can provide reflective supervision..."
                 maxLength={500}
+                disabled={isSubmitting}
                 {...field}
               />
             </FormControl>
@@ -53,6 +58,7 @@ export function SuperviseeStepProfileTerms() {
                 <FormControl>
                   <Checkbox
                     checked={field.value}
+                    disabled={isSubmitting}
                     onCheckedChange={field.onChange}
                     className="mt-0.5 shrink-0"
                   />
@@ -80,6 +86,7 @@ export function SuperviseeStepProfileTerms() {
                 <FormControl>
                   <Checkbox
                     checked={field.value}
+                    disabled={isSubmitting}
                     onCheckedChange={field.onChange}
                     className="mt-0.5 shrink-0"
                   />

@@ -17,6 +17,7 @@ export type ProfilePhotoFieldProps = {
   onChange: (file: File | undefined) => void
   onBlur?: () => void
   className?: string
+  disabled?: boolean
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -32,7 +33,7 @@ export type ProfilePhotoFieldProps = {
  * the full edit modal experience is needed.
  */
 export const ProfilePhotoField = React.forwardRef<HTMLButtonElement, ProfilePhotoFieldProps>(
-  ({ value, onChange, onBlur, className }, ref) => {
+  ({ value, onChange, onBlur, className, disabled = false }, ref) => {
     const [dialogOpen, setDialogOpen] = useState(false)
 
     // ── Preview URL management ─────────────────────────────────────────────────
@@ -81,11 +82,15 @@ export const ProfilePhotoField = React.forwardRef<HTMLButtonElement, ProfilePhot
         <button
           ref={ref}
           type="button"
-          onClick={() => setDialogOpen(true)}
+          disabled={disabled}
+          onClick={() => {
+            if (!disabled) setDialogOpen(true)
+          }}
           className={cn(
             'group w-full rounded-xl border-2 border-dashed border-input bg-muted/30 px-5 py-4 text-left',
             'transition-colors hover:border-primary/50 hover:bg-primary/5',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+            disabled && 'pointer-events-none cursor-not-allowed opacity-50',
             className,
           )}
           aria-label={hasPhoto ? 'Edit profile photo' : 'Upload profile photo'}

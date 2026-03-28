@@ -7,17 +7,18 @@ import { FormSection } from '@/components/Signup/FormSection'
 import { type SuperviseeFormValues } from '@/components/Signup/schema'
 import { superviseeFieldRules } from '@/components/Signup/superviseeFieldRules'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { FormSelectField } from '@/components/ui/form-select-field'
 import { TagInput } from '@/components/ui/tag-input'
 import type { SelectOption } from '@/lib/api/options'
 
+const superviseeFeeTypeOptions: SelectOption[] = [
+  { value: 'per-session', label: 'Per Session' },
+  { value: 'monthly', label: 'Monthly' },
+]
+
 type SuperviseeStepSupervisionNeedsProps = {
+  occupationOptions: SelectOption[]
+  occupationsLoading: boolean
   stateOptions: SelectOption[]
   supervisorTypeOptions: SelectOption[]
   howSoonOptions: SelectOption[]
@@ -28,9 +29,12 @@ type SuperviseeStepSupervisionNeedsProps = {
   howSoonLoading: boolean
   availabilityLoading: boolean
   salaryRangesLoading: boolean
+  isSubmitting: boolean
 }
 
 export function SuperviseeStepSupervisionNeeds({
+  occupationOptions,
+  occupationsLoading,
   stateOptions,
   supervisorTypeOptions,
   howSoonOptions,
@@ -41,11 +45,50 @@ export function SuperviseeStepSupervisionNeeds({
   howSoonLoading,
   availabilityLoading,
   salaryRangesLoading,
+  isSubmitting,
 }: SuperviseeStepSupervisionNeedsProps) {
-  const { control } = useFormContext<SuperviseeFormValues>()
+  const { control, clearErrors } = useFormContext<SuperviseeFormValues>()
 
   return (
     <FormSection title="Supervision Needs">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-start">
+        <FormSelectField
+          control={control}
+          name="occupationId"
+          label="Occupation"
+          rules={superviseeFieldRules('occupationId')}
+          options={occupationOptions}
+          placeholder="Select occupation"
+          loading={occupationsLoading}
+          isSubmitting={isSubmitting}
+          required
+        />
+        <FormField
+          control={control}
+          name="preferredFormat"
+          rules={superviseeFieldRules('preferredFormat')}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Preferred Format <span className="text-destructive">*</span>
+              </FormLabel>
+              <FormControl>
+                <FormatSelector
+                  value={field.value}
+                  onChange={(v) => {
+                    field.onChange(v)
+                    field.onBlur()
+                    clearErrors(field.name)
+                  }}
+                  disabled={isSubmitting}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField
           control={control}
@@ -62,8 +105,10 @@ export function SuperviseeStepSupervisionNeeds({
                   value={field.value ?? []}
                   onChange={(v) => {
                     field.onChange(v)
+                    clearErrors(field.name)
                   }}
                   placeholder="Add a state (e.g. CA)"
+                  disabled={isSubmitting}
                 />
               </FormControl>
               <FormMessage />
@@ -73,265 +118,76 @@ export function SuperviseeStepSupervisionNeeds({
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormField
+        <FormSelectField
           control={control}
           name="stateTheyAreLookingIn"
+          label="State You Are Looking In"
           rules={superviseeFieldRules('stateTheyAreLookingIn')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                State You Are Looking In <span className="text-destructive">*</span>
-              </FormLabel>
-              <Select
-                value={field.value ?? ''}
-                onValueChange={(v) => {
-                  field.onChange(v ?? '')
-                  field.onBlur()
-                }}
-                disabled={statesLoading}
-                itemToStringLabel={(val) => {
-                  if (val == null || val === '') return ''
-                  return stateOptions.find((o) => o.value === val)?.label ?? String(val)
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger ref={field.ref} onBlur={field.onBlur}>
-                    <SelectValue placeholder={statesLoading ? 'Loading…' : 'Select state'} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {stateOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          options={stateOptions}
+          placeholder="Select state"
+          loading={statesLoading}
+          isSubmitting={isSubmitting}
+          required
         />
-        <FormField
+        <FormSelectField
           control={control}
           name="typeOfSupervisor"
+          label="Type of Supervisor Needed"
           rules={superviseeFieldRules('typeOfSupervisor')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Type of Supervisor Needed <span className="text-destructive">*</span>
-              </FormLabel>
-              <Select
-                value={field.value ?? ''}
-                onValueChange={(v) => {
-                  field.onChange(v ?? '')
-                  field.onBlur()
-                }}
-                disabled={supervisorTypesLoading}
-                itemToStringLabel={(val) => {
-                  if (val == null || val === '') return ''
-                  return supervisorTypeOptions.find((o) => o.value === val)?.label ?? String(val)
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger ref={field.ref} onBlur={field.onBlur}>
-                    <SelectValue
-                      placeholder={supervisorTypesLoading ? 'Loading…' : 'Select type'}
-                    />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {supervisorTypeOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          options={supervisorTypeOptions}
+          placeholder="Select type"
+          loading={supervisorTypesLoading}
+          isSubmitting={isSubmitting}
+          required
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormField
+        <FormSelectField
           control={control}
           name="howSoon"
+          label="How Soon Do You Need Supervision?"
           rules={superviseeFieldRules('howSoon')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                How Soon Do You Need Supervision? <span className="text-destructive">*</span>
-              </FormLabel>
-              <Select
-                value={field.value ?? ''}
-                onValueChange={(v) => {
-                  field.onChange(v ?? '')
-                  field.onBlur()
-                }}
-                disabled={howSoonLoading}
-                itemToStringLabel={(val) => {
-                  if (val == null || val === '') return ''
-                  return howSoonOptions.find((o) => o.value === val)?.label ?? String(val)
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger ref={field.ref} onBlur={field.onBlur}>
-                    <SelectValue placeholder={howSoonLoading ? 'Loading…' : 'Select timeframe'} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {howSoonOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          options={howSoonOptions}
+          placeholder="Select timeframe"
+          loading={howSoonLoading}
+          isSubmitting={isSubmitting}
+          required
         />
-        <FormField
+        <FormSelectField
           control={control}
           name="availability"
+          label="Availability"
           rules={superviseeFieldRules('availability')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Availability <span className="text-destructive">*</span>
-              </FormLabel>
-              <Select
-                value={field.value ?? ''}
-                onValueChange={(v) => {
-                  field.onChange(v ?? '')
-                  field.onBlur()
-                }}
-                disabled={availabilityLoading}
-                itemToStringLabel={(val) => {
-                  if (val == null || val === '') return ''
-                  return availabilityOptions.find((o) => o.value === val)?.label ?? String(val)
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger ref={field.ref} onBlur={field.onBlur}>
-                    <SelectValue
-                      placeholder={availabilityLoading ? 'Loading…' : 'Select availability'}
-                    />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {availabilityOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          options={availabilityOptions}
+          placeholder="Select availability"
+          loading={availabilityLoading}
+          isSubmitting={isSubmitting}
+          required
         />
       </div>
 
-      <FormField
-        control={control}
-        name="preferredFormat"
-        rules={superviseeFieldRules('preferredFormat')}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>
-              Preferred Format <span className="text-destructive">*</span>
-            </FormLabel>
-            <FormControl>
-              <FormatSelector
-                value={field.value}
-                onChange={(v) => {
-                  field.onChange(v)
-                  field.onBlur()
-                }}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormField
+        <FormSelectField
           control={control}
           name="feeType"
+          label="Fee Type"
           rules={superviseeFieldRules('feeType')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Fee Type <span className="text-destructive">*</span>
-              </FormLabel>
-              <Select
-                value={field.value ?? ''}
-                onValueChange={(v) => {
-                  field.onChange(v ?? '')
-                  field.onBlur()
-                }}
-                itemToStringLabel={(val) =>
-                  val === 'per-session'
-                    ? 'Per Session'
-                    : val === 'monthly'
-                      ? 'Monthly'
-                      : String(val ?? '')
-                }
-              >
-                <FormControl>
-                  <SelectTrigger ref={field.ref} onBlur={field.onBlur}>
-                    <SelectValue placeholder="Select fee type" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="per-session">Per Session</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          options={superviseeFeeTypeOptions}
+          placeholder="Select fee type"
+          isSubmitting={isSubmitting}
+          required
         />
-        <FormField
+        <FormSelectField
           control={control}
           name="budgetRange"
+          label="Budget Range"
           rules={superviseeFieldRules('budgetRange')}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Budget Range <span className="text-destructive">*</span>
-              </FormLabel>
-              <Select
-                value={field.value ?? ''}
-                onValueChange={(v) => {
-                  field.onChange(v ?? '')
-                  field.onBlur()
-                }}
-                disabled={salaryRangesLoading}
-                itemToStringLabel={(val) => {
-                  if (val == null || val === '') return ''
-                  return salaryRangeOptions.find((o) => o.value === val)?.label ?? String(val)
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger ref={field.ref} onBlur={field.onBlur}>
-                    <SelectValue placeholder={salaryRangesLoading ? 'Loading…' : 'Select budget'} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {salaryRangeOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          options={salaryRangeOptions}
+          placeholder="Select budget"
+          loading={salaryRangesLoading}
+          isSubmitting={isSubmitting}
+          required
         />
       </div>
     </FormSection>

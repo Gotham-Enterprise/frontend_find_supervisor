@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { useForm, useFormState, useWatch } from 'react-hook-form'
 
 import { supervisorDefaultValues } from '@/components/Signup/helpers'
 import { type SupervisorFormValues, supervisorSchema } from '@/components/Signup/schema'
@@ -80,6 +80,8 @@ export function SupervisorSignupForm() {
 
   const canSubmit = Boolean(agreedToPost && agreedToTerms)
   const locationOptionsError = statesError || citiesError
+  const { isSubmitting: formIsSubmitting } = useFormState({ control: form.control })
+  const isSubmitting = formIsSubmitting || isPending
 
   useEffect(() => {
     form.setValue('specialtyId', '')
@@ -194,6 +196,7 @@ export function SupervisorSignupForm() {
             citiesLoading={citiesLoading}
             statesError={statesError}
             citiesError={citiesError}
+            isSubmitting={isSubmitting}
           />
         )}
         {step === 1 && (
@@ -207,6 +210,7 @@ export function SupervisorSignupForm() {
             specialtiesLoading={specialtiesLoading}
             licenseTypesLoading={licenseTypesLoading}
             certificatesLoading={certificatesLoading}
+            isSubmitting={isSubmitting}
           />
         )}
         {step === 2 && (
@@ -215,6 +219,7 @@ export function SupervisorSignupForm() {
             availabilityOptions={availabilityOptions}
             patientPopulationsLoading={patientPopulationsLoading}
             availabilityLoading={availabilityLoading}
+            isSubmitting={isSubmitting}
           />
         )}
 
@@ -224,6 +229,7 @@ export function SupervisorSignupForm() {
           onNext={handleNext}
           isAdvancing={isAdvancing}
           isPending={isPending}
+          isSubmitting={isSubmitting}
           isValidatingAddress={isValidatingAddress}
           canSubmit={canSubmit}
         />

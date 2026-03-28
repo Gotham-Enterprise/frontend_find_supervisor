@@ -21,6 +21,7 @@ type UploadFileProps = {
   /** Trailing control in the empty state (e.g. “Browse”). Set `null` to hide. */
   browseButtonLabel?: string | null
   className?: string
+  disabled?: boolean
 }
 
 function isFile(value: unknown): value is File {
@@ -90,6 +91,7 @@ export function UploadFile({
   showFileSize = true,
   browseButtonLabel = 'Browse',
   className,
+  disabled = false,
 }: UploadFileProps) {
   const generatedId = useId()
   const inputId = id ?? `upload-file-${generatedId.replace(/:/g, '')}`
@@ -120,6 +122,7 @@ export function UploadFile({
         type="file"
         accept={accept}
         ref={setRefs}
+        disabled={disabled}
         onBlur={onBlur}
         onChange={(e) => {
           const file = e.target.files?.[0]
@@ -133,11 +136,18 @@ export function UploadFile({
         <div
           className={cn(
             'rounded-xl border-2 border-dashed border-input bg-muted/30 px-4 py-3 transition-colors',
-            'hover:border-primary/50 hover:bg-primary/5',
+            !disabled && 'hover:border-primary/50 hover:bg-primary/5',
             'focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
+            disabled && 'pointer-events-none opacity-50',
           )}
         >
-          <label htmlFor={inputId} className="flex cursor-pointer items-center gap-3 text-left">
+          <label
+            htmlFor={inputId}
+            className={cn(
+              'flex items-center gap-3 text-left',
+              disabled ? 'cursor-not-allowed' : 'cursor-pointer',
+            )}
+          >
             <div
               aria-hidden
               className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-muted-foreground/20 bg-background"
@@ -172,6 +182,7 @@ export function UploadFile({
             type="button"
             variant="ghost"
             size="icon-sm"
+            disabled={disabled}
             className="text-muted-foreground hover:text-destructive"
             onClick={() => {
               onChange(undefined)
