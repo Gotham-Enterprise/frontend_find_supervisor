@@ -1,10 +1,6 @@
-import { SearchSupervisorPage } from '@/components/SearchSupervisor'
+import { redirect } from 'next/navigation'
 
-export const metadata = {
-  title: 'Find Your Supervisor | Find A Supervisor',
-  description: 'Browse verified supervisors matched to your specialty, license, and goals.',
-}
-
-export default function SupervisorsSearchPage() {
-  return <SearchSupervisorPage />
+/** Old public URL; search now lives at `/supervisors` (authenticated supervisees only). */
+export default function SearchSupervisorsLegacyRedirect() {
+  redirect('/supervisors')
 }

@@ -137,7 +137,7 @@ export function SearchSupervisorPage() {
       />
 
       <div className="border-t border-border bg-background">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 lg:flex-row lg:px-8">
+        <div className="flex w-full flex-col gap-6 py-8 lg:flex-row lg:gap-8">
           <SearchSupervisorFilters filters={filters} onChange={handleFiltersChange} />
 
           <SearchSupervisorResults
