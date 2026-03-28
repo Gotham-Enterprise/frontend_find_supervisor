@@ -6,17 +6,25 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 import { TOKEN_KEY } from '@/lib/api/client'
+import { isSuperviseeRole } from '@/lib/auth/roles'
+import { useUser } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Supervisors', href: '/supervisors', icon: Users },
+  { label: 'Supervisors', href: '/supervisors', icon: Users, superviseeOnly: true },
   { label: 'Supervisees', href: '/supervisees', icon: UserCheck },
   { label: 'Matching Requests', href: '/matching', icon: GitPullRequestArrow },
-]
+] as const
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { user } = useUser()
+
+  const visibleNavItems = navItems.filter((item) => {
+    if (!('superviseeOnly' in item) || !item.superviseeOnly) return true
+    return user ? isSuperviseeRole(user.role) : false
+  })
 
   function handleLogout() {
     localStorage.removeItem(TOKEN_KEY)
@@ -36,7 +44,7 @@ export function Sidebar() {
       </Link>
 
       <nav className="flex flex-1 flex-col gap-1 p-4">
-        {navItems.map(({ label, href, icon: Icon }) => {
+        {visibleNavItems.map(({ label, href, icon: Icon }) => {
           const isActive = pathname === href
           return (
             <Link

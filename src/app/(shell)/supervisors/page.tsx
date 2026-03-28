@@ -1,5 +1,15 @@
-import { SupervisorsPage } from '@/components/Supervisors'
+import { SuperviseeRouteGuard } from '@/components/Layout/SuperviseeRouteGuard'
+import { SearchSupervisorPage } from '@/components/SearchSupervisor'
+
+export const metadata = {
+  title: 'Find Your Supervisor | Find A Supervisor',
+  description: 'Browse verified supervisors matched to your specialty, license, and goals.',
+}
 
 export default function SupervisorsRoutePage() {
-  return <SupervisorsPage />
+  return (
+    <SuperviseeRouteGuard>
+      <SearchSupervisorPage />
+    </SuperviseeRouteGuard>
+  )
 }

@@ -122,7 +122,7 @@ export function SearchSupervisorFilters({ filters, onChange }: SearchSupervisorF
   }
 
   return (
-    <aside className="w-full space-y-5 lg:w-[188px] lg:shrink-0">
+    <aside className="w-full space-y-5 lg:w-64 lg:shrink-0">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-foreground">Filters</h2>
