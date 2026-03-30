@@ -31,7 +31,7 @@ export function SearchSupervisorHeader({
   }
 
   return (
-    <div className="bg-background py-10">
+    <div className="bg-background pb-10">
       <div className="w-full px-0">
         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-primary">
           Supervisee Portal
