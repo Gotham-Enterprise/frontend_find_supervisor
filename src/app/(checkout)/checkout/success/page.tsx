@@ -1,22 +1,22 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 
-import { CheckoutPage } from '@/components/checkout'
+import { CheckoutSuccessPage } from '@/components/checkout/CheckoutSuccessPage'
 
 export const metadata: Metadata = {
-  title: 'Checkout | Find A Supervisor',
+  title: 'Subscription Activated | Find A Supervisor',
 }
 
-export default function CheckoutRoutePage() {
+export default function CheckoutSuccessRoutePage() {
   return (
     <Suspense
       fallback={
         <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-border bg-card text-sm text-muted-foreground">
-          Loading checkout…
+          Confirming your subscription…
         </div>
       }
     >
-      <CheckoutPage />
+      <CheckoutSuccessPage />
     </Suspense>
   )
 }
