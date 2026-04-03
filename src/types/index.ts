@@ -4,6 +4,8 @@ export type { CreateMatchingRequestDto, MatchingRequest, MatchingStatus } from '
 export type { Supervisee } from './supervisee'
 export type { Supervisor } from './supervisor'
 export type {
+  ChoosablePlan,
+  PurchaseSubscriptionResponse,
   Subscription,
   SubscriptionPlan,
   SupervisorProfileData,

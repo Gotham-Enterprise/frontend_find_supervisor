@@ -1,5 +1,6 @@
 export { useLogin, useLogout } from './useAuth'
 export { categoryKeys, useOccupations } from './useCategories'
+export { useCheckoutPlanFromUrl } from './useCheckoutPlanFromUrl'
 export { useCooldownTimer } from './useCooldownTimer'
 export { useCitiesOptions, useMultiStateCityOptions, useStatesOptions } from './useLocationOptions'
 export {
@@ -24,7 +25,12 @@ export {
   useSupervisorFormOptions,
   useSupervisorTypeOptions,
 } from './useSignupOptions'
-export { subscriptionKeys, useSubscriptionPlansMutation } from './useSubscriptionPlans'
+export {
+  subscriptionKeys,
+  useCurrentSubscriptionQuery,
+  useSubscriptionPlansMutation,
+  useSubscriptionPlansQuery,
+} from './useSubscriptionPlans'
 export { superviseeKeys, useSupervisees } from './useSupervisees'
 export { supervisorDetailKeys, useSupervisor } from './useSupervisor'
 export { useSupervisorProfile } from './useSupervisorProfile'
