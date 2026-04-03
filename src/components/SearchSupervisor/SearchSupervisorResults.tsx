@@ -2,6 +2,7 @@
 
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -17,14 +18,15 @@ import { SupervisorCard } from './SupervisorCard'
 import { SupervisorCardSkeleton } from './SupervisorCardSkeleton'
 import type { SortOption, SupervisorSearchResult } from './types'
 
-const PAGE_SIZE = 10
-
 interface SearchSupervisorResultsProps {
   supervisors: SupervisorSearchResult[]
   total: number
   page: number
+  pageSize: number
   sortBy: SortOption
   isLoading: boolean
+  errorMessage: string | null
+  onRetry: () => void
   onPageChange: (page: number) => void
   onSortChange: (sort: SortOption) => void
   onClearFilters: () => void
@@ -34,15 +36,18 @@ export function SearchSupervisorResults({
   supervisors,
   total,
   page,
+  pageSize,
   sortBy,
   isLoading,
+  errorMessage,
+  onRetry,
   onPageChange,
   onSortChange,
   onClearFilters,
 }: SearchSupervisorResultsProps) {
-  const totalPages = Math.ceil(total / PAGE_SIZE)
-  const from = (page - 1) * PAGE_SIZE + 1
-  const to = Math.min(page * PAGE_SIZE, total)
+  const totalPages = Math.ceil(total / pageSize)
+  const from = total > 0 ? (page - 1) * pageSize + 1 : 0
+  const to = Math.min(page * pageSize, total)
 
   const sortLabel = SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Best Match'
 
@@ -52,6 +57,8 @@ export function SearchSupervisorResults({
       <div className="flex flex-wrap items-center justify-between gap-2">
         {isLoading ? (
           <div className="h-4 w-48 animate-pulse rounded bg-muted" />
+        ) : errorMessage ? (
+          <p className="text-sm text-destructive">{errorMessage}</p>
         ) : (
           <p className="text-sm text-foreground">
             <span className="font-semibold">{total.toLocaleString()} supervisors</span>
@@ -83,6 +90,15 @@ export function SearchSupervisorResults({
       <div className="space-y-3">
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => <SupervisorCardSkeleton key={i} />)
+        ) : errorMessage ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/30 bg-destructive/5 py-12 text-center">
+            <p className="mb-4 max-w-md text-sm text-muted-foreground">
+              We couldn&apos;t load supervisor results. Check your connection and try again.
+            </p>
+            <Button type="button" variant="outline" onClick={onRetry}>
+              Try again
+            </Button>
+          </div>
         ) : supervisors.length === 0 ? (
           <EmptyState onClearFilters={onClearFilters} />
         ) : (
@@ -91,7 +107,7 @@ export function SearchSupervisorResults({
       </div>
 
       {/* Pagination */}
-      {!isLoading && totalPages > 1 && (
+      {!isLoading && !errorMessage && totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
           <p className="text-xs text-muted-foreground">
             Showing {from}–{to} of {total} results

@@ -1,8 +1,16 @@
 import axios from 'axios'
 
 import { parseApiError } from '@/lib/utils/error-parser'
+import type { ApiResponse } from '@/types/api'
+import type { SubscriptionPlan } from '@/types/supervisor-profile'
 
 import { apiClient } from './client'
+
+/** GET /supervision/plans — active subscription plans (auth: supervisor | supervisee). */
+export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
+  const { data } = await apiClient.get<ApiResponse<SubscriptionPlan[]>>('/supervision/plans')
+  return data.data
+}
 
 export type ResendEmailResult =
   | { kind: 'success'; message: string }

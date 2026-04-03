@@ -8,20 +8,22 @@ export const RADIUS_STEP = 5
 export const RADIUS_DEFAULT = 25
 
 export const DEFAULT_FILTERS: SupervisorSearchFilters = {
-  keyword: '',
-  occupationId: '',
-  specialtyId: '',
+  occupationIds: [],
+  specialtyIds: [],
+  licenseTypes: [],
   stateLicenses: [],
   cities: [],
   states: [],
   radiusMiles: RADIUS_DEFAULT,
-  formatVirtual: false,
-  formatInPerson: false,
-  formatHybrid: false,
-  yearsOfExperience: '',
+  supervisionFormats: [],
+  yearsExperience: [],
   patientPopulation: [],
   acceptingOnly: false,
+  availability: [],
 }
+
+/** Page size for supervisor search results (must match API default limit). */
+export const SUPERVISOR_SEARCH_PAGE_SIZE = 10
 
 export const FORMAT_LABELS: Record<SupervisionFormat, string> = {
   VIRTUAL: 'Virtual',
@@ -29,14 +31,21 @@ export const FORMAT_LABELS: Record<SupervisionFormat, string> = {
   HYBRID: 'Hybrid',
 }
 
+/** TagInput options for supervision format (Virtual / In-Person / Hybrid). */
+export const SUPERVISION_FORMAT_TAG_OPTIONS: SelectOption[] = [
+  { label: 'Virtual', value: 'VIRTUAL' },
+  { label: 'In-Person', value: 'IN_PERSON' },
+  { label: 'Hybrid', value: 'HYBRID' },
+]
+
 export const FORMAT_BADGE_CLASSES: Record<SupervisionFormat, string> = {
   VIRTUAL: 'bg-blue-50 text-blue-700 border border-blue-100',
   IN_PERSON: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
   HYBRID: 'bg-violet-50 text-violet-700 border border-violet-100',
 }
 
+/** Years range options for search TagInput. */
 export const YEARS_OF_EXPERIENCE_OPTIONS = [
-  { label: 'Any', value: '' },
   { label: '0–1 years', value: '0_1' },
   { label: '2–3 years', value: '2_3' },
   { label: '4–5 years', value: '4_5' },
@@ -73,6 +82,8 @@ export interface ActiveChip {
 export interface ChipOptions {
   occupationOptions?: SelectOption[]
   specialtyOptions?: SelectOption[]
+  licenseTypeOptions?: SelectOption[]
+  availabilityOptions?: SelectOption[]
 }
 
 export function getActiveChips(
@@ -81,15 +92,25 @@ export function getActiveChips(
 ): ActiveChip[] {
   const chips: ActiveChip[] = []
 
-  if (filters.occupationId && chipOptions?.occupationOptions) {
-    const label = chipOptions.occupationOptions.find((o) => o.value === filters.occupationId)?.label
-    if (label) chips.push({ key: 'occupationId', label })
-  }
+  filters.occupationIds.forEach((id) => {
+    const label = chipOptions?.occupationOptions?.find((o) => o.value === id)?.label ?? id
+    chips.push({ key: `occ_${id}`, label })
+  })
 
-  if (filters.specialtyId && chipOptions?.specialtyOptions) {
-    const label = chipOptions.specialtyOptions.find((o) => o.value === filters.specialtyId)?.label
-    if (label) chips.push({ key: 'specialtyId', label })
-  }
+  filters.specialtyIds.forEach((id) => {
+    const label = chipOptions?.specialtyOptions?.find((o) => o.value === id)?.label ?? id
+    chips.push({ key: `spec_${id}`, label })
+  })
+
+  filters.licenseTypes.forEach((val) => {
+    const label = chipOptions?.licenseTypeOptions?.find((o) => o.value === val)?.label ?? val
+    chips.push({ key: `lic_${encodeURIComponent(val)}`, label })
+  })
+
+  filters.availability.forEach((val) => {
+    const label = chipOptions?.availabilityOptions?.find((o) => o.value === val)?.label ?? val
+    chips.push({ key: `av_${encodeURIComponent(val)}`, label })
+  })
 
   if (filters.radiusMiles !== RADIUS_DEFAULT) {
     chips.push({ key: 'radiusMiles', label: `Within ${filters.radiusMiles} miles` })
@@ -99,14 +120,15 @@ export function getActiveChips(
   filters.states.forEach((st) => chips.push({ key: `st_${st}`, label: st }))
   filters.cities.forEach((c) => chips.push({ key: `city_${c}`, label: c }))
 
-  if (filters.formatVirtual) chips.push({ key: 'formatVirtual', label: 'Virtual' })
-  if (filters.formatInPerson) chips.push({ key: 'formatInPerson', label: 'In-Person' })
-  if (filters.formatHybrid) chips.push({ key: 'formatHybrid', label: 'Hybrid' })
+  filters.supervisionFormats.forEach((fmt) => {
+    const label = FORMAT_LABELS[fmt as SupervisionFormat] ?? fmt
+    chips.push({ key: `sf_${fmt}`, label })
+  })
 
-  if (filters.yearsOfExperience) {
-    const opt = YEARS_OF_EXPERIENCE_OPTIONS.find((o) => o.value === filters.yearsOfExperience)
-    chips.push({ key: 'yearsOfExperience', label: opt?.label ?? filters.yearsOfExperience })
-  }
+  filters.yearsExperience.forEach((val) => {
+    const opt = YEARS_OF_EXPERIENCE_OPTIONS.find((o) => o.value === val)
+    chips.push({ key: `ye_${encodeURIComponent(val)}`, label: opt?.label ?? val })
+  })
 
   filters.patientPopulation.forEach((pop) => {
     chips.push({ key: `pop_${pop}`, label: pop })
@@ -123,13 +145,38 @@ export function removeChip(
 ): SupervisorSearchFilters {
   const next: SupervisorSearchFilters = {
     ...filters,
+    occupationIds: [...filters.occupationIds],
+    specialtyIds: [...filters.specialtyIds],
+    licenseTypes: [...filters.licenseTypes],
     stateLicenses: [...filters.stateLicenses],
     cities: [...filters.cities],
     states: [...filters.states],
+    supervisionFormats: [...filters.supervisionFormats],
+    yearsExperience: [...filters.yearsExperience],
     patientPopulation: [...filters.patientPopulation],
+    availability: [...filters.availability],
   }
 
-  if (chipKey.startsWith('sl_')) {
+  if (chipKey.startsWith('occ_')) {
+    const id = chipKey.slice(4)
+    next.occupationIds = next.occupationIds.filter((x) => x !== id)
+    if (next.occupationIds.length === 0) next.specialtyIds = []
+  } else if (chipKey.startsWith('spec_')) {
+    const id = chipKey.slice(5)
+    next.specialtyIds = next.specialtyIds.filter((x) => x !== id)
+  } else if (chipKey.startsWith('lic_')) {
+    const val = decodeURIComponent(chipKey.slice(4))
+    next.licenseTypes = next.licenseTypes.filter((x) => x !== val)
+  } else if (chipKey.startsWith('av_')) {
+    const val = decodeURIComponent(chipKey.slice(3))
+    next.availability = next.availability.filter((x) => x !== val)
+  } else if (chipKey.startsWith('ye_')) {
+    const val = decodeURIComponent(chipKey.slice(3))
+    next.yearsExperience = next.yearsExperience.filter((x) => x !== val)
+  } else if (chipKey.startsWith('sf_')) {
+    const fmt = chipKey.slice(3)
+    next.supervisionFormats = next.supervisionFormats.filter((x) => x !== fmt)
+  } else if (chipKey.startsWith('sl_')) {
     const val = chipKey.slice(3)
     next.stateLicenses = next.stateLicenses.filter((s) => s !== val)
   } else if (chipKey.startsWith('st_')) {
@@ -138,23 +185,10 @@ export function removeChip(
   } else if (chipKey.startsWith('city_')) {
     const val = chipKey.slice(5)
     next.cities = next.cities.filter((c) => c !== val)
-  } else if (chipKey === 'formatVirtual') {
-    next.formatVirtual = false
-  } else if (chipKey === 'formatInPerson') {
-    next.formatInPerson = false
-  } else if (chipKey === 'formatHybrid') {
-    next.formatHybrid = false
-  } else if (chipKey === 'yearsOfExperience') {
-    next.yearsOfExperience = ''
   } else if (chipKey === 'acceptingOnly') {
     next.acceptingOnly = false
   } else if (chipKey === 'radiusMiles') {
     next.radiusMiles = RADIUS_DEFAULT
-  } else if (chipKey === 'occupationId') {
-    next.occupationId = ''
-    next.specialtyId = ''
-  } else if (chipKey === 'specialtyId') {
-    next.specialtyId = ''
   } else if (chipKey.startsWith('pop_')) {
     const pop = chipKey.slice(4)
     next.patientPopulation = next.patientPopulation.filter((p) => p !== pop)

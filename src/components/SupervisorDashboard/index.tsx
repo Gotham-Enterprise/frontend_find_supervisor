@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 
+import { SupervisorDashboardSubscription } from '@/components/Dashboard/subscription'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -855,6 +856,11 @@ export function SupervisorDashboard() {
 
       <VerificationPanel profile={enrichedProfile} />
       <QuickActions />
+      <SupervisorDashboardSubscription
+        isSubscribed={hasActiveSubscription(enrichedProfile)}
+        planName={enrichedProfile.user.subscriptions?.[0]?.plan.name}
+        currentPeriodEnd={enrichedProfile.user.subscriptions?.[0]?.currentPeriodEnd}
+      />
       <TipsAndHelp />
       <BillingSection profile={enrichedProfile} />
     </div>
