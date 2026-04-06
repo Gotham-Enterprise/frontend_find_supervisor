@@ -1,4 +1,5 @@
 import type { User } from '@/types'
+import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 import type { GoalStep } from './SuperviseeDashboardTypes'
 
@@ -12,6 +13,7 @@ export function getInitials(name: string | null | undefined): string {
     .join('')
 }
 
+/** Lightweight completion based on the auth `User` object (used when full profile isn't loaded yet). */
 export function getSuperviseeProfileCompletion(user: User): number {
   const checks: boolean[] = [
     !!user.emailVerified,
@@ -19,6 +21,31 @@ export function getSuperviseeProfileCompletion(user: User): number {
     !!user.fullName || !!user.name,
     !!user.city,
     !!user.state,
+  ]
+  return Math.round((checks.filter(Boolean).length / checks.length) * 100)
+}
+
+/**
+ * Richer completion calculation using the full `SuperviseeProfileData`.
+ * Covers account, location, supervision needs, and budget fields.
+ */
+export function getSuperviseeProfileCompletionFromData(profile: SuperviseeProfileData): number {
+  const { user } = profile
+  const checks: boolean[] = [
+    !!user.emailVerified,
+    !!user.profilePhotoUrl,
+    !!(user.fullName ?? user.firstName ?? user.lastName),
+    !!user.city,
+    !!user.state,
+    !!user.contactNumber,
+    (user.stateOfLicensure?.length ?? 0) > 0,
+    !!profile.typeOfSupervisorNeeded,
+    !!profile.preferredFormat,
+    !!profile.availability,
+    !!profile.howSoonLooking,
+    !!profile.stateTheyAreLookingIn,
+    !!profile.budgetRangeType,
+    !!profile.idealSupervisor,
   ]
   return Math.round((checks.filter(Boolean).length / checks.length) * 100)
 }

@@ -67,7 +67,10 @@ export function SupervisorCard({ supervisor }: SupervisorCardProps) {
             </p>
           </div>
 
-          <Link href={`/user/${id}`} className={cn(buttonVariants({ size: 'sm' }), 'shrink-0')}>
+          <Link
+            href={`/supervisors/${id}`}
+            className={cn(buttonVariants({ size: 'sm' }), 'shrink-0')}
+          >
             View Profile <span aria-hidden>→</span>
           </Link>
         </div>

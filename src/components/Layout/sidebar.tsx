@@ -1,6 +1,6 @@
 'use client'
 
-import { GitPullRequestArrow, LayoutDashboard, LogOut, UserCheck, Users } from 'lucide-react'
+import { CreditCard, LayoutDashboard, LogOut, Settings, UserCheck, Users } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -12,9 +12,10 @@ import { cn } from '@/lib/utils'
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Supervisors', href: '/supervisors', icon: Users, superviseeOnly: true },
-  { label: 'Supervisees', href: '/supervisees', icon: UserCheck },
-  { label: 'Matching Requests', href: '/matching', icon: GitPullRequestArrow },
+  { label: 'Find Supervisors', href: '/supervisors', icon: Users, superviseeOnly: true },
+  { label: 'Supervisees', href: '/supervisees', icon: UserCheck, supervisorOnly: true },
+  { label: 'Billing & Invoices', href: '/billing', icon: CreditCard },
+  { label: 'Settings', href: '/settings', icon: Settings },
 ] as const
 
 export function Sidebar() {
@@ -22,8 +23,13 @@ export function Sidebar() {
   const { user } = useUser()
 
   const visibleNavItems = navItems.filter((item) => {
-    if (!('superviseeOnly' in item) || !item.superviseeOnly) return true
-    return user ? isSuperviseeRole(user.role) : false
+    if ('superviseeOnly' in item && item.superviseeOnly) {
+      return user ? isSuperviseeRole(user.role) : false
+    }
+    if ('supervisorOnly' in item && item.supervisorOnly) {
+      return user ? !isSuperviseeRole(user.role) : false
+    }
+    return true
   })
 
   function handleLogout() {
