@@ -1,7 +1,13 @@
 import type { MatchingRequest, Supervisor, User } from '@/types'
+import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 import { SuperviseeDashboardActiveRequests } from './SuperviseeDashboardActiveRequests'
 import { SuperviseeDashboardHeader } from './SuperviseeDashboardHeader'
+import {
+  SuperviseeDashboardProfileDetails,
+  SuperviseeDashboardProfileDetailsError,
+  SuperviseeDashboardProfileDetailsSkeleton,
+} from './SuperviseeDashboardProfileDetails'
 import { SuperviseeDashboardProgressSection } from './SuperviseeDashboardProgressSection'
 import { SuperviseeDashboardQuickActions } from './SuperviseeDashboardQuickActions'
 import { SuperviseeDashboardRecommendedSupervisors } from './SuperviseeDashboardRecommendedSupervisors'
@@ -16,6 +22,10 @@ interface SuperviseeDashboardContentProps {
   acceptedRequests: MatchingRequest[]
   allRequests: MatchingRequest[]
   availableSupervisors: Supervisor[]
+  /** Full supervisee profile — undefined while loading, null on error/not-found */
+  superviseeProfile: SuperviseeProfileData | null | undefined
+  isProfileLoading: boolean
+  isProfileError: boolean
 }
 
 export function SuperviseeDashboardContent({
@@ -25,6 +35,9 @@ export function SuperviseeDashboardContent({
   acceptedRequests,
   allRequests,
   availableSupervisors,
+  superviseeProfile,
+  isProfileLoading,
+  isProfileError,
 }: SuperviseeDashboardContentProps) {
   return (
     <div className="space-y-6">
@@ -36,8 +49,30 @@ export function SuperviseeDashboardContent({
         supervisorCount={availableSupervisors.length}
       />
 
+      {/* My Profile (50%) + Goals & Progress (50%) */}
+      <div className="grid items-stretch gap-4 lg:grid-cols-2">
+        <div className="flex flex-col">
+          {isProfileLoading && <SuperviseeDashboardProfileDetailsSkeleton />}
+          {isProfileError && <SuperviseeDashboardProfileDetailsError />}
+          {!isProfileLoading && !isProfileError && superviseeProfile && (
+            <SuperviseeDashboardProfileDetails profile={superviseeProfile} />
+          )}
+        </div>
+        {user && (
+          <div className="flex flex-col">
+            <SuperviseeDashboardProgressSection
+              user={user}
+              completion={completion}
+              allRequests={allRequests}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Upcoming Sessions — full width */}
       <SuperviseeDashboardUpcomingSessionsCard requests={acceptedRequests} />
 
+      {/* Recommended Supervisors (3/5) + Active Requests (2/5) */}
       <div className="grid gap-4 lg:grid-cols-5">
         <div className="lg:col-span-3">
           <SuperviseeDashboardRecommendedSupervisors supervisors={availableSupervisors} />
@@ -50,14 +85,6 @@ export function SuperviseeDashboardContent({
       <SuperviseeDashboardQuickActions />
 
       <SuperviseeDashboardSubscription />
-
-      {user && (
-        <SuperviseeDashboardProgressSection
-          user={user}
-          completion={completion}
-          allRequests={allRequests}
-        />
-      )}
     </div>
   )
 }

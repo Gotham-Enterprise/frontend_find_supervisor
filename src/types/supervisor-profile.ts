@@ -80,6 +80,18 @@ export interface Subscription {
   plan: SubscriptionPlan
 }
 
+export interface SupervisorOccupation {
+  id: number
+  name: string
+  iconUrl?: string | null
+}
+
+export interface SupervisorSpecialty {
+  id: number
+  name: string
+  occupationId?: number | null
+}
+
 export interface SupervisorProfileUser {
   id: string
   email: string
@@ -92,13 +104,13 @@ export interface SupervisorProfileUser {
   city: string | null
   state: string | null
   zipcode?: string | null
+  stateOfLicensure: string[]
   profilePhotoUrl: string | null
   emailVerified: boolean
   status?: string
   subscriptions: Subscription[]
-  /** Fetched via user relation, not SupervisorProfile */
-  occupation?: { id: number; name: string } | null
-  specialty?: { id: number; name: string } | null
+  occupation?: SupervisorOccupation | null
+  specialty?: SupervisorSpecialty | null
 }
 
 export interface SupervisorProfileData {
@@ -122,15 +134,27 @@ export interface SupervisorProfileData {
   describeYourself?: string | null
 
   supervisionFeeType: string | null
-  /** Fee stored in cents, e.g. 11000 = $110 */
+  /** Fee in whole dollars, e.g. 100 = $100 */
   supervisionFeeAmount: number | null
   professionalSummary?: string | null
   website?: string | null
+
+  licenseUrl?: string | null
+  licenseObjectKey?: string | null
+  licenseFileName?: string | null
+  verificationDocumentUrl?: string | null
 
   verificationStatus: VerificationStatus
   verificationNotes?: string | null
   visibilityStatus: VisibilityStatus
   totalCompletedSupervision?: number
+
+  /** Occupation from the profile join (same as user.occupation) */
+  occupation?: SupervisorOccupation | null
+  /** Specialty from the profile join (same as user.specialty) */
+  specialty?: SupervisorSpecialty | null
+  occupationId?: number | null
+  specialtyId?: number | null
 
   createdAt: string
   updatedAt: string

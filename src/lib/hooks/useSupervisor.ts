@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 
-import { getSupervisorById } from '@/lib/api/supervisors'
+import { getSupervisorProfileById } from '@/lib/api/supervisor-profile'
 
 export const supervisorDetailKeys = {
   all: ['supervisor-detail'] as const,
@@ -12,7 +12,8 @@ export const supervisorDetailKeys = {
 export function useSupervisor(id: string) {
   return useQuery({
     queryKey: supervisorDetailKeys.detail(id),
-    queryFn: () => getSupervisorById(id),
+    queryFn: () => getSupervisorProfileById(id),
     enabled: !!id,
+    staleTime: 1000 * 60 * 5,
   })
 }

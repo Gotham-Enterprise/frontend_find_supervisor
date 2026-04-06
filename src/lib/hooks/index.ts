@@ -31,6 +31,7 @@ export {
   useSubscriptionPlansMutation,
   useSubscriptionPlansQuery,
 } from './useSubscriptionPlans'
+export { superviseeProfileKeys, useSuperviseeProfile } from './useSuperviseeProfile'
 export { superviseeKeys, useSupervisees } from './useSupervisees'
 export { supervisorDetailKeys, useSupervisor } from './useSupervisor'
 export { useSupervisorProfile } from './useSupervisorProfile'

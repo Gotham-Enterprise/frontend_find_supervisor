@@ -19,6 +19,8 @@ export async function getSupervisors(
 }
 
 export async function getSupervisorById(id: string): Promise<Supervisor> {
-  const { data } = await apiClient.get<ApiResponse<Supervisor>>(`/supervisors/${id}`)
+  const { data } = await apiClient.get<ApiResponse<Supervisor>>(
+    `/supervision/supervisor/profile?id=${id}`,
+  )
   return data.data
 }
