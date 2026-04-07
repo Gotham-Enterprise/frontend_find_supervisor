@@ -2,7 +2,7 @@ import axios from 'axios'
 
 import { parseApiError } from '@/lib/utils/error-parser'
 import type { ApiResponse } from '@/types/api'
-import type { HireRecord, HireSupervisorPayload } from '@/types/hire'
+import type { HireListResponse, HireRecord, HireSupervisorPayload } from '@/types/hire'
 import type {
   PurchaseSubscriptionResponse,
   Subscription,
@@ -53,6 +53,14 @@ export async function purchaseSubscription(
 /** POST /api/supervision/hires — supervisee hires a supervisor. */
 export async function hireSupervisor(payload: HireSupervisorPayload): Promise<HireRecord> {
   const { data } = await apiClient.post<ApiResponse<HireRecord>>('/supervision/hires', payload)
+  return data.data
+}
+
+/** GET /api/supervision/hires — paginated hire list for the authenticated user (supervisor or supervisee). */
+export async function listHires(page = 1, limit = 10): Promise<HireListResponse> {
+  const { data } = await apiClient.get<ApiResponse<HireListResponse>>('/supervision/hires', {
+    params: { page, limit },
+  })
   return data.data
 }
 

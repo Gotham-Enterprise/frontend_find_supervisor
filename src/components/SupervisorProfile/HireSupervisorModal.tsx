@@ -36,24 +36,20 @@ const hireSupervisorSchema = z
   .object({
     supervisorId: z.string().min(1),
     preferredFormat: z.enum(['IN_PERSON', 'VIRTUAL', 'HYBRID'], {
-      required_error: 'Preferred format is required',
+      error: 'Preferred format is required',
     }),
     preferredAvailability: z.enum(
       ['FLEXIBLE', 'WEEKDAYS', 'EVENINGS', 'WEEKENDS', 'BY_APPOINTMENT'],
-      { required_error: 'Preferred availability is required' },
+      { error: 'Preferred availability is required' },
     ),
     typeOfSupervisorNeeded: z.string().min(1, 'Type of supervisor is required'),
     stateTheyAreLookingIn: z.string().min(1, 'State is required'),
     preferredStartDate: z.string().min(1, 'Preferred start date is required'),
     budgetRangeType: z.enum(['PER_SESSION', 'MONTHLY'], {
-      required_error: 'Budget type is required',
+      error: 'Budget type is required',
     }),
-    budgetRangeStart: z
-      .number({ invalid_type_error: 'Must be a number' })
-      .min(0, 'Must be 0 or greater'),
-    budgetRangeEnd: z
-      .number({ invalid_type_error: 'Must be a number' })
-      .min(0, 'Must be 0 or greater'),
+    budgetRangeStart: z.number({ error: 'Must be a number' }).min(0, 'Must be 0 or greater'),
+    budgetRangeEnd: z.number({ error: 'Must be a number' }).min(0, 'Must be 0 or greater'),
     introMessage: z.string().min(1, 'Intro message is required'),
     goals: z.string().min(1, 'Goals for supervision are required'),
   })
