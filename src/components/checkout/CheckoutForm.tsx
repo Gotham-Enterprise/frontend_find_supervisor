@@ -3,7 +3,7 @@
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import type { StripeElementsOptions } from '@stripe/stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
-import { AlertCircle, Lock, ShieldCheck } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Lock, ShieldCheck } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { purchaseSubscription } from '@/lib/api/supervision'
@@ -132,7 +132,7 @@ function CheckoutFormInner({ plan }: CheckoutFormInnerProps) {
 // ─── Outer wrapper — initializes subscription on arrival, then mounts Elements ─
 
 export function CheckoutForm() {
-  const { plan, planId, isLoading: planLoading } = useCheckoutPlanFromUrl()
+  const { plan, planId, canCheckout, isLoading: planLoading } = useCheckoutPlanFromUrl()
 
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [initError, setInitError] = useState<string | null>(null)
@@ -144,6 +144,8 @@ export function CheckoutForm() {
   useEffect(() => {
     // Wait until the plan is resolved from the URL
     if (!planId || !plan || planLoading) return
+    // Free plans do not go through Stripe — skip initialization
+    if (!canCheckout) return
     // Don't re-initialize if already in flight or complete
     if (initStarted.current) return
 
@@ -156,7 +158,7 @@ export function CheckoutForm() {
         setInitError(parseApiError(err))
         initStarted.current = false // allow retry
       })
-  }, [planId, plan, planLoading])
+  }, [planId, plan, planLoading, canCheckout])
 
   // "Initializing" is derived rather than tracked with separate state:
   // plan is resolved but we have neither a clientSecret nor an error yet.
@@ -197,6 +199,23 @@ export function CheckoutForm() {
         <p className="text-sm text-muted-foreground">
           Return to the dashboard and select a plan to continue.
         </p>
+      </div>
+    )
+  }
+
+  // ── Free plan — no payment required ────────────────────────────────────────
+  if (!canCheckout) {
+    return (
+      <div className="flex flex-1 flex-col gap-6 bg-card px-8 py-12">
+        <div className="flex items-start gap-2.5 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3">
+          <CheckCircle2 className="mt-px size-4 shrink-0 text-emerald-600" />
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-emerald-800">No payment required</p>
+            <p className="text-xs text-emerald-700">
+              {plan.name} is free. Return to the dashboard to start using the platform.
+            </p>
+          </div>
+        </div>
       </div>
     )
   }

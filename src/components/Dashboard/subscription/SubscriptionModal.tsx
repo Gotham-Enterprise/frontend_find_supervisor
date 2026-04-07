@@ -5,7 +5,12 @@ import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
 
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
-import { FREE_PLAN_ID, mergeFreeWithApiPlans } from '@/lib/constants/subscription-plans'
+import {
+  canCheckoutPlan,
+  isFreePlan,
+  planFeatures,
+  sortPlans,
+} from '@/lib/constants/subscription-plans'
 import {
   useCurrentSubscriptionQuery,
   useSubscriptionPlansQuery,
@@ -20,30 +25,25 @@ import {
   planMatchesSubscription,
   resolveCurrentChoosablePlan,
 } from '@/lib/utils/subscription-plan-resolution'
-import type { ChoosablePlan } from '@/types/supervisor-profile'
 
-const FREE_FEATURES = [
-  'Browse supervisor profiles',
-  'View session availability',
-  'Track goals & progress',
-  'Access session history (limited)',
+/** Fallback features shown on the free plan card if the API returns none. */
+const FREE_PLAN_FALLBACK_FEATURES = [
+  'Receive and respond to supervisee requests',
+  'Basic profile listing in search',
+  'Platform notifications for new activity',
 ]
 
-const PAID_FALLBACK_FEATURES = [
-  'Everything in Free',
-  'Browse verified supervisors',
-  'Direct messaging with supervisors',
-  'Availability & scheduling tools',
-  'Priority supervisor matching',
+/** Fallback features shown on paid plan cards if the API returns none. */
+const PAID_PLAN_FALLBACK_FEATURES = [
+  'Full messaging with supervisees',
+  'View supervisee contact details',
+  'Improved discoverability and profile exposure',
+  'Unlock full supervisor platform tools',
 ]
 
 interface SubscriptionModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-}
-
-function isPaidPlan(plan: ChoosablePlan): plan is ChoosablePlan & { isFree?: false } {
-  return plan.id !== FREE_PLAN_ID
 }
 
 export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps) {
@@ -65,14 +65,16 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
     refetch: refetchCurrent,
   } = useCurrentSubscriptionQuery(open)
 
-  const mergedPlans = useMemo(() => mergeFreeWithApiPlans(plansData ?? []), [plansData])
+  // Sort plans price-ascending (free first) and filter inactive plans
+  const plans = useMemo(() => sortPlans(plansData ?? []), [plansData])
 
   const resolution = useMemo(
-    () => resolveCurrentChoosablePlan(currentSubscription ?? null, mergedPlans),
-    [currentSubscription, mergedPlans],
+    () => resolveCurrentChoosablePlan(currentSubscription ?? null, plans),
+    [currentSubscription, plans],
   )
 
-  const paidPlans = useMemo(() => mergedPlans.filter((p) => isPaidPlan(p)), [mergedPlans])
+  // Index of the first paid plan — used for the "Most popular" badge
+  const firstPaidPlanId = useMemo(() => plans.find((p) => !isFreePlan(p))?.id ?? null, [plans])
 
   const awaitingSubscriptionStatus = open && currentPending && !!plansData
 
@@ -81,24 +83,8 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
     router.push(`/checkout?planId=${encodeURIComponent(planId)}`)
   }
 
-  function paidFeaturesFor(plan: ChoosablePlan) {
-    if (!isPaidPlan(plan)) return FREE_FEATURES
-    const desc = plan.description?.trim()
-    if (desc) {
-      const lines = desc
-        .split(/\n+/)
-        .map((l) => l.trim())
-        .filter(Boolean)
-      if (lines.length > 1) return lines
-      return [desc]
-    }
-    return PAID_FALLBACK_FEATURES
-  }
-
   const gridClass =
-    mergedPlans.length <= 2
-      ? 'grid-cols-1 md:grid-cols-2'
-      : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'
+    plans.length <= 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
@@ -122,7 +108,7 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
           >
             <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
             <div className="flex-1 text-left">
-              <p className="font-semibold">Couldn&apos;t load paid plans</p>
+              <p className="font-semibold">Couldn&apos;t load plans</p>
               <p className="mt-1 text-muted-foreground">
                 {plansErrorObj instanceof Error ? plansErrorObj.message : 'Please try again.'}
               </p>
@@ -162,18 +148,23 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
         )}
 
         <div className={cn('grid gap-5', gridClass)}>
-          {mergedPlans.map((plan) => {
-            const isFree = plan.id === FREE_PLAN_ID
-            const isFirstPaid = isPaidPlan(plan) && paidPlans[0]?.id === plan.id
+          {plans.map((plan) => {
+            const isFree = isFreePlan(plan)
+            const isFirstPaid = plan.id === firstPaidPlanId
             const isThisCurrent = planMatchesSubscription(plan, resolution)
-            const showCurrentBadge = isThisCurrent && resolution.isActivePaid
             const showPendingBadge = isThisCurrent && resolution.isPendingActivation
             const titleNeedsRightPad = isFirstPaid
-            const titleNeedsLeftPad = showCurrentBadge || showPendingBadge
+            const titleNeedsLeftPad = showPendingBadge
 
-            const showDisabledCurrentCta =
-              (isPaidPlan(plan) && isThisCurrent && resolution.isActivePaid) ||
-              (isFree && isThisCurrent)
+            // CTA is disabled when this is the user's current active plan (paid or free)
+            const isCurrentActivePlan =
+              (isThisCurrent && resolution.isActivePaid) ||
+              (isThisCurrent && isFree && !resolution.isPendingActivation)
+
+            const features = planFeatures(
+              plan,
+              isFree ? FREE_PLAN_FALLBACK_FEATURES : PAID_PLAN_FALLBACK_FEATURES,
+            )
 
             return (
               <div
@@ -182,19 +173,12 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
                 aria-label={plan.name}
                 className={cn(
                   'relative flex flex-col rounded-xl border p-6 text-left transition-all',
-                  showDisabledCurrentCta
+                  isCurrentActivePlan
                     ? 'border-border bg-muted/40 ring-1 ring-border/60'
                     : 'border-border hover:border-primary/40',
-                  !isFree && !showDisabledCurrentCta && 'bg-primary/5',
+                  !isFree && !isCurrentActivePlan && 'bg-primary/5',
                 )}
               >
-                {showCurrentBadge && (
-                  <div className="absolute left-3 top-3 z-10 inline-flex h-6 items-center justify-center rounded-md border border-emerald-600/25 bg-emerald-50 px-2.5 dark:bg-emerald-950/40">
-                    <span className="text-[9px] font-semibold uppercase leading-none tracking-wider text-emerald-800 dark:text-emerald-200">
-                      Current plan
-                    </span>
-                  </div>
-                )}
                 {showPendingBadge && (
                   <div className="absolute left-3 top-3 z-10 inline-flex h-6 items-center justify-center rounded-md border border-amber-500/30 bg-amber-50 px-2.5 dark:bg-amber-950/40">
                     <span className="text-[9px] font-semibold uppercase leading-none tracking-wider text-amber-900 dark:text-amber-100">
@@ -228,38 +212,29 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
                     {plan.name}
                   </p>
                   <div className="mt-1 flex items-baseline gap-1">
-                    {formatPlanPriceFromCents(plan.priceInCents) === 'Free' ? (
-                      <span className="text-4xl font-extrabold tracking-tight text-foreground">
-                        $0
-                      </span>
-                    ) : (
-                      <span className="text-4xl font-extrabold tracking-tight text-foreground">
-                        {formatPlanPriceFromCents(plan.priceInCents)}
-                      </span>
-                    )}
+                    <span className="text-4xl font-extrabold tracking-tight text-foreground">
+                      {isFree ? '$0' : formatPlanPriceFromCents(plan.priceInCents)}
+                    </span>
                     {formatBillingCycleSuffix(plan.billingCycle) ? (
                       <span className="text-sm text-muted-foreground">
                         {formatBillingCycleSuffix(plan.billingCycle)}
                       </span>
-                    ) : isFree ? (
-                      <span className="text-sm text-muted-foreground">/mo.</span>
                     ) : null}
                   </div>
-                  {isPaidPlan(plan) && plan.billingCycle && (
+                  {!isFree && plan.billingCycle && (
                     <p className="mt-1 text-xs text-primary">
                       {formatBillingCycleLabel(plan.billingCycle)}
                     </p>
                   )}
-                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                    {plan.description ??
-                      (isFree
-                        ? 'Basic access to browse supervisors and explore the platform.'
-                        : 'Full access to messaging, scheduling tools, and priority support.')}
-                  </p>
+                  {plan.description && (
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                      {plan.description}
+                    </p>
+                  )}
                 </div>
 
                 <ul className="mb-6 flex-1 space-y-2.5">
-                  {paidFeaturesFor(plan).map((feature) => (
+                  {features.map((feature) => (
                     <li key={`${plan.id}-${feature}`} className="flex items-start gap-2.5">
                       <CheckCircle2
                         className={cn(
@@ -272,7 +247,7 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
                   ))}
                 </ul>
 
-                {showDisabledCurrentCta ? (
+                {isCurrentActivePlan ? (
                   <button
                     type="button"
                     disabled
@@ -280,7 +255,7 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
                   >
                     Your current plan
                   </button>
-                ) : isPaidPlan(plan) ? (
+                ) : canCheckoutPlan(plan) ? (
                   <button
                     type="button"
                     onClick={() => goToCheckout(plan.id)}
@@ -289,6 +264,7 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
                     Choose plan
                   </button>
                 ) : (
+                  // Free plan with no active subscription — just close the modal
                   <button
                     type="button"
                     onClick={() => onOpenChange(false)}

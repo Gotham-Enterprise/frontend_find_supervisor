@@ -112,7 +112,38 @@ function UnsubscribedCard() {
   )
 }
 
-function SubscribedCard() {
+function formatBillingDate(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+function SubscriptionSectionSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="border-b pb-4">
+        <div className="h-5 w-48 animate-pulse rounded bg-muted" />
+        <div className="mt-2 h-4 w-72 max-w-full animate-pulse rounded bg-muted/60" />
+      </CardHeader>
+      <CardContent className="pt-5">
+        <div className="h-40 animate-pulse rounded-xl bg-muted/40" />
+      </CardContent>
+    </Card>
+  )
+}
+
+function SubscribedCard({
+  planName,
+  currentPeriodEnd,
+}: {
+  planName: string
+  currentPeriodEnd: string | null | undefined
+}) {
+  const nextBilling = formatBillingDate(currentPeriodEnd)
+
   return (
     <Card className="border-emerald-200 bg-emerald-50/30">
       <CardHeader className="flex flex-row items-start justify-between gap-4 border-b border-emerald-100 pb-4">
@@ -161,11 +192,11 @@ function SubscribedCard() {
             <div className="mt-4 space-y-2 border-t border-emerald-200 pt-4">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-emerald-700">Current plan</span>
-                <span className="font-semibold text-emerald-800">Pro Plan</span>
+                <span className="font-semibold text-emerald-800">{planName}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-emerald-700">Next billing</span>
-                <span className="text-emerald-700">Apr 16, 2025</span>
+                <span className="text-emerald-700">{nextBilling}</span>
               </div>
             </div>
 
@@ -186,11 +217,27 @@ function SubscribedCard() {
 }
 
 interface SuperviseeDashboardSubscriptionProps {
+  /** While true, show a skeleton instead of defaulting to “free” (avoids flash after checkout). */
+  isProfileLoading?: boolean
   isSubscribed?: boolean
+  planName?: string | null
+  currentPeriodEnd?: string | null
 }
 
 export function SuperviseeDashboardSubscription({
+  isProfileLoading = false,
   isSubscribed = false,
+  planName,
+  currentPeriodEnd,
 }: SuperviseeDashboardSubscriptionProps) {
-  return isSubscribed ? <SubscribedCard /> : <UnsubscribedCard />
+  if (isProfileLoading) {
+    return <SubscriptionSectionSkeleton />
+  }
+
+  if (!isSubscribed) {
+    return <UnsubscribedCard />
+  }
+
+  const resolvedPlan = planName?.trim() || 'Premium plan'
+  return <SubscribedCard planName={resolvedPlan} currentPeriodEnd={currentPeriodEnd} />
 }

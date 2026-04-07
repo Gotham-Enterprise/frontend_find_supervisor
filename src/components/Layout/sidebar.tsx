@@ -1,6 +1,14 @@
 'use client'
 
-import { CreditCard, LayoutDashboard, LogOut, Settings, UserCheck, Users } from 'lucide-react'
+import {
+  Briefcase,
+  CreditCard,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  UserCheck,
+  Users,
+} from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -13,6 +21,7 @@ import { cn } from '@/lib/utils'
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Find Supervisors', href: '/supervisors', icon: Users, superviseeOnly: true },
+  { label: 'Hired Supervisors', href: '/hires', icon: Briefcase, superviseeOnly: true },
   { label: 'Supervisees', href: '/supervisees', icon: UserCheck, supervisorOnly: true },
   { label: 'Billing & Invoices', href: '/billing', icon: CreditCard },
   { label: 'Settings', href: '/settings', icon: Settings },
