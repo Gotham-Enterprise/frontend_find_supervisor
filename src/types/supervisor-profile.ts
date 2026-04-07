@@ -9,11 +9,13 @@ export type SubscriptionStatus =
   | 'CANCELED'
   | 'UNPAID'
 
-/** Paid plans from GET /supervision/plans (and nested on Subscription). */
+/** Plans from GET /supervision/plans — both free (priceInCents: 0) and paid. */
 export interface SubscriptionPlan {
   id: string
   name: string
   description?: string | null
+  /** Feature bullet points returned by the API. */
+  features?: string[] | null
   priceInCents: number
   billingCycle: string | null
   transactionFeePct?: number | null
@@ -26,21 +28,11 @@ export interface SubscriptionPlan {
 }
 
 /**
- * Free tier (frontend-only `free-plan` id) or a paid API plan for the plan picker.
+ * All plans returned by GET /supervision/plans.
+ * Both free (priceInCents === 0, stripePriceId === null) and paid plans are included.
+ * Use {@link isFreePlan} / {@link canCheckoutPlan} from subscription-plans.ts to distinguish them.
  */
-export type ChoosablePlan =
-  | (SubscriptionPlan & { isFree?: false })
-  | {
-      id: 'free-plan'
-      name: string
-      description?: string | null
-      priceInCents: 0
-      billingCycle: null
-      isActive: true
-      isFree: true
-      stripePriceId?: undefined
-      stripeProductId?: undefined
-    }
+export type ChoosablePlan = SubscriptionPlan
 
 /**
  * Response from POST /supervision/payments/purchase-subscription.

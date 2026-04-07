@@ -47,6 +47,14 @@ export function useSalaryRangesOptions() {
   return useSignupOption('salaryRanges')
 }
 
+export function useFormatOptions() {
+  return useSignupOption('format')
+}
+
+export function useBudgetTypeOptions() {
+  return useSignupOption('budgetType')
+}
+
 /**
  * Occupation dropdown options from GET /api/categories/occupations (same as job_finder `useOccupations`).
  */

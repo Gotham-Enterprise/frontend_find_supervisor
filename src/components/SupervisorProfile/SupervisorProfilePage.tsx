@@ -35,7 +35,6 @@ export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePagePro
   const { data: patientPopulationOptions = [] } = usePatientPopulationOptions()
   const { data: licenseTypeOptions = [] } = useLicenseTypeOptions()
   const { data: availabilityOptions = [] } = useAvailabilityOptions()
-
   if (isLoading) {
     return <SupervisorProfileSkeleton />
   }

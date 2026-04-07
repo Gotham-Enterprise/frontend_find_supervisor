@@ -2,6 +2,7 @@ import axios from 'axios'
 
 import { parseApiError } from '@/lib/utils/error-parser'
 import type { ApiResponse } from '@/types/api'
+import type { HireRecord, HireSupervisorPayload } from '@/types/hire'
 import type {
   PurchaseSubscriptionResponse,
   Subscription,
@@ -46,6 +47,12 @@ export async function purchaseSubscription(
     '/supervision/payments/purchase-subscription',
     { subscriptionPlanId },
   )
+  return data.data
+}
+
+/** POST /api/supervision/hires — supervisee hires a supervisor. */
+export async function hireSupervisor(payload: HireSupervisorPayload): Promise<HireRecord> {
+  const { data } = await apiClient.post<ApiResponse<HireRecord>>('/supervision/hires', payload)
   return data.data
 }
 

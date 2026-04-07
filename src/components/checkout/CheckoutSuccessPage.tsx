@@ -1,8 +1,12 @@
 'use client'
 
+import { useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, XCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { useEffect } from 'react'
+
+import { subscriptionKeys } from '@/lib/hooks/useSubscriptionPlans'
 
 /**
  * Handles the Stripe return_url redirect after stripe.confirmPayment().
@@ -15,6 +19,13 @@ import { useSearchParams } from 'next/navigation'
 export function CheckoutSuccessPage() {
   const searchParams = useSearchParams()
   const status = searchParams.get('redirect_status')
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (status !== 'succeeded' && status !== 'processing') return
+    void queryClient.invalidateQueries({ queryKey: ['supervisee-profile'] })
+    void queryClient.invalidateQueries({ queryKey: subscriptionKeys.all })
+  }, [status, queryClient])
 
   if (status === 'succeeded') {
     return (

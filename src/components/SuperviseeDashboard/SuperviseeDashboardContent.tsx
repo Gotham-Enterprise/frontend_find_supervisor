@@ -1,3 +1,7 @@
+import {
+  getActivePaidSupervisionSubscription,
+  hasActivePaidSupervisionSubscription,
+} from '@/lib/utils/subscription-plan-resolution'
 import type { MatchingRequest, Supervisor, User } from '@/types'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
@@ -39,6 +43,13 @@ export function SuperviseeDashboardContent({
   isProfileLoading,
   isProfileError,
 }: SuperviseeDashboardContentProps) {
+  const activeSub = superviseeProfile
+    ? getActivePaidSupervisionSubscription(superviseeProfile.user.subscriptions)
+    : undefined
+  const isSubscribed = superviseeProfile
+    ? hasActivePaidSupervisionSubscription(superviseeProfile.user.subscriptions)
+    : false
+
   return (
     <div className="space-y-6">
       {user && <SuperviseeDashboardHeader user={user} completion={completion} />}
@@ -84,7 +95,12 @@ export function SuperviseeDashboardContent({
 
       <SuperviseeDashboardQuickActions />
 
-      <SuperviseeDashboardSubscription />
+      <SuperviseeDashboardSubscription
+        isProfileLoading={isProfileLoading}
+        isSubscribed={isSubscribed}
+        planName={activeSub?.plan?.name}
+        currentPeriodEnd={activeSub?.currentPeriodEnd}
+      />
     </div>
   )
 }

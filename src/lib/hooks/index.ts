@@ -2,6 +2,7 @@ export { useLogin, useLogout } from './useAuth'
 export { categoryKeys, useOccupations } from './useCategories'
 export { useCheckoutPlanFromUrl } from './useCheckoutPlanFromUrl'
 export { useCooldownTimer } from './useCooldownTimer'
+export { useHireSupervisor } from './useHires'
 export { useCitiesOptions, useMultiStateCityOptions, useStatesOptions } from './useLocationOptions'
 export {
   matchingKeys,
@@ -14,7 +15,9 @@ export { useResendVerificationEmail } from './useResendVerificationEmail'
 export { useSuperviseeSignup, useSupervisorSignup } from './useSignup'
 export {
   useAvailabilityOptions,
+  useBudgetTypeOptions,
   useCertificateOptions,
+  useFormatOptions,
   useHowSoonOptions,
   useLicenseTypeOptions,
   useOccupationOptions,

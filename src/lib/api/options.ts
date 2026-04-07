@@ -48,6 +48,8 @@ export type OptionsParam =
   | 'howSoon'
   | 'supervisorType'
   | 'salaryRanges'
+  | 'format'
+  | 'budgetType'
 
 export async function fetchOptions(param: OptionsParam): Promise<SelectOption[]> {
   const { data: res } = await apiClient.get<{ success: boolean; data: RawOption[] }>(
