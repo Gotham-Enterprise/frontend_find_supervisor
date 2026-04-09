@@ -2,7 +2,7 @@ import axios from 'axios'
 
 import { parseApiError } from '@/lib/utils/error-parser'
 import type { ApiResponse } from '@/types/api'
-import type { HireListResponse, HireRecord, HireSupervisorPayload } from '@/types/hire'
+import type { HireListResponse, HireRecord, HireStatus, HireSupervisorPayload } from '@/types/hire'
 import type {
   PurchaseSubscriptionResponse,
   Subscription,
@@ -57,11 +57,30 @@ export async function hireSupervisor(payload: HireSupervisorPayload): Promise<Hi
 }
 
 /** GET /api/supervision/hires — paginated hire list for the authenticated user (supervisor or supervisee). */
-export async function listHires(page = 1, limit = 10): Promise<HireListResponse> {
+export async function listHires(
+  page = 1,
+  limit = 10,
+  status?: HireStatus,
+): Promise<HireListResponse> {
   const { data } = await apiClient.get<ApiResponse<HireListResponse>>('/supervision/hires', {
-    params: { page, limit },
+    params: { page, limit, ...(status ? { status } : {}) },
   })
   return data.data
+}
+
+/** PATCH /supervision/hires/:hireId/accept — supervisor accepts a hire request. */
+export async function acceptHire(hireId: string): Promise<void> {
+  await apiClient.patch(`/supervision/hires/${hireId}/accept`)
+}
+
+/** PATCH /supervision/hires/:hireId/reject — supervisor rejects a hire request. */
+export async function rejectHire(hireId: string, reason: string): Promise<void> {
+  await apiClient.patch(`/supervision/hires/${hireId}/reject`, { reason })
+}
+
+/** PATCH /supervision/hires/:hireId/cancel — cancel a hire request. */
+export async function cancelHire(hireId: string): Promise<void> {
+  await apiClient.patch(`/supervision/hires/${hireId}/cancel`)
 }
 
 export type ResendEmailResult =
