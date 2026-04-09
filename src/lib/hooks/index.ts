@@ -2,7 +2,15 @@ export { useLogin, useLogout } from './useAuth'
 export { categoryKeys, useOccupations } from './useCategories'
 export { useCheckoutPlanFromUrl } from './useCheckoutPlanFromUrl'
 export { useCooldownTimer } from './useCooldownTimer'
-export { hireKeys, useHiresList, useHireSupervisor } from './useHires'
+export {
+  hireKeys,
+  useAcceptHire,
+  useCancelHire,
+  useHiresList,
+  useHireSupervisor,
+  usePendingRequestsCount,
+  useRejectHire,
+} from './useHires'
 export { useCitiesOptions, useMultiStateCityOptions, useStatesOptions } from './useLocationOptions'
 export {
   matchingKeys,

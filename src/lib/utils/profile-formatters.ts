@@ -1,4 +1,5 @@
 import type { SelectOption } from '@/lib/api/options'
+import { formatUSPhoneForDisplay } from '@/lib/utils/phone'
 
 // ─── Display name ──────────────────────────────────────────────────────────────
 
@@ -96,6 +97,49 @@ const SUPERVISION_FORMAT_LABELS: Record<string, string> = {
 export function formatSupervisionFormat(fmt: string | null | undefined): string {
   if (!fmt) return 'N/A'
   return SUPERVISION_FORMAT_LABELS[fmt] ?? fmt
+}
+
+// ─── Availability ─────────────────────────────────────────────────────────────
+
+const AVAILABILITY_LABELS: Record<string, string> = {
+  FLEXIBLE: 'Flexible',
+  WEEKDAYS: 'Weekdays',
+  EVENINGS: 'Evenings',
+  WEEKENDS: 'Weekends',
+  BY_APPOINTMENT: 'By Appointment',
+}
+
+export function formatAvailability(availability: string | null | undefined): string {
+  if (!availability) return 'N/A'
+  return AVAILABILITY_LABELS[availability] ?? availability
+}
+
+// ─── Budget range ─────────────────────────────────────────────────────────────
+
+const BUDGET_TYPE_SUFFIX: Record<string, string> = {
+  PER_SESSION: '/session',
+  MONTHLY: '/month',
+}
+
+export function formatBudgetRange(
+  start: number | null | undefined,
+  end: number | null | undefined,
+  type: string | null | undefined,
+): string {
+  if (start == null && end == null) return 'N/A'
+  const suffix = type ? (BUDGET_TYPE_SUFFIX[type] ?? '') : ''
+  if (start != null && end != null) return `$${start}–$${end}${suffix}`
+  if (start != null) return `From $${start}${suffix}`
+  return `Up to $${end}${suffix}`
+}
+
+// ─── Phone ────────────────────────────────────────────────────────────────────
+
+/** Formats a raw phone string as (XXX) XXX-XXXX. Returns "N/A" for nullish. */
+export function formatContactNumber(value: string | null | undefined): string {
+  if (!value?.trim()) return 'N/A'
+  const formatted = formatUSPhoneForDisplay(value)
+  return formatted || value
 }
 
 // ─── Initials ─────────────────────────────────────────────────────────────────

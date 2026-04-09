@@ -2,6 +2,7 @@
 
 import {
   Briefcase,
+  ClipboardList,
   CreditCard,
   LayoutDashboard,
   LogOut,
@@ -14,8 +15,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 import { TOKEN_KEY } from '@/lib/api/client'
-import { isSuperviseeRole } from '@/lib/auth/roles'
-import { useUser } from '@/lib/hooks'
+import { isSuperviseeRole, isSupervisorRole } from '@/lib/auth/roles'
+import { usePendingRequestsCount, useUser } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -23,6 +24,12 @@ const navItems = [
   { label: 'Find Supervisors', href: '/supervisors', icon: Users, superviseeOnly: true },
   { label: 'Hired Supervisors', href: '/hires', icon: Briefcase, superviseeOnly: true },
   { label: 'Supervisees', href: '/supervisees', icon: UserCheck, supervisorOnly: true },
+  {
+    label: 'Supervision Requests',
+    href: '/supervision-requests',
+    icon: ClipboardList,
+    supervisorOnly: true,
+  },
   { label: 'Billing & Invoices', href: '/billing', icon: CreditCard },
   { label: 'Settings', href: '/settings', icon: Settings },
 ] as const
@@ -30,6 +37,7 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname()
   const { user } = useUser()
+  const { data: pendingCount } = usePendingRequestsCount(isSupervisorRole(user?.role))
 
   const visibleNavItems = navItems.filter((item) => {
     if ('superviseeOnly' in item && item.superviseeOnly) {
@@ -61,6 +69,11 @@ export function Sidebar() {
       <nav className="flex flex-1 flex-col gap-1 p-4">
         {visibleNavItems.map(({ label, href, icon: Icon }) => {
           const isActive = pathname === href
+          const badge =
+            href === '/supervision-requests' && pendingCount && pendingCount > 0
+              ? pendingCount
+              : null
+
           return (
             <Link
               key={href}
@@ -73,7 +86,12 @@ export function Sidebar() {
               )}
             >
               <Icon className="h-4 w-4 shrink-0" />
-              {label}
+              <span className="flex-1">{label}</span>
+              {badge !== null && (
+                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold leading-none text-primary-foreground">
+                  {badge > 99 ? '99+' : badge}
+                </span>
+              )}
             </Link>
           )
         })}

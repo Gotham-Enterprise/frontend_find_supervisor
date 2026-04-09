@@ -1,10 +1,20 @@
 'use client'
 
-import { AlertCircle, Briefcase, ChevronLeft, ChevronRight } from 'lucide-react'
+import { AlertCircle, Briefcase, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
 import { Button, buttonVariants } from '@/components/ui/button'
+import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
+import {
+  DropdownMenuItem,
+  DropdownMenuPopup,
+  DropdownMenuPortal,
+  DropdownMenuPositioner,
+  DropdownMenuRoot,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -154,6 +164,8 @@ function Pagination({
 // ─── Table row ────────────────────────────────────────────────────────────────
 
 function HireRow({ hire }: { hire: HireListItem }) {
+  const [reasonOpen, setReasonOpen] = useState(false)
+
   const supervisorName = formatDisplayName(hire.supervisor)
   const occupation = hire.supervisor.occupation?.name ?? '—'
   const specialty = hire.supervisor.specialty?.name
@@ -162,28 +174,68 @@ function HireRow({ hire }: { hire: HireListItem }) {
   const format = formatSupervisionFormat(hire.supervisorFormat)
   const fee = formatFeeAmount(hire.supervisorFeeAmount, hire.supervisorFeeType)
 
+  const hasRejectionReason = hire.status === 'REJECTED' && !!hire.rejectionReason
+
   return (
-    <TableRow>
-      <TableCell className="font-medium">{supervisorName}</TableCell>
-      <TableCell className="max-w-[180px] truncate text-muted-foreground" title={occupationDisplay}>
-        {occupationDisplay}
-      </TableCell>
-      <TableCell className="text-muted-foreground">{location}</TableCell>
-      <TableCell>{format}</TableCell>
-      <TableCell>{fee}</TableCell>
-      <TableCell>
-        <HireStatusBadge status={hire.status} />
-      </TableCell>
-      <TableCell className="text-muted-foreground">{formatDate(hire.createdAt)}</TableCell>
-      <TableCell>
-        <Link
-          href={`/supervisors/${hire.supervisorId}`}
-          className={buttonVariants({ variant: 'outline', size: 'sm' })}
+    <>
+      <TableRow>
+        <TableCell className="font-medium">{supervisorName}</TableCell>
+        <TableCell
+          className="max-w-[180px] truncate text-muted-foreground"
+          title={occupationDisplay}
         >
-          View Profile
-        </Link>
-      </TableCell>
-    </TableRow>
+          {occupationDisplay}
+        </TableCell>
+        <TableCell className="text-muted-foreground">{location}</TableCell>
+        <TableCell>{format}</TableCell>
+        <TableCell>{fee}</TableCell>
+        <TableCell>
+          <HireStatusBadge status={hire.status} />
+        </TableCell>
+        <TableCell className="text-muted-foreground">{formatDate(hire.createdAt)}</TableCell>
+        <TableCell>
+          <DropdownMenuRoot>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="ghost" size="icon-sm" aria-label="Row actions">
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              }
+            />
+            <DropdownMenuPortal>
+              <DropdownMenuPositioner>
+                <DropdownMenuPopup>
+                  <DropdownMenuItem>
+                    <Link href={`/supervisors/${hire.supervisorId}`} className="w-full">
+                      View Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  {hasRejectionReason && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem destructive onClick={() => setReasonOpen(true)}>
+                        View Reason
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuPopup>
+              </DropdownMenuPositioner>
+            </DropdownMenuPortal>
+          </DropdownMenuRoot>
+        </TableCell>
+      </TableRow>
+
+      {hasRejectionReason && (
+        <DialogRoot open={reasonOpen} onOpenChange={setReasonOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogTitle>Rejection Reason</DialogTitle>
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+              {hire.rejectionReason}
+            </p>
+          </DialogContent>
+        </DialogRoot>
+      )}
+    </>
   )
 }
 
