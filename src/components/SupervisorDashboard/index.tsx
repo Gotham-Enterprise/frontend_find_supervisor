@@ -274,9 +274,6 @@ function WelcomeBanner({
     <div className="relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-widest opacity-70">
-            Supervisor Portal
-          </p>
           <div>
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Welcome, {name}</h1>
             <p className="mt-1 text-sm opacity-80">

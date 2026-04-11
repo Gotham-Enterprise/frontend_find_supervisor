@@ -16,10 +16,5 @@ export function DashboardPage() {
   if (role === 'SUPERVISEE') return <SuperviseeDashboard />
 
   // Fallback for unknown/admin roles
-  return (
-    <div className="space-y-2">
-      <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-      <p className="text-sm text-muted-foreground">Select a role to see your dashboard.</p>
-    </div>
-  )
+  return <p className="text-sm text-muted-foreground">Select a role to see your dashboard.</p>
 }

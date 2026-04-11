@@ -66,7 +66,7 @@ export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePagePro
 
   return (
     /* Bleed white to the full shell content area — overrides the shell's bg-background */
-    <div className="-mx-6 -mt-6 min-h-full bg-white px-6 pt-6 pb-12">
+    <div className="min-h-full bg-white px-6 pt-6 pb-12">
       <div className="mx-auto max-w-4xl">
         {/* Back navigation */}
         <Link

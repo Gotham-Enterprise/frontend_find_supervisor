@@ -17,10 +17,7 @@ export function SuperviseesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Supervisees</h1>
-        <p className="text-sm text-muted-foreground">Students registered in the matching system</p>
-      </div>
+      <p className="text-sm text-muted-foreground">Students registered in the matching system</p>
       <div className="rounded-md border">
         <Table>
           <TableHeader>

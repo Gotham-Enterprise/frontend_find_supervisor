@@ -5,7 +5,6 @@ import {
   ClipboardList,
   CreditCard,
   LayoutDashboard,
-  LogOut,
   Settings,
   UserCheck,
   Users,
@@ -14,8 +13,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-import { TOKEN_KEY } from '@/lib/api/client'
-import { isSuperviseeRole, isSupervisorRole } from '@/lib/auth/roles'
+import { isSuperviseeRole } from '@/lib/auth/roles'
 import { usePendingRequestsCount, useUser } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 
@@ -37,7 +35,7 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname()
   const { user } = useUser()
-  const { data: pendingCount } = usePendingRequestsCount(isSupervisorRole(user?.role))
+  const { data: pendingCount } = usePendingRequestsCount(!isSuperviseeRole(user?.role))
 
   const visibleNavItems = navItems.filter((item) => {
     if ('superviseeOnly' in item && item.superviseeOnly) {
@@ -49,14 +47,9 @@ export function Sidebar() {
     return true
   })
 
-  function handleLogout() {
-    localStorage.removeItem(TOKEN_KEY)
-    window.location.href = '/login'
-  }
-
   return (
-    <aside className="flex h-full w-64 flex-col border-r bg-sidebar">
-      <Link href="/" className="flex h-16 items-center gap-2 border-b px-6">
+    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-border bg-white">
+      <Link href="/" className="flex h-[60px] shrink-0 items-center border-b border-border px-6">
         <Image
           src="/logo.png"
           alt="Find A Supervisor"
@@ -66,9 +59,9 @@ export function Sidebar() {
         />
       </Link>
 
-      <nav className="flex flex-1 flex-col gap-1 p-4">
+      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
         {visibleNavItems.map(({ label, href, icon: Icon }) => {
-          const isActive = pathname === href
+          const isActive = pathname === href || pathname.startsWith(href + '/')
           const badge =
             href === '/supervision-requests' && pendingCount && pendingCount > 0
               ? pendingCount
@@ -96,16 +89,6 @@ export function Sidebar() {
           )
         })}
       </nav>
-
-      <div className="border-t p-4">
-        <button
-          onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-        >
-          <LogOut className="h-4 w-4 shrink-0" />
-          Log out
-        </button>
-      </div>
     </aside>
   )
 }
