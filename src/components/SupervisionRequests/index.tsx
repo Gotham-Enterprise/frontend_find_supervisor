@@ -482,12 +482,9 @@ export function SupervisionRequestsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Supervision Requests</h1>
-        <p className="text-sm text-muted-foreground">
-          Supervisees who have requested supervision from you.
-        </p>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        Supervisees who have requested supervision from you.
+      </p>
 
       {isLoading ? (
         <SupervisionRequestsTableSkeleton />

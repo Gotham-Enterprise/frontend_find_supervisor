@@ -29,14 +29,7 @@ export function SearchSupervisorHeader({
   return (
     <div className="bg-background pb-10">
       <div className="w-full px-0">
-        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-primary">
-          Supervisee Portal
-        </p>
-
-        <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Find A Supervisor
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Browse verified supervisors matched to your license, location, and goals.
         </p>
 
