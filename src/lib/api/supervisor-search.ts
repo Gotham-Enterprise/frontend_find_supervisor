@@ -99,6 +99,7 @@ function resolveSupervisionFormat(f: SupervisorSearchFilters): string | undefine
 /**
  * Maps UI state to GET /api/supervision/search query params.
  * Omits empty values; comma-joins multi-value fields per API contract.
+ * Always sends acceptingSupervisees (true/false) so the backend receives an explicit filter.
  */
 export function buildSupervisorSearchParams(
   input: SupervisorSearchQueryInput,
@@ -120,9 +121,7 @@ export function buildSupervisorSearchParams(
   appendCommaSeparated(params, 'patientPopulation', filters.patientPopulation)
   appendCommaSeparated(params, 'availability', filters.availability)
 
-  if (filters.acceptingOnly) {
-    params.acceptingSupervisees = true
-  }
+  params.acceptingSupervisees = filters.acceptingOnly
 
   const cityFirst = filters.cities.map((c) => c.trim()).filter(Boolean)[0]
   const stateFirst = filters.states.map((s) => s.trim()).filter(Boolean)[0]

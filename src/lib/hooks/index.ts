@@ -19,6 +19,12 @@ export {
   useUpdateMatchingRequestStatus,
 } from './useMatchingRequests'
 export { useMergedSpecialtyOptions } from './useMergedSpecialtyOptions'
+export {
+  notificationKeys,
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useNotifications,
+} from './useNotifications'
 export { useResendVerificationEmail } from './useResendVerificationEmail'
 export { useSuperviseeSignup, useSupervisorSignup } from './useSignup'
 export {

@@ -19,8 +19,8 @@ import { cn } from '@/lib/utils'
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Find Supervisors', href: '/supervisors', icon: Users, superviseeOnly: true },
-  { label: 'Hired Supervisors', href: '/hires', icon: Briefcase, superviseeOnly: true },
+  { label: 'Find Supervisors', href: '/find-supervisors', icon: Users, superviseeOnly: true },
+  { label: 'Hired Supervisors', href: '/hired-supervisors', icon: Briefcase, superviseeOnly: true },
   { label: 'Supervisees', href: '/supervisees', icon: UserCheck, supervisorOnly: true },
   {
     label: 'Supervision Requests',

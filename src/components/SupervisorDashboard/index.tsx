@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 
+import { ProfilePreviewCard } from '@/components/Dashboard/shared'
 import { SupervisorDashboardSubscription } from '@/components/Dashboard/subscription'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,16 +32,6 @@ import { cn } from '@/lib/utils'
 import type { SupervisorProfileData, VerificationStatus } from '@/types/supervisor-profile'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function getInitials(fullName: string | null | undefined): string {
-  if (!fullName?.trim()) return '?'
-  return fullName
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((n) => n[0]?.toUpperCase() ?? '')
-    .join('')
-}
 
 function getProfileCompletion(profile: SupervisorProfileData): number {
   const checks: boolean[] = [
@@ -153,38 +144,6 @@ function formatCents(cents: number): string {
 }
 
 // ─── Small reusable pieces ───────────────────────────────────────────────────
-
-function ProfileAvatar({
-  fullName,
-  photoUrl,
-  size = 'md',
-}: {
-  fullName: string | null | undefined
-  photoUrl: string | null | undefined
-  size?: 'sm' | 'md' | 'lg'
-}) {
-  const sizeClass = { sm: 'size-8 text-xs', md: 'size-12 text-sm', lg: 'size-16 text-lg' }[size]
-  if (photoUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={photoUrl}
-        alt={fullName ?? ''}
-        className={cn('rounded-full object-cover', sizeClass)}
-      />
-    )
-  }
-  return (
-    <div
-      className={cn(
-        'flex items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground',
-        sizeClass,
-      )}
-    >
-      {getInitials(fullName)}
-    </div>
-  )
-}
 
 function CircularProgress({ value }: { value: number }) {
   const r = 28
@@ -471,6 +430,7 @@ function ProfilePreview({ profile }: { profile: SupervisorProfileData }) {
   const name = profile.user.fullName ?? (composedName || '—')
   const location = [profile.user.city, profile.user.state].filter(Boolean).join(', ')
   const fmt = formatFormat(profile.supervisionFormat)
+  const metaLine = location || fmt ? `${location}${location && fmt ? ' · ' : ''}${fmt}` : undefined
   const tags = [
     profile.user.specialty?.name,
     profile.user.occupation?.name,
@@ -481,89 +441,63 @@ function ProfilePreview({ profile }: { profile: SupervisorProfileData }) {
     .slice(0, 5)
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between border-b pb-3">
-        <div>
-          <CardTitle className="text-base font-semibold">Profile Preview</CardTitle>
-          <p className="text-sm text-muted-foreground">How your profile looks publicly</p>
-        </div>
+    <ProfilePreviewCard
+      title="Profile Preview"
+      description="How your profile looks publicly"
+      headerAction={
         <Badge className="bg-muted text-muted-foreground hover:bg-muted">+ Hidden</Badge>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-4 pt-4">
-        {/* Header */}
-        <div className="flex items-start gap-3">
-          <ProfileAvatar fullName={name} photoUrl={profile.user.profilePhotoUrl} size="lg" />
-          <div className="min-w-0">
-            <p className="font-semibold leading-tight">{name}</p>
-            <p className="text-sm text-muted-foreground">
-              {profile.licenseType ?? profile.profession ?? '—'}
-            </p>
-            {(location || fmt) && (
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {location}
-                {location && fmt && ' · '}
-                {fmt}
-              </p>
-            )}
-          </div>
+      }
+      avatar={{ fullName: name, photoUrl: profile.user.profilePhotoUrl, size: 'lg' }}
+      identity={{
+        name,
+        subline: profile.licenseType ?? profile.profession ?? '—',
+        meta: metaLine,
+      }}
+      stats={[
+        { value: profile.yearsOfExperience ?? '—', label: 'Yrs Exp.' },
+        { value: profile.totalCompletedSupervision ?? 0, label: 'Reviews' },
+        {
+          value: <span className="capitalize">{profile.availability ?? '—'}</span>,
+          label: 'Availability',
+        },
+      ]}
+    >
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {tags.map((tag) => (
+            <Badge key={tag} variant="outline" className="text-xs">
+              {tag}
+            </Badge>
+          ))}
         </div>
+      )}
 
-        {/* Stats row */}
-        <div className="grid grid-cols-3 divide-x rounded-lg border text-center text-sm">
-          <div className="py-2">
-            <p className="font-semibold">{profile.yearsOfExperience ?? '—'}</p>
-            <p className="text-xs text-muted-foreground">Yrs Exp.</p>
-          </div>
-          <div className="py-2">
-            <p className="font-semibold">{profile.totalCompletedSupervision ?? 0}</p>
-            <p className="text-xs text-muted-foreground">Reviews</p>
-          </div>
-          <div className="py-2">
-            <p className="font-semibold capitalize">{profile.availability ?? '—'}</p>
-            <p className="text-xs text-muted-foreground">Availability</p>
-          </div>
-        </div>
-
-        {/* Tags */}
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {tags.map((tag) => (
-              <Badge key={tag} variant="outline" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
-          </div>
+      <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
+        <span className="font-semibold text-primary">
+          {formatFee(profile.supervisionFeeAmount, profile.supervisionFeeType)}
+        </span>
+        {profile.acceptingSupervisees ? (
+          <span className="text-xs font-medium text-emerald-600">Accepting now</span>
+        ) : (
+          <span className="text-xs text-muted-foreground">Not accepting</span>
         )}
+      </div>
 
-        {/* Fee + accepting */}
-        <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
-          <span className="font-semibold text-primary">
-            {formatFee(profile.supervisionFeeAmount, profile.supervisionFeeType)}
-          </span>
-          {profile.acceptingSupervisees ? (
-            <span className="text-xs font-medium text-emerald-600">Accepting now</span>
-          ) : (
-            <span className="text-xs text-muted-foreground">Not accepting</span>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="mt-auto flex gap-2">
-          <Link
-            href="/dashboard"
-            className="flex-1 rounded-lg bg-primary py-2 text-center text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-          >
-            Edit Profile
-          </Link>
-          <Link
-            href="/dashboard"
-            className="flex-1 rounded-lg border border-border py-2 text-center text-sm font-medium transition-colors hover:bg-muted"
-          >
-            Preview Public
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
+      <div className="mt-auto flex gap-2">
+        <Link
+          href="/dashboard"
+          className="flex-1 rounded-lg bg-primary py-2 text-center text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+        >
+          Edit Profile
+        </Link>
+        <Link
+          href="/dashboard"
+          className="flex-1 rounded-lg border border-border py-2 text-center text-sm font-medium transition-colors hover:bg-muted"
+        >
+          Preview Public
+        </Link>
+      </div>
+    </ProfilePreviewCard>
   )
 }
 

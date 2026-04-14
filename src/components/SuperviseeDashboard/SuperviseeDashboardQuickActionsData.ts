@@ -14,7 +14,7 @@ export const SUPERVISEE_DASHBOARD_QUICK_ACTIONS: SuperviseeDashboardQuickActionI
     icon: Search,
     label: 'Find a Supervisor',
     description: 'Browse verified supervisors',
-    href: '/supervisors',
+    href: '/find-supervisors',
     linkText: 'Browse now →',
   },
   {

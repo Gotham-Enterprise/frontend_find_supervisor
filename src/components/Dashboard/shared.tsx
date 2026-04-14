@@ -3,48 +3,12 @@
  * profile sections. Keep these generic — no supervisor/supervisee-specific logic here.
  */
 
-import { cn } from '@/lib/utils'
-import { getInitials } from '@/lib/utils/profile-formatters'
-
-// ─── Profile Avatar ───────────────────────────────────────────────────────────
-
-interface ProfileAvatarProps {
-  fullName: string | null | undefined
-  photoUrl: string | null | undefined
-  size?: 'sm' | 'md' | 'lg'
-}
-
-const AVATAR_SIZE: Record<NonNullable<ProfileAvatarProps['size']>, string> = {
-  sm: 'size-8 text-xs',
-  md: 'size-12 text-sm',
-  lg: 'size-16 text-lg',
-}
-
-export function ProfileAvatar({ fullName, photoUrl, size = 'md' }: ProfileAvatarProps) {
-  const sizeClass = AVATAR_SIZE[size]
-
-  if (photoUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={photoUrl}
-        alt={fullName ?? ''}
-        className={cn('rounded-full object-cover', sizeClass)}
-      />
-    )
-  }
-
-  return (
-    <div
-      className={cn(
-        'flex shrink-0 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground',
-        sizeClass,
-      )}
-    >
-      {getInitials(fullName)}
-    </div>
-  )
-}
+export { ProfileAvatar, type ProfileAvatarProps } from './ProfileAvatar'
+export {
+  ProfilePreviewCard,
+  type ProfilePreviewCardProps,
+  type ProfilePreviewStat,
+} from './ProfilePreviewCard'
 
 // ─── Profile Detail Row ───────────────────────────────────────────────────────
 

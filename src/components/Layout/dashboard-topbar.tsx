@@ -3,6 +3,7 @@
 import { ChevronDown, LogOut, Settings } from 'lucide-react'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 import { MessageBell } from '@/components/messages'
 import { NotificationBell } from '@/components/notifications'
@@ -20,13 +21,13 @@ import { useLogout, useUser } from '@/lib/hooks'
 
 /**
  * Route-to-title map for the topbar page title.
- * Prefix matching is used for dynamic segments (e.g. /supervisors/[id]).
+ * Prefix matching is used for dynamic segments (e.g. /find-supervisors/[id]).
  */
 const PAGE_TITLES: Array<{ prefix: string; title: string }> = [
   { prefix: '/dashboard', title: 'Dashboard' },
-  { prefix: '/supervisors', title: 'Find Supervisors' },
+  { prefix: '/find-supervisors', title: 'Find Supervisors' },
   { prefix: '/supervisees', title: 'Supervisees' },
-  { prefix: '/hires', title: 'Hired Supervisors' },
+  { prefix: '/hired-supervisors', title: 'Hired Supervisors' },
   { prefix: '/supervision-requests', title: 'Supervision Requests' },
   { prefix: '/billing', title: 'Billing & Invoices' },
   { prefix: '/settings', title: 'Settings' },
@@ -56,6 +57,11 @@ export function DashboardTopbar() {
 
   const displayName = user?.fullName ?? user?.name ?? ''
   const initials = getInitials(displayName)
+  const photoUrl = user?.profilePhotoUrl?.trim() ?? ''
+  /** Profile image URL that failed to load; retry when `photoUrl` changes. */
+  const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null)
+
+  const showPhoto = Boolean(photoUrl && failedPhotoUrl !== photoUrl)
   const sectionLabel = isSupervisorRole(user?.role) ? 'Supervisor Portal' : 'Supervisee Portal'
   const pageTitle = resolvePageTitle(pathname)
 
@@ -77,16 +83,20 @@ export function DashboardTopbar() {
         {/* User menu */}
         <DropdownMenuRoot>
           <DropdownMenuTrigger className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            {user?.profilePhotoUrl ? (
+            {showPhoto ? (
               <Image
-                src={user.profilePhotoUrl}
-                alt={displayName}
+                src={photoUrl}
+                alt=""
                 width={28}
                 height={28}
                 className="h-7 w-7 rounded-full object-cover"
+                onError={() => setFailedPhotoUrl(photoUrl)}
               />
             ) : (
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
+              <span
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground"
+                aria-hidden
+              >
                 {initials}
               </span>
             )}

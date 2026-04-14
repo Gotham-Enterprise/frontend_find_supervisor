@@ -29,4 +29,6 @@ export interface AppNotification {
   ctas?: NotificationCta[]
   /** ID of the related domain entity (hire, request, message thread, etc.) */
   referenceId?: string
+  /** Backend redirectSlug — used to build navigation targets from notifications */
+  redirectSlug?: string
 }

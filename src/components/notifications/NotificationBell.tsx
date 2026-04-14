@@ -1,42 +1,46 @@
 'use client'
 
-import { Bell } from 'lucide-react'
-import { useState } from 'react'
+import { Bell, Loader2 } from 'lucide-react'
 
+import {
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useNotifications,
+} from '@/lib/hooks/useNotifications'
 import { useTopbarDropdown } from '@/lib/hooks/useTopbarDropdown'
 import { cn } from '@/lib/utils'
 
-import { MOCK_NOTIFICATIONS } from './mock-data'
 import { NotificationPanel } from './NotificationPanel'
-import type { AppNotification } from './types'
 
 /**
  * Self-contained notification bell for the dashboard topbar.
  *
- * State ownership:
- * - `notifications` — initialized from mock data; swap with a `useQuery` hook when ready
- * - `actedMap`      — tracks CTA actions taken per notification ID (local-only for now)
- *
- * To migrate to real data: replace `useState(MOCK_NOTIFICATIONS)` with a
- * `useQuery` call and thread the setter through `onMarkRead` / `onAction`
- * into your mutation handlers.
+ * Data is fetched from GET /api/supervision/notifications and polled every 10 s.
+ * Mark-read and mark-all-read mutations apply optimistic updates so the UI
+ * responds instantly without waiting for the next poll cycle.
  */
 export function NotificationBell() {
   const { open, toggle, close, containerRef } = useTopbarDropdown()
-  const [notifications, setNotifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS)
-  const [actedMap, setActedMap] = useState<Record<string, string>>({})
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length
+  const { data, isLoading } = useNotifications()
+  const { mutate: markRead } = useMarkNotificationRead()
+  const { mutate: markAllRead } = useMarkAllNotificationsRead()
+
+  const notifications = data?.notifications ?? []
+  const unreadCount = data?.totalNotifUnread ?? 0
 
   function handleMarkRead(id: string) {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)))
+    markRead(id)
   }
 
   function handleAction(id: string, actionKey: string) {
-    setActedMap((prev) => ({ ...prev, [id]: actionKey }))
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, ctas: undefined, isRead: true } : n)),
-    )
+    markRead(id)
+    // actionKey reserved for future domain-level handlers (accept/reject requests, etc.)
+    void actionKey
+  }
+
+  function handleMarkAllRead() {
+    markAllRead()
   }
 
   function handleSeeAll() {
@@ -58,7 +62,11 @@ export function NotificationBell() {
           open && 'bg-muted text-foreground',
         )}
       >
-        <Bell className="h-[18px] w-[18px]" />
+        {isLoading ? (
+          <Loader2 className="h-[18px] w-[18px] animate-spin" />
+        ) : (
+          <Bell className="h-[18px] w-[18px]" />
+        )}
 
         {unreadCount > 0 && (
           <span
@@ -74,9 +82,10 @@ export function NotificationBell() {
         <div className="absolute right-0 top-full z-50 mt-2">
           <NotificationPanel
             notifications={notifications}
-            actedMap={actedMap}
+            actedMap={{}}
             onMarkRead={handleMarkRead}
             onAction={handleAction}
+            onMarkAllRead={handleMarkAllRead}
             onSeeAll={handleSeeAll}
           />
         </div>
