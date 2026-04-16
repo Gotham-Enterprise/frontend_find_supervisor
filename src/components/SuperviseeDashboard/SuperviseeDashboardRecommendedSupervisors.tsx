@@ -25,7 +25,7 @@ export function SuperviseeDashboardRecommendedSupervisors({
           <Star className="mb-2 size-8 text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">No supervisors available right now.</p>
           <Link
-            href="/supervisors"
+            href="/find-supervisors"
             className="mt-2 text-sm font-medium text-primary hover:underline"
           >
             Browse all supervisors →
@@ -42,7 +42,7 @@ export function SuperviseeDashboardRecommendedSupervisors({
           <CardTitle className="text-base font-semibold">Recommended for You</CardTitle>
           <p className="text-sm text-muted-foreground">Based on your supervision needs</p>
         </div>
-        <Link href="/supervisors" className="text-sm font-medium text-primary hover:underline">
+        <Link href="/find-supervisors" className="text-sm font-medium text-primary hover:underline">
           Browse all →
         </Link>
       </CardHeader>
@@ -76,7 +76,7 @@ export function SuperviseeDashboardRecommendedSupervisors({
 
                 <div className="mt-2 flex items-center gap-2">
                   <Link
-                    href={`/supervisors/${supervisor.id}`}
+                    href={`/find-supervisors/${supervisor.id}`}
                     className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
                   >
                     View Profile

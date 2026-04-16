@@ -48,7 +48,7 @@ export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePagePro
           This profile may not exist or is unavailable.
         </p>
         <Link
-          href="/supervisors"
+          href="/find-supervisors"
           className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'mt-5')}
         >
           <ArrowLeftIcon className="mr-1.5 size-4" />
@@ -70,7 +70,7 @@ export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePagePro
       <div className="mx-auto max-w-4xl">
         {/* Back navigation */}
         <Link
-          href="/supervisors"
+          href="/find-supervisors"
           className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeftIcon className="size-4" />

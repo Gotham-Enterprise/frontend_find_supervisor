@@ -26,7 +26,7 @@ export function SuperviseeDashboardActiveRequests({
           <MessageCircle className="mb-2 size-8 text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">No active requests yet.</p>
           <Link
-            href="/supervisors"
+            href="/find-supervisors"
             className="mt-2 text-sm font-medium text-primary hover:underline"
           >
             Find a supervisor →

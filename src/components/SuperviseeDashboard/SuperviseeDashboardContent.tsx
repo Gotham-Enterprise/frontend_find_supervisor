@@ -6,13 +6,14 @@ import type { MatchingRequest, Supervisor, User } from '@/types'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 import { SuperviseeDashboardActiveRequests } from './SuperviseeDashboardActiveRequests'
+import { SuperviseeDashboardActivityCard } from './SuperviseeDashboardActivityCard'
+import { SuperviseeDashboardGoalsProgressCard } from './SuperviseeDashboardGoalsProgressCard'
 import { SuperviseeDashboardHeader } from './SuperviseeDashboardHeader'
 import {
   SuperviseeDashboardProfileDetails,
   SuperviseeDashboardProfileDetailsError,
   SuperviseeDashboardProfileDetailsSkeleton,
 } from './SuperviseeDashboardProfileDetails'
-import { SuperviseeDashboardProgressSection } from './SuperviseeDashboardProgressSection'
 import { SuperviseeDashboardQuickActions } from './SuperviseeDashboardQuickActions'
 import { SuperviseeDashboardRecommendedSupervisors } from './SuperviseeDashboardRecommendedSupervisors'
 import { SuperviseeDashboardSubscription } from './SuperviseeDashboardSubscription'
@@ -60,9 +61,9 @@ export function SuperviseeDashboardContent({
         supervisorCount={availableSupervisors.length}
       />
 
-      {/* My Profile (50%) + Goals & Progress (50%) */}
-      <div className="grid items-stretch gap-4 lg:grid-cols-2">
-        <div className="flex flex-col">
+      {/* My Profile (40%) | Goals & Progress + Your Activity stacked (60%) */}
+      <div className="grid items-stretch gap-4 lg:grid-cols-5">
+        <div className="flex flex-col lg:col-span-2">
           {isProfileLoading && <SuperviseeDashboardProfileDetailsSkeleton />}
           {isProfileError && <SuperviseeDashboardProfileDetailsError />}
           {!isProfileLoading && !isProfileError && superviseeProfile && (
@@ -70,8 +71,9 @@ export function SuperviseeDashboardContent({
           )}
         </div>
         {user && (
-          <div className="flex flex-col">
-            <SuperviseeDashboardProgressSection
+          <div className="flex flex-col gap-4 lg:col-span-3">
+            <SuperviseeDashboardGoalsProgressCard user={user} allRequests={allRequests} />
+            <SuperviseeDashboardActivityCard
               user={user}
               completion={completion}
               allRequests={allRequests}

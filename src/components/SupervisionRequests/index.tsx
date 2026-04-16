@@ -5,6 +5,7 @@ import * as React from 'react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import {
@@ -62,33 +63,50 @@ const ALLOWED_ACTIONS: Record<HireStatus, ReadonlyArray<'accept' | 'reject' | 'c
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
+const SUPERVISION_REQUESTS_TABLE_HEADERS = [
+  'Supervisee',
+  'Email',
+  'Contact',
+  'Occupation',
+  'Location',
+  'Format',
+  'Availability',
+  'Budget',
+  'Status',
+  'Requested',
+  '',
+] as const
+
 function SupervisionRequestsTableSkeleton() {
-  const cols = 9
+  const cols = SUPERVISION_REQUESTS_TABLE_HEADERS.length
   return (
-    <div className="rounded-md border">
-      <Table>
+    <Card className="gap-0 overflow-hidden p-0 shadow-sm">
+      <Table className="text-[15px]">
         <TableHeader>
-          <TableRow>
-            {Array.from({ length: cols }).map((_, i) => (
-              <TableHead key={i}>
-                <Skeleton className="h-4 w-20" />
+          <TableRow className="border-b border-border bg-muted/50 hover:bg-muted/50">
+            {SUPERVISION_REQUESTS_TABLE_HEADERS.map((h) => (
+              <TableHead
+                key={h}
+                className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground"
+              >
+                {h}
               </TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
           {Array.from({ length: 5 }).map((_, i) => (
-            <TableRow key={i}>
+            <TableRow key={i} className="border-border/80">
               {Array.from({ length: cols }).map((__, j) => (
-                <TableCell key={j}>
-                  <Skeleton className="h-4 w-full" />
+                <TableCell key={j} className="px-4 py-4">
+                  <Skeleton className="h-4 w-full max-w-[8rem]" />
                 </TableCell>
               ))}
             </TableRow>
           ))}
         </TableBody>
       </Table>
-    </div>
+    </Card>
   )
 }
 
@@ -96,13 +114,17 @@ function SupervisionRequestsTableSkeleton() {
 
 function SupervisionRequestsEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center rounded-md border py-16 text-center">
-      <ClipboardList className="mb-3 size-10 text-muted-foreground/40" />
-      <p className="text-sm font-medium text-foreground">No supervision requests yet</p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Supervisees who request your supervision will appear here.
-      </p>
-    </div>
+    <Card className="border-dashed shadow-sm">
+      <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10">
+          <ClipboardList className="size-7 text-primary" aria-hidden />
+        </div>
+        <p className="text-base font-semibold text-foreground">No supervision requests yet</p>
+        <p className="mt-2 max-w-sm text-sm leading-relaxed text-foreground/80">
+          Supervisees who request your supervision will appear here.
+        </p>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -110,13 +132,19 @@ function SupervisionRequestsEmpty() {
 
 function SupervisionRequestsError() {
   return (
-    <div className="flex flex-col items-center justify-center rounded-md border py-16 text-center">
-      <AlertCircle className="mb-3 size-10 text-destructive/60" />
-      <p className="text-sm font-medium text-foreground">Failed to load supervision requests</p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Something went wrong. Please refresh the page to try again.
-      </p>
-    </div>
+    <Card className="border-destructive/25 bg-destructive/5 shadow-sm">
+      <CardContent className="flex flex-col items-center justify-center py-14 text-center">
+        <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-destructive/10">
+          <AlertCircle className="size-7 text-destructive" aria-hidden />
+        </div>
+        <p className="text-base font-semibold text-foreground">
+          Failed to load supervision requests
+        </p>
+        <p className="mt-2 max-w-sm text-sm leading-relaxed text-foreground/80">
+          Something went wrong. Please refresh the page to try again.
+        </p>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -141,8 +169,8 @@ function Pagination({
   const to = Math.min(currentPage * pageSize, totalCount)
 
   return (
-    <div className="flex items-center justify-between px-1 pt-3 text-sm text-muted-foreground">
-      <span>
+    <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <span className="text-sm font-medium text-foreground">
         Showing {from}–{to} of {totalCount} result{totalCount !== 1 ? 's' : ''}
       </span>
       <div className="flex items-center gap-1">
@@ -156,7 +184,7 @@ function Pagination({
         >
           <ChevronLeft className="size-4" />
         </Button>
-        <span className="min-w-[4rem] text-center text-sm">
+        <span className="min-w-[4rem] text-center text-sm font-medium tabular-nums text-foreground">
           {currentPage} / {totalPages}
         </span>
         <Button
@@ -446,24 +474,41 @@ function RequestRow({ hire }: { hire: HireListItem }) {
   const budget = formatBudgetRange(hire.budgetRangeStart, hire.budgetRangeEnd, hire.budgetRangeType)
 
   return (
-    <TableRow>
-      <TableCell className="font-medium">{superviseeName}</TableCell>
-      <TableCell className="text-muted-foreground">{hire.supervisee.email}</TableCell>
-      <TableCell className="text-muted-foreground">
+    <TableRow className="border-border/80">
+      <TableCell className="px-4 py-3.5 font-semibold text-foreground">{superviseeName}</TableCell>
+      <TableCell
+        className="max-w-[200px] truncate px-4 py-3.5 text-foreground/90"
+        title={hire.supervisee.email}
+      >
+        {hire.supervisee.email}
+      </TableCell>
+      <TableCell className="px-4 py-3.5 text-foreground/90 tabular-nums">
         {formatContactNumber(hire.supervisee.contactNumber)}
       </TableCell>
-      <TableCell className="max-w-[180px] truncate text-muted-foreground" title={occupationDisplay}>
+      <TableCell
+        className="max-w-[200px] truncate px-4 py-3.5 text-foreground/90"
+        title={occupationDisplay}
+      >
         {occupationDisplay}
       </TableCell>
-      <TableCell className="text-muted-foreground">{location}</TableCell>
-      <TableCell>{format}</TableCell>
-      <TableCell className="text-muted-foreground">{availability}</TableCell>
-      <TableCell className="text-muted-foreground">{budget}</TableCell>
-      <TableCell>
+      <TableCell className="px-4 py-3.5 text-foreground/90">{location}</TableCell>
+      <TableCell className="px-4 py-3.5 text-foreground">{format}</TableCell>
+      <TableCell
+        className="max-w-[140px] truncate px-4 py-3.5 text-foreground/90"
+        title={availability}
+      >
+        {availability}
+      </TableCell>
+      <TableCell className="px-4 py-3.5 font-medium tabular-nums text-foreground">
+        {budget}
+      </TableCell>
+      <TableCell className="px-4 py-3.5">
         <HireStatusBadge status={hire.status} />
       </TableCell>
-      <TableCell className="text-muted-foreground">{formatDate(hire.createdAt)}</TableCell>
-      <TableCell>
+      <TableCell className="px-4 py-3.5 text-sm tabular-nums text-foreground/90">
+        {formatDate(hire.createdAt)}
+      </TableCell>
+      <TableCell className="px-4 py-3.5">
         <RowActions hire={hire} />
       </TableCell>
     </TableRow>
@@ -481,10 +526,14 @@ export function SupervisionRequestsPage() {
   const totalPages = data?.totalPages ?? 1
 
   return (
-    <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">
-        Supervisees who have requested supervision from you.
-      </p>
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">Incoming requests</h2>
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          Supervisees who have asked you to supervise them appear below. Review format, budget, and
+          status—open the row menu to view full details, accept, reject, or cancel when allowed.
+        </p>
+      </div>
 
       {isLoading ? (
         <SupervisionRequestsTableSkeleton />
@@ -494,21 +543,43 @@ export function SupervisionRequestsPage() {
         <SupervisionRequestsEmpty />
       ) : (
         <>
-          <div className="rounded-md border">
-            <Table>
+          <Card className="gap-0 overflow-hidden p-0 shadow-sm">
+            <Table className="text-[15px]">
               <TableHeader>
-                <TableRow>
-                  <TableHead>Supervisee</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Occupation</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Format</TableHead>
-                  <TableHead>Availability</TableHead>
-                  <TableHead>Budget</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Requested</TableHead>
-                  <TableHead />
+                <TableRow className="border-b border-border bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Supervisee
+                  </TableHead>
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Email
+                  </TableHead>
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Contact
+                  </TableHead>
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Occupation
+                  </TableHead>
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Location
+                  </TableHead>
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Format
+                  </TableHead>
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Availability
+                  </TableHead>
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Budget
+                  </TableHead>
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Status
+                  </TableHead>
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Requested
+                  </TableHead>
+                  <TableHead className="h-12 w-[4.5rem] px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -517,7 +588,7 @@ export function SupervisionRequestsPage() {
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </Card>
 
           {totalPages > 1 && (
             <Pagination

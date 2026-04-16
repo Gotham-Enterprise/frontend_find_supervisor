@@ -16,6 +16,8 @@ interface NotificationPanelProps {
   onAction: (notificationId: string, actionKey: string) => void
   /** Called when the "See previous notifications" footer is clicked */
   onSeeAll: () => void
+  /** Called when the user clicks "Mark all as read". Only shown when there are unread items. */
+  onMarkAllRead?: () => void
 }
 
 interface FilterTabProps {
@@ -64,6 +66,7 @@ export function NotificationPanel({
   onMarkRead,
   onAction,
   onSeeAll,
+  onMarkAllRead,
 }: NotificationPanelProps) {
   const [filter, setFilter] = useState<NotificationFilter>('unread')
 
@@ -80,11 +83,21 @@ export function NotificationPanel({
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
         <h2 className="text-[15px] font-semibold text-foreground">Notifications</h2>
-        {unreadCount > 0 && (
-          <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">
-            {unreadCount} new
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && onMarkAllRead && (
+            <button
+              onClick={onMarkAllRead}
+              className="text-[12px] font-medium text-primary transition-colors hover:text-primary/80"
+            >
+              Mark all as read
+            </button>
+          )}
+          {unreadCount > 0 && (
+            <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">
+              {unreadCount} new
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Filter tabs */}

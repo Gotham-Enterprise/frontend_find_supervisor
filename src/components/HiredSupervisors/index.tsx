@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 
 import { Button, buttonVariants } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import {
   DropdownMenuItem,
@@ -42,10 +43,10 @@ const PAGE_SIZE = 10
 
 function HiredSupervisorsTableSkeleton() {
   return (
-    <div className="rounded-md border">
-      <Table>
+    <Card className="gap-0 overflow-hidden p-0 shadow-sm">
+      <Table className="text-[15px]">
         <TableHeader>
-          <TableRow>
+          <TableRow className="border-b border-border bg-muted/50 hover:bg-muted/50">
             {[
               'Supervisor',
               'Occupation',
@@ -56,23 +57,28 @@ function HiredSupervisorsTableSkeleton() {
               'Requested',
               '',
             ].map((h) => (
-              <TableHead key={h}>{h}</TableHead>
+              <TableHead
+                key={h}
+                className="h-12 px-4 text-xs font-semibold tracking-wide text-foreground"
+              >
+                {h}
+              </TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
           {Array.from({ length: 5 }).map((_, i) => (
-            <TableRow key={i}>
+            <TableRow key={i} className="border-border/80">
               {Array.from({ length: 8 }).map((__, j) => (
-                <TableCell key={j}>
-                  <Skeleton className="h-4 w-full" />
+                <TableCell key={j} className="px-4 py-4">
+                  <Skeleton className="h-4 w-full max-w-[8rem]" />
                 </TableCell>
               ))}
             </TableRow>
           ))}
         </TableBody>
       </Table>
-    </div>
+    </Card>
   )
 }
 
@@ -80,16 +86,23 @@ function HiredSupervisorsTableSkeleton() {
 
 function HiredSupervisorsEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center rounded-md border py-16 text-center">
-      <Briefcase className="mb-3 size-10 text-muted-foreground/40" />
-      <p className="text-sm font-medium text-foreground">No hired supervisors yet</p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Browse available supervisors and send a hire request to get started.
-      </p>
-      <Link href="/supervisors" className={buttonVariants({ size: 'sm', className: 'mt-4' })}>
-        Find a Supervisor
-      </Link>
-    </div>
+    <Card className="border-dashed shadow-sm">
+      <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10">
+          <Briefcase className="size-7 text-primary" aria-hidden />
+        </div>
+        <p className="text-base font-semibold text-foreground">No hired supervisors yet</p>
+        <p className="mt-2 max-w-sm text-sm leading-relaxed text-foreground/80">
+          Browse available supervisors and send a hire request to get started.
+        </p>
+        <Link
+          href="/find-supervisors"
+          className={buttonVariants({ size: 'default', className: 'mt-6' })}
+        >
+          Find a Supervisor
+        </Link>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -97,13 +110,17 @@ function HiredSupervisorsEmpty() {
 
 function HiredSupervisorsError() {
   return (
-    <div className="flex flex-col items-center justify-center rounded-md border py-16 text-center">
-      <AlertCircle className="mb-3 size-10 text-destructive/60" />
-      <p className="text-sm font-medium text-foreground">Failed to load hired supervisors</p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Something went wrong. Please refresh the page to try again.
-      </p>
-    </div>
+    <Card className="border-destructive/25 bg-destructive/5 shadow-sm">
+      <CardContent className="flex flex-col items-center justify-center py-14 text-center">
+        <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-destructive/10">
+          <AlertCircle className="size-7 text-destructive" aria-hidden />
+        </div>
+        <p className="text-base font-semibold text-foreground">Failed to load hired supervisors</p>
+        <p className="mt-2 max-w-sm text-sm leading-relaxed text-foreground/80">
+          Something went wrong. Please refresh the page to try again.
+        </p>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -128,8 +145,8 @@ function Pagination({
   const to = Math.min(currentPage * pageSize, totalCount)
 
   return (
-    <div className="flex items-center justify-between px-1 pt-3 text-sm text-muted-foreground">
-      <span>
+    <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <span className="text-sm font-medium text-foreground">
         Showing {from}–{to} of {totalCount} result{totalCount !== 1 ? 's' : ''}
       </span>
       <div className="flex items-center gap-1">
@@ -143,7 +160,7 @@ function Pagination({
         >
           <ChevronLeft className="size-4" />
         </Button>
-        <span className="min-w-[4rem] text-center text-sm">
+        <span className="min-w-[4rem] text-center text-sm font-medium tabular-nums text-foreground">
           {currentPage} / {totalPages}
         </span>
         <Button
@@ -178,22 +195,28 @@ function HireRow({ hire }: { hire: HireListItem }) {
 
   return (
     <>
-      <TableRow>
-        <TableCell className="font-medium">{supervisorName}</TableCell>
+      <TableRow className="border-border/80">
+        <TableCell className="px-4 py-3.5 font-semibold text-foreground">
+          {supervisorName}
+        </TableCell>
         <TableCell
-          className="max-w-[180px] truncate text-muted-foreground"
+          className="max-w-[200px] truncate px-4 py-3.5 text-foreground/90"
           title={occupationDisplay}
         >
           {occupationDisplay}
         </TableCell>
-        <TableCell className="text-muted-foreground">{location}</TableCell>
-        <TableCell>{format}</TableCell>
-        <TableCell>{fee}</TableCell>
-        <TableCell>
+        <TableCell className="px-4 py-3.5 text-foreground/90">{location}</TableCell>
+        <TableCell className="px-4 py-3.5 text-foreground">{format}</TableCell>
+        <TableCell className="px-4 py-3.5 font-medium tabular-nums text-foreground">
+          {fee}
+        </TableCell>
+        <TableCell className="px-4 py-3.5">
           <HireStatusBadge status={hire.status} />
         </TableCell>
-        <TableCell className="text-muted-foreground">{formatDate(hire.createdAt)}</TableCell>
-        <TableCell>
+        <TableCell className="px-4 py-3.5 text-sm tabular-nums text-foreground/90">
+          {formatDate(hire.createdAt)}
+        </TableCell>
+        <TableCell className="px-4 py-3.5">
           <DropdownMenuRoot>
             <DropdownMenuTrigger
               render={
@@ -206,7 +229,7 @@ function HireRow({ hire }: { hire: HireListItem }) {
               <DropdownMenuPositioner>
                 <DropdownMenuPopup>
                   <DropdownMenuItem>
-                    <Link href={`/supervisors/${hire.supervisorId}`} className="w-full">
+                    <Link href={`/find-supervisors/${hire.supervisorId}`} className="w-full">
                       View Profile
                     </Link>
                   </DropdownMenuItem>
@@ -250,10 +273,14 @@ export function HiredSupervisorsPage() {
   const totalPages = data?.totalPages ?? 1
 
   return (
-    <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">
-        All supervisors you have sent a hire request to.
-      </p>
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">Your hire requests</h2>
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          Everyone you&apos;ve asked to supervise you is listed here. Columns show format, fee, and
+          current status—use the row menu to view a profile or see a rejection reason.
+        </p>
+      </div>
 
       {isLoading ? (
         <HiredSupervisorsTableSkeleton />
@@ -263,18 +290,34 @@ export function HiredSupervisorsPage() {
         <HiredSupervisorsEmpty />
       ) : (
         <>
-          <div className="rounded-md border">
-            <Table>
+          <Card className="gap-0 overflow-hidden p-0 shadow-sm">
+            <Table className="text-[15px]">
               <TableHeader>
-                <TableRow>
-                  <TableHead>Supervisor</TableHead>
-                  <TableHead>Occupation</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Format</TableHead>
-                  <TableHead>Fee</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Requested</TableHead>
-                  <TableHead />
+                <TableRow className="border-b border-border bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Supervisor
+                  </TableHead>
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Occupation
+                  </TableHead>
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Location
+                  </TableHead>
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Format
+                  </TableHead>
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Fee
+                  </TableHead>
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Status
+                  </TableHead>
+                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    Requested
+                  </TableHead>
+                  <TableHead className="h-12 w-[4.5rem] px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -283,7 +326,7 @@ export function HiredSupervisorsPage() {
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </Card>
 
           {totalPages > 1 && (
             <Pagination

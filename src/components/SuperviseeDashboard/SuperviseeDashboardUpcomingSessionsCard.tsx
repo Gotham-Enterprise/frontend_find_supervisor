@@ -31,7 +31,7 @@ export function SuperviseeDashboardUpcomingSessionsCard({
             Once a supervisor accepts your request, sessions will appear here.
           </p>
           <Link
-            href="/supervisors"
+            href="/find-supervisors"
             className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
           >
             <Search className="size-4" />
@@ -95,7 +95,7 @@ export function SuperviseeDashboardUpcomingSessionsCard({
 
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
-              href={`/supervisors/${next.supervisorId}`}
+              href={`/find-supervisors/${next.supervisorId}`}
               className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
             >
               View Details
@@ -119,7 +119,7 @@ export function SuperviseeDashboardUpcomingSessionsCard({
                     Accepted
                   </Badge>
                   <Link
-                    href={`/supervisors/${req.supervisorId}`}
+                    href={`/find-supervisors/${req.supervisorId}`}
                     className="text-xs font-medium text-primary hover:underline"
                   >
                     View →

@@ -1,5 +1,8 @@
+'use client'
+
 import { ClockIcon, FileTextIcon, MapPinIcon } from 'lucide-react'
 import Link from 'next/link'
+import { useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
@@ -7,6 +10,45 @@ import { cn } from '@/lib/utils'
 
 import { FORMAT_BADGE_CLASSES, FORMAT_LABELS } from './helpers'
 import type { SupervisorSearchResult } from './types'
+
+/** Avatar for search results: photo when URL loads; initials fallback when missing or on error. */
+function SupervisorSearchAvatar({
+  photoUrl,
+  initials,
+  avatarColor,
+}: {
+  photoUrl: string | undefined
+  initials: string
+  avatarColor: string
+}) {
+  const [loadFailed, setLoadFailed] = useState(false)
+  const url = photoUrl?.trim()
+  const showImage = Boolean(url && !loadFailed)
+
+  if (!showImage) {
+    return (
+      <div
+        className={cn(
+          'flex size-14 items-center justify-center rounded-full text-lg font-bold text-white',
+          avatarColor,
+        )}
+        aria-hidden
+      >
+        {initials}
+      </div>
+    )
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- external profile URLs from API
+    <img
+      src={url}
+      alt=""
+      className="size-14 shrink-0 rounded-full object-cover"
+      onError={() => setLoadFailed(true)}
+    />
+  )
+}
 
 interface SupervisorCardProps {
   supervisor: SupervisorSearchResult
@@ -28,20 +70,21 @@ export function SupervisorCard({ supervisor }: SupervisorCardProps) {
     patientPopulation,
     initials,
     avatarColor,
+    profilePhotoUrl,
   } = supervisor
+
+  const photoUrl = profilePhotoUrl?.trim()
 
   return (
     <div className="flex gap-5 rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
       {/* Avatar column */}
       <div className="flex shrink-0 flex-col items-center gap-2">
-        <div
-          className={cn(
-            'flex size-14 items-center justify-center rounded-full text-lg font-bold text-white',
-            avatarColor,
-          )}
-        >
-          {initials}
-        </div>
+        <SupervisorSearchAvatar
+          key={photoUrl ?? 'no-photo'}
+          photoUrl={photoUrl}
+          initials={initials}
+          avatarColor={avatarColor}
+        />
         {accepting ? (
           <span className="flex items-center gap-1 text-xs font-medium text-[#006d36]">
             <span className="size-1.5 rounded-full bg-[#006d36]" />
@@ -68,7 +111,7 @@ export function SupervisorCard({ supervisor }: SupervisorCardProps) {
           </div>
 
           <Link
-            href={`/supervisors/${id}`}
+            href={`/find-supervisors/${id}`}
             className={cn(buttonVariants({ size: 'sm' }), 'shrink-0')}
           >
             View Profile <span aria-hidden>→</span>

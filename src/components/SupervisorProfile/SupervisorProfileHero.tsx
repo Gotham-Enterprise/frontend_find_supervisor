@@ -33,18 +33,26 @@ function ProfileAvatar({
   fullName: string | null | undefined
   photoUrl: string | null | undefined
 }) {
-  if (photoUrl) {
+  const [loadFailed, setLoadFailed] = useState(false)
+  const url = photoUrl?.trim()
+  const showImage = Boolean(url && !loadFailed)
+
+  if (showImage) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
+      // eslint-disable-next-line @next/next/no-img-element -- external profile URLs from API
       <img
-        src={photoUrl}
-        alt={fullName ?? 'Profile photo'}
+        src={url}
+        alt=""
         className="size-[88px] shrink-0 rounded-full object-cover"
+        onError={() => setLoadFailed(true)}
       />
     )
   }
   return (
-    <div className="flex size-[88px] shrink-0 items-center justify-center rounded-full bg-[#E2F0E8] text-2xl font-semibold text-[#006D36]">
+    <div
+      className="flex size-[88px] shrink-0 items-center justify-center rounded-full bg-[#E2F0E8] text-2xl font-semibold text-[#006D36]"
+      aria-hidden
+    >
       {getInitials(fullName)}
     </div>
   )
@@ -90,7 +98,11 @@ export function SupervisorProfileHero({ profile }: SupervisorProfileHeroProps) {
   return (
     <>
       <div className="flex flex-col items-start gap-6 border-b border-[#E5E7EB] py-8 sm:flex-row">
-        <ProfileAvatar fullName={displayName} photoUrl={profile.user.profilePhotoUrl} />
+        <ProfileAvatar
+          key={profile.user.profilePhotoUrl ?? 'no-photo'}
+          fullName={displayName}
+          photoUrl={profile.user.profilePhotoUrl}
+        />
 
         {/* Name / meta */}
         <div className="min-w-0 flex-1 space-y-1.5">

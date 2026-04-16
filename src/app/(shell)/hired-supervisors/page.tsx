@@ -1,5 +1,5 @@
 import { HiredSupervisorsPage } from '@/components/HiredSupervisors'
 
-export default function HiresRoutePage() {
+export default function HiredSupervisorsRoutePage() {
   return <HiredSupervisorsPage />
 }

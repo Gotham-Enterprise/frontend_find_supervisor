@@ -6,7 +6,7 @@ export const metadata = {
   description: 'Browse verified supervisors matched to your specialty, license, and goals.',
 }
 
-export default function SupervisorsRoutePage() {
+export default function FindSupervisorsRoutePage() {
   return (
     <SuperviseeRouteGuard>
       <SearchSupervisorPage />
