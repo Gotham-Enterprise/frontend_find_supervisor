@@ -43,6 +43,7 @@ export const superviseeDefaultValues: Partial<SuperviseeFormValues> = {
   stateTheyAreLookingIn: '',
   typeOfSupervisor: '',
   howSoon: '',
+  howSoonDate: '',
   preferredFormat: 'virtual',
   feeType: 'per-session',
   budgetRange: '',

@@ -6,9 +6,11 @@ export type SupervisionFormat = 'IN_PERSON' | 'VIRTUAL' | 'HYBRID'
 
 export type LookingTimeline =
   | 'IMMEDIATELY'
+  | 'WITHIN_2_WEEKS'
   | 'WITHIN_1_MONTH'
   | 'WITHIN_2_MONTHS'
   | 'WITHIN_6_MONTHS'
+  | 'CUSTOM_DATE'
 
 export type BudgetRangeType = 'PER_SESSION' | 'MONTHLY'
 

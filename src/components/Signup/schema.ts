@@ -114,6 +114,7 @@ export const superviseeSchema = accountSchema.extend({
   stateTheyAreLookingIn: z.string().min(1, 'Please select the state you are looking in'),
   typeOfSupervisor: z.string().min(1, 'Please select a supervisor type'),
   howSoon: z.string().min(1, 'Please select how soon you need a supervisor'),
+  howSoonDate: z.string().optional(),
   preferredFormat: z.enum(['virtual', 'in-person', 'hybrid'], {
     message: 'Please select a preferred format',
   }),
@@ -241,17 +242,28 @@ export const superviseeStep1Schema = superviseeSchema.pick({
   zipcode: true,
 })
 
-export const superviseeStep2Schema = superviseeSchema.pick({
-  occupationId: true,
-  stateOfLicensure: true,
-  stateTheyAreLookingIn: true,
-  typeOfSupervisor: true,
-  howSoon: true,
-  preferredFormat: true,
-  feeType: true,
-  budgetRange: true,
-  availability: true,
-})
+export const superviseeStep2Schema = superviseeSchema
+  .pick({
+    occupationId: true,
+    stateOfLicensure: true,
+    stateTheyAreLookingIn: true,
+    typeOfSupervisor: true,
+    howSoon: true,
+    howSoonDate: true,
+    preferredFormat: true,
+    feeType: true,
+    budgetRange: true,
+    availability: true,
+  })
+  .superRefine((data, ctx) => {
+    if (data.howSoon === 'CUSTOM_DATE' && !data.howSoonDate) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['howSoonDate'],
+        message: 'Please select a date',
+      })
+    }
+  })
 
 export const superviseeStep3Schema = superviseeSchema.pick({
   description: true,
@@ -282,6 +294,7 @@ export const SUPERVISEE_SIGNUP_STEP_FIELDS = [
     'stateTheyAreLookingIn',
     'typeOfSupervisor',
     'howSoon',
+    'howSoonDate',
     'preferredFormat',
     'feeType',
     'budgetRange',

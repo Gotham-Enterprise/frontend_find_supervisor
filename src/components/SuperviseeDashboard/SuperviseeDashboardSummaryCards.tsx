@@ -25,7 +25,9 @@ export function SuperviseeDashboardSummaryCards({
           <CalendarDays className="size-4 text-muted-foreground" />
         </CardHeader>
         <CardContent className="space-y-1">
-          <p className="text-2xl font-bold">{acceptedCount}</p>
+          <div className="flex h-8 items-center">
+            <p className="text-2xl font-bold">{acceptedCount}</p>
+          </div>
           <p className="text-xs text-muted-foreground">
             {acceptedCount === 0 ? 'No sessions scheduled' : 'Active supervision sessions'}
           </p>
@@ -40,14 +42,16 @@ export function SuperviseeDashboardSummaryCards({
           <BookOpen className="size-4 text-muted-foreground" />
         </CardHeader>
         <CardContent className="space-y-1">
-          <Badge
-            className={cn(
-              'text-sm hover:opacity-100',
-              pendingCount > 0 ? 'bg-amber-100 text-amber-700' : 'bg-muted text-muted-foreground',
-            )}
-          >
-            {pendingCount > 0 ? '● Pending' : '● None'}
-          </Badge>
+          <div className="flex h-8 items-center">
+            <Badge
+              className={cn(
+                'w-fit hover:opacity-100',
+                pendingCount > 0 ? 'bg-amber-100 text-amber-700' : 'bg-muted text-muted-foreground',
+              )}
+            >
+              {pendingCount > 0 ? '● Pending' : '● None'}
+            </Badge>
+          </div>
           <p className="text-xs text-muted-foreground">
             {pendingCount === 0 ? 'No pending requests' : 'Awaiting supervisor response'}
           </p>
@@ -62,7 +66,9 @@ export function SuperviseeDashboardSummaryCards({
           <UserCheck className="size-4 text-muted-foreground" />
         </CardHeader>
         <CardContent className="space-y-1">
-          <p className="text-2xl font-bold">{supervisorCount}</p>
+          <div className="flex h-8 items-center">
+            <p className="text-2xl font-bold">{supervisorCount}</p>
+          </div>
           <p className="text-xs text-muted-foreground">Accepting new supervisees</p>
         </CardContent>
       </Card>
@@ -75,7 +81,9 @@ export function SuperviseeDashboardSummaryCards({
           <MessageCircle className="size-4 text-muted-foreground" />
         </CardHeader>
         <CardContent className="space-y-1">
-          <p className="text-2xl font-bold">—</p>
+          <div className="flex h-8 items-center">
+            <p className="text-2xl font-bold">—</p>
+          </div>
           <p className="text-xs text-muted-foreground">Coming soon</p>
         </CardContent>
       </Card>

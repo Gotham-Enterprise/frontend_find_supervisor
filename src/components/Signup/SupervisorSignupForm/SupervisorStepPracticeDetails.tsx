@@ -171,7 +171,7 @@ export function SupervisorStepPracticeDetails({
               <FormControl>
                 <Textarea
                   rows={4}
-                  placeholder="Specializing in orthopedic and sports rehabilitation with extensive experience supervising new graduates..."
+                  placeholder="Enter your professional summary"
                   maxLength={500}
                   disabled={isSubmitting}
                   {...field}
@@ -202,7 +202,7 @@ export function SupervisorStepPracticeDetails({
               <FormControl>
                 <Textarea
                   rows={4}
-                  placeholder="Share your background, approach to supervision, and what makes your practice unique..."
+                  placeholder="Please describe yourself..."
                   maxLength={500}
                   disabled={isSubmitting}
                   {...field}

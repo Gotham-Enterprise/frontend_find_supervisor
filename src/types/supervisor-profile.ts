@@ -103,6 +103,7 @@ export interface SupervisorProfileUser {
   subscriptions: Subscription[]
   occupation?: SupervisorOccupation | null
   specialty?: SupervisorSpecialty | null
+  createdAt?: string
 }
 
 export interface SupervisorProfileData {

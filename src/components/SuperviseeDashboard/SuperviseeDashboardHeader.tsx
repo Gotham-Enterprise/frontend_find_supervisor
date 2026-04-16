@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+
 import type { User } from '@/types'
 
 import { CircularProgress } from './SuperviseeDashboardShared'
@@ -11,13 +13,19 @@ export function SuperviseeDashboardHeader({ user, completion }: SuperviseeDashbo
   const name = user.fullName ?? user.name ?? user.email
   const firstName = name.split(' ')[0] ?? name
 
+  const isNewUser = useMemo(() => {
+    if (!user.createdAt) return false
+    const now = new Date()
+    return now.getTime() - new Date(user.createdAt).getTime() < 24 * 60 * 60 * 1000
+  }, [user.createdAt])
+
   return (
     <div className="relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-              Welcome back, {firstName}
+              {isNewUser ? `Welcome, ${firstName}` : `Welcome back, ${firstName}`}
             </h1>
             <p className="mt-1 text-sm opacity-80">
               Track your sessions, manage requests, and find the right supervisor.
