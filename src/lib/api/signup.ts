@@ -13,9 +13,14 @@ const FORMAT_MAP: Record<'virtual' | 'in-person' | 'hybrid', string> = {
 
 const HOW_SOON_MAP: Record<string, string> = {
   'As soon as possible': 'IMMEDIATELY',
+  IMMEDIATELY: 'IMMEDIATELY',
   'Within 1 month': 'WITHIN_1_MONTH',
+  WITHIN_1_MONTH: 'WITHIN_1_MONTH',
   'Within 3 months': 'WITHIN_2_MONTHS',
+  WITHIN_2_MONTHS: 'WITHIN_2_MONTHS',
   'Just exploring': 'WITHIN_6_MONTHS',
+  WITHIN_6_MONTHS: 'WITHIN_6_MONTHS',
+  CUSTOM_DATE: 'CUSTOM_DATE',
 }
 
 /** Matches `validateSuperviseeRegister` — only `PER_SESSION` and `MONTHLY` are allowed. */
@@ -115,6 +120,9 @@ export function buildSuperviseeFormData(values: SuperviseeFormValues): FormData 
   fd.append('typeOfSupervisorNeeded', values.typeOfSupervisor)
   // Backend field: howSoonLooking + enum transformation
   fd.append('howSoonLooking', HOW_SOON_MAP[values.howSoon] ?? 'IMMEDIATELY')
+  if (values.howSoon === 'CUSTOM_DATE' && values.howSoonDate) {
+    fd.append('lookingDate', values.howSoonDate)
+  }
   fd.append('preferredFormat', FORMAT_MAP[values.preferredFormat])
   fd.append('availability', values.availability)
   // Backend field: idealSupervisor

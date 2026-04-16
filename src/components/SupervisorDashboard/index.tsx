@@ -21,6 +21,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import Link from 'next/link'
+import { useMemo } from 'react'
 
 import { ProfilePreviewCard } from '@/components/Dashboard/shared'
 import { SupervisorDashboardSubscription } from '@/components/Dashboard/subscription'
@@ -120,14 +121,34 @@ function getChecklist(profile: SupervisorProfileData): ChecklistStep[] {
 
 function formatFee(amount: number | null | undefined, type: string | null | undefined): string {
   if (!amount) return '—'
-  const dollars = Math.floor(amount / 100)
   const label = type === 'HOURLY' ? '/hr' : type === 'MONTHLY' ? '/month' : '/session'
-  return `$${dollars}${label}`
+  return `$${amount}${label}`
 }
 
 function formatFormat(fmt: string | null | undefined): string {
   if (!fmt) return ''
   return { IN_PERSON: 'In-Person', VIRTUAL: 'Virtual', HYBRID: 'Hybrid' }[fmt] ?? fmt
+}
+
+function formatAvailability(value: string | null | undefined): string {
+  if (!value) return '—'
+  const map: Record<string, string> = {
+    WEEKDAYS: 'Weekdays',
+    WEEKENDS: 'Weekends',
+    EVENINGS: 'Evenings',
+    MORNINGS: 'Mornings',
+    BY_APPOINTMENT: 'By Appointment',
+    FLEXIBLE: 'Flexible',
+    FULL_TIME: 'Full Time',
+    PART_TIME: 'Part Time',
+  }
+  return (
+    map[value] ??
+    value
+      .toLowerCase()
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+  )
 }
 
 function formatDate(iso: string | null | undefined): string {
@@ -229,12 +250,20 @@ function WelcomeBanner({
   const name = profile.user.fullName ?? (composedName || profile.user.email)
   const isPending = profile.verificationStatus === 'PENDING'
 
+  const isNewUser = useMemo(() => {
+    if (!profile.user.createdAt) return false
+    const now = new Date()
+    return now.getTime() - new Date(profile.user.createdAt).getTime() < 24 * 60 * 60 * 1000
+  }, [profile.user.createdAt])
+
   return (
     <div className="relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Welcome, {name}</h1>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              {isNewUser ? `Welcome, ${name}` : `Welcome back, ${name}`}
+            </h1>
             <p className="mt-1 text-sm opacity-80">
               Let&apos;s complete your supervisor setup and get your profile live.
             </p>
@@ -457,7 +486,7 @@ function ProfilePreview({ profile }: { profile: SupervisorProfileData }) {
         { value: profile.yearsOfExperience ?? '—', label: 'Yrs Exp.' },
         { value: profile.totalCompletedSupervision ?? 0, label: 'Reviews' },
         {
-          value: <span className="capitalize">{profile.availability ?? '—'}</span>,
+          value: formatAvailability(profile.availability),
           label: 'Availability',
         },
       ]}

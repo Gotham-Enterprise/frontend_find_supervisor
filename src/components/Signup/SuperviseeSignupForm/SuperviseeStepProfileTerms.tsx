@@ -31,7 +31,7 @@ export function SuperviseeStepProfileTerms({ isSubmitting }: SuperviseeStepProfi
             <FormControl>
               <Textarea
                 rows={4}
-                placeholder="Looking for a licensed LCSW with experience in trauma-informed care and CBT. I prefer someone who can provide reflective supervision..."
+                placeholder="Describe your ideal supervisor…"
                 maxLength={500}
                 disabled={isSubmitting}
                 {...field}

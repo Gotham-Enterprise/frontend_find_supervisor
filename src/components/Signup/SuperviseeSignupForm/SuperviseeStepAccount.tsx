@@ -67,7 +67,7 @@ export function SuperviseeStepAccount({
           name="fullName"
           label="Full Name"
           rules={superviseeFieldRules('fullName')}
-          placeholder="Alex Johnson"
+          placeholder="Enter your full name"
           isSubmitting={isSubmitting}
           required
         />
