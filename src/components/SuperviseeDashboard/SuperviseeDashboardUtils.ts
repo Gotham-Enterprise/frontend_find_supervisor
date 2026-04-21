@@ -25,13 +25,10 @@ export function getSuperviseeProfileCompletion(user: User): number {
   return Math.round((checks.filter(Boolean).length / checks.length) * 100)
 }
 
-/**
- * Richer completion calculation using the full `SuperviseeProfileData`.
- * Covers account, location, supervision needs, and budget fields.
- */
-export function getSuperviseeProfileCompletionFromData(profile: SuperviseeProfileData): number {
+/** Individual checks used for dashboard completion % and onboarding goal "profile complete". */
+function getSuperviseeProfileCompletionChecks(profile: SuperviseeProfileData): boolean[] {
   const { user } = profile
-  const checks: boolean[] = [
+  return [
     !!user.emailVerified,
     !!user.profilePhotoUrl,
     !!(user.fullName ?? user.firstName ?? user.lastName),
@@ -47,10 +44,39 @@ export function getSuperviseeProfileCompletionFromData(profile: SuperviseeProfil
     !!profile.budgetRangeType,
     !!profile.idealSupervisor,
   ]
+}
+
+/**
+ * Richer completion calculation using the full `SuperviseeProfileData`.
+ * Covers account, location, supervision needs, and budget fields.
+ */
+export function getSuperviseeProfileCompletionFromData(profile: SuperviseeProfileData): number {
+  const checks = getSuperviseeProfileCompletionChecks(profile)
   return Math.round((checks.filter(Boolean).length / checks.length) * 100)
 }
 
-export function getGoalSteps(user: User, hasAcceptedRequest: boolean): GoalStep[] {
+/** True when every field counted toward profile completion is present (matches 100% completion). */
+export function isSuperviseeOnboardingProfileComplete(profile: SuperviseeProfileData): boolean {
+  return getSuperviseeProfileCompletionChecks(profile).every(Boolean)
+}
+
+/**
+ * Derives onboarding goal steps. When `profile` is loaded from GET supervisee/profile, those
+ * fields override the auth `user` (JWT/context can omit or stale `emailVerified`, city/state, etc.).
+ */
+export function getGoalSteps(
+  user: User,
+  hasAcceptedRequest: boolean,
+  profile?: SuperviseeProfileData | null,
+): GoalStep[] {
+  const emailVerified = profile?.user.emailVerified ?? user.emailVerified ?? false
+
+  const profileStepDone = profile
+    ? isSuperviseeOnboardingProfileComplete(profile)
+    : Boolean(user.city && user.state)
+
+  const readyToFindSupervisor = emailVerified && profileStepDone
+
   return [
     {
       label: 'Create your account',
@@ -60,17 +86,17 @@ export function getGoalSteps(user: User, hasAcceptedRequest: boolean): GoalStep[
     {
       label: 'Verify your email',
       description: 'Confirm your email address',
-      status: user.emailVerified ? 'done' : 'current',
+      status: emailVerified ? 'done' : 'current',
     },
     {
       label: 'Complete your profile',
       description: 'Add your supervision goals and license info',
-      status: user.city && user.state ? 'done' : user.emailVerified ? 'current' : 'upcoming',
+      status: profileStepDone ? 'done' : emailVerified ? 'current' : 'upcoming',
     },
     {
       label: 'Find your first supervisor',
       description: 'Browse verified supervisors and send a request',
-      status: hasAcceptedRequest ? 'done' : user.emailVerified ? 'current' : 'upcoming',
+      status: hasAcceptedRequest ? 'done' : readyToFindSupervisor ? 'current' : 'upcoming',
     },
     {
       label: 'Complete 10 supervision hours',

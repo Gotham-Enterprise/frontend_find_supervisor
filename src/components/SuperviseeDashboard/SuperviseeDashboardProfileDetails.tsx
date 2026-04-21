@@ -1,5 +1,4 @@
 import { AlertCircle } from 'lucide-react'
-import Link from 'next/link'
 
 import { ProfileDetailRow, ProfilePreviewCard, TagList } from '@/components/Dashboard/shared'
 import { Badge } from '@/components/ui/badge'
@@ -90,10 +89,12 @@ export function SuperviseeDashboardProfileDetailsSkeleton() {
 
 interface SuperviseeDashboardProfileDetailsProps {
   profile: SuperviseeProfileData
+  onEditClick: () => void
 }
 
 export function SuperviseeDashboardProfileDetails({
   profile,
+  onEditClick,
 }: SuperviseeDashboardProfileDetailsProps) {
   const { data: availabilityOptions = [] } = useAvailabilityOptions()
   const { data: supervisorTypeOptions = [] } = useSupervisorTypeOptions()
@@ -124,9 +125,13 @@ export function SuperviseeDashboardProfileDetails({
       title="My Profile"
       description="Your supervisee profile details"
       headerAction={
-        <Link href="/dashboard" className="text-sm font-medium text-primary hover:underline">
+        <button
+          type="button"
+          onClick={onEditClick}
+          className="text-sm font-medium text-primary hover:underline"
+        >
           Edit Profile →
-        </Link>
+        </button>
       }
       avatar={{ fullName: displayName, photoUrl: profile.user.profilePhotoUrl, size: 'lg' }}
       identity={{

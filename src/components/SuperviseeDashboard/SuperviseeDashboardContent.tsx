@@ -31,6 +31,7 @@ interface SuperviseeDashboardContentProps {
   superviseeProfile: SuperviseeProfileData | null | undefined
   isProfileLoading: boolean
   isProfileError: boolean
+  onEditProfileClick: () => void
 }
 
 export function SuperviseeDashboardContent({
@@ -43,6 +44,7 @@ export function SuperviseeDashboardContent({
   superviseeProfile,
   isProfileLoading,
   isProfileError,
+  onEditProfileClick,
 }: SuperviseeDashboardContentProps) {
   const activeSub = superviseeProfile
     ? getActivePaidSupervisionSubscription(superviseeProfile.user.subscriptions)
@@ -67,16 +69,24 @@ export function SuperviseeDashboardContent({
           {isProfileLoading && <SuperviseeDashboardProfileDetailsSkeleton />}
           {isProfileError && <SuperviseeDashboardProfileDetailsError />}
           {!isProfileLoading && !isProfileError && superviseeProfile && (
-            <SuperviseeDashboardProfileDetails profile={superviseeProfile} />
+            <SuperviseeDashboardProfileDetails
+              profile={superviseeProfile}
+              onEditClick={onEditProfileClick}
+            />
           )}
         </div>
         {user && (
           <div className="flex flex-col gap-4 lg:col-span-3">
-            <SuperviseeDashboardGoalsProgressCard user={user} allRequests={allRequests} />
+            <SuperviseeDashboardGoalsProgressCard
+              user={user}
+              allRequests={allRequests}
+              superviseeProfile={superviseeProfile}
+            />
             <SuperviseeDashboardActivityCard
               user={user}
               completion={completion}
               allRequests={allRequests}
+              superviseeProfile={superviseeProfile}
             />
           </div>
         )}
@@ -101,6 +111,8 @@ export function SuperviseeDashboardContent({
         isProfileLoading={isProfileLoading}
         isSubscribed={isSubscribed}
         planName={activeSub?.plan?.name}
+        plan={activeSub?.plan}
+        subscriptionStatus={activeSub?.status}
         currentPeriodEnd={activeSub?.currentPeriodEnd}
       />
     </div>

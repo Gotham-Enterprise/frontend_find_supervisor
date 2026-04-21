@@ -8,6 +8,16 @@ export interface AuthToken {
   expiresAt: string
 }
 
+/** Permission flags returned by GET /supervision/me → data.permissions */
+export interface UserPermissions {
+  /** Whether the supervisee can see a supervisor's contact details (phone, email). */
+  isSupervisorContactDetailsVisible: boolean
+  /** Whether the supervisee is allowed to send a hire request. */
+  canHireSupervisor: boolean
+  /** Whether the supervisor is allowed to accept incoming hire requests. */
+  canAcceptRequest: boolean
+}
+
 // Matches the SupervisionUser shape returned by the backend
 export interface User {
   id: string
@@ -22,4 +32,5 @@ export interface User {
   state?: string | null
   emailVerified?: boolean
   status?: string
+  permissions?: UserPermissions | null
 }

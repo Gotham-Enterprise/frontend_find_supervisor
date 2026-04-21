@@ -71,7 +71,25 @@ export function SupervisorProfileHero({ profile }: SupervisorProfileHeroProps) {
     isError: superviseeProfileError,
   } = useSuperviseeProfile()
 
+  /**
+   * JWT `permissions.canHireSupervisor` can lag after checkout or may never be set for
+   * free-plan users. The supervisee profile subscription list is authoritative.
+   */
+  const subscribedPerProfile =
+    isSuperviseeRole(user?.role) &&
+    !superviseeProfileLoading &&
+    !superviseeProfileError &&
+    hasActivePaidSupervisionSubscription(superviseeProfile?.user.subscriptions)
+
   const hireBlockedForSupervisee = useMemo(() => {
+    if (!isSuperviseeRole(user?.role)) return false
+    if (superviseeProfileLoading) return true
+    if (superviseeProfileError) return true
+    return !subscribedPerProfile
+  }, [subscribedPerProfile, superviseeProfileError, superviseeProfileLoading, user?.role])
+
+  /** Message Me: subscription first (independent of canHireSupervisor), then supervisor canMessage. */
+  const messageBlockedBySubscription = useMemo(() => {
     if (!isSuperviseeRole(user?.role)) return false
     if (superviseeProfileLoading) return true
     if (superviseeProfileError) return true
@@ -83,11 +101,31 @@ export function SupervisorProfileHero({ profile }: SupervisorProfileHeroProps) {
     user?.role,
   ])
 
-  const hireDisabledTooltip = superviseeProfileLoading
+  const messageSubscriptionTooltip = superviseeProfileLoading
     ? 'Checking your subscription status…'
     : superviseeProfileError
       ? 'We could not verify your subscription. Refresh the page or try again from your dashboard.'
       : 'You need an active supervision plan subscription to hire a supervisor. Subscribe from your dashboard.'
+
+  const messageBlockedBySupervisorSettings = useMemo(() => {
+    if (messageBlockedBySubscription) return false
+    const settings = profile.user.supervisorSettings
+    if (!settings) return false
+    return settings.canMessage === false
+  }, [messageBlockedBySubscription, profile.user.supervisorSettings])
+
+  const messageDisabled = messageBlockedBySubscription || messageBlockedBySupervisorSettings
+
+  const messageDisabledTooltip = messageBlockedBySubscription
+    ? messageSubscriptionTooltip
+    : profile.user.supervisorSettings?.disabledMessageInfo?.trim() ||
+      'Messaging is not available for this supervisor.'
+
+  const hireDisabledTooltip = superviseeProfileLoading
+    ? 'Checking your subscription status…'
+    : superviseeProfileError
+      ? 'We could not verify your subscription. Refresh the page or try again from your dashboard.'
+      : 'You need an active subscription to hire a supervisor. Subscribe from your dashboard.'
 
   const displayName = formatDisplayName(profile.user)
   const occupation = profile.user.occupation?.name ?? profile.occupation?.name
@@ -140,9 +178,11 @@ export function SupervisorProfileHero({ profile }: SupervisorProfileHeroProps) {
               Hire as Supervisor
             </Button>
           </DisabledWithTooltip>
-          <Button size="sm" variant="outline">
-            Message Me
-          </Button>
+          <DisabledWithTooltip tooltip={messageDisabledTooltip} disabled={messageDisabled}>
+            <Button size="sm" variant="outline" disabled={messageDisabled}>
+              Message Me
+            </Button>
+          </DisabledWithTooltip>
         </div>
       </div>
 

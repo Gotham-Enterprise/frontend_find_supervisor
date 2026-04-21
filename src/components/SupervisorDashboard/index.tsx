@@ -21,16 +21,21 @@ import {
   Wallet,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 import { ProfilePreviewCard } from '@/components/Dashboard/shared'
 import { SupervisorDashboardSubscription } from '@/components/Dashboard/subscription'
+import { EditSupervisorProfileModal } from '@/components/EditSupervisorProfileModal'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSupervisorProfile, useUser } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
-import type { SupervisorProfileData, VerificationStatus } from '@/types/supervisor-profile'
+import type {
+  Subscription,
+  SupervisorProfileData,
+  VerificationStatus,
+} from '@/types/supervisor-profile'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -70,6 +75,11 @@ function hasActiveSubscription(profile: SupervisorProfileData): boolean {
     profile.user.subscriptions?.some((s) => s.status === 'ACTIVE' || s.status === 'TRIALING') ??
     false
   )
+}
+
+function getPrimaryDashboardSubscription(profile: SupervisorProfileData): Subscription | undefined {
+  const subs = profile.user.subscriptions ?? []
+  return subs.find((s) => s.status === 'ACTIVE' || s.status === 'TRIALING') ?? subs[0]
 }
 
 function getChecklist(profile: SupervisorProfileData): ChecklistStep[] {
@@ -454,7 +464,13 @@ function SetupChecklist({ profile }: { profile: SupervisorProfileData }) {
   )
 }
 
-function ProfilePreview({ profile }: { profile: SupervisorProfileData }) {
+function ProfilePreview({
+  profile,
+  onEditClick,
+}: {
+  profile: SupervisorProfileData
+  onEditClick: () => void
+}) {
   const composedName = `${profile.user.firstName ?? ''} ${profile.user.lastName ?? ''}`.trim()
   const name = profile.user.fullName ?? (composedName || '—')
   const location = [profile.user.city, profile.user.state].filter(Boolean).join(', ')
@@ -471,10 +487,16 @@ function ProfilePreview({ profile }: { profile: SupervisorProfileData }) {
 
   return (
     <ProfilePreviewCard
-      title="Profile Preview"
-      description="How your profile looks publicly"
+      title="My Profile"
+      description="Your supervisor profile details"
       headerAction={
-        <Badge className="bg-muted text-muted-foreground hover:bg-muted">+ Hidden</Badge>
+        <button
+          type="button"
+          onClick={onEditClick}
+          className="text-sm font-medium text-primary hover:underline"
+        >
+          Edit Profile →
+        </button>
       }
       avatar={{ fullName: name, photoUrl: profile.user.profilePhotoUrl, size: 'lg' }}
       identity={{
@@ -510,21 +532,6 @@ function ProfilePreview({ profile }: { profile: SupervisorProfileData }) {
         ) : (
           <span className="text-xs text-muted-foreground">Not accepting</span>
         )}
-      </div>
-
-      <div className="mt-auto flex gap-2">
-        <Link
-          href="/dashboard"
-          className="flex-1 rounded-lg bg-primary py-2 text-center text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-        >
-          Edit Profile
-        </Link>
-        <Link
-          href="/dashboard"
-          className="flex-1 rounded-lg border border-border py-2 text-center text-sm font-medium transition-colors hover:bg-muted"
-        >
-          Preview Public
-        </Link>
       </div>
     </ProfilePreviewCard>
   )
@@ -571,27 +578,42 @@ function VerificationPanel({ profile }: { profile: SupervisorProfileData }) {
   )
 }
 
-function QuickActions() {
+function QuickActions({ onEditProfileClick }: { onEditProfileClick: () => void }) {
   const actions = [
     {
       icon: UserCog,
       label: 'Complete Profile',
       description: 'Fill missing details',
-      link: 'Go to profile →',
+      link: 'Edit profile →',
+      onClick: onEditProfileClick,
     },
     {
       icon: CalendarDays,
       label: 'Edit Availability',
       description: 'Set your schedule',
       link: 'Manage →',
+      onClick: onEditProfileClick,
     },
-    { icon: Wallet, label: 'Update Fees', description: 'Set session pricing', link: 'Edit fees →' },
-    { icon: Eye, label: 'Profile Preview', description: 'See public view', link: 'Preview →' },
+    {
+      icon: Wallet,
+      label: 'Update Fees',
+      description: 'Set session pricing',
+      link: 'Edit fees →',
+      onClick: onEditProfileClick,
+    },
+    {
+      icon: Eye,
+      label: 'Edit Profile',
+      description: 'Update your info',
+      link: 'Edit now →',
+      onClick: onEditProfileClick,
+    },
     {
       icon: HelpCircle,
       label: 'Contact Support',
       description: 'Get help from our team',
       link: 'Message us →',
+      onClick: undefined,
     },
   ]
 
@@ -603,11 +625,12 @@ function QuickActions() {
       </CardHeader>
       <CardContent className="pt-4">
         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {actions.map(({ icon: Icon, label, description, link }) => (
-            <Link
+          {actions.map(({ icon: Icon, label, description, link, onClick }) => (
+            <button
               key={label}
-              href="/dashboard"
-              className="group flex flex-col gap-2 rounded-xl border border-border p-3 transition-colors hover:border-primary/30 hover:bg-primary/5"
+              type="button"
+              onClick={onClick}
+              className="group flex flex-col gap-2 rounded-xl border border-border p-3 text-left transition-colors hover:border-primary/30 hover:bg-primary/5"
             >
               <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
                 <Icon className="size-4 text-primary" />
@@ -617,7 +640,7 @@ function QuickActions() {
                 <p className="text-xs text-muted-foreground">{description}</p>
               </div>
               <span className="mt-auto text-xs font-medium text-primary">{link}</span>
-            </Link>
+            </button>
           ))}
         </div>
       </CardContent>
@@ -774,6 +797,7 @@ function BillingSection({ profile }: { profile: SupervisorProfileData }) {
 export function SupervisorDashboard() {
   const { user } = useUser()
   const { data: profile, isLoading, isError } = useSupervisorProfile()
+  const [editModalOpen, setEditModalOpen] = useState(false)
 
   if (isLoading) return <SupervisorDashboardSkeleton />
 
@@ -800,29 +824,41 @@ export function SupervisorDashboard() {
     user: { ...profile.user, fullName: displayName ?? profile.user.fullName },
   }
 
-  return (
-    <div className="space-y-6">
-      <WelcomeBanner profile={enrichedProfile} completion={completion} />
-      <StatusCards profile={enrichedProfile} completion={completion} />
+  const primarySubscription = getPrimaryDashboardSubscription(enrichedProfile)
 
-      <div className="grid gap-4 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-          <SetupChecklist profile={enrichedProfile} />
+  return (
+    <>
+      <div className="space-y-6">
+        <WelcomeBanner profile={enrichedProfile} completion={completion} />
+        <StatusCards profile={enrichedProfile} completion={completion} />
+
+        <div className="grid gap-4 lg:grid-cols-5">
+          <div className="lg:col-span-3">
+            <SetupChecklist profile={enrichedProfile} />
+          </div>
+          <div className="lg:col-span-2">
+            <ProfilePreview profile={enrichedProfile} onEditClick={() => setEditModalOpen(true)} />
+          </div>
         </div>
-        <div className="lg:col-span-2">
-          <ProfilePreview profile={enrichedProfile} />
-        </div>
+
+        <VerificationPanel profile={enrichedProfile} />
+        <QuickActions onEditProfileClick={() => setEditModalOpen(true)} />
+        <SupervisorDashboardSubscription
+          isSubscribed={hasActiveSubscription(enrichedProfile)}
+          planName={primarySubscription?.plan?.name}
+          plan={primarySubscription?.plan}
+          subscriptionStatus={primarySubscription?.status}
+          currentPeriodEnd={primarySubscription?.currentPeriodEnd}
+        />
+        <TipsAndHelp />
+        <BillingSection profile={enrichedProfile} />
       </div>
 
-      <VerificationPanel profile={enrichedProfile} />
-      <QuickActions />
-      <SupervisorDashboardSubscription
-        isSubscribed={hasActiveSubscription(enrichedProfile)}
-        planName={enrichedProfile.user.subscriptions?.[0]?.plan.name}
-        currentPeriodEnd={enrichedProfile.user.subscriptions?.[0]?.currentPeriodEnd}
+      <EditSupervisorProfileModal
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        profile={enrichedProfile}
       />
-      <TipsAndHelp />
-      <BillingSection profile={enrichedProfile} />
-    </div>
+    </>
   )
 }

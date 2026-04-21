@@ -26,6 +26,8 @@ export type ProfilePhotoUploadProps = {
   /** Whether to show the remove (×) button while a photo is selected. */
   allowRemove?: boolean
   className?: string
+  /** Existing remote photo URL shown as the default preview before a new file is picked. */
+  existingPhotoUrl?: string | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -58,6 +60,7 @@ export function ProfilePhotoUpload({
   size = 'md',
   allowRemove = true,
   className,
+  existingPhotoUrl,
 }: ProfilePhotoUploadProps) {
   const generatedId = useId()
   const inputId = id ?? `profile-photo-${generatedId.replace(/:/g, '')}`
@@ -116,8 +119,11 @@ export function ProfilePhotoUpload({
     fileInputRef.current?.click()
   }
 
-  // Derive display state from props (not refs — never touched during render)
-  const hasPhoto = isFile(value) && previewUrl !== null
+  // A new File has been picked — use its blob URL for the preview.
+  // Otherwise fall back to the existing remote URL (if provided).
+  const hasNewFile = isFile(value) && previewUrl !== null
+  const displayUrl = hasNewFile ? previewUrl : (existingPhotoUrl ?? null)
+  const hasPhoto = displayUrl !== null
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -147,10 +153,10 @@ export function ProfilePhotoUpload({
               : 'border-dashed border-input bg-muted/50 hover:border-primary/50 hover:bg-muted',
           )}
         >
-          {/* Live preview */}
+          {/* Preview — new blob URL or existing remote URL */}
           {hasPhoto && (
             <img
-              src={previewUrl}
+              src={displayUrl!}
               alt="Profile photo preview"
               className="h-full w-full object-cover"
             />
@@ -176,8 +182,8 @@ export function ProfilePhotoUpload({
           </div>
         </button>
 
-        {/* Remove button — top-right corner, shown only when a photo is selected */}
-        {allowRemove && hasPhoto && (
+        {/* Remove button — only shown when a new file has been staged (clears the staged file) */}
+        {allowRemove && hasNewFile && (
           <button
             type="button"
             onClick={handleRemove}
@@ -191,7 +197,7 @@ export function ProfilePhotoUpload({
 
       {/* Helper text */}
       <span className="text-xs text-muted-foreground">
-        {hasPhoto ? 'Click to change photo' : 'Upload photo'}
+        {hasNewFile ? 'Click to change photo' : hasPhoto ? 'Click to update photo' : 'Upload photo'}
       </span>
     </div>
   )
