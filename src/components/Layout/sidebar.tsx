@@ -28,7 +28,7 @@ const navItems = [
     icon: ClipboardList,
     supervisorOnly: true,
   },
-  { label: 'Billing & Invoices', href: '/billing', icon: CreditCard },
+  { label: 'Billing & Invoices', href: '/billing', icon: CreditCard, supervisorOnly: true },
   { label: 'Settings', href: '/settings', icon: Settings },
 ] as const
 
