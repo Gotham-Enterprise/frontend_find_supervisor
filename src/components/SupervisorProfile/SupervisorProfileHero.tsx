@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { DisabledWithTooltip } from '@/components/ui/tooltip'
@@ -6,7 +6,6 @@ import { isSuperviseeRole } from '@/lib/auth/roles'
 import { useUser } from '@/lib/contexts/UserContext'
 import { useSuperviseeProfile } from '@/lib/hooks/useSuperviseeProfile'
 import { formatDisplayName, getInitials } from '@/lib/utils/profile-formatters'
-import { hasActivePaidSupervisionSubscription } from '@/lib/utils/subscription-plan-resolution'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 import { HireSupervisorModal } from './HireSupervisorModal'
@@ -65,29 +64,15 @@ const DUMMY_REVIEW_COUNT = 100
 export function SupervisorProfileHero({ profile }: SupervisorProfileHeroProps) {
   const [hireModalOpen, setHireModalOpen] = useState(false)
   const { user } = useUser()
-  const {
-    data: superviseeProfile,
-    isPending: superviseeProfileLoading,
-    isError: superviseeProfileError,
-  } = useSuperviseeProfile()
+  const { data: superviseeProfile } = useSuperviseeProfile()
 
-  const hireBlockedForSupervisee = useMemo(() => {
-    if (!isSuperviseeRole(user?.role)) return false
-    if (superviseeProfileLoading) return true
-    if (superviseeProfileError) return true
-    return !hasActivePaidSupervisionSubscription(superviseeProfile?.user.subscriptions)
-  }, [
-    superviseeProfile?.user.subscriptions,
-    superviseeProfileError,
-    superviseeProfileLoading,
-    user?.role,
-  ])
+  // Message is only blocked by the supervisor's own messaging settings, not by subscription.
+  const supervisorCanMessage = profile.user.supervisorSettings?.canMessage !== false
+  const messageDisabled = isSuperviseeRole(user?.role) ? !supervisorCanMessage : false
 
-  const hireDisabledTooltip = superviseeProfileLoading
-    ? 'Checking your subscription status…'
-    : superviseeProfileError
-      ? 'We could not verify your subscription. Refresh the page or try again from your dashboard.'
-      : 'You need an active supervision plan subscription to hire a supervisor. Subscribe from your dashboard.'
+  const messageDisabledTooltip =
+    profile.user.supervisorSettings?.disabledMessageInfo?.trim() ||
+    'Messaging is not available for this supervisor.'
 
   const displayName = formatDisplayName(profile.user)
   const occupation = profile.user.occupation?.name ?? profile.occupation?.name
@@ -129,20 +114,14 @@ export function SupervisorProfileHero({ profile }: SupervisorProfileHeroProps) {
 
         {/* CTA buttons */}
         <div className="flex shrink-0 gap-2">
-          <DisabledWithTooltip tooltip={hireDisabledTooltip} disabled={hireBlockedForSupervisee}>
-            <Button
-              size="sm"
-              disabled={hireBlockedForSupervisee}
-              onClick={() => {
-                if (!hireBlockedForSupervisee) setHireModalOpen(true)
-              }}
-            >
-              Hire as Supervisor
+          <Button size="sm" onClick={() => setHireModalOpen(true)}>
+            Hire as Supervisor
+          </Button>
+          <DisabledWithTooltip tooltip={messageDisabledTooltip} disabled={messageDisabled}>
+            <Button size="sm" variant="outline" disabled={messageDisabled}>
+              Message Me
             </Button>
           </DisabledWithTooltip>
-          <Button size="sm" variant="outline">
-            Message Me
-          </Button>
         </div>
       </div>
 

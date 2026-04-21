@@ -5,6 +5,11 @@ import { useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  isSupervisionFreeTierSubscription,
+  shouldShowSupervisionPremiumSubscriptionCard,
+} from '@/lib/constants/supervision-dashboard-plans'
+import type { SubscriptionPlan, SubscriptionStatus } from '@/types/supervisor-profile'
 
 import { FreeFeatureRow, LockedFeatureRow, PremiumFeaturesDivider } from './SubscriptionFeatureRows'
 import { SubscriptionModal } from './SubscriptionModal'
@@ -123,6 +128,86 @@ function UnsubscribedCard() {
   )
 }
 
+function SupervisorFreePlanEnrolledCard({ planName }: { planName: string }) {
+  const [modalOpen, setModalOpen] = useState(false)
+  const freeFeatures = SUPERVISOR_FEATURES.filter((f) => !f.premium)
+  const premiumFeatures = SUPERVISOR_FEATURES.filter((f) => f.premium)
+
+  return (
+    <>
+      <SubscriptionModal open={modalOpen} onOpenChange={setModalOpen} />
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-4 border-b pb-4">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+              <Star className="size-4 text-muted-foreground" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-semibold">
+                You&apos;re on the free plan
+              </CardTitle>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Basic supervisor tools are included. Upgrade for messaging, richer visibility, and
+                full platform access.
+              </p>
+            </div>
+          </div>
+          <Badge className="shrink-0 bg-muted text-muted-foreground hover:bg-muted">
+            Free Plan
+          </Badge>
+        </CardHeader>
+
+        <CardContent className="pt-5">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Included for free
+              </p>
+              <ul className="space-y-2.5">
+                {freeFeatures.map((f) => (
+                  <FreeFeatureRow key={f.label} label={f.label} />
+                ))}
+              </ul>
+
+              <PremiumFeaturesDivider />
+
+              <ul className="space-y-2.5">
+                {premiumFeatures.map((f) => (
+                  <LockedFeatureRow key={f.label} label={f.label} />
+                ))}
+              </ul>
+            </div>
+
+            <div className="self-start rounded-xl border border-border bg-muted/40 p-5 lg:col-span-1">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Current plan
+              </p>
+              <p className="mt-1 text-sm font-semibold text-foreground">{planName}</p>
+              <p className="mt-3 text-sm font-semibold text-foreground">Unlock premium tools</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                Move to Find a Supervisor Platform Access when you&apos;re ready for the full
+                supervisor experience.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                <Star className="size-3.5" />
+                Upgrade plan
+              </button>
+              <p className="mt-2 text-center text-[11px] text-muted-foreground">
+                Cancel anytime · No hidden fees
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </>
+  )
+}
+
 function SubscribedCard({
   planName,
   nextBillingDate,
@@ -207,6 +292,8 @@ export interface SupervisorDashboardSubscriptionProps {
   isSubscribed: boolean
   /** Display name for the active plan (e.g. from API) */
   planName?: string | null
+  plan?: SubscriptionPlan | null
+  subscriptionStatus?: SubscriptionStatus | null
   /** ISO date string for next billing period end */
   currentPeriodEnd?: string | null
 }
@@ -214,13 +301,31 @@ export interface SupervisorDashboardSubscriptionProps {
 export function SupervisorDashboardSubscription({
   isSubscribed,
   planName,
+  plan,
+  subscriptionStatus,
   currentPeriodEnd,
 }: SupervisorDashboardSubscriptionProps) {
+  const resolvedPlanName = planName?.trim() || ''
+
+  if (shouldShowSupervisionPremiumSubscriptionCard(resolvedPlanName, subscriptionStatus ?? null)) {
+    const displayName = resolvedPlanName || 'Find a Supervisor Platform Access'
+    const nextBilling = formatBillingDate(currentPeriodEnd ?? null)
+    return <SubscribedCard planName={displayName} nextBillingDate={nextBilling} />
+  }
+
   if (!isSubscribed) {
     return <UnsubscribedCard />
   }
 
-  const resolvedPlan = planName?.trim() || 'Supervisor Pro'
+  if (isSupervisionFreeTierSubscription(planName, plan ?? undefined)) {
+    return (
+      <SupervisorFreePlanEnrolledCard
+        planName={resolvedPlanName || 'Find a Supervisor Free Plan'}
+      />
+    )
+  }
+
+  const resolvedPlan = resolvedPlanName || 'Supervisor Pro'
   const nextBilling = formatBillingDate(currentPeriodEnd ?? null)
 
   return <SubscribedCard planName={resolvedPlan} nextBillingDate={nextBilling} />

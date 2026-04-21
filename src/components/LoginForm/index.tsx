@@ -150,7 +150,15 @@ export function LoginForm() {
           name="email"
           render={({ field, fieldState }) => (
             <FormItem>
-              <FormLabel>Email address</FormLabel>
+              <div className="flex items-center justify-between gap-3">
+                <FormLabel className="min-w-0">Email address</FormLabel>
+                <Link
+                  href="/forgot-email"
+                  className="shrink-0 text-sm font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Forgot email?
+                </Link>
+              </div>
               <FormControl>
                 <Input
                   type="email"
@@ -176,7 +184,15 @@ export function LoginForm() {
           name="password"
           render={({ field, fieldState }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <div className="flex items-center justify-between gap-3">
+                <FormLabel className="min-w-0">Password</FormLabel>
+                <Link
+                  href="/forgot-password"
+                  className="shrink-0 text-sm font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <FormControl>
                 <Input
                   type={showPassword ? 'text' : 'password'}
@@ -212,31 +228,23 @@ export function LoginForm() {
           )}
         />
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <FormField
-            control={form.control}
-            name="rememberMe"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center gap-2 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    disabled={isPending}
-                    aria-label="Remember me on this device"
-                  />
-                </FormControl>
-                <span className="text-sm text-muted-foreground">Remember me</span>
-              </FormItem>
-            )}
-          />
-          <Link
-            href="/contact"
-            className="text-sm font-medium text-primary underline-offset-4 hover:underline sm:text-right"
-          >
-            Forgot password?
-          </Link>
-        </div>
+        <FormField
+          control={form.control}
+          name="rememberMe"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center gap-2 space-y-0">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={isPending}
+                  aria-label="Remember me on this device"
+                />
+              </FormControl>
+              <span className="text-sm text-muted-foreground">Remember me</span>
+            </FormItem>
+          )}
+        />
 
         <Button type="submit" className="h-11 w-full text-base" disabled={isPending}>
           {isPending ? (

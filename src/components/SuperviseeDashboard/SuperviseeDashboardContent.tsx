@@ -1,7 +1,3 @@
-import {
-  getActivePaidSupervisionSubscription,
-  hasActivePaidSupervisionSubscription,
-} from '@/lib/utils/subscription-plan-resolution'
 import type { MatchingRequest, Supervisor, User } from '@/types'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
@@ -16,7 +12,6 @@ import {
 } from './SuperviseeDashboardProfileDetails'
 import { SuperviseeDashboardQuickActions } from './SuperviseeDashboardQuickActions'
 import { SuperviseeDashboardRecommendedSupervisors } from './SuperviseeDashboardRecommendedSupervisors'
-import { SuperviseeDashboardSubscription } from './SuperviseeDashboardSubscription'
 import { SuperviseeDashboardSummaryCards } from './SuperviseeDashboardSummaryCards'
 import { SuperviseeDashboardUpcomingSessionsCard } from './SuperviseeDashboardUpcomingSessionsCard'
 
@@ -31,6 +26,7 @@ interface SuperviseeDashboardContentProps {
   superviseeProfile: SuperviseeProfileData | null | undefined
   isProfileLoading: boolean
   isProfileError: boolean
+  onEditProfileClick: () => void
 }
 
 export function SuperviseeDashboardContent({
@@ -43,14 +39,8 @@ export function SuperviseeDashboardContent({
   superviseeProfile,
   isProfileLoading,
   isProfileError,
+  onEditProfileClick,
 }: SuperviseeDashboardContentProps) {
-  const activeSub = superviseeProfile
-    ? getActivePaidSupervisionSubscription(superviseeProfile.user.subscriptions)
-    : undefined
-  const isSubscribed = superviseeProfile
-    ? hasActivePaidSupervisionSubscription(superviseeProfile.user.subscriptions)
-    : false
-
   return (
     <div className="space-y-6">
       {user && <SuperviseeDashboardHeader user={user} completion={completion} />}
@@ -67,16 +57,24 @@ export function SuperviseeDashboardContent({
           {isProfileLoading && <SuperviseeDashboardProfileDetailsSkeleton />}
           {isProfileError && <SuperviseeDashboardProfileDetailsError />}
           {!isProfileLoading && !isProfileError && superviseeProfile && (
-            <SuperviseeDashboardProfileDetails profile={superviseeProfile} />
+            <SuperviseeDashboardProfileDetails
+              profile={superviseeProfile}
+              onEditClick={onEditProfileClick}
+            />
           )}
         </div>
         {user && (
           <div className="flex flex-col gap-4 lg:col-span-3">
-            <SuperviseeDashboardGoalsProgressCard user={user} allRequests={allRequests} />
+            <SuperviseeDashboardGoalsProgressCard
+              user={user}
+              allRequests={allRequests}
+              superviseeProfile={superviseeProfile}
+            />
             <SuperviseeDashboardActivityCard
               user={user}
               completion={completion}
               allRequests={allRequests}
+              superviseeProfile={superviseeProfile}
             />
           </div>
         )}
@@ -96,13 +94,6 @@ export function SuperviseeDashboardContent({
       </div>
 
       <SuperviseeDashboardQuickActions />
-
-      <SuperviseeDashboardSubscription
-        isProfileLoading={isProfileLoading}
-        isSubscribed={isSubscribed}
-        planName={activeSub?.plan?.name}
-        currentPeriodEnd={activeSub?.currentPeriodEnd}
-      />
     </div>
   )
 }

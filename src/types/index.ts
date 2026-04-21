@@ -1,5 +1,5 @@
 export type { ApiResponse, PaginatedResponse } from './api'
-export type { AuthToken, LoginCredentials, User } from './auth'
+export type { AuthToken, LoginCredentials, User, UserPermissions } from './auth'
 export type { CreateMatchingRequestDto, MatchingRequest, MatchingStatus } from './matching'
 export type { Supervisee } from './supervisee'
 export type {

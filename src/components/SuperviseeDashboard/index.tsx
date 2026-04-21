@@ -1,5 +1,8 @@
 'use client'
 
+import { useState } from 'react'
+
+import { EditSuperviseeProfileModal } from '@/components/EditSuperviseeProfileModal'
 import { useMatchingRequests, useSupervisors, useUser } from '@/lib/hooks'
 import { useSuperviseeProfile } from '@/lib/hooks/useSuperviseeProfile'
 
@@ -12,6 +15,7 @@ import {
 
 export function SuperviseeDashboard() {
   const { user } = useUser()
+  const [editModalOpen, setEditModalOpen] = useState(false)
 
   const { data: matchingData, isLoading: matchingLoading } = useMatchingRequests()
   const { data: supervisorsData, isLoading: supervisorsLoading } = useSupervisors({
@@ -40,16 +44,27 @@ export function SuperviseeDashboard() {
       : 0
 
   return (
-    <SuperviseeDashboardContent
-      user={user ?? null}
-      completion={completion}
-      pendingRequests={pendingRequests}
-      acceptedRequests={acceptedRequests}
-      allRequests={allRequests}
-      availableSupervisors={availableSupervisors}
-      superviseeProfile={superviseeProfile ?? null}
-      isProfileLoading={profileLoading}
-      isProfileError={profileError}
-    />
+    <>
+      <SuperviseeDashboardContent
+        user={user ?? null}
+        completion={completion}
+        pendingRequests={pendingRequests}
+        acceptedRequests={acceptedRequests}
+        allRequests={allRequests}
+        availableSupervisors={availableSupervisors}
+        superviseeProfile={superviseeProfile ?? null}
+        isProfileLoading={profileLoading}
+        isProfileError={profileError}
+        onEditProfileClick={() => setEditModalOpen(true)}
+      />
+
+      {superviseeProfile && (
+        <EditSuperviseeProfileModal
+          open={editModalOpen}
+          onOpenChange={setEditModalOpen}
+          profile={superviseeProfile}
+        />
+      )}
+    </>
   )
 }

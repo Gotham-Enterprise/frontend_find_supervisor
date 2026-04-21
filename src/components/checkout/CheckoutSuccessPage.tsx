@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useEffect } from 'react'
 
+import { useUser } from '@/lib/contexts/UserContext'
 import { subscriptionKeys } from '@/lib/hooks/useSubscriptionPlans'
 
 /**
@@ -16,16 +17,27 @@ import { subscriptionKeys } from '@/lib/hooks/useSubscriptionPlans'
  *   - payment_intent: pi_xxx
  *   - payment_intent_client_secret: pi_xxx_secret_xxx
  */
+const PAYMENT_COMPLETE_STATUSES = new Set(['succeeded', 'processing'])
+
 export function CheckoutSuccessPage() {
   const searchParams = useSearchParams()
   const status = searchParams.get('redirect_status')
   const queryClient = useQueryClient()
+  const { refreshUser } = useUser()
 
   useEffect(() => {
-    if (status !== 'succeeded' && status !== 'processing') return
-    void queryClient.invalidateQueries({ queryKey: ['supervisee-profile'] })
-    void queryClient.invalidateQueries({ queryKey: subscriptionKeys.all })
-  }, [status, queryClient])
+    if (!PAYMENT_COMPLETE_STATUSES.has(status ?? '')) return
+
+    const invalidateAll = () =>
+      Promise.all([
+        refreshUser(),
+        queryClient.invalidateQueries({ queryKey: ['supervisee-profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['supervisor-profile'] }),
+        queryClient.invalidateQueries({ queryKey: subscriptionKeys.all }),
+      ])
+
+    void invalidateAll()
+  }, [status, queryClient, refreshUser])
 
   if (status === 'succeeded') {
     return (

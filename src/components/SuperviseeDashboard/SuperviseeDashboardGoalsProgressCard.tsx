@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { MatchingRequest, User } from '@/types'
+import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 import { GoalStepIcon } from './SuperviseeDashboardShared'
 import { getGoalSteps } from './SuperviseeDashboardUtils'
@@ -10,14 +11,17 @@ import { getGoalSteps } from './SuperviseeDashboardUtils'
 interface SuperviseeDashboardGoalsProgressCardProps {
   user: User
   allRequests: MatchingRequest[]
+  /** When set, email + profile completion for goals match GET supervisee/profile (auth user can be stale). */
+  superviseeProfile?: SuperviseeProfileData | null
 }
 
 export function SuperviseeDashboardGoalsProgressCard({
   user,
   allRequests,
+  superviseeProfile,
 }: SuperviseeDashboardGoalsProgressCardProps) {
   const hasAcceptedRequest = allRequests.some((r) => r.status === 'accepted')
-  const steps = getGoalSteps(user, hasAcceptedRequest)
+  const steps = getGoalSteps(user, hasAcceptedRequest, superviseeProfile)
   const doneCount = steps.filter((s) => s.status === 'done').length
 
   return (

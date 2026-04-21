@@ -2,11 +2,14 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 
+import { getMe } from '@/lib/api/auth'
 import type { User } from '@/types'
 
 interface UserContextValue {
   user: User | null
   setUser: (user: User | null) => void
+  /** Re-fetch GET /supervision/me and replace context (e.g. after subscription updates permissions). */
+  refreshUser: () => Promise<void>
   isLoading: boolean
   setIsLoading: (loading: boolean) => void
   clearUser: () => void
@@ -20,9 +23,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   const clearUser = useCallback(() => setUser(null), [])
 
+  const refreshUser = useCallback(async () => {
+    try {
+      const next = await getMe()
+      setUser(next)
+    } catch {
+      // 401 is handled by apiClient interceptor; keep existing user on other failures
+    }
+  }, [])
+
   const value = useMemo(
-    () => ({ user, setUser, isLoading, setIsLoading, clearUser }),
-    [user, isLoading, clearUser],
+    () => ({ user, setUser, refreshUser, isLoading, setIsLoading, clearUser }),
+    [user, isLoading, clearUser, refreshUser],
   )
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>

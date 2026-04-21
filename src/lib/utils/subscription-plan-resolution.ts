@@ -4,22 +4,6 @@ import type { ChoosablePlan, Subscription, SubscriptionStatus } from '@/types/su
 /** Paid access is considered active for these statuses. */
 const ACTIVE_PAID_STATUSES: SubscriptionStatus[] = ['ACTIVE', 'TRIALING', 'PAST_DUE']
 
-/** True if the user has at least one paid supervision subscription in good standing. */
-export function hasActivePaidSupervisionSubscription(
-  subscriptions: Subscription[] | null | undefined,
-): boolean {
-  if (!subscriptions?.length) return false
-  return subscriptions.some((s) => ACTIVE_PAID_STATUSES.includes(s.status))
-}
-
-/** Newest subscription row that counts as paid access (for plan name / renewal UI). */
-export function getActivePaidSupervisionSubscription(
-  subscriptions: Subscription[] | null | undefined,
-): Subscription | undefined {
-  if (!subscriptions?.length) return undefined
-  return subscriptions.find((s) => ACTIVE_PAID_STATUSES.includes(s.status))
-}
-
 /** Checkout started but payment not completed (Stripe subscription still incomplete). */
 const PENDING_CHECKOUT_STATUSES: SubscriptionStatus[] = ['INACTIVE']
 

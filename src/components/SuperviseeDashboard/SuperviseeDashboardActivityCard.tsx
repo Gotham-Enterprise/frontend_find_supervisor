@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import type { MatchingRequest, User } from '@/types'
+import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 import { ProgressBar } from './SuperviseeDashboardShared'
 import { getGoalSteps } from './SuperviseeDashboardUtils'
@@ -9,15 +10,17 @@ interface SuperviseeDashboardActivityCardProps {
   user: User
   completion: number
   allRequests: MatchingRequest[]
+  superviseeProfile?: SuperviseeProfileData | null
 }
 
 export function SuperviseeDashboardActivityCard({
   user,
   completion,
   allRequests,
+  superviseeProfile,
 }: SuperviseeDashboardActivityCardProps) {
   const hasAcceptedRequest = allRequests.some((r) => r.status === 'accepted')
-  const steps = getGoalSteps(user, hasAcceptedRequest)
+  const steps = getGoalSteps(user, hasAcceptedRequest, superviseeProfile)
   const doneCount = steps.filter((s) => s.status === 'done').length
   const acceptedCount = allRequests.filter((r) => r.status === 'accepted').length
 

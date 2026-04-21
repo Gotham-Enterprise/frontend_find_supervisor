@@ -84,6 +84,12 @@ export interface SupervisorSpecialty {
   occupationId?: number | null
 }
 
+/** Shaped by GET supervisor/profile → user.supervisorSettings */
+export interface SupervisorUserSettings {
+  canMessage: boolean
+  disabledMessageInfo?: string | null
+}
+
 export interface SupervisorProfileUser {
   id: string
   email: string
@@ -104,6 +110,7 @@ export interface SupervisorProfileUser {
   occupation?: SupervisorOccupation | null
   specialty?: SupervisorSpecialty | null
   createdAt?: string
+  supervisorSettings?: SupervisorUserSettings | null
 }
 
 export interface SupervisorProfileData {

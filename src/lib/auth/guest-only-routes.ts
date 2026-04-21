@@ -2,7 +2,14 @@
  * Routes that redirect to the dashboard when a session already exists (landing `/`, login, signup).
  * Other public marketing URLs stay reachable when logged in unless listed here.
  */
-export const GUEST_ONLY_PATHS = ['/', '/login', '/signup'] as const
+export const GUEST_ONLY_PATHS = [
+  '/',
+  '/login',
+  '/signup',
+  '/forgot-email',
+  '/forgot-password',
+  '/reset-password',
+] as const
 
 export type GuestOnlyPath = (typeof GUEST_ONLY_PATHS)[number]
 
