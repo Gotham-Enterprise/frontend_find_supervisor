@@ -5,6 +5,7 @@ import {
   ClipboardList,
   CreditCard,
   LayoutDashboard,
+  MessageCircle,
   Settings,
   UserCheck,
   Users,
@@ -15,6 +16,7 @@ import { usePathname } from 'next/navigation'
 
 import { isSuperviseeRole } from '@/lib/auth/roles'
 import { usePendingRequestsCount, useUser } from '@/lib/hooks'
+import { useConversations } from '@/lib/hooks/useChat'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -28,6 +30,7 @@ const navItems = [
     icon: ClipboardList,
     supervisorOnly: true,
   },
+  { label: 'Messages', href: '/messages', icon: MessageCircle },
   { label: 'Billing & Invoices', href: '/billing', icon: CreditCard, supervisorOnly: true },
   { label: 'Settings', href: '/settings', icon: Settings },
 ] as const
@@ -36,6 +39,8 @@ export function Sidebar() {
   const pathname = usePathname()
   const { user } = useUser()
   const { data: pendingCount } = usePendingRequestsCount(!isSuperviseeRole(user?.role))
+  const { data: conversations = [] } = useConversations()
+  const totalUnreadMessages = conversations.reduce((sum, c) => sum + (c.unreadCount ?? 0), 0)
 
   const visibleNavItems = navItems.filter((item) => {
     if ('superviseeOnly' in item && item.superviseeOnly) {
@@ -65,7 +70,9 @@ export function Sidebar() {
           const badge =
             href === '/supervision-requests' && pendingCount && pendingCount > 0
               ? pendingCount
-              : null
+              : href === '/messages' && totalUnreadMessages > 0
+                ? totalUnreadMessages
+                : null
 
           return (
             <Link
