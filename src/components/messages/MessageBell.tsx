@@ -1,42 +1,66 @@
 'use client'
 
 import { MessageCircle } from 'lucide-react'
-import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useMemo } from 'react'
 
-import { useTopbarDropdown } from '@/lib/hooks'
+import { isSuperviseeRole } from '@/lib/auth/roles'
+import { useUser } from '@/lib/hooks'
+import { useConversations } from '@/lib/hooks/useChat'
+import { useTopbarDropdown } from '@/lib/hooks/useTopbarDropdown'
 import { cn } from '@/lib/utils'
+import type { Conversation } from '@/types/chat'
 
 import { MessagesPanel } from './MessagesPanel'
-import { MOCK_CONVERSATIONS } from './mock-data'
 import type { ConversationPreview } from './types'
+
+function mapConversationToPreview(
+  conversation: Conversation,
+  currentUserId: string | undefined,
+  isSupervisee: boolean,
+): ConversationPreview {
+  const other = isSupervisee ? conversation.supervisor : conversation.supervisee
+  const otherName =
+    other.fullName || [other.firstName, other.lastName].filter(Boolean).join(' ') || 'Unknown'
+
+  return {
+    id: conversation.id,
+    participantName: otherName,
+    participantRole: isSupervisee ? 'supervisor' : 'supervisee',
+    lastMessage: conversation.lastMessagePreview ?? '',
+    lastMessageSender: conversation.lastMessageAt && !conversation.unreadCount ? 'me' : 'them',
+    isRead: conversation.unreadCount === 0,
+    updatedAt: conversation.lastMessageAt ? new Date(conversation.lastMessageAt) : new Date(0),
+    unreadCount: conversation.unreadCount,
+  }
+}
 
 /**
  * Self-contained message bell for the dashboard topbar.
- *
- * State ownership:
- * - `conversations` — initialized from mock data; swap with a `useQuery` hook when ready
- *
- * To migrate to real data: replace `useState(MOCK_CONVERSATIONS)` with a
- * `useQuery` call (e.g. `GET /messages/conversations`) and thread the setter
- * through `onOpenConversation` into your mutation/invalidation handlers.
+ * Fetches real conversations via useConversations() and navigates to /messages.
  */
 export function MessageBell() {
   const { open, toggle, close, containerRef } = useTopbarDropdown()
-  const [conversations, setConversations] = useState<ConversationPreview[]>(MOCK_CONVERSATIONS)
+  const router = useRouter()
+  const { user } = useUser()
+  const isSupervisee = isSuperviseeRole(user?.role)
 
-  const unreadCount = conversations.filter((c) => !c.isRead).length
+  const { data: conversations = [] } = useConversations()
+
+  const previews = useMemo<ConversationPreview[]>(
+    () => conversations.map((c) => mapConversationToPreview(c, user?.id, isSupervisee)),
+    [conversations, user?.id, isSupervisee],
+  )
+
+  const unreadCount = previews.filter((c) => !c.isRead).length
 
   function handleOpenConversation(id: string) {
-    // Optimistically mark the conversation as read when the user opens it
-    setConversations((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, isRead: true, unreadCount: 0 } : c)),
-    )
-    // TODO: navigate to /messages/[id] once the messages page exists
+    router.push(`/messages/${id}`)
     close()
   }
 
   function handleSeeAll() {
-    // TODO: navigate to /messages once that route exists
+    router.push('/messages')
     close()
   }
 
@@ -69,7 +93,7 @@ export function MessageBell() {
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2">
           <MessagesPanel
-            conversations={conversations}
+            conversations={previews}
             onOpenConversation={handleOpenConversation}
             onSeeAll={handleSeeAll}
           />

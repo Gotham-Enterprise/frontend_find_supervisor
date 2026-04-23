@@ -30,6 +30,7 @@ const PAGE_TITLES: Array<{ prefix: string; title: string }> = [
   { prefix: '/hired-supervisors', title: 'Hired Supervisors' },
   { prefix: '/supervision-requests', title: 'Supervision Requests' },
   { prefix: '/billing', title: 'Billing & Invoices' },
+  { prefix: '/messages', title: 'Messages' },
   { prefix: '/settings', title: 'Settings' },
   { prefix: '/user', title: 'User Profile' },
 ]
