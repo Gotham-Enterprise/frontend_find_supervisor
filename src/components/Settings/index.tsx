@@ -147,11 +147,11 @@ export function SettingsPanel() {
     const prev = getValue(field)
     setOptimistic((o) => ({ ...o, [field]: next }))
 
+    // Send only the changed field (+ disabledMessageInfo when relevant).
+    // Sending all fields at once caused stale reads to silently overwrite other
+    // settings — e.g. toggling hideProfile would re-send the current canMessage
+    // value from state before the optimistic update had flushed.
     const payload: UpdateSupervisionSettingsPayload = {
-      notificationAlert: getValue('notificationAlert'),
-      canMessage: getValue('canMessage'),
-      emailAlert: getValue('emailAlert'),
-      ...(isSupervisor ? { hideProfile: getValue('hideProfile') } : {}),
       [field]: next,
       ...extra,
     }

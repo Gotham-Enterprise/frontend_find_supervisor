@@ -99,8 +99,9 @@ export function useSendMessage(conversationId: string) {
         body,
         preview: body,
         locked: false,
-        isRead: true,
-        readAt: new Date().toISOString(),
+        isRead: false,
+        readAt: null,
+        deliveredAt: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }

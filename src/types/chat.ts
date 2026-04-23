@@ -49,6 +49,7 @@ export interface ChatMessage {
   locked: boolean
   isRead: boolean
   readAt: string | null
+  deliveredAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -93,8 +94,9 @@ export interface SocketNewMessage {
   id: string
   conversationId: string
   senderId: string
-  body: string
+  body: string | null
   preview: string
+  locked: boolean
   createdAt: string
 }
 
@@ -118,4 +120,17 @@ export interface SocketTypingPayload {
   conversationId: string
   userId: string
   isTyping: boolean
+}
+
+export interface SocketDeliveredPayload {
+  conversationId: string
+  messageId: string
+  deliveredAt: string
+}
+
+export interface SocketMessagingStatusPayload {
+  userId: string
+  role: string
+  canMessage: boolean
+  disabledMessageInfo: string | null
 }

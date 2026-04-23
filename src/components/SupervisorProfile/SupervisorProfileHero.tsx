@@ -7,6 +7,7 @@ import { isSuperviseeRole } from '@/lib/auth/roles'
 import { useUser } from '@/lib/contexts/UserContext'
 import { useConversations, useCreateOrGetConversation } from '@/lib/hooks/useChat'
 import { useSuperviseeProfile } from '@/lib/hooks/useSuperviseeProfile'
+import { useSupervisionChatSocket } from '@/lib/hooks/useSupervisionChatSocket'
 import { formatDisplayName, getInitials } from '@/lib/utils/profile-formatters'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
@@ -75,20 +76,32 @@ export function SupervisorProfileHero({ profile }: SupervisorProfileHeroProps) {
   const { data: conversations } = useConversations()
   const existingConversation = conversations?.find((c) => c.supervisorId === profile.user.id)
 
-  // Message is only blocked by the supervisor's own messaging settings, not by subscription.
-  const supervisorCanMessage = profile.user.supervisorSettings?.canMessage !== false
+  // Realtime messaging status — overrides static profile data when the socket fires
+  const { messagingStatus } = useSupervisionChatSocket()
+  const realtimeStatus = messagingStatus.get(profile.user.id)
+
+  // Merge: socket state takes precedence over static profile data when present
+  const supervisorCanMessage =
+    realtimeStatus !== undefined
+      ? realtimeStatus.canMessage
+      : profile.user.supervisorSettings?.canMessage !== false
+
+  const disabledMessageInfo =
+    realtimeStatus?.disabledMessageInfo?.trim() ||
+    profile.user.supervisorSettings?.disabledMessageInfo?.trim() ||
+    null
+
   // Only supervisees can message from the profile page; always disabled for non-supervisees.
-  // Also disabled if messaging is turned off for this supervisor.
   const messageDisabled = isSuperviseeRole(user?.role) ? !supervisorCanMessage : false
 
   // If no hire exists with this supervisor, messaging requires hiring first.
-  const noHireExists =
-    isSuperviseeRole(user?.role) && !existingConversation && conversations !== undefined
+  // const noHireExists =
+  //   isSuperviseeRole(user?.role) && !existingConversation && conversations !== undefined
+  const isInMyHireList = profile.isInMyHireList ?? false
 
-  const messageDisabledTooltip = noHireExists
+  const messageDisabledTooltip = !isInMyHireList
     ? 'You need to submit a hire request before messaging this supervisor.'
-    : profile.user.supervisorSettings?.disabledMessageInfo?.trim() ||
-      'Messaging is not available for this supervisor.'
+    : (disabledMessageInfo ?? 'Messaging is not available for this supervisor.')
 
   const displayName = formatDisplayName(profile.user)
   const occupation = profile.user.occupation?.name ?? profile.occupation?.name
@@ -135,14 +148,14 @@ export function SupervisorProfileHero({ profile }: SupervisorProfileHeroProps) {
           </Button>
           <DisabledWithTooltip
             tooltip={messageDisabledTooltip}
-            disabled={messageDisabled || noHireExists}
+            disabled={messageDisabled || !isInMyHireList}
           >
             <Button
               size="sm"
               variant="outline"
-              disabled={messageDisabled || noHireExists || isStartingChat}
+              disabled={messageDisabled || !isInMyHireList || isStartingChat}
               onClick={() => {
-                if (messageDisabled || noHireExists) return
+                if (messageDisabled || !isInMyHireList) return
                 // If a conversation already exists, navigate directly without hitting the API
                 if (existingConversation) {
                   router.push(`/messages/${existingConversation.id}`)
