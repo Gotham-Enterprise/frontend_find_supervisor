@@ -8,6 +8,8 @@ import { toast } from 'sonner'
 import type {
   ChatMessage,
   Conversation,
+  SocketDeliveredPayload,
+  SocketMessagingStatusPayload,
   SocketNewMessage,
   SocketNotification,
   SocketReadPayload,
@@ -30,9 +32,27 @@ function getSocketOrigin(): string {
  */
 type TypingMap = Map<string, Set<string>>
 
+/**
+ * Tracks realtime messaging-disabled status per userId.
+ * Map<userId, { canMessage: boolean; disabledMessageInfo: string | null }>
+ */
+export type MessagingStatusMap = Map<
+  string,
+  { canMessage: boolean; disabledMessageInfo: string | null }
+>
+
+interface UseSupervisionChatSocketOptions {
+  /** Pass true when the current user is a SUPERVISOR so incoming messages are
+   *  locked client-side until the backend override arrives. */
+  isSupervisor?: boolean
+  /** Current user's ID — used to avoid locking the supervisor's own sent messages. */
+  currentUserId?: string
+}
+
 interface UseSupervisionChatSocketReturn {
   isConnected: boolean
   typingUsers: TypingMap
+  messagingStatus: MessagingStatusMap
   joinConversation: (conversationId: string) => void
   sendTyping: (conversationId: string, isTyping: boolean) => void
 }
@@ -51,11 +71,24 @@ function getOrCreateSocket(): Socket {
   return socketSingleton
 }
 
-export function useSupervisionChatSocket(): UseSupervisionChatSocketReturn {
+export function useSupervisionChatSocket({
+  isSupervisor = false,
+  currentUserId,
+}: UseSupervisionChatSocketOptions = {}): UseSupervisionChatSocketReturn {
   const queryClient = useQueryClient()
   const socketRef = useRef<Socket>(getOrCreateSocket())
   const [isConnected, setIsConnected] = useState(false)
   const [typingUsers, setTypingUsers] = useState<TypingMap>(new Map())
+  const [messagingStatus, setMessagingStatus] = useState<MessagingStatusMap>(new Map())
+
+  // Keep latest option values in refs so the stable useEffect closure always
+  // reads the current values without needing them as dependencies.
+  const isSupervisorRef = useRef(isSupervisor)
+  const currentUserIdRef = useRef(currentUserId)
+  useEffect(() => {
+    isSupervisorRef.current = isSupervisor
+    currentUserIdRef.current = currentUserId
+  })
 
   // Typing emit debounce
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -125,26 +158,45 @@ export function useSupervisionChatSocket(): UseSupervisionChatSocketReturn {
 
       queryClient.setQueryData<ChatMessage[]>(queryKey, (old) => {
         if (!old) return old
-        // Dedup: skip if already present (optimistic or previously received)
-        if (old.some((m) => m.id === msg.id)) return old
-        // Also replace any lingering optimistic message for the same content
+
+        // If this message ID already exists but arrives again as locked=true
+        // (supervisor's personal room overriding the shared-room broadcast),
+        // update it to the locked version.
+        const existing = old.find((m) => m.id === msg.id)
+        if (existing) {
+          if (msg.locked && !existing.locked) {
+            return old.map((m) => (m.id === msg.id ? { ...m, body: null, locked: true } : m))
+          }
+          return old
+        }
+
+        // Replace any lingering optimistic message for the same content.
+        // Match by body only (not senderId) because the optimistic entry uses
+        // '__me__' while the real socket message carries the actual user ID.
         const withoutOptimistic = old.filter(
-          (m) =>
-            !(m.id.startsWith('optimistic-') && m.body === msg.body && m.senderId === '__me__'),
+          (m) => !(m.id.startsWith('optimistic-') && m.body === msg.body),
         )
+        // Lock incoming messages for an unpaid supervisor (isSupervisor=true means
+        // the conversation.locked flag was true, i.e. the supervisor hasn't upgraded).
+        // Never lock the supervisor's own sent messages.
+        const isOwnMessage = msg.senderId === currentUserIdRef.current || msg.senderId === '__me__'
+        const shouldLock = msg.locked === true || (isSupervisorRef.current && !isOwnMessage)
+
         const newMessage: ChatMessage = {
           id: msg.id,
           conversationId: msg.conversationId,
           senderId: msg.senderId,
           messageType: 'TEXT',
-          body: msg.body,
+          body: shouldLock ? null : msg.body,
           preview: msg.preview,
-          locked: false,
+          locked: shouldLock,
           isRead: false,
           readAt: null,
+          deliveredAt: null,
           createdAt: msg.createdAt,
           updatedAt: msg.createdAt,
         }
+
         return [...withoutOptimistic, newMessage]
       })
 
@@ -152,11 +204,26 @@ export function useSupervisionChatSocket(): UseSupervisionChatSocketReturn {
       void queryClient.invalidateQueries({ queryKey: chatKeys.conversations() })
     }
 
-    function onRead(payload: SocketReadPayload) {
-      // Mark all messages as read in this conversation when the other user reads
+    function onDelivered(payload: SocketDeliveredPayload) {
       queryClient.setQueryData<ChatMessage[]>(chatKeys.messages(payload.conversationId), (old) => {
         if (!old) return old
-        return old.map((m) => ({ ...m, isRead: true, readAt: new Date().toISOString() }))
+        return old.map((m) =>
+          m.id === payload.messageId ? { ...m, deliveredAt: payload.deliveredAt } : m,
+        )
+      })
+    }
+
+    function onRead(payload: SocketReadPayload) {
+      // Mark all messages as read and ensure deliveredAt is set (read implies delivered)
+      queryClient.setQueryData<ChatMessage[]>(chatKeys.messages(payload.conversationId), (old) => {
+        if (!old) return old
+        const now = new Date().toISOString()
+        return old.map((m) => ({
+          ...m,
+          isRead: true,
+          readAt: m.readAt ?? now,
+          deliveredAt: m.deliveredAt ?? now,
+        }))
       })
     }
 
@@ -174,14 +241,27 @@ export function useSupervisionChatSocket(): UseSupervisionChatSocketReturn {
       })
     }
 
+    function onMessagingStatus(payload: SocketMessagingStatusPayload) {
+      setMessagingStatus((prev) => {
+        const next = new Map(prev)
+        next.set(payload.userId, {
+          canMessage: payload.canMessage,
+          disabledMessageInfo: payload.disabledMessageInfo ?? null,
+        })
+        return next
+      })
+    }
+
     socket.on('connect', onConnect)
     socket.on('disconnect', onDisconnect)
     socket.on('error', onError)
     socket.on('supervision:message:unread_count', onUnreadCount)
     socket.on('supervision:notification:new', onNotification)
     socket.on('supervision:message:new', onNewMessage)
+    socket.on('supervision:message:delivered', onDelivered)
     socket.on('supervision:message:read', onRead)
     socket.on('supervision:message:typing', onTyping)
+    socket.on('supervision:user:messaging_status', onMessagingStatus)
 
     return () => {
       socket.off('connect', onConnect)
@@ -190,8 +270,10 @@ export function useSupervisionChatSocket(): UseSupervisionChatSocketReturn {
       socket.off('supervision:message:unread_count', onUnreadCount)
       socket.off('supervision:notification:new', onNotification)
       socket.off('supervision:message:new', onNewMessage)
+      socket.off('supervision:message:delivered', onDelivered)
       socket.off('supervision:message:read', onRead)
       socket.off('supervision:message:typing', onTyping)
+      socket.off('supervision:user:messaging_status', onMessagingStatus)
     }
   }, [queryClient])
 
@@ -218,5 +300,5 @@ export function useSupervisionChatSocket(): UseSupervisionChatSocketReturn {
     void conversationId // the server infers it from the room
   }, [])
 
-  return { isConnected, typingUsers, joinConversation, sendTyping }
+  return { isConnected, typingUsers, messagingStatus, joinConversation, sendTyping }
 }

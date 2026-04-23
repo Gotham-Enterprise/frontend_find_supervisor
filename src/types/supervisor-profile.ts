@@ -143,7 +143,7 @@ export interface SupervisorProfileData {
   licenseObjectKey?: string | null
   licenseFileName?: string | null
   verificationDocumentUrl?: string | null
-
+  isInMyHireList?: boolean
   verificationStatus: VerificationStatus
   verificationNotes?: string | null
   visibilityStatus: VisibilityStatus

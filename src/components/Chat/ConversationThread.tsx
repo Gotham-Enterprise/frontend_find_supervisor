@@ -52,7 +52,16 @@ export function ConversationThread({ conversationId, onBack }: ConversationThrea
   const { mutate: markRead } = useMarkConversationRead(conversationId)
   const { mutate: sendMessage, isPending: isSending } = useSendMessage(conversationId)
 
-  const { joinConversation, sendTyping, typingUsers } = useSupervisionChatSocket()
+  // Derive locked early so the socket hook can use it.
+  // locked is only ever true for an unpaid SUPERVISOR — never for a supervisee.
+  const locked = conversation?.locked ?? false
+
+  // isSupervisor=true signals the socket hook to immediately render new incoming
+  // messages as locked (preview-only) without waiting for the backend override.
+  const { joinConversation, sendTyping, typingUsers, messagingStatus } = useSupervisionChatSocket({
+    isSupervisor: !isSupervisee && locked,
+    currentUserId: user?.id,
+  })
 
   // Bottom-of-list ref for auto-scroll
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -108,12 +117,18 @@ export function ConversationThread({ conversationId, onBack }: ConversationThrea
   const hireStatus = conversation?.hire.status
   const isPending = hireStatus === 'PENDING'
   const remainingMessages = conversation?.remainingMessages ?? 0
-  const locked = conversation?.locked ?? false
 
   // Check if other participant is typing in this conversation
   const othersTyping = typingUsers.get(conversationId)
   const isOtherTyping =
     othersTyping !== undefined && othersTyping.size > 0 && !othersTyping.has(user?.id ?? '')
+
+  // Realtime messaging-disabled state from the other participant
+  const otherUserId = other?.id
+  const realtimeStatus = otherUserId ? messagingStatus.get(otherUserId) : undefined
+  // canMessage defaults to true (status only arrives when it changes)
+  const messagingDisabled = realtimeStatus ? !realtimeStatus.canMessage : false
+  const disabledMessageInfo = realtimeStatus?.disabledMessageInfo ?? null
 
   return (
     <div className="flex h-full flex-col">
@@ -208,6 +223,8 @@ export function ConversationThread({ conversationId, onBack }: ConversationThrea
         remainingMessages={remainingMessages}
         isPending={isPending}
         isSending={isSending}
+        messagingDisabled={messagingDisabled}
+        disabledMessageInfo={disabledMessageInfo}
         onSend={handleSend}
         onTyping={handleTyping}
       />

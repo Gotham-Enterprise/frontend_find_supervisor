@@ -1,6 +1,6 @@
 'use client'
 
-import { Lock, Send } from 'lucide-react'
+import { Lock, MessageSquareOff, Send } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,10 @@ interface MessageComposerProps {
   remainingMessages: number
   isPending: boolean
   isSending: boolean
+  /** Realtime: supervisor has disabled messaging via settings */
+  messagingDisabled?: boolean
+  /** Realtime: explanation text from supervisor settings */
+  disabledMessageInfo?: string | null
   onSend: (body: string) => void
   onTyping: (isTyping: boolean) => void
 }
@@ -21,6 +25,8 @@ export function MessageComposer({
   remainingMessages,
   isPending,
   isSending,
+  messagingDisabled = false,
+  disabledMessageInfo,
   onSend,
   onTyping,
 }: MessageComposerProps) {
@@ -28,7 +34,7 @@ export function MessageComposer({
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isLimitReached = isPending && remainingMessages === 0
-  const isDisabled = locked || isLimitReached || isSending
+  const isDisabled = locked || isLimitReached || isSending || messagingDisabled
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -76,6 +82,24 @@ export function MessageComposer({
           <p className="text-[13px] font-medium text-amber-700">
             Upgrade your plan to read full messages and reply.
           </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (messagingDisabled) {
+    return (
+      <div className="shrink-0 border-t border-border bg-white px-4 py-3">
+        <div className="flex items-start gap-2.5 rounded-lg bg-muted px-4 py-3">
+          <MessageSquareOff className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          <div>
+            <p className="text-[13px] font-medium text-foreground">
+              Messaging is currently unavailable
+            </p>
+            {disabledMessageInfo && (
+              <p className="mt-0.5 text-[13px] text-muted-foreground">{disabledMessageInfo}</p>
+            )}
+          </div>
         </div>
       </div>
     )
