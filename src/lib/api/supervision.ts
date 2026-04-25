@@ -26,6 +26,20 @@ export async function getCurrentSubscription(): Promise<Subscription | null> {
 }
 
 /**
+ * POST /supervision/payments/cancel-subscription
+ *
+ * Sets cancel_at_period_end = true on the active Stripe subscription so access
+ * remains until the current billing period ends. No request body is required —
+ * the backend identifies the subscription from the auth cookie.
+ */
+export async function cancelSubscription(): Promise<Subscription> {
+  const { data } = await apiClient.post<ApiResponse<Subscription>>(
+    '/supervision/payments/cancel-subscription',
+  )
+  return data.data
+}
+
+/**
  * POST /supervision/payments/purchase-subscription
  *
  * Initiates a Stripe subscription for the given plan. The backend:

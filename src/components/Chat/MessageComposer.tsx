@@ -3,6 +3,7 @@
 import { Lock, MessageSquareOff, Send } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 
+import { SubscriptionModal } from '@/components/Dashboard/subscription/SubscriptionModal'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -31,6 +32,7 @@ export function MessageComposer({
   onTyping,
 }: MessageComposerProps) {
   const [text, setText] = useState('')
+  const [planModalOpen, setPlanModalOpen] = useState(false)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isLimitReached = isPending && remainingMessages === 0
@@ -76,14 +78,27 @@ export function MessageComposer({
 
   if (locked) {
     return (
-      <div className="shrink-0 border-t border-border bg-white px-4 py-3">
-        <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-4 py-3">
-          <Lock className="h-4 w-4 shrink-0 text-amber-600" />
-          <p className="text-[13px] font-medium text-amber-700">
-            Upgrade your plan to read full messages and reply.
-          </p>
+      <>
+        <SubscriptionModal open={planModalOpen} onOpenChange={setPlanModalOpen} />
+        <div className="shrink-0 border-t border-border bg-white px-4 py-3">
+          <div className="flex flex-col gap-3 rounded-lg bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div className="flex min-w-0 items-center gap-2">
+              <Lock className="h-4 w-4 shrink-0 text-amber-600" />
+              <p className="text-[13px] font-medium text-amber-700">
+                Upgrade your plan to read full messages and reply.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              className="shrink-0 self-stretch sm:self-center"
+              onClick={() => setPlanModalOpen(true)}
+            >
+              Upgrade Now!
+            </Button>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 

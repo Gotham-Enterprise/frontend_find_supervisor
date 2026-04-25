@@ -52,6 +52,7 @@ export {
 } from './useSignupOptions'
 export {
   subscriptionKeys,
+  useCancelSubscription,
   useCurrentSubscriptionQuery,
   useSubscriptionPlansMutation,
   useSubscriptionPlansQuery,
@@ -68,5 +69,7 @@ export { useTopbarDropdown } from './useTopbarDropdown'
 export { useUpdateSuperviseeProfile } from './useUpdateSuperviseeProfile'
 export { useUpdateSupervisionSettings } from './useUpdateSupervisionSettings'
 export { useUpdateSupervisorProfile } from './useUpdateSupervisorProfile'
+export type { UserPresenceResult } from './useUserPresence'
+export { useUserPresence } from './useUserPresence'
 export { useUser } from '@/lib/contexts/UserContext'
 export { useUserSnackbar } from '@/lib/contexts/UserSnackbarContext'

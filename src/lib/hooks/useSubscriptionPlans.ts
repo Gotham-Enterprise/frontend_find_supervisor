@@ -2,8 +2,12 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { getCurrentSubscription, getSubscriptionPlans } from '@/lib/api/supervision'
-import type { SubscriptionPlan } from '@/types/supervisor-profile'
+import {
+  cancelSubscription,
+  getCurrentSubscription,
+  getSubscriptionPlans,
+} from '@/lib/api/supervision'
+import type { Subscription, SubscriptionPlan } from '@/types/supervisor-profile'
 
 export const subscriptionKeys = {
   all: ['supervision', 'subscription'] as const,
@@ -48,6 +52,23 @@ export function useSubscriptionPlansMutation() {
     mutationFn: getSubscriptionPlans,
     onSuccess: (data: SubscriptionPlan[]) => {
       queryClient.setQueryData(subscriptionKeys.list(), data)
+    },
+  })
+}
+
+/**
+ * POST /supervision/payments/cancel-subscription
+ *
+ * On success, updates the cached current-subscription entry so the UI reflects
+ * the cancellation immediately without a separate refetch round-trip.
+ */
+export function useCancelSubscription() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: cancelSubscription,
+    onSuccess: (updated: Subscription) => {
+      queryClient.setQueryData(subscriptionKeys.current(), updated)
     },
   })
 }
