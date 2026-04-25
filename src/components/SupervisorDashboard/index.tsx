@@ -738,9 +738,12 @@ function BillingSection({ profile }: { profile: SupervisorProfileData }) {
           <CardTitle className="text-base font-semibold">Billing &amp; Subscription</CardTitle>
           <p className="text-sm text-muted-foreground">Manage your plan and payment details</p>
         </div>
-        <button className="flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+        <Link
+          href="/billing"
+          className="flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+        >
           <CreditCard className="size-4" /> Manage Billing
-        </button>
+        </Link>
       </CardHeader>
       <CardContent className="grid gap-6 pt-4 sm:grid-cols-2">
         {/* Current plan */}

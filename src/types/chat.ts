@@ -134,3 +134,9 @@ export interface SocketMessagingStatusPayload {
   canMessage: boolean
   disabledMessageInfo: string | null
 }
+
+export interface SocketPresencePayload {
+  userId: string
+  isOnline: boolean
+  lastSeenAt: string | null
+}

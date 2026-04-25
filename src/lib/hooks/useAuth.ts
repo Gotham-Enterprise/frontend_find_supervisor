@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { login, logout } from '@/lib/api/auth'
 import { TOKEN_KEY } from '@/lib/api/client'
 import { useUser } from '@/lib/contexts/UserContext'
+import { disconnectSupervisionSocket } from '@/lib/socket/supervisionSocket'
 import type { LoginCredentials } from '@/types'
 
 export function useLogin() {
@@ -30,6 +31,7 @@ export function useLogout() {
     mutationFn: logout,
     onSettled: () => {
       localStorage.removeItem(TOKEN_KEY)
+      disconnectSupervisionSocket()
       clearUser()
       window.location.href = '/login'
     },

@@ -3,8 +3,8 @@
 import { Lock } from 'lucide-react'
 import { memo } from 'react'
 
-import { ProfileAvatar } from '@/components/Dashboard/ProfileAvatar'
 import { formatRelativeTime } from '@/components/notifications/utils'
+import { UserAvatar } from '@/components/ui/UserAvatar'
 import { isSuperviseeRole } from '@/lib/auth/roles'
 import { useUser } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
@@ -35,6 +35,11 @@ export const ConversationListItem = memo(function ConversationListItem({
     : null
   const hasUnread = conversation.unreadCount > 0
   const isPending = conversation.hire.status === 'PENDING'
+  const avatarCornerRing = isActive
+    ? 'ring-brand-light'
+    : hasUnread && !isActive
+      ? 'ring-brand-light/50'
+      : 'ring-white'
 
   return (
     <button
@@ -47,13 +52,28 @@ export const ConversationListItem = memo(function ConversationListItem({
       )}
     >
       {/* Avatar */}
-      <div className="relative mt-0.5 shrink-0">
-        <ProfileAvatar fullName={displayName} photoUrl={other.profilePhotoUrl} size="sm" />
-        {conversation.locked && (
-          <span className="absolute -right-0.5 -bottom-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 ring-1 ring-white">
-            <Lock className="h-2.5 w-2.5 text-amber-600" />
-          </span>
-        )}
+      <div className="mt-0.5 shrink-0">
+        <UserAvatar
+          size="sm"
+          src={other.profilePhotoUrl}
+          name={displayName}
+          showPresence={!conversation.locked}
+          userId={other.id}
+          presenceRingClassName={avatarCornerRing}
+          bottomRightSlot={
+            conversation.locked ? (
+              <span
+                className={cn(
+                  'flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 ring-2',
+                  avatarCornerRing,
+                )}
+                aria-hidden
+              >
+                <Lock className="size-2 text-amber-600" />
+              </span>
+            ) : undefined
+          }
+        />
       </div>
 
       {/* Content */}

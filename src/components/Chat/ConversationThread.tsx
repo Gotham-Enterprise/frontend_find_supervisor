@@ -3,8 +3,8 @@
 import { AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 
-import { ProfileAvatar } from '@/components/Dashboard/ProfileAvatar'
 import { Skeleton } from '@/components/ui/skeleton'
+import { UserAvatar } from '@/components/ui/UserAvatar'
 import { isSuperviseeRole } from '@/lib/auth/roles'
 import { useUser } from '@/lib/hooks'
 import {
@@ -144,13 +144,21 @@ export function ConversationThread({ conversationId, onBack }: ConversationThrea
         </button>
 
         {other && (
-          <ProfileAvatar fullName={otherDisplayName} photoUrl={other.profilePhotoUrl} size="sm" />
+          <UserAvatar
+            className="shrink-0"
+            size="sm"
+            src={other.profilePhotoUrl}
+            name={otherDisplayName}
+            showPresence
+            userId={other.id}
+            presenceRingClassName="ring-white"
+          />
         )}
 
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-foreground">{otherDisplayName}</p>
           {hireStatus && (
-            <p className="text-[11px] text-muted-foreground">
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
               {isSupervisee ? 'Supervisor' : 'Supervisee'}
               {hireStatus === 'PENDING' && (
                 <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-px text-[10px] font-semibold text-amber-700">

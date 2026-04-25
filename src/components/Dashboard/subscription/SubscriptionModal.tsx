@@ -152,14 +152,11 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
             const isFree = isFreePlan(plan)
             const isFirstPaid = plan.id === firstPaidPlanId
             const isThisCurrent = planMatchesSubscription(plan, resolution)
-            const showPendingBadge = isThisCurrent && resolution.isPendingActivation
             const titleNeedsRightPad = isFirstPaid
-            const titleNeedsLeftPad = showPendingBadge
 
             // CTA is disabled when this is the user's current active plan (paid or free)
             const isCurrentActivePlan =
-              (isThisCurrent && resolution.isActivePaid) ||
-              (isThisCurrent && isFree && !resolution.isPendingActivation)
+              (isThisCurrent && resolution.isActivePaid) || (isThisCurrent && isFree)
 
             const features = planFeatures(
               plan,
@@ -179,14 +176,6 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
                   !isFree && !isCurrentActivePlan && 'bg-primary/5',
                 )}
               >
-                {showPendingBadge && (
-                  <div className="absolute left-3 top-3 z-10 inline-flex h-6 items-center justify-center rounded-md border border-amber-500/30 bg-amber-50 px-2.5 dark:bg-amber-950/40">
-                    <span className="text-[9px] font-semibold uppercase leading-none tracking-wider text-amber-900 dark:text-amber-100">
-                      Pending payment
-                    </span>
-                  </div>
-                )}
-
                 {isFirstPaid && (
                   <div className="absolute right-3 top-3 z-10 inline-flex h-6 items-center justify-center rounded-md bg-primary px-2.5 shadow-sm">
                     <span className="block text-center text-[9px] font-semibold uppercase leading-none tracking-wider text-primary-foreground">
@@ -199,8 +188,7 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
                   className={cn(
                     'mb-5',
                     titleNeedsRightPad && 'pr-24',
-                    titleNeedsLeftPad && 'pl-24',
-                    (titleNeedsRightPad || titleNeedsLeftPad) && 'pt-0.5',
+                    titleNeedsRightPad && 'pt-0.5',
                   )}
                 >
                   <p

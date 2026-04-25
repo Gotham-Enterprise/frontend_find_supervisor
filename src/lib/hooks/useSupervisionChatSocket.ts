@@ -2,9 +2,10 @@
 
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { io, type Socket } from 'socket.io-client'
+import type { Socket } from 'socket.io-client'
 import { toast } from 'sonner'
 
+import { getOrCreateSupervisionSocket } from '@/lib/socket/supervisionSocket'
 import type {
   ChatMessage,
   Conversation,
@@ -18,13 +19,6 @@ import type {
 } from '@/types/chat'
 
 import { chatKeys } from './useChat'
-
-// Derive socket origin from the API base URL (strip trailing /api path)
-function getSocketOrigin(): string {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:5000/api'
-  // Remove everything from /api onward so we connect to the root origin
-  return base.replace(/\/api.*$/, '')
-}
 
 /**
  * Tracks which users are currently typing per conversation.
@@ -57,26 +51,12 @@ interface UseSupervisionChatSocketReturn {
   sendTyping: (conversationId: string, isTyping: boolean) => void
 }
 
-// Module-level singleton so multiple component mounts share one socket
-let socketSingleton: Socket | null = null
-
-function getOrCreateSocket(): Socket {
-  if (!socketSingleton) {
-    socketSingleton = io(`${getSocketOrigin()}/supervision`, {
-      withCredentials: true,
-      path: '/socket.io',
-      autoConnect: false,
-    })
-  }
-  return socketSingleton
-}
-
 export function useSupervisionChatSocket({
   isSupervisor = false,
   currentUserId,
 }: UseSupervisionChatSocketOptions = {}): UseSupervisionChatSocketReturn {
   const queryClient = useQueryClient()
-  const socketRef = useRef<Socket>(getOrCreateSocket())
+  const socketRef = useRef<Socket>(getOrCreateSupervisionSocket())
   const [isConnected, setIsConnected] = useState(false)
   const [typingUsers, setTypingUsers] = useState<TypingMap>(new Map())
   const [messagingStatus, setMessagingStatus] = useState<MessagingStatusMap>(new Map())

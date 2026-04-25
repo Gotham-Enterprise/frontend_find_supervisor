@@ -1,6 +1,7 @@
 'use client'
 
 import { CheckCircle2, Star } from 'lucide-react'
+import Link from 'next/link'
 import { useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -272,12 +273,12 @@ function SubscribedCard({
               </div>
             </div>
 
-            <button
-              type="button"
-              className="mt-4 w-full rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-50"
+            <Link
+              href="/billing"
+              className="mt-4 flex w-full items-center justify-center rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-50"
             >
               Manage subscription
-            </button>
+            </Link>
             <p className="mt-2 text-center text-[11px] text-emerald-600">
               Auto-renews · Cancel anytime
             </p>
