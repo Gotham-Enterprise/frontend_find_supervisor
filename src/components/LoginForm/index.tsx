@@ -39,17 +39,18 @@ export function LoginForm() {
     defaultValues,
   })
 
+  const { setValue } = form
   useEffect(() => {
     try {
       const saved = localStorage.getItem(REMEMBERED_LOGIN_EMAIL_KEY)
       if (saved) {
-        form.setValue('email', saved)
-        form.setValue('rememberMe', true)
+        setValue('email', saved)
+        setValue('rememberMe', true)
       }
     } catch {
       // ignore storage access errors
     }
-  }, [form])
+  }, [setValue])
 
   function clearApiError() {
     resetMutation()
