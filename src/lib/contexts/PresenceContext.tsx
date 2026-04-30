@@ -36,8 +36,9 @@ const PresenceContext = createContext<PresenceContextValue | null>(null)
 export function PresenceProvider({ children }: { children: React.ReactNode }) {
   const socketRef = useRef(getOrCreateSupervisionSocket())
   const [presence, setPresence] = useState<PresenceMap>(new Map())
-  const { data: conversations } = useConversations()
   const { user } = useUser()
+  /** Avoid hitting chat API on public routes — 401 + axios login redirect would reload /login forever. */
+  const { data: conversations } = useConversations({ enabled: Boolean(user?.id) })
 
   const conversationPeerIds = useMemo(() => {
     if (!conversations?.length || !user?.id) return []

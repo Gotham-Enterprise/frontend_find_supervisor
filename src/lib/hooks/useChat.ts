@@ -27,12 +27,13 @@ export const chatKeys = {
 // Queries
 // ---------------------------------------------------------------------------
 
-export function useConversations() {
+export function useConversations(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: chatKeys.conversations(),
     queryFn: fetchConversations,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
+    enabled: options?.enabled ?? true,
   })
 }
 
