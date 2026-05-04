@@ -3,19 +3,25 @@ import Link from 'next/link'
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { MatchingRequest } from '@/types'
+import type { HireListItem } from '@/types/hire'
 
 import { InitialsAvatar } from './SuperviseeDashboardShared'
 import { formatRelativeTime } from './SuperviseeDashboardUtils'
 
+const FORMAT_LABELS: Record<string, string> = {
+  VIRTUAL: 'Video · Virtual',
+  IN_PERSON: 'In-Person',
+  HYBRID: 'Hybrid',
+}
+
 interface SuperviseeDashboardUpcomingSessionsCardProps {
-  requests: MatchingRequest[]
+  hires: HireListItem[]
 }
 
 export function SuperviseeDashboardUpcomingSessionsCard({
-  requests,
+  hires,
 }: SuperviseeDashboardUpcomingSessionsCardProps) {
-  if (requests.length === 0) {
+  if (hires.length === 0) {
     return (
       <Card>
         <CardHeader className="border-b pb-3">
@@ -42,7 +48,13 @@ export function SuperviseeDashboardUpcomingSessionsCard({
     )
   }
 
-  const [next, ...rest] = requests
+  const [next, ...rest] = hires
+
+  const supervisorName = next.supervisor?.fullName ?? '—'
+  const sessionTypeLabel =
+    FORMAT_LABELS[next.preferredFormat ?? ''] ?? next.preferredFormat ?? 'Supervision'
+  const statusLabel =
+    next.status === 'ACTIVE' ? 'Active' : next.status === 'ACCEPTED' ? 'Accepted' : next.status
 
   return (
     <Card>
@@ -51,7 +63,10 @@ export function SuperviseeDashboardUpcomingSessionsCard({
           <CardTitle className="text-base font-semibold">Upcoming Sessions</CardTitle>
           <p className="text-sm text-muted-foreground">Your next scheduled supervision sessions</p>
         </div>
-        <Link href="/sessions" className="text-sm font-medium text-primary hover:underline">
+        <Link
+          href="/hired-supervisors"
+          className="text-sm font-medium text-primary hover:underline"
+        >
           View all →
         </Link>
       </CardHeader>
@@ -59,14 +74,14 @@ export function SuperviseeDashboardUpcomingSessionsCard({
         <div className="rounded-xl border border-border bg-muted/30 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-start gap-3">
-              <InitialsAvatar name={next.supervisorName} className="size-10 text-sm" />
+              <InitialsAvatar name={supervisorName} className="size-10 text-sm" />
               <div>
-                <p className="font-semibold leading-tight">{next.supervisorName}</p>
+                <p className="font-semibold leading-tight">{supervisorName}</p>
                 <p className="text-sm text-muted-foreground">Individual Supervision</p>
               </div>
             </div>
             <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-              ● Accepted
+              ● {statusLabel}
             </Badge>
           </div>
 
@@ -82,14 +97,14 @@ export function SuperviseeDashboardUpcomingSessionsCard({
                 Session Type
               </p>
               <p className="mt-0.5 flex items-center gap-1 text-sm font-medium">
-                <Video className="size-3.5 text-muted-foreground" /> Video · Virtual
+                <Video className="size-3.5 text-muted-foreground" /> {sessionTypeLabel}
               </p>
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Status
               </p>
-              <p className="mt-0.5 text-sm font-medium capitalize">{next.status}</p>
+              <p className="mt-0.5 text-sm font-medium">{statusLabel}</p>
             </div>
           </div>
 
@@ -100,33 +115,33 @@ export function SuperviseeDashboardUpcomingSessionsCard({
             >
               View Details
             </Link>
-            <button className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
-              Join Session
-            </button>
           </div>
         </div>
 
         {rest.length > 0 && (
           <ul className="mt-3 divide-y">
-            {rest.map((req) => (
-              <li key={req.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-                <div className="flex items-center gap-3">
-                  <InitialsAvatar name={req.supervisorName} className="size-7 text-xs" />
-                  <span className="font-medium">{req.supervisorName}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-xs">
-                    Accepted
-                  </Badge>
-                  <Link
-                    href={`/find-supervisors/${req.supervisorId}`}
-                    className="text-xs font-medium text-primary hover:underline"
-                  >
-                    View →
-                  </Link>
-                </div>
-              </li>
-            ))}
+            {rest.map((hire) => {
+              const name = hire.supervisor?.fullName ?? '—'
+              return (
+                <li key={hire.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                  <div className="flex items-center gap-3">
+                    <InitialsAvatar name={name} className="size-7 text-xs" />
+                    <span className="font-medium">{name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-xs">
+                      {hire.status === 'ACTIVE' ? 'Active' : 'Accepted'}
+                    </Badge>
+                    <Link
+                      href={`/find-supervisors/${hire.supervisorId}`}
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      View →
+                    </Link>
+                  </div>
+                </li>
+              )
+            })}
           </ul>
         )}
       </CardContent>

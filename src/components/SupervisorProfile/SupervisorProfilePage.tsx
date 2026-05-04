@@ -2,6 +2,7 @@
 
 import { AlertCircle, ArrowLeftIcon } from 'lucide-react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 import { buttonVariants } from '@/components/ui/button'
 import {
@@ -29,7 +30,18 @@ interface SupervisorProfilePageProps {
   supervisorId: string
 }
 
+const BACK_LINK_CONFIG: Record<string, { href: string; label: string }> = {
+  dashboard: { href: '/dashboard', label: 'Back to Dashboard' },
+  'hired-supervisors': { href: '/hired-supervisors', label: 'Back to Hired Supervisors' },
+}
+
+const DEFAULT_BACK = { href: '/find-supervisors', label: 'Back to Find Supervisors' }
+
 export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePageProps) {
+  const searchParams = useSearchParams()
+  const from = searchParams.get('from') ?? ''
+  const backLink = BACK_LINK_CONFIG[from] ?? DEFAULT_BACK
+
   const { data: profile, isLoading, isError } = useSupervisor(supervisorId)
   const { data: certificationOptions = [] } = useCertificateOptions()
   const { data: patientPopulationOptions = [] } = usePatientPopulationOptions()
@@ -48,11 +60,11 @@ export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePagePro
           This profile may not exist or is unavailable.
         </p>
         <Link
-          href="/find-supervisors"
+          href={backLink.href}
           className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'mt-5')}
         >
           <ArrowLeftIcon className="mr-1.5 size-4" />
-          Back to search
+          {backLink.label}
         </Link>
       </div>
     )
@@ -70,11 +82,11 @@ export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePagePro
       <div className="mx-auto max-w-4xl">
         {/* Back navigation */}
         <Link
-          href="/find-supervisors"
+          href={backLink.href}
           className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeftIcon className="size-4" />
-          Back to supervisors
+          {backLink.label}
         </Link>
 
         <SupervisorProfileHero profile={profile} />

@@ -18,7 +18,7 @@ export const DEFAULT_FILTERS: SupervisorSearchFilters = {
   supervisionFormats: [],
   yearsExperience: [],
   patientPopulation: [],
-  acceptingOnly: false,
+  acceptingOnly: true,
   availability: [],
 }
 
@@ -133,8 +133,6 @@ export function getActiveChips(
   filters.patientPopulation.forEach((pop) => {
     chips.push({ key: `pop_${pop}`, label: pop })
   })
-
-  if (filters.acceptingOnly) chips.push({ key: 'acceptingOnly', label: 'Accepting Only' })
 
   return chips
 }

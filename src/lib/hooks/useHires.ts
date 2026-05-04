@@ -27,6 +27,7 @@ export function useHiresList(page = 1, limit = 10) {
   return useQuery({
     queryKey: hireKeys.list(page, limit),
     queryFn: () => listHires(page, limit),
+    staleTime: 2 * 60 * 1000,
   })
 }
 

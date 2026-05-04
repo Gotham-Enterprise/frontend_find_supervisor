@@ -1,11 +1,22 @@
 'use client'
 
-import { AlertCircle, ChevronLeft, ChevronRight, ClipboardList, MoreHorizontal } from 'lucide-react'
+import {
+  AlertCircle,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  DollarSign,
+  type LucideIcon,
+  MapPin,
+  Monitor,
+  MoreHorizontal,
+} from 'lucide-react'
 import * as React from 'react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import {
@@ -18,21 +29,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  useAcceptHire,
-  useCancelHire,
-  useHiresList,
-  useRejectHire,
-  useUserSnackbar,
-} from '@/lib/hooks'
+import { UserAvatar } from '@/components/ui/UserAvatar'
+import { useAcceptHire, useHiresList, useRejectHire, useUserSnackbar } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
   formatAvailability,
@@ -51,62 +49,70 @@ import { HireStatusBadge } from '../HiredSupervisors/HireStatusBadge'
 
 const PAGE_SIZE = 10
 
-/** Actions that make sense per status, from the supervisor's perspective. */
-const ALLOWED_ACTIONS: Record<HireStatus, ReadonlyArray<'accept' | 'reject' | 'cancel'>> = {
+/** Actions available to the supervisor. Only supervisees can cancel. */
+const ALLOWED_ACTIONS: Record<HireStatus, ReadonlyArray<'accept' | 'reject'>> = {
   PENDING: ['accept', 'reject'],
-  ACCEPTED: ['cancel'],
-  ACTIVE: ['cancel'],
+  ACCEPTED: [],
+  ACTIVE: [],
   COMPLETED: [],
   CANCELED: [],
   REJECTED: [],
 }
 
+// ─── Detail cell ──────────────────────────────────────────────────────────────
+
+function DetailCell({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string
+  value: string
+  icon: LucideIcon
+}) {
+  const display = value.trim() && value !== 'N/A' && value !== '—' ? value : 'Not specified'
+  return (
+    <div className="min-w-0">
+      <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+        <Icon className="size-3 shrink-0" aria-hidden />
+        <span>{label}</span>
+      </div>
+      <p className="mt-0.5 truncate text-sm font-medium text-foreground">{display}</p>
+    </div>
+  )
+}
+
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
-const SUPERVISION_REQUESTS_TABLE_HEADERS = [
-  'Supervisee',
-  'Email',
-  'Contact',
-  'Occupation',
-  'Location',
-  'Format',
-  'Availability',
-  'Budget',
-  'Status',
-  'Requested',
-  '',
-] as const
-
-function SupervisionRequestsTableSkeleton() {
-  const cols = SUPERVISION_REQUESTS_TABLE_HEADERS.length
+function SupervisionRequestsSkeleton() {
   return (
-    <Card className="gap-0 overflow-hidden p-0 shadow-sm">
-      <Table className="text-[15px]">
-        <TableHeader>
-          <TableRow className="border-b border-border bg-muted/50 hover:bg-muted/50">
-            {SUPERVISION_REQUESTS_TABLE_HEADERS.map((h) => (
-              <TableHead
-                key={h}
-                className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground"
-              >
-                {h}
-              </TableHead>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Card key={i} className="gap-0 overflow-hidden rounded-xl py-0 shadow-sm">
+          <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
+            <div className="flex min-w-0 gap-3">
+              <Skeleton className="mt-0.5 size-11 shrink-0 rounded-full" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-40 max-w-full" />
+                <Skeleton className="h-3 w-full max-w-[14rem]" />
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="size-8 rounded-md" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/50 px-5 py-4">
+            {Array.from({ length: 4 }).map((__, j) => (
+              <div key={j} className="space-y-1.5">
+                <Skeleton className="h-2.5 w-14" />
+                <Skeleton className="h-4 w-full max-w-[9rem]" />
+              </div>
             ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <TableRow key={i} className="border-border/80">
-              {Array.from({ length: cols }).map((__, j) => (
-                <TableCell key={j} className="px-4 py-4">
-                  <Skeleton className="h-4 w-full max-w-[8rem]" />
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
+          </div>
+        </Card>
+      ))}
+    </div>
   )
 }
 
@@ -115,7 +121,7 @@ function SupervisionRequestsTableSkeleton() {
 function SupervisionRequestsEmpty() {
   return (
     <Card className="border-dashed shadow-sm">
-      <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="flex flex-col items-center justify-center py-16 text-center">
         <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10">
           <ClipboardList className="size-7 text-primary" aria-hidden />
         </div>
@@ -123,7 +129,7 @@ function SupervisionRequestsEmpty() {
         <p className="mt-2 max-w-sm text-sm leading-relaxed text-foreground/80">
           Supervisees who request your supervision will appear here.
         </p>
-      </CardContent>
+      </div>
     </Card>
   )
 }
@@ -133,7 +139,7 @@ function SupervisionRequestsEmpty() {
 function SupervisionRequestsError() {
   return (
     <Card className="border-destructive/25 bg-destructive/5 shadow-sm">
-      <CardContent className="flex flex-col items-center justify-center py-14 text-center">
+      <div className="flex flex-col items-center justify-center py-14 text-center">
         <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-destructive/10">
           <AlertCircle className="size-7 text-destructive" aria-hidden />
         </div>
@@ -143,7 +149,7 @@ function SupervisionRequestsError() {
         <p className="mt-2 max-w-sm text-sm leading-relaxed text-foreground/80">
           Something went wrong. Please refresh the page to try again.
         </p>
-      </CardContent>
+      </div>
     </Card>
   )
 }
@@ -206,18 +212,18 @@ function Pagination({
 
 function DetailItem({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div>
+    <div className="min-w-0">
       <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 text-sm text-foreground">{value || '—'}</dd>
+      <dd className="mt-0.5 break-words text-sm text-foreground">{value || '—'}</dd>
     </div>
   )
 }
 
 function DetailBlock({ label, value }: { label: string; value: string | null | undefined }) {
   return (
-    <div>
+    <div className="min-w-0">
       <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
-      <dd className="mt-1 whitespace-pre-wrap rounded-md bg-muted/50 px-3 py-2 text-sm text-foreground leading-relaxed">
+      <dd className="mt-1 min-w-0 break-words whitespace-pre-wrap rounded-md bg-muted/50 px-3 py-2 text-sm text-foreground leading-relaxed">
         {value || '—'}
       </dd>
     </div>
@@ -307,7 +313,7 @@ function SuperviseeDetailsDialog({ hire, open, onOpenChange }: SuperviseeDetails
 
 // ─── Row actions ──────────────────────────────────────────────────────────────
 
-type PendingAction = 'accept' | 'reject' | 'cancel' | null
+type PendingAction = 'accept' | 'reject' | null
 
 interface RowActionsProps {
   hire: HireListItem
@@ -323,25 +329,18 @@ function RowActions({ hire }: RowActionsProps) {
 
   const acceptMutation = useAcceptHire()
   const rejectMutation = useRejectHire()
-  const cancelMutation = useCancelHire()
 
-  const isMutating =
-    acceptMutation.isPending || rejectMutation.isPending || cancelMutation.isPending
+  const isMutating = acceptMutation.isPending || rejectMutation.isPending
 
   function closeDialog() {
     setPendingAction(null)
     setRejectionReason('')
   }
 
-  function handleConfirm(action: 'accept' | 'cancel') {
-    const mutation = action === 'accept' ? acceptMutation : cancelMutation
-    const successMessages = {
-      accept: 'Supervision request accepted.',
-      cancel: 'Supervision request cancelled.',
-    }
-    mutation.mutate(hire.id, {
+  function handleAcceptConfirm() {
+    acceptMutation.mutate(hire.id, {
       onSuccess: () => {
-        showSuccess(successMessages[action])
+        showSuccess('Supervision request accepted.')
         closeDialog()
       },
       onError: (err) => {
@@ -397,11 +396,6 @@ function RowActions({ hire }: RowActionsProps) {
                   </DropdownMenuItem>
                 </>
               )}
-              {allowedActions.includes('cancel') && (
-                <DropdownMenuItem destructive onClick={() => setPendingAction('cancel')}>
-                  Cancel
-                </DropdownMenuItem>
-              )}
             </DropdownMenuPopup>
           </DropdownMenuPositioner>
         </DropdownMenuPortal>
@@ -416,7 +410,7 @@ function RowActions({ hire }: RowActionsProps) {
         description={`You are about to accept the supervision request from ${formatDisplayName(hire.supervisee)}. This will notify them and mark the hire as accepted.`}
         confirmLabel="Accept"
         isPending={acceptMutation.isPending}
-        onConfirm={() => handleConfirm('accept')}
+        onConfirm={handleAcceptConfirm}
       />
 
       <ConfirmDialog
@@ -446,72 +440,65 @@ function RowActions({ hire }: RowActionsProps) {
           </span>
         </label>
       </ConfirmDialog>
-
-      <ConfirmDialog
-        open={pendingAction === 'cancel'}
-        onOpenChange={(open) => !open && closeDialog()}
-        title="Cancel supervision request?"
-        description={`You are about to cancel the supervision arrangement with ${formatDisplayName(hire.supervisee)}. This action cannot be undone.`}
-        confirmLabel="Cancel Request"
-        destructive
-        isPending={cancelMutation.isPending}
-        onConfirm={() => handleConfirm('cancel')}
-      />
     </>
   )
 }
 
-// ─── Table row ────────────────────────────────────────────────────────────────
+// ─── Request card ─────────────────────────────────────────────────────────────
 
-function RequestRow({ hire }: { hire: HireListItem }) {
+function SupervisionRequestCard({ hire }: { hire: HireListItem }) {
   const superviseeName = formatDisplayName(hire.supervisee)
-  const occupation = hire.supervisee.occupation?.name ?? '—'
-  const specialty = hire.supervisee.specialty?.name
-  const occupationDisplay = specialty ? `${occupation} · ${specialty}` : occupation
-  const location = formatLocation(hire.supervisee.city, hire.supervisee.state)
-  const format = formatSupervisionFormat(hire.preferredFormat)
-  const availability = formatAvailability(hire.preferredAvailability)
-  const budget = formatBudgetRange(hire.budgetRangeStart, hire.budgetRangeEnd, hire.budgetRangeType)
+  const occupation = hire.supervisee.occupation?.name?.trim()
+  const specialty = hire.supervisee.specialty?.name?.trim()
+  const occupationDisplay =
+    occupation && specialty
+      ? `${occupation} · ${specialty}`
+      : (occupation ?? specialty ?? 'Not specified')
+
+  const locationRaw = formatLocation(hire.supervisee.city, hire.supervisee.state)
+  const formatRaw = formatSupervisionFormat(hire.preferredFormat)
+  const budgetRaw = formatBudgetRange(
+    hire.budgetRangeStart,
+    hire.budgetRangeEnd,
+    hire.budgetRangeType,
+  )
+  const requestedRaw = formatDate(hire.createdAt)
 
   return (
-    <TableRow className="border-border/80">
-      <TableCell className="px-4 py-3.5 font-semibold text-foreground">{superviseeName}</TableCell>
-      <TableCell
-        className="max-w-[200px] truncate px-4 py-3.5 text-foreground/90"
-        title={hire.supervisee.email}
-      >
-        {hire.supervisee.email}
-      </TableCell>
-      <TableCell className="px-4 py-3.5 text-foreground/90 tabular-nums">
-        {formatContactNumber(hire.supervisee.contactNumber)}
-      </TableCell>
-      <TableCell
-        className="max-w-[200px] truncate px-4 py-3.5 text-foreground/90"
-        title={occupationDisplay}
-      >
-        {occupationDisplay}
-      </TableCell>
-      <TableCell className="px-4 py-3.5 text-foreground/90">{location}</TableCell>
-      <TableCell className="px-4 py-3.5 text-foreground">{format}</TableCell>
-      <TableCell
-        className="max-w-[140px] truncate px-4 py-3.5 text-foreground/90"
-        title={availability}
-      >
-        {availability}
-      </TableCell>
-      <TableCell className="px-4 py-3.5 font-medium tabular-nums text-foreground">
-        {budget}
-      </TableCell>
-      <TableCell className="px-4 py-3.5">
-        <HireStatusBadge status={hire.status} />
-      </TableCell>
-      <TableCell className="px-4 py-3.5 text-sm tabular-nums text-foreground/90">
-        {formatDate(hire.createdAt)}
-      </TableCell>
-      <TableCell className="px-4 py-3.5">
-        <RowActions hire={hire} />
-      </TableCell>
-    </TableRow>
+    <Card className="gap-0 overflow-hidden rounded-xl py-0 shadow-sm">
+      {/* ── Header ─────────────────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
+        <div className="flex min-w-0 gap-3">
+          <UserAvatar
+            src={hire.supervisee.profilePhotoUrl}
+            name={superviseeName}
+            alt={`Profile photo of ${superviseeName}`}
+            size="lg"
+            className="mt-0.5 shrink-0"
+          />
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold leading-tight tracking-tight text-foreground">
+              {superviseeName}
+            </h3>
+            <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+              {occupationDisplay}
+            </p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <HireStatusBadge status={hire.status} />
+          <RowActions hire={hire} />
+        </div>
+      </div>
+
+      {/* ── Details ────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/50 px-5 py-4">
+        <DetailCell label="Location" value={locationRaw} icon={MapPin} />
+        <DetailCell label="Format" value={formatRaw} icon={Monitor} />
+        <DetailCell label="Budget" value={budgetRaw} icon={DollarSign} />
+        <DetailCell label="Requested" value={requestedRaw} icon={CalendarDays} />
+      </div>
+    </Card>
   )
 }
 
@@ -530,65 +517,24 @@ export function SupervisionRequestsPage() {
       <div className="space-y-2">
         <h2 className="text-lg font-semibold tracking-tight text-foreground">Incoming requests</h2>
         <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Supervisees who have asked you to supervise them appear below. Review format, budget, and
-          status—open the row menu to view full details, accept, reject, or cancel when allowed.
+          Supervisees who have asked you to supervise them appear below. Use the menu on any card to
+          view full details, accept, reject, or cancel when allowed.
         </p>
       </div>
 
       {isLoading ? (
-        <SupervisionRequestsTableSkeleton />
+        <SupervisionRequestsSkeleton />
       ) : isError ? (
         <SupervisionRequestsError />
       ) : items.length === 0 ? (
         <SupervisionRequestsEmpty />
       ) : (
         <>
-          <Card className="gap-0 overflow-hidden p-0 shadow-sm">
-            <Table className="text-[15px]">
-              <TableHeader>
-                <TableRow className="border-b border-border bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
-                    Supervisee
-                  </TableHead>
-                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
-                    Email
-                  </TableHead>
-                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
-                    Contact
-                  </TableHead>
-                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
-                    Occupation
-                  </TableHead>
-                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
-                    Location
-                  </TableHead>
-                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
-                    Format
-                  </TableHead>
-                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
-                    Availability
-                  </TableHead>
-                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
-                    Budget
-                  </TableHead>
-                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
-                    Status
-                  </TableHead>
-                  <TableHead className="h-12 px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
-                    Requested
-                  </TableHead>
-                  <TableHead className="h-12 w-[4.5rem] px-4 text-xs font-semibold uppercase tracking-wide text-foreground">
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((hire) => (
-                  <RequestRow key={hire.id} hire={hire} />
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {items.map((hire) => (
+              <SupervisionRequestCard key={hire.id} hire={hire} />
+            ))}
+          </div>
 
           {totalPages > 1 && (
             <Pagination

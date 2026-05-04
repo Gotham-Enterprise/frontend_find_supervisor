@@ -33,6 +33,7 @@ export {
   useMarkNotificationRead,
   useNotifications,
 } from './useNotifications'
+export { recommendedSupervisorKeys, useRecommendedSupervisors } from './useRecommendedSupervisors'
 export { useResendVerificationEmail } from './useResendVerificationEmail'
 export { useSuperviseeSignup, useSupervisorSignup } from './useSignup'
 export {
