@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import type { MatchingRequest, User } from '@/types'
+import type { User } from '@/types'
+import type { HireListItem } from '@/types/hire'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 import { ProgressBar } from './SuperviseeDashboardShared'
@@ -9,20 +10,25 @@ import { getGoalSteps } from './SuperviseeDashboardUtils'
 interface SuperviseeDashboardActivityCardProps {
   user: User
   completion: number
-  allRequests: MatchingRequest[]
+  allHires: HireListItem[]
+  /** True total from the API response — use this instead of allHires.length to avoid showing a capped page count. */
+  totalHiresCount: number
   superviseeProfile?: SuperviseeProfileData | null
 }
 
 export function SuperviseeDashboardActivityCard({
   user,
   completion,
-  allRequests,
+  allHires,
+  totalHiresCount,
   superviseeProfile,
 }: SuperviseeDashboardActivityCardProps) {
-  const hasAcceptedRequest = allRequests.some((r) => r.status === 'accepted')
+  const hasAcceptedRequest = allHires.some((h) => h.status === 'ACCEPTED' || h.status === 'ACTIVE')
   const steps = getGoalSteps(user, hasAcceptedRequest, superviseeProfile)
   const doneCount = steps.filter((s) => s.status === 'done').length
-  const acceptedCount = allRequests.filter((r) => r.status === 'accepted').length
+  const acceptedCount = allHires.filter(
+    (h) => h.status === 'ACCEPTED' || h.status === 'ACTIVE',
+  ).length
 
   return (
     <Card className="flex flex-col">
@@ -37,7 +43,7 @@ export function SuperviseeDashboardActivityCard({
             <p className="text-xs text-muted-foreground">Sessions</p>
           </div>
           <div className="py-2">
-            <p className="text-xl font-bold text-primary">{allRequests.length}</p>
+            <p className="text-xl font-bold text-primary">{totalHiresCount}</p>
             <p className="text-xs text-muted-foreground">Requests</p>
           </div>
           <div className="py-2">
@@ -66,24 +72,27 @@ export function SuperviseeDashboardActivityCard({
           />
         </div>
 
-        {allRequests.length > 0 && (
+        {allHires.length > 0 && (
           <div className="space-y-2">
             <p className="text-xs font-semibold text-foreground">Recent Requests</p>
             <ul className="space-y-2">
-              {allRequests.slice(0, 3).map((req) => (
-                <li key={req.id} className="flex items-center gap-2 text-xs">
+              {allHires.slice(0, 3).map((hire) => (
+                <li key={hire.id} className="flex items-center gap-2 text-xs">
                   <span
                     className={cn('size-2 shrink-0 rounded-full', {
-                      'bg-emerald-500': req.status === 'accepted',
-                      'bg-amber-400': req.status === 'pending',
-                      'bg-red-400': req.status === 'rejected',
-                      'bg-muted-foreground': req.status === 'cancelled',
+                      'bg-emerald-500': hire.status === 'ACCEPTED' || hire.status === 'ACTIVE',
+                      'bg-amber-400': hire.status === 'PENDING',
+                      'bg-red-400': hire.status === 'REJECTED',
+                      'bg-muted-foreground':
+                        hire.status === 'CANCELED' || hire.status === 'COMPLETED',
                     })}
                   />
                   <span className="flex-1 truncate text-muted-foreground">
-                    Request to {req.supervisorName}
+                    Request to {hire.supervisor?.fullName ?? '—'}
                   </span>
-                  <span className="shrink-0 capitalize text-muted-foreground/70">{req.status}</span>
+                  <span className="shrink-0 capitalize text-muted-foreground/70">
+                    {hire.status.toLowerCase()}
+                  </span>
                 </li>
               ))}
             </ul>

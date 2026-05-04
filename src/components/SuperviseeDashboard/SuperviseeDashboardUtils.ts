@@ -98,11 +98,6 @@ export function getGoalSteps(
       description: 'Browse verified supervisors and send a request',
       status: hasAcceptedRequest ? 'done' : readyToFindSupervisor ? 'current' : 'upcoming',
     },
-    {
-      label: 'Complete 10 supervision hours',
-      description: 'Work toward your licensed hours goal',
-      status: 'upcoming',
-    },
   ]
 }
 

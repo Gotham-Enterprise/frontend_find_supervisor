@@ -3,7 +3,7 @@
 import { useState } from 'react'
 
 import { EditSuperviseeProfileModal } from '@/components/EditSuperviseeProfileModal'
-import { useMatchingRequests, useSupervisors, useUser } from '@/lib/hooks'
+import { useHiresList, useRecommendedSupervisors, useUser } from '@/lib/hooks'
 import { useSuperviseeProfile } from '@/lib/hooks/useSuperviseeProfile'
 
 import { SuperviseeDashboardContent } from './SuperviseeDashboardContent'
@@ -17,24 +17,28 @@ export function SuperviseeDashboard() {
   const { user } = useUser()
   const [editModalOpen, setEditModalOpen] = useState(false)
 
-  const { data: matchingData, isLoading: matchingLoading } = useMatchingRequests()
-  const { data: supervisorsData, isLoading: supervisorsLoading } = useSupervisors({
-    available: true,
-    pageSize: 3,
-  })
+  const { data: hiresData, isLoading: hiresLoading, isError: hiresError } = useHiresList(1, 10)
+  const {
+    data: recommendedData,
+    isLoading: recommendedLoading,
+    isError: recommendedError,
+  } = useRecommendedSupervisors({ page: 1, limit: 6 })
   const {
     data: superviseeProfile,
     isLoading: profileLoading,
     isError: profileError,
   } = useSuperviseeProfile()
 
-  // Block the full skeleton only on the core data; profile loads independently
-  if (matchingLoading || supervisorsLoading) return <SuperviseeDashboardSkeleton />
+  // Block the full skeleton on hires data; recommended and profile load independently
+  if (hiresLoading) return <SuperviseeDashboardSkeleton />
 
-  const allRequests = matchingData?.data ?? []
-  const pendingRequests = allRequests.filter((r) => r.status === 'pending')
-  const acceptedRequests = allRequests.filter((r) => r.status === 'accepted')
-  const availableSupervisors = supervisorsData?.data ?? []
+  const allHires = hiresData?.items ?? []
+  const totalHiresCount = hiresData?.totalCount ?? 0
+  const pendingHires = allHires.filter((h) => h.status === 'PENDING')
+  const acceptedHires = allHires.filter((h) => h.status === 'ACCEPTED' || h.status === 'ACTIVE')
+
+  const recommendedSupervisors = recommendedData?.items ?? []
+  const totalRecommendedCount = recommendedData?.totalCount ?? 0
 
   // Use the richer profile-based completion when available, fall back to user-only
   const completion = superviseeProfile
@@ -48,10 +52,15 @@ export function SuperviseeDashboard() {
       <SuperviseeDashboardContent
         user={user ?? null}
         completion={completion}
-        pendingRequests={pendingRequests}
-        acceptedRequests={acceptedRequests}
-        allRequests={allRequests}
-        availableSupervisors={availableSupervisors}
+        allHires={allHires}
+        totalHiresCount={totalHiresCount}
+        pendingHires={pendingHires}
+        acceptedHires={acceptedHires}
+        isHiresError={hiresError}
+        recommendedSupervisors={recommendedSupervisors}
+        totalRecommendedCount={totalRecommendedCount}
+        isRecommendedLoading={recommendedLoading}
+        isRecommendedError={recommendedError}
         superviseeProfile={superviseeProfile ?? null}
         isProfileLoading={profileLoading}
         isProfileError={profileError}

@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
+
 import { SuperviseeRouteGuard } from '@/components/Layout/SuperviseeRouteGuard'
-import { SupervisorProfilePage } from '@/components/SupervisorProfile'
+import { SupervisorProfilePage, SupervisorProfileSkeleton } from '@/components/SupervisorProfile'
 
 interface SupervisorProfileRouteProps {
   params: Promise<{ supervisorId: string }>
@@ -18,7 +20,9 @@ export default async function SupervisorProfileRoute({ params }: SupervisorProfi
 
   return (
     <SuperviseeRouteGuard>
-      <SupervisorProfilePage supervisorId={supervisorId} />
+      <Suspense fallback={<SupervisorProfileSkeleton />}>
+        <SupervisorProfilePage supervisorId={supervisorId} />
+      </Suspense>
     </SuperviseeRouteGuard>
   )
 }

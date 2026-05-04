@@ -1,4 +1,6 @@
-import type { MatchingRequest, Supervisor, User } from '@/types'
+import type { RecommendedSupervisorApiItem } from '@/lib/api/supervisors'
+import type { User } from '@/types'
+import type { HireListItem } from '@/types/hire'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 import { SuperviseeDashboardActiveRequests } from './SuperviseeDashboardActiveRequests'
@@ -18,10 +20,21 @@ import { SuperviseeDashboardUpcomingSessionsCard } from './SuperviseeDashboardUp
 interface SuperviseeDashboardContentProps {
   user: User | null
   completion: number
-  pendingRequests: MatchingRequest[]
-  acceptedRequests: MatchingRequest[]
-  allRequests: MatchingRequest[]
-  availableSupervisors: Supervisor[]
+  /** All hires (pending + accepted/active + historical) for activity stats and goal tracking. */
+  allHires: HireListItem[]
+  /** True total hire count from the API — may exceed allHires.length when paginated. */
+  totalHiresCount: number
+  /** Hires the supervisee is waiting on a response for. */
+  pendingHires: HireListItem[]
+  /** Hires that have been accepted or are currently active. */
+  acceptedHires: HireListItem[]
+  /** True when the hires query failed — shown inside the Active Requests card. */
+  isHiresError: boolean
+  recommendedSupervisors: RecommendedSupervisorApiItem[]
+  /** Total count from API pagination (all eligible, not just current page). */
+  totalRecommendedCount: number
+  isRecommendedLoading: boolean
+  isRecommendedError: boolean
   /** Full supervisee profile — undefined while loading, null on error/not-found */
   superviseeProfile: SuperviseeProfileData | null | undefined
   isProfileLoading: boolean
@@ -32,10 +45,15 @@ interface SuperviseeDashboardContentProps {
 export function SuperviseeDashboardContent({
   user,
   completion,
-  pendingRequests,
-  acceptedRequests,
-  allRequests,
-  availableSupervisors,
+  allHires,
+  totalHiresCount,
+  pendingHires,
+  acceptedHires,
+  isHiresError,
+  recommendedSupervisors,
+  totalRecommendedCount,
+  isRecommendedLoading,
+  isRecommendedError,
   superviseeProfile,
   isProfileLoading,
   isProfileError,
@@ -46,9 +64,9 @@ export function SuperviseeDashboardContent({
       {user && <SuperviseeDashboardHeader user={user} completion={completion} />}
 
       <SuperviseeDashboardSummaryCards
-        pendingCount={pendingRequests.length}
-        acceptedCount={acceptedRequests.length}
-        supervisorCount={availableSupervisors.length}
+        pendingCount={pendingHires.length}
+        acceptedCount={acceptedHires.length}
+        supervisorCount={totalRecommendedCount}
       />
 
       {/* My Profile (40%) | Goals & Progress + Your Activity stacked (60%) */}
@@ -67,13 +85,14 @@ export function SuperviseeDashboardContent({
           <div className="flex flex-col gap-4 lg:col-span-3">
             <SuperviseeDashboardGoalsProgressCard
               user={user}
-              allRequests={allRequests}
+              allHires={allHires}
               superviseeProfile={superviseeProfile}
             />
             <SuperviseeDashboardActivityCard
               user={user}
               completion={completion}
-              allRequests={allRequests}
+              allHires={allHires}
+              totalHiresCount={totalHiresCount}
               superviseeProfile={superviseeProfile}
             />
           </div>
@@ -81,15 +100,19 @@ export function SuperviseeDashboardContent({
       </div>
 
       {/* Upcoming Sessions — full width */}
-      <SuperviseeDashboardUpcomingSessionsCard requests={acceptedRequests} />
+      <SuperviseeDashboardUpcomingSessionsCard hires={acceptedHires} />
 
       {/* Recommended Supervisors (3/5) + Active Requests (2/5) */}
       <div className="grid gap-4 lg:grid-cols-5">
         <div className="lg:col-span-3">
-          <SuperviseeDashboardRecommendedSupervisors supervisors={availableSupervisors} />
+          <SuperviseeDashboardRecommendedSupervisors
+            supervisors={recommendedSupervisors}
+            isLoading={isRecommendedLoading}
+            isError={isRecommendedError}
+          />
         </div>
         <div className="lg:col-span-2">
-          <SuperviseeDashboardActiveRequests requests={pendingRequests} />
+          <SuperviseeDashboardActiveRequests hires={pendingHires} isError={isHiresError} />
         </div>
       </div>
 
