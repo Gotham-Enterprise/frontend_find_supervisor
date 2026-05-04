@@ -1,6 +1,6 @@
 import type { RecommendedSupervisorApiItem } from '@/lib/api/supervisors'
 import type { User } from '@/types'
-import type { HireListItem } from '@/types/hire'
+import type { HireListItem, UpcomingSessionItem } from '@/types/hire'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 import { SuperviseeDashboardActiveRequests } from './SuperviseeDashboardActiveRequests'
@@ -26,10 +26,13 @@ interface SuperviseeDashboardContentProps {
   totalHiresCount: number
   /** Hires the supervisee is waiting on a response for. */
   pendingHires: HireListItem[]
-  /** Hires that have been accepted or are currently active. */
-  acceptedHires: HireListItem[]
   /** True when the hires query failed — shown inside the Active Requests card. */
   isHiresError: boolean
+  /** From GET /supervision/supervisee/upcoming-sessions — future-dated active supervision. */
+  upcomingSessions: UpcomingSessionItem[]
+  isUpcomingSessionsLoading: boolean
+  isUpcomingSessionsError: boolean
+  onRetryUpcomingSessions: () => void
   recommendedSupervisors: RecommendedSupervisorApiItem[]
   /** Total count from API pagination (all eligible, not just current page). */
   totalRecommendedCount: number
@@ -48,7 +51,10 @@ export function SuperviseeDashboardContent({
   allHires,
   totalHiresCount,
   pendingHires,
-  acceptedHires,
+  upcomingSessions,
+  isUpcomingSessionsLoading,
+  isUpcomingSessionsError,
+  onRetryUpcomingSessions,
   isHiresError,
   recommendedSupervisors,
   totalRecommendedCount,
@@ -65,8 +71,9 @@ export function SuperviseeDashboardContent({
 
       <SuperviseeDashboardSummaryCards
         pendingCount={pendingHires.length}
-        acceptedCount={acceptedHires.length}
         supervisorCount={totalRecommendedCount}
+        upcomingSessionsCount={upcomingSessions.length}
+        isUpcomingSessionsLoading={isUpcomingSessionsLoading}
       />
 
       {/* My Profile (40%) | Goals & Progress + Your Activity stacked (60%) */}
@@ -100,7 +107,12 @@ export function SuperviseeDashboardContent({
       </div>
 
       {/* Upcoming Sessions — full width */}
-      <SuperviseeDashboardUpcomingSessionsCard hires={acceptedHires} />
+      <SuperviseeDashboardUpcomingSessionsCard
+        sessions={upcomingSessions}
+        isLoading={isUpcomingSessionsLoading}
+        isError={isUpcomingSessionsError}
+        onRetry={onRetryUpcomingSessions}
+      />
 
       {/* Recommended Supervisors (3/5) + Active Requests (2/5) */}
       <div className="grid gap-4 lg:grid-cols-5">

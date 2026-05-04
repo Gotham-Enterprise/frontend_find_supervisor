@@ -1,3 +1,5 @@
+import type { HireStatus } from '@/types/hire'
+
 export type VerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 export type VisibilityStatus = 'HIDDEN' | 'VISIBLE'
 export type SupervisionFormat = 'IN_PERSON' | 'VIRTUAL' | 'HYBRID'
@@ -90,6 +92,23 @@ export interface SupervisorUserSettings {
   disabledMessageInfo?: string | null
 }
 
+/** Hire row summary returned with GET supervisor profile when the viewer is the supervisee. */
+export interface SupervisorProfileHiredInfo {
+  hireId: string
+  status: HireStatus
+  hiredAt: string
+  acceptedAt: string | null
+  completedAt: string | null
+  hiredBy: {
+    id: string
+    firstName?: string | null
+    lastName?: string | null
+    fullName: string | null
+    email: string
+    profilePhotoUrl: string | null
+  }
+}
+
 export interface SupervisorProfileUser {
   id: string
   email: string
@@ -144,6 +163,7 @@ export interface SupervisorProfileData {
   licenseFileName?: string | null
   verificationDocumentUrl?: string | null
   isInMyHireList?: boolean
+  hiredInfo?: SupervisorProfileHiredInfo | null
   verificationStatus: VerificationStatus
   verificationNotes?: string | null
   visibilityStatus: VisibilityStatus

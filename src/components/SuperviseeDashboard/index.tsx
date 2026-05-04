@@ -3,7 +3,12 @@
 import { useState } from 'react'
 
 import { EditSuperviseeProfileModal } from '@/components/EditSuperviseeProfileModal'
-import { useHiresList, useRecommendedSupervisors, useUser } from '@/lib/hooks'
+import {
+  useHiresList,
+  useRecommendedSupervisors,
+  useSuperviseeUpcomingSessions,
+  useUser,
+} from '@/lib/hooks'
 import { useSuperviseeProfile } from '@/lib/hooks/useSuperviseeProfile'
 
 import { SuperviseeDashboardContent } from './SuperviseeDashboardContent'
@@ -18,6 +23,12 @@ export function SuperviseeDashboard() {
   const [editModalOpen, setEditModalOpen] = useState(false)
 
   const { data: hiresData, isLoading: hiresLoading, isError: hiresError } = useHiresList(1, 10)
+  const {
+    data: upcomingSessionsData,
+    isLoading: upcomingSessionsLoading,
+    isError: upcomingSessionsError,
+    refetch: refetchUpcomingSessions,
+  } = useSuperviseeUpcomingSessions()
   const {
     data: recommendedData,
     isLoading: recommendedLoading,
@@ -35,7 +46,6 @@ export function SuperviseeDashboard() {
   const allHires = hiresData?.items ?? []
   const totalHiresCount = hiresData?.totalCount ?? 0
   const pendingHires = allHires.filter((h) => h.status === 'PENDING')
-  const acceptedHires = allHires.filter((h) => h.status === 'ACCEPTED' || h.status === 'ACTIVE')
 
   const recommendedSupervisors = recommendedData?.items ?? []
   const totalRecommendedCount = recommendedData?.totalCount ?? 0
@@ -55,8 +65,13 @@ export function SuperviseeDashboard() {
         allHires={allHires}
         totalHiresCount={totalHiresCount}
         pendingHires={pendingHires}
-        acceptedHires={acceptedHires}
         isHiresError={hiresError}
+        upcomingSessions={upcomingSessionsData ?? []}
+        isUpcomingSessionsLoading={upcomingSessionsLoading}
+        isUpcomingSessionsError={upcomingSessionsError}
+        onRetryUpcomingSessions={() => {
+          void refetchUpcomingSessions()
+        }}
         recommendedSupervisors={recommendedSupervisors}
         totalRecommendedCount={totalRecommendedCount}
         isRecommendedLoading={recommendedLoading}

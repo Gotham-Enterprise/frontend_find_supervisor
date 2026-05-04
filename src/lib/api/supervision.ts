@@ -2,7 +2,13 @@ import axios from 'axios'
 
 import { parseApiError } from '@/lib/utils/error-parser'
 import type { ApiResponse } from '@/types/api'
-import type { HireListResponse, HireRecord, HireStatus, HireSupervisorPayload } from '@/types/hire'
+import type {
+  HireListResponse,
+  HireRecord,
+  HireStatus,
+  HireSupervisorPayload,
+  UpcomingSessionItem,
+} from '@/types/hire'
 import type {
   PurchaseSubscriptionResponse,
   Subscription,
@@ -82,6 +88,14 @@ export async function listHires(
   return data.data
 }
 
+/** GET /api/supervision/supervisee/upcoming-sessions — accepted/active hires with a future session date (supervisee only). */
+export async function getSuperviseeUpcomingSessions(): Promise<UpcomingSessionItem[]> {
+  const { data } = await apiClient.get<ApiResponse<UpcomingSessionItem[]>>(
+    '/supervision/supervisee/upcoming-sessions',
+  )
+  return data.data
+}
+
 /** PATCH /supervision/hires/:hireId/accept — supervisor accepts a hire request. */
 export async function acceptHire(hireId: string): Promise<void> {
   await apiClient.patch(`/supervision/hires/${hireId}/accept`)
@@ -95,6 +109,11 @@ export async function rejectHire(hireId: string, reason: string): Promise<void> 
 /** PATCH /supervision/hires/:hireId/cancel — cancel a hire request. */
 export async function cancelHire(hireId: string): Promise<void> {
   await apiClient.patch(`/supervision/hires/${hireId}/cancel`)
+}
+
+/** PATCH /supervision/hires/:hireId/complete — mark a hire as completed (supervisor or supervisee). */
+export async function markHireAsCompleted(hireId: string): Promise<void> {
+  await apiClient.patch(`/supervision/hires/${hireId}/complete`)
 }
 
 export type ResendEmailResult =

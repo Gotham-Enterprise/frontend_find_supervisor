@@ -40,14 +40,19 @@ function formatBillingDate(iso: string | null | undefined): string {
   })
 }
 
-function UnsubscribedCard() {
+function UnsubscribedCard({ onOpenChoosePlanModal }: { onOpenChoosePlanModal?: () => void }) {
   const [modalOpen, setModalOpen] = useState(false)
   const freeFeatures = SUPERVISOR_FEATURES.filter((f) => !f.premium)
   const premiumFeatures = SUPERVISOR_FEATURES.filter((f) => f.premium)
 
+  const openModal = () => {
+    if (onOpenChoosePlanModal) onOpenChoosePlanModal()
+    else setModalOpen(true)
+  }
+
   return (
     <>
-      <SubscriptionModal open={modalOpen} onOpenChange={setModalOpen} />
+      {!onOpenChoosePlanModal && <SubscriptionModal open={modalOpen} onOpenChange={setModalOpen} />}
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4 border-b pb-4">
           <div className="flex items-start gap-3">
@@ -112,7 +117,7 @@ function UnsubscribedCard() {
 
               <button
                 type="button"
-                onClick={() => setModalOpen(true)}
+                onClick={openModal}
                 className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
               >
                 <Star className="size-3.5" />
@@ -129,14 +134,25 @@ function UnsubscribedCard() {
   )
 }
 
-function SupervisorFreePlanEnrolledCard({ planName }: { planName: string }) {
+function SupervisorFreePlanEnrolledCard({
+  planName,
+  onOpenChoosePlanModal,
+}: {
+  planName: string
+  onOpenChoosePlanModal?: () => void
+}) {
   const [modalOpen, setModalOpen] = useState(false)
   const freeFeatures = SUPERVISOR_FEATURES.filter((f) => !f.premium)
   const premiumFeatures = SUPERVISOR_FEATURES.filter((f) => f.premium)
 
+  const openModal = () => {
+    if (onOpenChoosePlanModal) onOpenChoosePlanModal()
+    else setModalOpen(true)
+  }
+
   return (
     <>
-      <SubscriptionModal open={modalOpen} onOpenChange={setModalOpen} />
+      {!onOpenChoosePlanModal && <SubscriptionModal open={modalOpen} onOpenChange={setModalOpen} />}
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4 border-b pb-4">
           <div className="flex items-start gap-3">
@@ -192,7 +208,7 @@ function SupervisorFreePlanEnrolledCard({ planName }: { planName: string }) {
 
               <button
                 type="button"
-                onClick={() => setModalOpen(true)}
+                onClick={openModal}
                 className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
               >
                 <Star className="size-3.5" />
@@ -297,6 +313,8 @@ export interface SupervisorDashboardSubscriptionProps {
   subscriptionStatus?: SubscriptionStatus | null
   /** ISO date string for next billing period end */
   currentPeriodEnd?: string | null
+  /** When set, Upgrade plan opens this handler (shared modal, e.g. dashboard parent). */
+  onOpenChoosePlanModal?: () => void
 }
 
 export function SupervisorDashboardSubscription({
@@ -305,6 +323,7 @@ export function SupervisorDashboardSubscription({
   plan,
   subscriptionStatus,
   currentPeriodEnd,
+  onOpenChoosePlanModal,
 }: SupervisorDashboardSubscriptionProps) {
   const resolvedPlanName = planName?.trim() || ''
 
@@ -315,13 +334,14 @@ export function SupervisorDashboardSubscription({
   }
 
   if (!isSubscribed) {
-    return <UnsubscribedCard />
+    return <UnsubscribedCard onOpenChoosePlanModal={onOpenChoosePlanModal} />
   }
 
   if (isSupervisionFreeTierSubscription(planName, plan ?? undefined)) {
     return (
       <SupervisorFreePlanEnrolledCard
         planName={resolvedPlanName || 'Find a Supervisor Free Plan'}
+        onOpenChoosePlanModal={onOpenChoosePlanModal}
       />
     )
   }

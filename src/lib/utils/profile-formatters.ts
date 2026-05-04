@@ -114,6 +114,37 @@ export function formatAvailability(availability: string | null | undefined): str
   return AVAILABILITY_LABELS[availability] ?? availability
 }
 
+// ─── Type of supervisor (GET /supervision/options `supervisorType`; same list as signup) ─
+
+/** When options are still loading or the API adds a code not yet in the list — no parallel enum map. */
+function humanizeSupervisorTypeFallback(raw: string): string {
+  return raw
+    .split('_')
+    .map((part) => {
+      if (part.length >= 2 && part.length <= 6 && part === part.toUpperCase()) {
+        return part
+      }
+      return part.charAt(0) + part.slice(1).toLowerCase()
+    })
+    .join(' ')
+}
+
+/**
+ * Resolves the display label from `useSuperviseeFormOptions().supervisorTypes` (or any matching
+ * `SelectOption[]`). If there is no match, returns a best-effort humanized string (not the raw
+ * code) so the UI stays readable while options load or for unknown values.
+ */
+export function resolveSupervisorTypeLabel(
+  value: string | null | undefined,
+  options: SelectOption[],
+): string {
+  if (!value?.trim()) return 'N/A'
+  const key = value.trim()
+  const fromOptions = options.find((o) => o.value === key)?.label
+  if (fromOptions) return fromOptions
+  return humanizeSupervisorTypeFallback(key)
+}
+
 // ─── Budget range ─────────────────────────────────────────────────────────────
 
 const BUDGET_TYPE_SUFFIX: Record<string, string> = {

@@ -12,12 +12,15 @@ export { useCheckoutPlanFromUrl } from './useCheckoutPlanFromUrl'
 export { useCooldownTimer } from './useCooldownTimer'
 export {
   hireKeys,
+  upcomingSessionsKeys,
   useAcceptHire,
   useCancelHire,
   useHiresList,
   useHireSupervisor,
+  useMarkHireAsCompleted,
   usePendingRequestsCount,
   useRejectHire,
+  useSuperviseeUpcomingSessions,
 } from './useHires'
 export { useCitiesOptions, useMultiStateCityOptions, useStatesOptions } from './useLocationOptions'
 export {
@@ -35,6 +38,13 @@ export {
 } from './useNotifications'
 export { recommendedSupervisorKeys, useRecommendedSupervisors } from './useRecommendedSupervisors'
 export { useResendVerificationEmail } from './useResendVerificationEmail'
+export {
+  reviewKeys,
+  useCreateReview,
+  useMyReviews,
+  useSupervisorReviews,
+  useUpdateReview,
+} from './useReviews'
 export { useSuperviseeSignup, useSupervisorSignup } from './useSignup'
 export {
   useAvailabilityOptions,

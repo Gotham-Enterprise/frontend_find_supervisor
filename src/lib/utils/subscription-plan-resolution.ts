@@ -27,6 +27,38 @@ function paidPlans(plans: ChoosablePlan[]): ChoosablePlan[] {
   return plans.filter((p) => !isFreePlan(p))
 }
 
+/** True when the subscription row is the free tier (handles partial API payloads without plan.id). */
+function subscriptionRowLooksFree(subscription: Subscription): boolean {
+  const p = subscription.plan
+  if (!p) return false
+  if (typeof p.priceInCents === 'number' && p.priceInCents === 0) return true
+  return isFreePlan(p)
+}
+
+/**
+ * Maps the user's free subscription to a catalog plan id so the modal can highlight
+ * "Your current plan" even when `planId` / `plan.id` are omitted from the API.
+ */
+function resolveFreeCatalogPlanId(
+  subscription: Subscription,
+  plans: ChoosablePlan[],
+): string | null {
+  const targetPlanId = subscription.planId ?? subscription.plan.id
+  const name = subscription.plan.name?.trim()
+
+  if (targetPlanId) {
+    const byId = plans.find((p) => p.id === targetPlanId && isFreePlan(p))
+    if (byId) return byId.id
+  }
+
+  if (name) {
+    const byName = plans.find((p) => isFreePlan(p) && p.name?.trim() === name)
+    if (byName) return byName.id
+  }
+
+  return plans.find(isFreePlan)?.id ?? null
+}
+
 /**
  * Maps an API subscription + list of available plans to the stable plan ID used in the
  * plan picker. Falls back to the free plan's ID when the user has no active paid subscription.
@@ -70,16 +102,33 @@ export function resolveCurrentChoosablePlan(
   }
 
   if (ACTIVE_PAID_STATUSES.includes(status)) {
+    if (subscriptionRowLooksFree(subscription)) {
+      const resolvedFreeId = resolveFreeCatalogPlanId(subscription, plans) ?? freePlanId
+      return {
+        choosablePlanId: resolvedFreeId,
+        isActivePaid: false,
+        isPendingActivation: false,
+      }
+    }
+
     return {
-      choosablePlanId: matched?.id ?? targetPlanId,
+      choosablePlanId: matched?.id ?? targetPlanId ?? freePlanId,
       isActivePaid: true,
       isPendingActivation: false,
     }
   }
 
   if (PENDING_CHECKOUT_STATUSES.includes(status)) {
+    if (subscriptionRowLooksFree(subscription)) {
+      return {
+        choosablePlanId: resolveFreeCatalogPlanId(subscription, plans) ?? freePlanId,
+        isActivePaid: false,
+        isPendingActivation: true,
+      }
+    }
+    // Paid plan row but checkout not finished — entitlement is still the free tier until webhook activates.
     return {
-      choosablePlanId: matched?.id ?? targetPlanId,
+      choosablePlanId: freePlanId,
       isActivePaid: false,
       isPendingActivation: true,
     }
@@ -100,6 +149,6 @@ export function planMatchesSubscription(
   plan: ChoosablePlan,
   resolution: CurrentPlanResolution,
 ): boolean {
-  if (resolution.choosablePlanId === null) return false
+  if (resolution.choosablePlanId == null) return false
   return plan.id === resolution.choosablePlanId
 }

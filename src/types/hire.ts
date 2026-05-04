@@ -6,7 +6,14 @@ export type PreferredAvailability =
   | 'WEEKENDS'
   | 'BY_APPOINTMENT'
 export type BudgetRangeType = 'PER_SESSION' | 'MONTHLY'
-export type HireStatus = 'PENDING' | 'ACCEPTED' | 'ACTIVE' | 'COMPLETED' | 'CANCELED' | 'REJECTED'
+export type HireStatus =
+  | 'PENDING'
+  | 'ACCEPTED'
+  | 'ACTIVE'
+  | 'COMPLETED'
+  | 'CANCELED'
+  | 'REJECTED'
+  | 'REVIEWED'
 
 // ─── Nested user shape returned inside hire list items ─────────────────────────
 
@@ -123,4 +130,24 @@ export interface HireListResponse {
   totalCount: number
   currentPage: number
   totalPages: number
+}
+
+/** GET /api/supervision/supervisee/upcoming-sessions — future session queue for the supervisee. */
+export interface UpcomingSessionItem {
+  id: string
+  supervisorId: string
+  superviseeId: string
+  status: HireStatus
+  /** Effective session time: `startDate` or `preferredStartDate` (see backend). */
+  upcomingSessionDate: string | null
+  startDate: string | null
+  preferredStartDate: string | null
+  endDate: string | null
+  preferredFormat: PreferredFormat | null
+  preferredAvailability: PreferredAvailability | null
+  goals: string | null
+  notes: string | null
+  supervisor: HireUser
+  createdAt: string
+  updatedAt: string
 }

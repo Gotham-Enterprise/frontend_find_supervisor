@@ -1,12 +1,13 @@
-import { CalendarDays, Search, Video } from 'lucide-react'
+import { CalendarDays, Loader2, Search, Video } from 'lucide-react'
 import Link from 'next/link'
 
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { HireListItem } from '@/types/hire'
+import type { UpcomingSessionItem } from '@/types/hire'
 
 import { InitialsAvatar } from './SuperviseeDashboardShared'
-import { formatRelativeTime } from './SuperviseeDashboardUtils'
+import { formatUpcomingSessionDisplay } from './SuperviseeDashboardUtils'
 
 const FORMAT_LABELS: Record<string, string> = {
   VIRTUAL: 'Video · Virtual',
@@ -15,13 +16,51 @@ const FORMAT_LABELS: Record<string, string> = {
 }
 
 interface SuperviseeDashboardUpcomingSessionsCardProps {
-  hires: HireListItem[]
+  sessions: UpcomingSessionItem[]
+  isLoading: boolean
+  isError: boolean
+  onRetry: () => void
 }
 
 export function SuperviseeDashboardUpcomingSessionsCard({
-  hires,
+  sessions,
+  isLoading,
+  isError,
+  onRetry,
 }: SuperviseeDashboardUpcomingSessionsCardProps) {
-  if (hires.length === 0) {
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader className="border-b pb-3">
+          <CardTitle className="text-base font-semibold">Upcoming Sessions</CardTitle>
+          <p className="text-sm text-muted-foreground">Your next scheduled supervision sessions</p>
+        </CardHeader>
+        <CardContent className="flex min-h-[200px] flex-col items-center justify-center py-12 text-center">
+          <Loader2 className="size-8 animate-spin text-muted-foreground" aria-hidden />
+          <p className="mt-3 text-sm text-muted-foreground">Loading sessions…</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader className="border-b pb-3">
+          <CardTitle className="text-base font-semibold">Upcoming Sessions</CardTitle>
+          <p className="text-sm text-muted-foreground">Your next scheduled supervision sessions</p>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+          <p className="text-sm text-muted-foreground">Could not load upcoming sessions.</p>
+          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+            Try again
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (sessions.length === 0) {
     return (
       <Card>
         <CardHeader className="border-b pb-3">
@@ -32,9 +71,10 @@ export function SuperviseeDashboardUpcomingSessionsCard({
           <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-muted">
             <CalendarDays className="size-6 text-muted-foreground" />
           </div>
-          <p className="font-medium text-foreground">No sessions yet</p>
+          <p className="font-medium text-foreground">No upcoming sessions</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Once a supervisor accepts your request, sessions will appear here.
+            When a supervisor sets a future start date, it will show here. You can still message
+            supervisors from Hired Supervisors.
           </p>
           <Link
             href="/find-supervisors"
@@ -48,13 +88,14 @@ export function SuperviseeDashboardUpcomingSessionsCard({
     )
   }
 
-  const [next, ...rest] = hires
+  const [next, ...rest] = sessions
 
   const supervisorName = next.supervisor?.fullName ?? '—'
   const sessionTypeLabel =
     FORMAT_LABELS[next.preferredFormat ?? ''] ?? next.preferredFormat ?? 'Supervision'
   const statusLabel =
     next.status === 'ACTIVE' ? 'Active' : next.status === 'ACCEPTED' ? 'Accepted' : next.status
+  const whenLabel = formatUpcomingSessionDisplay(next.upcomingSessionDate)
 
   return (
     <Card>
@@ -88,16 +129,16 @@ export function SuperviseeDashboardUpcomingSessionsCard({
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Requested
+                Scheduled for
               </p>
-              <p className="mt-0.5 text-sm font-medium">{formatRelativeTime(next.createdAt)}</p>
+              <p className="mt-0.5 text-sm font-medium">{whenLabel}</p>
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Session Type
               </p>
               <p className="mt-0.5 flex items-center gap-1 text-sm font-medium">
-                <Video className="size-3.5 text-muted-foreground" /> {sessionTypeLabel}
+                <Video className="size-3.5 shrink-0 text-muted-foreground" /> {sessionTypeLabel}
               </p>
             </div>
             <div>
@@ -110,7 +151,7 @@ export function SuperviseeDashboardUpcomingSessionsCard({
 
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
-              href={`/find-supervisors/${next.supervisorId}`}
+              href={`/find-supervisors/${next.supervisorId}?from=dashboard`}
               className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
             >
               View Details
@@ -122,13 +163,20 @@ export function SuperviseeDashboardUpcomingSessionsCard({
           <ul className="mt-3 divide-y">
             {rest.map((hire) => {
               const name = hire.supervisor?.fullName ?? '—'
+              const restWhen = formatUpcomingSessionDisplay(hire.upcomingSessionDate)
               return (
-                <li key={hire.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                <li
+                  key={hire.id}
+                  className="flex flex-col gap-2 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                >
                   <div className="flex items-center gap-3">
                     <InitialsAvatar name={name} className="size-7 text-xs" />
-                    <span className="font-medium">{name}</span>
+                    <div>
+                      <span className="font-medium">{name}</span>
+                      <p className="text-xs text-muted-foreground">{restWhen}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 sm:shrink-0">
                     <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-xs">
                       {hire.status === 'ACTIVE' ? 'Active' : 'Accepted'}
                     </Badge>

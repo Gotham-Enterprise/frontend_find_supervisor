@@ -1,4 +1,5 @@
 import type { User } from '@/types'
+import type { HireListItem } from '@/types/hire'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 import type { GoalStep } from './SuperviseeDashboardTypes'
@@ -60,13 +61,20 @@ export function isSuperviseeOnboardingProfileComplete(profile: SuperviseeProfile
   return getSuperviseeProfileCompletionChecks(profile).every(Boolean)
 }
 
+/** True when the supervisee had an accepted, active, or completed hire (counts toward "Find your first supervisor"). */
+export function hasMetFindFirstSupervisorGoal(hires: HireListItem[]): boolean {
+  return hires.some(
+    (h) => h.status === 'ACCEPTED' || h.status === 'ACTIVE' || h.status === 'COMPLETED',
+  )
+}
+
 /**
  * Derives onboarding goal steps. When `profile` is loaded from GET supervisee/profile, those
  * fields override the auth `user` (JWT/context can omit or stale `emailVerified`, city/state, etc.).
  */
 export function getGoalSteps(
   user: User,
-  hasAcceptedRequest: boolean,
+  hasMetFirstSupervisorGoal: boolean,
   profile?: SuperviseeProfileData | null,
 ): GoalStep[] {
   const emailVerified = profile?.user.emailVerified ?? user.emailVerified ?? false
@@ -96,7 +104,7 @@ export function getGoalSteps(
     {
       label: 'Find your first supervisor',
       description: 'Browse verified supervisors and send a request',
-      status: hasAcceptedRequest ? 'done' : readyToFindSupervisor ? 'current' : 'upcoming',
+      status: hasMetFirstSupervisorGoal ? 'done' : readyToFindSupervisor ? 'current' : 'upcoming',
     },
   ]
 }
@@ -108,4 +116,22 @@ export function formatRelativeTime(iso: string): string {
   const hrs = Math.floor(mins / 60)
   if (hrs < 24) return `${hrs}h ago`
   return `${Math.floor(hrs / 24)}d ago`
+}
+
+/** Calendar-style label for a scheduled supervision slot (locale-aware). */
+export function formatUpcomingSessionDisplay(iso: string | null): string {
+  if (!iso) return 'Date to be confirmed'
+  try {
+    const d = new Date(iso)
+    return new Intl.DateTimeFormat(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(d)
+  } catch {
+    return 'Date to be confirmed'
+  }
 }

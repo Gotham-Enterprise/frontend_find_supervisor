@@ -30,7 +30,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
-import { useAcceptHire, useHiresList, useRejectHire, useUserSnackbar } from '@/lib/hooks'
+import {
+  useAcceptHire,
+  useHiresList,
+  useRejectHire,
+  useSuperviseeFormOptions,
+  useUserSnackbar,
+} from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
   formatAvailability,
@@ -40,6 +46,7 @@ import {
   formatDisplayName,
   formatLocation,
   formatSupervisionFormat,
+  resolveSupervisorTypeLabel,
 } from '@/lib/utils/profile-formatters'
 import type { HireListItem, HireStatus } from '@/types/hire'
 
@@ -57,6 +64,7 @@ const ALLOWED_ACTIONS: Record<HireStatus, ReadonlyArray<'accept' | 'reject'>> = 
   COMPLETED: [],
   CANCELED: [],
   REJECTED: [],
+  REVIEWED: [],
 }
 
 // ─── Detail cell ──────────────────────────────────────────────────────────────
@@ -237,6 +245,8 @@ interface SuperviseeDetailsDialogProps {
 }
 
 function SuperviseeDetailsDialog({ hire, open, onOpenChange }: SuperviseeDetailsDialogProps) {
+  const { supervisorTypes } = useSuperviseeFormOptions()
+  const supervisorTypeOptions = supervisorTypes.data ?? []
   const { supervisee } = hire
 
   const occupation = supervisee.occupation?.name
@@ -282,7 +292,10 @@ function SuperviseeDetailsDialog({ hire, open, onOpenChange }: SuperviseeDetails
               label="Availability"
               value={formatAvailability(hire.preferredAvailability)}
             />
-            <DetailItem label="Type of Supervisor" value={hire.typeOfSupervisorNeeded} />
+            <DetailItem
+              label="Type of Supervisor"
+              value={resolveSupervisorTypeLabel(hire.typeOfSupervisorNeeded, supervisorTypeOptions)}
+            />
             <DetailItem label="Looking in State" value={hire.stateTheyAreLookingIn} />
             <DetailItem label="Preferred Start Date" value={formatDate(hire.preferredStartDate)} />
             <DetailItem

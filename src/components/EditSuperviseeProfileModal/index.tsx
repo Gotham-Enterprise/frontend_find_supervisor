@@ -21,14 +21,7 @@ import { ProfilePhotoUpload } from '@/components/ui/profile-photo-upload'
 import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
 import { useUser } from '@/lib/contexts/UserContext'
-import {
-  useAvailabilityOptions,
-  useHowSoonOptions,
-  useOccupationOptions,
-  useSpecialtiesByOccupation,
-  useStatesOptions,
-  useSupervisorTypeOptions,
-} from '@/lib/hooks'
+import { useSpecialtiesByOccupation, useStatesOptions, useSuperviseeFormOptions } from '@/lib/hooks'
 import { useUpdateSuperviseeProfile } from '@/lib/hooks/useUpdateSuperviseeProfile'
 import { normalizeUSPhoneNumber } from '@/lib/utils/phone'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
@@ -107,10 +100,11 @@ export function EditSuperviseeProfileModal({
   const mutation = useUpdateSuperviseeProfile(userId)
 
   const { data: stateOptions = [] } = useStatesOptions()
-  const { data: availabilityOptions = [] } = useAvailabilityOptions()
-  const { data: howSoonOptions = [] } = useHowSoonOptions()
-  const { data: supervisorTypeOptions = [] } = useSupervisorTypeOptions()
-  const { data: occupationOptions = [] } = useOccupationOptions()
+  const { availability, howSoon, supervisorTypes, occupations } = useSuperviseeFormOptions()
+  const availabilityOptions = availability.data ?? []
+  const howSoonOptions = howSoon.data ?? []
+  const supervisorTypeOptions = supervisorTypes.data ?? []
+  const occupationOptions = occupations.data ?? []
 
   const defaultOccupationId = String(
     profile.occupationId ?? profile.occupation?.id ?? profile.user.occupation?.id ?? '',

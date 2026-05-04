@@ -23,7 +23,7 @@ import {
   useFormatOptions,
   useHireSupervisor,
   useStatesOptions,
-  useSupervisorTypeOptions,
+  useSuperviseeFormOptions,
   useUserSnackbar,
 } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
@@ -84,8 +84,9 @@ export function HireSupervisorModal({
   const { data: formatOptions = [], isLoading: formatsLoading } = useFormatOptions()
   const { data: availabilityOptions = [], isLoading: availabilityLoading } =
     useAvailabilityOptions()
-  const { data: supervisorTypeOptions = [], isLoading: supervisorTypesLoading } =
-    useSupervisorTypeOptions()
+  const { supervisorTypes } = useSuperviseeFormOptions()
+  const supervisorTypeOptions = supervisorTypes.data ?? []
+  const supervisorTypesLoading = supervisorTypes.isLoading
   const { data: stateOptions = [], isLoading: statesLoading } = useStatesOptions()
   const { data: budgetTypeOptions = [], isLoading: budgetTypesLoading } = useBudgetTypeOptions()
 
