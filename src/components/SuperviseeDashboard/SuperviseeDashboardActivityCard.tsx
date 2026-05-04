@@ -5,7 +5,7 @@ import type { HireListItem } from '@/types/hire'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 import { ProgressBar } from './SuperviseeDashboardShared'
-import { getGoalSteps } from './SuperviseeDashboardUtils'
+import { getGoalSteps, hasMetFindFirstSupervisorGoal } from './SuperviseeDashboardUtils'
 
 interface SuperviseeDashboardActivityCardProps {
   user: User
@@ -23,8 +23,7 @@ export function SuperviseeDashboardActivityCard({
   totalHiresCount,
   superviseeProfile,
 }: SuperviseeDashboardActivityCardProps) {
-  const hasAcceptedRequest = allHires.some((h) => h.status === 'ACCEPTED' || h.status === 'ACTIVE')
-  const steps = getGoalSteps(user, hasAcceptedRequest, superviseeProfile)
+  const steps = getGoalSteps(user, hasMetFindFirstSupervisorGoal(allHires), superviseeProfile)
   const doneCount = steps.filter((s) => s.status === 'done').length
   const acceptedCount = allHires.filter(
     (h) => h.status === 'ACCEPTED' || h.status === 'ACTIVE',

@@ -24,11 +24,15 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
 import { ProfilePreviewCard } from '@/components/Dashboard/shared'
-import { SupervisorDashboardSubscription } from '@/components/Dashboard/subscription'
+import {
+  SubscriptionModal,
+  SupervisorDashboardSubscription,
+} from '@/components/Dashboard/subscription'
 import { EditSupervisorProfileModal } from '@/components/EditSupervisorProfileModal'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { isFreePlan } from '@/lib/constants/subscription-plans'
 import { useSupervisorProfile, useUser } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 import type {
@@ -66,14 +70,25 @@ interface ChecklistStep {
   label: string
   description: string
   status: StepStatus
-  /** When current, show “Coming soon” instead of the Start link (no subscription URL yet) */
-  noRedirect?: boolean
+  /** When current, show “Upgrade plan” and open the choose-plan modal */
+  choosePlanAction?: boolean
+  /** When current, no Start link — show admin review label instead */
+  adminReviewStep?: boolean
 }
 
 function hasActiveSubscription(profile: SupervisorProfileData): boolean {
   return (
     profile.user.subscriptions?.some((s) => s.status === 'ACTIVE' || s.status === 'TRIALING') ??
     false
+  )
+}
+
+/** Premium / paid platform access — excludes the default free tier (ACTIVE at registration). */
+function hasActivePaidSupervisionSubscription(profile: SupervisorProfileData): boolean {
+  return (
+    profile.user.subscriptions?.some(
+      (s) => (s.status === 'ACTIVE' || s.status === 'TRIALING') && !!s.plan && !isFreePlan(s.plan),
+    ) ?? false
   )
 }
 
@@ -89,10 +104,11 @@ function getChecklist(profile: SupervisorProfileData): ChecklistStep[] {
     profile.supervisionFormat
   )
   const subscribed = hasActiveSubscription(profile)
+  const paidSupervisionActive = hasActivePaidSupervisionSubscription(profile)
   const fullProfileDone = detailsDone && subscribed
   const verified = profile.verificationStatus === 'APPROVED'
 
-  const subscribeStatus: StepStatus = subscribed
+  const subscribeStatus: StepStatus = paidSupervisionActive
     ? 'done'
     : profile.user.emailVerified && detailsDone
       ? 'current'
@@ -116,15 +132,15 @@ function getChecklist(profile: SupervisorProfileData): ChecklistStep[] {
     },
     {
       label: 'Subscribe to our app',
-      description:
-        'Choose a plan to unlock full platform access. Subscription checkout will be available soon.',
+      description: 'Choose a plan to unlock full platform access.',
       status: subscribeStatus,
-      noRedirect: true,
+      choosePlanAction: true,
     },
     {
       label: 'Await admin verification',
       description: 'Review typically takes 2–3 business days',
       status: verified ? 'done' : fullProfileDone ? 'current' : 'upcoming',
+      adminReviewStep: true,
     },
   ]
 }
@@ -390,13 +406,13 @@ function StatusCards({
           )}
         </CardHeader>
         <CardContent className="space-y-1">
-          {profile.visibilityStatus === 'VISIBLE' ? (
+          {profile.verificationStatus === 'APPROVED' ? (
             <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">● Public</Badge>
           ) : (
             <Badge className="bg-muted text-muted-foreground hover:bg-muted">● Hidden</Badge>
           )}
           <p className="text-sm text-muted-foreground">
-            {profile.visibilityStatus === 'VISIBLE'
+            {profile.verificationStatus === 'APPROVED'
               ? 'Visible to supervisees'
               : 'Visible after verification'}
           </p>
@@ -406,9 +422,20 @@ function StatusCards({
   )
 }
 
-function SetupChecklist({ profile }: { profile: SupervisorProfileData }) {
+function SetupChecklist({
+  profile,
+  onOpenChoosePlanModal,
+}: {
+  profile: SupervisorProfileData
+  onOpenChoosePlanModal: () => void
+}) {
   const steps = getChecklist(profile)
   const doneCount = steps.filter((s) => s.status === 'done').length
+
+  function adminReviewTrailingLabel(): string {
+    if (profile.verificationStatus === 'REJECTED') return 'Not approved'
+    return 'Reviewing'
+  }
 
   return (
     <Card className="flex flex-col">
@@ -439,10 +466,21 @@ function SetupChecklist({ profile }: { profile: SupervisorProfileData }) {
                   {step.status === 'done' && (
                     <span className="shrink-0 text-xs font-medium text-emerald-600">Done</span>
                   )}
-                  {step.status === 'current' && step.noRedirect && (
-                    <span className="shrink-0 text-xs text-muted-foreground">Coming soon</span>
+                  {step.status === 'current' && step.choosePlanAction && (
+                    <button
+                      type="button"
+                      onClick={onOpenChoosePlanModal}
+                      className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
+                    >
+                      Upgrade plan
+                    </button>
                   )}
-                  {step.status === 'current' && !step.noRedirect && (
+                  {step.status === 'current' && !step.choosePlanAction && step.adminReviewStep && (
+                    <span className="shrink-0 text-xs font-medium text-amber-700">
+                      {adminReviewTrailingLabel()}
+                    </span>
+                  )}
+                  {step.status === 'current' && !step.choosePlanAction && !step.adminReviewStep && (
                     <Link
                       href="/dashboard"
                       className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground"
@@ -801,6 +839,7 @@ export function SupervisorDashboard() {
   const { user } = useUser()
   const { data: profile, isLoading, isError } = useSupervisorProfile()
   const [editModalOpen, setEditModalOpen] = useState(false)
+  const [choosePlanModalOpen, setChoosePlanModalOpen] = useState(false)
 
   if (isLoading) return <SupervisorDashboardSkeleton />
 
@@ -837,7 +876,10 @@ export function SupervisorDashboard() {
 
         <div className="grid gap-4 lg:grid-cols-5">
           <div className="lg:col-span-3">
-            <SetupChecklist profile={enrichedProfile} />
+            <SetupChecklist
+              profile={enrichedProfile}
+              onOpenChoosePlanModal={() => setChoosePlanModalOpen(true)}
+            />
           </div>
           <div className="lg:col-span-2">
             <ProfilePreview profile={enrichedProfile} onEditClick={() => setEditModalOpen(true)} />
@@ -852,6 +894,7 @@ export function SupervisorDashboard() {
           plan={primarySubscription?.plan}
           subscriptionStatus={primarySubscription?.status}
           currentPeriodEnd={primarySubscription?.currentPeriodEnd}
+          onOpenChoosePlanModal={() => setChoosePlanModalOpen(true)}
         />
         <TipsAndHelp />
         <BillingSection profile={enrichedProfile} />
@@ -862,6 +905,7 @@ export function SupervisorDashboard() {
         onOpenChange={setEditModalOpen}
         profile={enrichedProfile}
       />
+      <SubscriptionModal open={choosePlanModalOpen} onOpenChange={setChoosePlanModalOpen} />
     </>
   )
 }

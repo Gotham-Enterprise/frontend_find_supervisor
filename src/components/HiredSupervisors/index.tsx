@@ -7,7 +7,8 @@ import { useState } from 'react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useHiresList } from '@/lib/hooks'
+import { useHiresList, useMyReviews } from '@/lib/hooks'
+import type { Review } from '@/types/review'
 
 import { HireRequestCard } from './HireRequestCard'
 
@@ -148,19 +149,27 @@ function Pagination({
 export function HiredSupervisorsPage() {
   const [page, setPage] = useState(1)
   const { data, isLoading, isError } = useHiresList(page, PAGE_SIZE)
+  const { data: reviewsData } = useMyReviews(0)
 
   const items = data?.items ?? []
   const totalCount = data?.totalCount ?? 0
   const totalPages = data?.totalPages ?? 1
 
+  // Build a hireId → Review map so each card can check its review status in O(1)
+  const reviewsByHireId = new Map<string, Review>(
+    (reviewsData?.items ?? [])
+      .filter((r): r is Review & { hireId: string } => r.hireId !== null)
+      .map((r) => [r.hireId, r]),
+  )
+
   return (
     <div className="space-y-8">
       <div className="space-y-2">
         <h2 className="text-lg font-semibold tracking-tight text-foreground">Your hire requests</h2>
-        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Everyone you&apos;ve asked to supervise you is listed here. Each card shows format, fee,
-          and current status. Use the menu on any card to view a supervisor&apos;s profile or see
-          the reason a request was declined.
+          and current status. Open the menu to view a supervisor&apos;s profile, see full request
+          details, or take other actions.
         </p>
       </div>
 
@@ -174,7 +183,11 @@ export function HiredSupervisorsPage() {
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {items.map((hire) => (
-              <HireRequestCard key={hire.id} hire={hire} />
+              <HireRequestCard
+                key={hire.id}
+                hire={hire}
+                existingReview={reviewsByHireId.get(hire.id)}
+              />
             ))}
           </div>
 

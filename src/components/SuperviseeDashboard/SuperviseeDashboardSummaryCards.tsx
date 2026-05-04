@@ -1,20 +1,37 @@
+'use client'
+
 import { BookOpen, CalendarDays, MessageCircle, UserCheck } from 'lucide-react'
+import { useMemo } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useUser } from '@/lib/hooks'
+import { useConversations } from '@/lib/hooks/useChat'
 import { cn } from '@/lib/utils'
 
 interface SuperviseeDashboardSummaryCardsProps {
   pendingCount: number
-  acceptedCount: number
   supervisorCount: number
+  upcomingSessionsCount: number
+  isUpcomingSessionsLoading: boolean
 }
 
 export function SuperviseeDashboardSummaryCards({
   pendingCount,
-  acceptedCount,
   supervisorCount,
+  upcomingSessionsCount,
+  isUpcomingSessionsLoading,
 }: SuperviseeDashboardSummaryCardsProps) {
+  const { user } = useUser()
+  const { data: conversations, isPending: isConversationsPending } = useConversations({
+    enabled: Boolean(user?.id),
+  })
+
+  const unreadMessageCount = useMemo(
+    () => (conversations ?? []).reduce((sum, c) => sum + (c.unreadCount ?? 0), 0),
+    [conversations],
+  )
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <Card>
@@ -26,10 +43,16 @@ export function SuperviseeDashboardSummaryCards({
         </CardHeader>
         <CardContent className="space-y-1">
           <div className="flex h-8 items-center">
-            <p className="text-2xl font-bold">{acceptedCount}</p>
+            <p className="text-2xl font-bold">
+              {isUpcomingSessionsLoading ? '—' : upcomingSessionsCount}
+            </p>
           </div>
           <p className="text-xs text-muted-foreground">
-            {acceptedCount === 0 ? 'No sessions scheduled' : 'Active supervision sessions'}
+            {isUpcomingSessionsLoading
+              ? 'Loading…'
+              : upcomingSessionsCount === 0
+                ? 'None scheduled ahead'
+                : `Scheduled session${upcomingSessionsCount === 1 ? '' : 's'}`}
           </p>
         </CardContent>
       </Card>
@@ -82,9 +105,17 @@ export function SuperviseeDashboardSummaryCards({
         </CardHeader>
         <CardContent className="space-y-1">
           <div className="flex h-8 items-center">
-            <p className="text-2xl font-bold">—</p>
+            <p className="text-2xl font-bold">
+              {isConversationsPending ? '—' : unreadMessageCount}
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground">Coming soon</p>
+          <p className="text-xs text-muted-foreground">
+            {isConversationsPending
+              ? 'Loading…'
+              : unreadMessageCount === 0
+                ? 'No unread messages'
+                : `Unread message${unreadMessageCount === 1 ? '' : 's'}`}
+          </p>
         </CardContent>
       </Card>
     </div>

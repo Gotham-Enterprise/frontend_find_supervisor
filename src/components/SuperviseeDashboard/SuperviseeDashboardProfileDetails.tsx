@@ -4,13 +4,14 @@ import { ProfileDetailRow, ProfilePreviewCard, TagList } from '@/components/Dash
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAvailabilityOptions, useSupervisorTypeOptions } from '@/lib/hooks'
+import { useSuperviseeFormOptions } from '@/lib/hooks'
 import { formatUSPhoneForDisplay } from '@/lib/utils/phone'
 import {
   formatDisplayName,
   formatLocation,
   formatSupervisionFormat,
   resolveOptionLabel,
+  resolveSupervisorTypeLabel,
 } from '@/lib/utils/profile-formatters'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
@@ -96,8 +97,9 @@ export function SuperviseeDashboardProfileDetails({
   profile,
   onEditClick,
 }: SuperviseeDashboardProfileDetailsProps) {
-  const { data: availabilityOptions = [] } = useAvailabilityOptions()
-  const { data: supervisorTypeOptions = [] } = useSupervisorTypeOptions()
+  const { availability, supervisorTypes } = useSuperviseeFormOptions()
+  const availabilityOptions = availability.data ?? []
+  const supervisorTypeOptions = supervisorTypes.data ?? []
 
   const displayName = formatDisplayName(profile.user)
   const location = formatLocation(profile.user.city, profile.user.state, profile.user.zipcode)
@@ -107,7 +109,7 @@ export function SuperviseeDashboardProfileDetails({
   const statesOfLicensure = profile.user.stateOfLicensure ?? []
 
   const availabilityLabel = resolveOptionLabel(profile.availability, availabilityOptions)
-  const supervisorTypeLabel = resolveOptionLabel(
+  const supervisorTypeLabel = resolveSupervisorTypeLabel(
     profile.typeOfSupervisorNeeded,
     supervisorTypeOptions,
   )

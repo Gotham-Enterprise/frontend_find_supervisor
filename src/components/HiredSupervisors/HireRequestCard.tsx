@@ -11,6 +11,7 @@ import {
 import Link from 'next/link'
 import { useState } from 'react'
 
+import { LeaveReviewModal } from '@/components/reviews/LeaveReviewModal'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -25,7 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { UserAvatar } from '@/components/ui/UserAvatar'
-import { useCancelHire, useUserSnackbar } from '@/lib/hooks'
+import { useCancelHire, useMarkHireAsCompleted, useUserSnackbar } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
   formatDate,
@@ -35,7 +36,9 @@ import {
   formatSupervisionFormat,
 } from '@/lib/utils/profile-formatters'
 import type { HireListItem, HireStatus } from '@/types/hire'
+import type { Review } from '@/types/review'
 
+import { HireRequestDetailsDialog } from './HireRequestDetailsDialog'
 import { HireStatusBadge } from './HireStatusBadge'
 
 const CANCELABLE_STATUSES: ReadonlyArray<HireStatus> = ['PENDING', 'ACCEPTED', 'ACTIVE']
@@ -68,11 +71,20 @@ function DetailCell({
   )
 }
 
-export function HireRequestCard({ hire }: { hire: HireListItem }) {
+interface HireRequestCardProps {
+  hire: HireListItem
+  existingReview?: Review
+}
+
+export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) {
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [reasonOpen, setReasonOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
+  const [completeOpen, setCompleteOpen] = useState(false)
+  const [reviewOpen, setReviewOpen] = useState(false)
   const { showSuccess, showError } = useUserSnackbar()
   const cancelMutation = useCancelHire()
+  const completeMutation = useMarkHireAsCompleted()
 
   const supervisorName = formatDisplayName(hire.supervisor)
   const occupation = hire.supervisor.occupation?.name?.trim()
@@ -90,6 +102,28 @@ export function HireRequestCard({ hire }: { hire: HireListItem }) {
   const hasRejectionReason = hire.status === 'REJECTED' && Boolean(hire.rejectionReason?.trim())
   const canCancel = CANCELABLE_STATUSES.includes(hire.status)
   const profileHref = `/find-supervisors/${hire.supervisorId}?from=hired-supervisors`
+
+  // Mark as Completed: only when ACCEPTED or ACTIVE (supervisee has no end-date restriction)
+  const canComplete = hire.status === 'ACCEPTED' || hire.status === 'ACTIVE'
+
+  // Review eligibility:
+  // - "Leave Review": hire is COMPLETED and no review submitted yet
+  // - "Edit Review": a review already exists for this hire
+  const hasReview = !!existingReview
+  const canReview = hire.status === 'COMPLETED' && !hasReview
+
+  function handleCompleteConfirm() {
+    completeMutation.mutate(hire.id, {
+      onSuccess: () => {
+        showSuccess('Supervision marked as completed.')
+        setCompleteOpen(false)
+      },
+      onError: (err) => {
+        showError(parseApiError(err))
+        setCompleteOpen(false)
+      },
+    })
+  }
 
   function handleCancelConfirm() {
     cancelMutation.mutate(hire.id, {
@@ -150,11 +184,38 @@ export function HireRequestCard({ hire }: { hire: HireListItem }) {
                         View Profile
                       </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDetailsOpen(true)}>
+                      Request Details
+                    </DropdownMenuItem>
                     {hasRejectionReason && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem destructive onClick={() => setReasonOpen(true)}>
                           View Reason
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {canComplete && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setCompleteOpen(true)}>
+                          Mark as Completed
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {canReview && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setReviewOpen(true)}>
+                          Leave Review
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {hasReview && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setReviewOpen(true)}>
+                          Edit Review
                         </DropdownMenuItem>
                       </>
                     )}
@@ -182,6 +243,8 @@ export function HireRequestCard({ hire }: { hire: HireListItem }) {
         </div>
       </Card>
 
+      <HireRequestDetailsDialog hire={hire} open={detailsOpen} onOpenChange={setDetailsOpen} />
+
       {hasRejectionReason && (
         <DialogRoot open={reasonOpen} onOpenChange={setReasonOpen}>
           <DialogContent className="max-w-sm">
@@ -194,6 +257,16 @@ export function HireRequestCard({ hire }: { hire: HireListItem }) {
       )}
 
       <ConfirmDialog
+        open={completeOpen}
+        onOpenChange={(open) => !open && setCompleteOpen(false)}
+        title="Mark supervision as completed?"
+        description={`This will mark your supervision with ${supervisorName} as completed. You'll then be able to leave a review. This action cannot be undone.`}
+        confirmLabel="Mark as Completed"
+        isPending={completeMutation.isPending}
+        onConfirm={handleCompleteConfirm}
+      />
+
+      <ConfirmDialog
         open={cancelOpen}
         onOpenChange={(open) => !open && setCancelOpen(false)}
         title="Cancel supervision request?"
@@ -203,6 +276,16 @@ export function HireRequestCard({ hire }: { hire: HireListItem }) {
         isPending={cancelMutation.isPending}
         onConfirm={handleCancelConfirm}
       />
+
+      {(canReview || hasReview) && (
+        <LeaveReviewModal
+          open={reviewOpen}
+          onOpenChange={setReviewOpen}
+          hireId={hire.id}
+          supervisorName={supervisorName}
+          existingReview={existingReview}
+        />
+      )}
     </>
   )
 }

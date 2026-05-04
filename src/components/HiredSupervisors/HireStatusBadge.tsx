@@ -11,6 +11,7 @@ const STATUS_CONFIG: Record<HireStatus, { label: string; className: string }> = 
   COMPLETED: { label: 'Completed', className: 'bg-gray-100 text-gray-600 hover:bg-gray-100' },
   CANCELED: { label: 'Canceled', className: 'bg-red-100 text-red-600 hover:bg-red-100' },
   REJECTED: { label: 'Rejected', className: 'bg-red-100 text-red-600 hover:bg-red-100' },
+  REVIEWED: { label: 'Reviewed', className: 'bg-blue-100 text-blue-700 hover:bg-blue-100' },
 }
 
 interface HireStatusBadgeProps {

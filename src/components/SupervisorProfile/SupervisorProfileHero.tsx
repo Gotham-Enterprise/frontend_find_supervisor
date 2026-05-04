@@ -98,6 +98,7 @@ export function SupervisorProfileHero({ profile }: SupervisorProfileHeroProps) {
   // const noHireExists =
   //   isSuperviseeRole(user?.role) && !existingConversation && conversations !== undefined
   const isInMyHireList = profile.isInMyHireList ?? false
+  const hirePending = isInMyHireList && profile.hiredInfo?.status === 'PENDING'
 
   const messageDisabledTooltip = !isInMyHireList
     ? 'You need to submit a hire request before messaging this supervisor.'
@@ -143,9 +144,18 @@ export function SupervisorProfileHero({ profile }: SupervisorProfileHeroProps) {
 
         {/* CTA buttons */}
         <div className="flex shrink-0 gap-2">
-          <Button size="sm" onClick={() => setHireModalOpen(true)}>
-            Hire as Supervisor
-          </Button>
+          {isInMyHireList ? (
+            <span
+              className="inline-flex h-9 items-center px-3 text-sm font-medium text-[#6B7280]"
+              role="status"
+            >
+              {hirePending ? 'Waiting for approval' : 'Hired'}
+            </span>
+          ) : (
+            <Button size="sm" onClick={() => setHireModalOpen(true)}>
+              Hire as Supervisor
+            </Button>
+          )}
           <DisabledWithTooltip
             tooltip={messageDisabledTooltip}
             disabled={messageDisabled || !isInMyHireList}

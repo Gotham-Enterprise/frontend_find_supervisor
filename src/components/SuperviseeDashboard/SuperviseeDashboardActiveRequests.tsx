@@ -34,6 +34,10 @@ const STATUS_BADGE: Record<HireStatus, { label: string; className: string }> = {
     label: '● Rejected',
     className: 'bg-red-100 text-red-700 hover:bg-red-100',
   },
+  REVIEWED: {
+    label: '● Reviewed',
+    className: 'bg-blue-100 text-blue-700 hover:bg-blue-100',
+  },
 }
 
 function ActiveRequestSkeleton() {

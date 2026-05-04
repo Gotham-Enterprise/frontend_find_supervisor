@@ -5,8 +5,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   acceptHire,
   cancelHire,
+  getSuperviseeUpcomingSessions,
   hireSupervisor,
   listHires,
+  markHireAsCompleted,
   rejectHire,
 } from '@/lib/api/supervision'
 import type { HireSupervisorPayload } from '@/types/hire'
@@ -17,9 +19,22 @@ export const hireKeys = {
   pendingCount: () => [...hireKeys.all, 'pending-count'] as const,
 }
 
+export const upcomingSessionsKeys = {
+  all: ['supervision', 'supervisee-upcoming-sessions'] as const,
+}
+
+async function invalidateHireRelatedQueries(queryClient: ReturnType<typeof useQueryClient>) {
+  await queryClient.invalidateQueries({ queryKey: hireKeys.all })
+  await queryClient.invalidateQueries({ queryKey: upcomingSessionsKeys.all })
+}
+
 export function useHireSupervisor() {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (payload: HireSupervisorPayload) => hireSupervisor(payload),
+    onSuccess: async () => {
+      await invalidateHireRelatedQueries(queryClient)
+    },
   })
 }
 
@@ -27,6 +42,14 @@ export function useHiresList(page = 1, limit = 10) {
   return useQuery({
     queryKey: hireKeys.list(page, limit),
     queryFn: () => listHires(page, limit),
+    staleTime: 2 * 60 * 1000,
+  })
+}
+
+export function useSuperviseeUpcomingSessions() {
+  return useQuery({
+    queryKey: upcomingSessionsKeys.all,
+    queryFn: () => getSuperviseeUpcomingSessions(),
     staleTime: 2 * 60 * 1000,
   })
 }
@@ -46,7 +69,7 @@ export function useAcceptHire() {
   return useMutation({
     mutationFn: (hireId: string) => acceptHire(hireId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: hireKeys.all })
+      await invalidateHireRelatedQueries(queryClient)
     },
   })
 }
@@ -57,7 +80,7 @@ export function useRejectHire() {
     mutationFn: ({ hireId, reason }: { hireId: string; reason: string }) =>
       rejectHire(hireId, reason),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: hireKeys.all })
+      await invalidateHireRelatedQueries(queryClient)
     },
   })
 }
@@ -67,7 +90,17 @@ export function useCancelHire() {
   return useMutation({
     mutationFn: (hireId: string) => cancelHire(hireId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: hireKeys.all })
+      await invalidateHireRelatedQueries(queryClient)
+    },
+  })
+}
+
+export function useMarkHireAsCompleted() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (hireId: string) => markHireAsCompleted(hireId),
+    onSuccess: async () => {
+      await invalidateHireRelatedQueries(queryClient)
     },
   })
 }
