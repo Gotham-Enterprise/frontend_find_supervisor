@@ -27,7 +27,7 @@ export function SearchSupervisorHeader({
   }
 
   return (
-    <div className="bg-background pb-10">
+    <div className="pb-0">
       <div className="w-full px-0">
         <p className="text-sm text-muted-foreground">
           Browse verified supervisors matched to your license, location, and goals.

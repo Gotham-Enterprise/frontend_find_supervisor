@@ -20,6 +20,7 @@ import {
 
 export function SuperviseeDashboard() {
   const { user } = useUser()
+
   const [editModalOpen, setEditModalOpen] = useState(false)
 
   const { data: hiresData, isLoading: hiresLoading, isError: hiresError } = useHiresList(1, 10)

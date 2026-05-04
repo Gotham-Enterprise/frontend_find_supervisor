@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown, LogOut, Settings } from 'lucide-react'
+import { ChevronDown, CircleUser, LogOut, Settings } from 'lucide-react'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -24,6 +24,7 @@ import { useLogout, useUser } from '@/lib/hooks'
  * Prefix matching is used for dynamic segments (e.g. /find-supervisors/[id]).
  */
 const PAGE_TITLES: Array<{ prefix: string; title: string }> = [
+  { prefix: '/my-profile', title: 'My Profile' },
   { prefix: '/dashboard', title: 'Dashboard' },
   { prefix: '/find-supervisors', title: 'Find Supervisors' },
   { prefix: '/supervisees', title: 'Supervisees' },
@@ -108,6 +109,10 @@ export function DashboardTopbar() {
           <DropdownMenuPortal>
             <DropdownMenuPositioner>
               <DropdownMenuPopup>
+                <DropdownMenuItem onClick={() => router.push('/my-profile')}>
+                  <CircleUser className="mr-2 h-4 w-4 shrink-0" />
+                  My Profile
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => router.push('/settings')}>
                   <Settings className="mr-2 h-4 w-4 shrink-0" />
                   Settings

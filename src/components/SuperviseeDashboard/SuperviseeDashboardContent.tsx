@@ -67,7 +67,13 @@ export function SuperviseeDashboardContent({
 }: SuperviseeDashboardContentProps) {
   return (
     <div className="space-y-6">
-      {user && <SuperviseeDashboardHeader user={user} completion={completion} />}
+      {user && (
+        <SuperviseeDashboardHeader
+          user={user}
+          completion={completion}
+          emailVerified={superviseeProfile?.user.emailVerified ?? user.emailVerified ?? false}
+        />
+      )}
 
       <SuperviseeDashboardSummaryCards
         pendingCount={pendingHires.length}
