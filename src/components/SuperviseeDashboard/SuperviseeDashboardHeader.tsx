@@ -7,9 +7,15 @@ import { CircularProgress } from './SuperviseeDashboardShared'
 interface SuperviseeDashboardHeaderProps {
   user: User
   completion: number
+  /** Prefer GET /supervision/supervisee/profile → `user.emailVerified`; auth user used until profile loads. */
+  emailVerified: boolean
 }
 
-export function SuperviseeDashboardHeader({ user, completion }: SuperviseeDashboardHeaderProps) {
+export function SuperviseeDashboardHeader({
+  user,
+  completion,
+  emailVerified,
+}: SuperviseeDashboardHeaderProps) {
   const name = user.fullName ?? user.name ?? user.email
   const firstName = name.split(' ')[0] ?? name
 
@@ -32,7 +38,7 @@ export function SuperviseeDashboardHeader({ user, completion }: SuperviseeDashbo
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {user.emailVerified ? (
+            {emailVerified ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
                 <span className="size-1.5 rounded-full bg-emerald-300" />
                 Email Verified

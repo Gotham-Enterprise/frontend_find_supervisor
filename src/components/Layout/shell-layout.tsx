@@ -28,9 +28,9 @@ export function ShellLayout({ children }: ShellLayoutProps) {
       <Sidebar />
 
       {/* Main column: topbar + scrollable content */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <DashboardTopbar />
-        <main className="flex-1 overflow-y-auto bg-background-subtle">
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background-subtle">
           <div className="p-8">{children}</div>
         </main>
       </div>

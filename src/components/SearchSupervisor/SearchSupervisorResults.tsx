@@ -52,9 +52,8 @@ export function SearchSupervisorResults({
   const sortLabel = SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Best Match'
 
   return (
-    <div className="min-w-0 flex-1 space-y-4">
-      {/* Results header */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border pb-4">
         {isLoading ? (
           <div className="h-4 w-48 animate-pulse rounded bg-muted" />
         ) : errorMessage ? (
@@ -86,35 +85,35 @@ export function SearchSupervisorResults({
         </div>
       </div>
 
-      {/* Cards */}
-      <div className="space-y-3">
-        {isLoading ? (
-          Array.from({ length: 3 }).map((_, i) => <SupervisorCardSkeleton key={i} />)
-        ) : errorMessage ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/30 bg-destructive/5 py-12 text-center">
-            <p className="mb-4 max-w-md text-sm text-muted-foreground">
-              We couldn&apos;t load supervisor results. Check your connection and try again.
+      <div className="min-h-0 flex-1 overflow-y-auto pt-4">
+        <div className="space-y-3">
+          {isLoading ? (
+            Array.from({ length: 3 }).map((_, i) => <SupervisorCardSkeleton key={i} />)
+          ) : errorMessage ? (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/30 bg-destructive/5 py-12 text-center">
+              <p className="mb-4 max-w-md text-sm text-muted-foreground">
+                We couldn&apos;t load supervisor results. Check your connection and try again.
+              </p>
+              <Button type="button" variant="outline" onClick={onRetry}>
+                Try again
+              </Button>
+            </div>
+          ) : supervisors.length === 0 ? (
+            <EmptyState onClearFilters={onClearFilters} />
+          ) : (
+            supervisors.map((s) => <SupervisorCard key={s.id} supervisor={s} />)
+          )}
+        </div>
+
+        {!isLoading && !errorMessage && totalPages > 1 && (
+          <div className="flex items-center justify-between pt-6">
+            <p className="text-xs text-muted-foreground">
+              Showing {from}–{to} of {total} results
             </p>
-            <Button type="button" variant="outline" onClick={onRetry}>
-              Try again
-            </Button>
+            <Pagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
           </div>
-        ) : supervisors.length === 0 ? (
-          <EmptyState onClearFilters={onClearFilters} />
-        ) : (
-          supervisors.map((s) => <SupervisorCard key={s.id} supervisor={s} />)
         )}
       </div>
-
-      {/* Pagination */}
-      {!isLoading && !errorMessage && totalPages > 1 && (
-        <div className="flex items-center justify-between pt-2">
-          <p className="text-xs text-muted-foreground">
-            Showing {from}–{to} of {total} results
-          </p>
-          <Pagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
-        </div>
-      )}
     </div>
   )
 }

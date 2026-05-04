@@ -34,6 +34,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { isFreePlan } from '@/lib/constants/subscription-plans'
 import { useSupervisorProfile, useUser } from '@/lib/hooks'
+import { mergeSupervisorProfileDisplayName } from '@/lib/profile/supervisor-profile-display'
 import { cn } from '@/lib/utils'
 import type {
   Subscription,
@@ -855,16 +856,8 @@ export function SupervisorDashboard() {
     )
   }
 
+  const enrichedProfile = mergeSupervisorProfileDisplayName(profile, user)
   const completion = getProfileCompletion(profile)
-  const composedName = `${profile.user.firstName ?? ''} ${profile.user.lastName ?? ''}`.trim()
-  const displayName =
-    profile.user.fullName ?? user?.fullName ?? (composedName || user?.email) ?? null
-
-  // Merge the display name into the profile user for child components
-  const enrichedProfile: SupervisorProfileData = {
-    ...profile,
-    user: { ...profile.user, fullName: displayName ?? profile.user.fullName },
-  }
 
   const primarySubscription = getPrimaryDashboardSubscription(enrichedProfile)
 

@@ -112,24 +112,30 @@ export function SearchSupervisorPage() {
   }
 
   return (
-    <div>
-      <SearchSupervisorHeader
-        keyword={keyword}
-        supervisionFormats={filters.supervisionFormats}
-        onKeywordChange={setKeyword}
-        onSupervisionFormatsChange={(next) => setFilters({ ...filters, supervisionFormats: next })}
-        onSearch={handleSearch}
-      />
+    <div className="flex h-[calc(100vh-60px-4rem)] min-h-0 flex-col overflow-hidden">
+      <div className="shrink-0 border-b border-border pb-6 pt-0">
+        <SearchSupervisorHeader
+          keyword={keyword}
+          supervisionFormats={filters.supervisionFormats}
+          onKeywordChange={setKeyword}
+          onSupervisionFormatsChange={(next) =>
+            setFilters({ ...filters, supervisionFormats: next })
+          }
+          onSearch={handleSearch}
+        />
+      </div>
 
-      <div className="border-t border-border bg-background">
-        <div className="flex w-full flex-col gap-6 py-8 lg:flex-row lg:gap-8">
+      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden py-6 lg:grid lg:min-h-0 lg:grid-cols-[280px_1fr] lg:gap-8 lg:py-8">
+        <div className="min-h-0 max-h-[min(42vh,380px)] shrink-0 overflow-y-auto border-b border-border pb-4 lg:max-h-none lg:border-b-0 lg:pb-0">
           <SearchSupervisorFilters
             filters={filters}
             onChange={handleFiltersChange}
             onApply={handleApplyFilters}
             onClearFilters={handleClearFilterPanel}
           />
+        </div>
 
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <SearchSupervisorResults
             supervisors={supervisors}
             total={total}
