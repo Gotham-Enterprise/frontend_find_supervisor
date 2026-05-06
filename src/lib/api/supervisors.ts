@@ -33,6 +33,7 @@ export async function getSupervisorById(id: string): Promise<Supervisor> {
 export interface RecommendedSupervisorApiItem {
   id: string
   fullName: string
+  profilePhotoUrl?: string | null
   stateOfLicensure: string[]
   occupation: { id: string; name: string } | null
   specialty: { id: string; name: string } | null

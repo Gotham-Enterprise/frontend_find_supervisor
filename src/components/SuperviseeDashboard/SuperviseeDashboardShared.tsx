@@ -1,4 +1,7 @@
+'use client'
+
 import { CheckCircle2, Circle } from 'lucide-react'
+import { useState } from 'react'
 
 import { cn } from '@/lib/utils'
 
@@ -8,10 +11,29 @@ import { getInitials } from './SuperviseeDashboardUtils'
 export function InitialsAvatar({
   name,
   className,
+  photoUrl,
 }: {
   name: string | null | undefined
   className?: string
+  /** When set and load succeeds, shows the photo instead of initials. */
+  photoUrl?: string | null
 }) {
+  const [photoFailed, setPhotoFailed] = useState(false)
+  const trimmed = photoUrl?.trim()
+  const showPhoto = Boolean(trimmed && !photoFailed)
+
+  if (showPhoto) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- S3 profile URLs from API
+      <img
+        src={trimmed}
+        alt=""
+        className={cn('shrink-0 rounded-full object-cover', className)}
+        onError={() => setPhotoFailed(true)}
+      />
+    )
+  }
+
   return (
     <div
       className={cn(

@@ -130,7 +130,11 @@ export function SuperviseeDashboardActiveRequests({
           return (
             <div key={hire.id} className="flex items-center justify-between gap-3 py-3">
               <div className="flex items-center gap-3">
-                <InitialsAvatar name={supervisorName} className="size-8 text-xs" />
+                <InitialsAvatar
+                  name={supervisorName}
+                  photoUrl={hire.supervisor?.profilePhotoUrl}
+                  className="size-8 text-xs"
+                />
                 <div>
                   <p className="text-sm font-medium leading-tight">{supervisorName}</p>
                   <p className="text-xs text-muted-foreground">

@@ -4,9 +4,8 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { UserAvatar } from '@/components/ui/UserAvatar'
 import type { RecommendedSupervisorApiItem } from '@/lib/api/supervisors'
-
-import { InitialsAvatar } from './SuperviseeDashboardShared'
 
 const FORMAT_LABELS: Record<string, string> = {
   VIRTUAL: 'Virtual',
@@ -45,6 +44,7 @@ function RecommendedSupervisorRow({ supervisor }: RecommendedSupervisorRowProps)
   const {
     id,
     fullName,
+    profilePhotoUrl,
     occupation,
     supervisorProfile,
     stateOfLicensure,
@@ -60,7 +60,7 @@ function RecommendedSupervisorRow({ supervisor }: RecommendedSupervisorRowProps)
   return (
     <div className="py-4">
       <div className="flex items-stretch gap-3">
-        <InitialsAvatar name={fullName} className="size-10 shrink-0 self-start text-sm" />
+        <UserAvatar src={profilePhotoUrl} name={fullName} size="md" className="self-start" />
 
         <div className="flex min-w-0 flex-1 gap-3">
           <div className="min-w-0 flex-1">

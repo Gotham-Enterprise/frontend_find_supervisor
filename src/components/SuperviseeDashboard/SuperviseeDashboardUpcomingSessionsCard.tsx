@@ -115,7 +115,11 @@ export function SuperviseeDashboardUpcomingSessionsCard({
         <div className="rounded-xl border border-border bg-muted/30 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-start gap-3">
-              <InitialsAvatar name={supervisorName} className="size-10 text-sm" />
+              <InitialsAvatar
+                name={supervisorName}
+                photoUrl={next.supervisor?.profilePhotoUrl}
+                className="size-10 text-sm"
+              />
               <div>
                 <p className="font-semibold leading-tight">{supervisorName}</p>
                 <p className="text-sm text-muted-foreground">Individual Supervision</p>
@@ -170,7 +174,11 @@ export function SuperviseeDashboardUpcomingSessionsCard({
                   className="flex flex-col gap-2 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex items-center gap-3">
-                    <InitialsAvatar name={name} className="size-7 text-xs" />
+                    <InitialsAvatar
+                      name={name}
+                      photoUrl={hire.supervisor?.profilePhotoUrl}
+                      className="size-7 text-xs"
+                    />
                     <div>
                       <span className="font-medium">{name}</span>
                       <p className="text-xs text-muted-foreground">{restWhen}</p>

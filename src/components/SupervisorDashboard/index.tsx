@@ -44,25 +44,62 @@ import type {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getProfileCompletion(profile: SupervisorProfileData): number {
-  const checks: boolean[] = [
-    !!profile.user.profilePhotoUrl,
-    !!profile.licenseType,
-    !!profile.profession,
-    !!profile.licenseNumber,
-    !!profile.stateLicense,
-    !!profile.yearsOfExperience,
-    !!profile.supervisionFormat,
-    !!profile.availability,
-    !!profile.supervisionFeeAmount,
-    !!profile.professionalSummary,
+/**
+ * Per-field checks aligned with the supervisor profile editor:
+ * - Occupation is stored on the user / `occupationId`, not only `profession`.
+ * - Licensure states are often in `user.stateOfLicensure[]`, not only `stateLicense`.
+ * - License can be an upload (`licenseUrl` / `licenseObjectKey`) without a typed number.
+ * - Short bio may live in `describeYourself` or `professionalSummary`.
+ */
+function getSupervisorProfileCompletionChecks(profile: SupervisorProfileData): boolean[] {
+  const hasOccupation = Boolean(
+    profile.profession?.trim() ||
+    profile.professionOther?.trim() ||
+    profile.occupationId ||
+    profile.user.occupation?.id ||
+    profile.occupation?.id,
+  )
+
+  const hasLicenseIdOrFile =
+    Boolean(profile.licenseNumber?.trim()) ||
+    Boolean(profile.licenseUrl?.trim()) ||
+    Boolean(profile.licenseObjectKey?.trim())
+
+  const hasStateLicenseInfo =
+    Boolean(profile.stateLicense?.trim()) || (profile.user.stateOfLicensure?.length ?? 0) > 0
+
+  const hasFee = Boolean(profile.supervisionFeeAmount)
+
+  const hasBio =
+    Boolean(profile.professionalSummary?.trim()) || Boolean(profile.describeYourself?.trim())
+
+  return [
+    Boolean(profile.user.profilePhotoUrl?.trim()),
+    Boolean(profile.licenseType?.trim()),
+    hasOccupation,
+    hasLicenseIdOrFile,
+    hasStateLicenseInfo,
+    Boolean(profile.yearsOfExperience?.trim()),
+    Boolean(profile.supervisionFormat),
+    Boolean(profile.availability?.trim()),
+    hasFee,
+    hasBio,
     (profile.certification?.length ?? 0) > 0,
     (profile.patientPopulation?.length ?? 0) > 0,
-    !!profile.user.city,
-    !!profile.user.state,
+    Boolean(profile.user.city?.trim()),
+    Boolean(profile.user.state?.trim()),
   ]
+}
+
+function getProfileCompletion(profile: SupervisorProfileData): number {
+  const checks = getSupervisorProfileCompletionChecks(profile)
+  if (checks.length === 0) return 0
   const filled = checks.filter(Boolean).length
   return Math.round((filled / checks.length) * 100)
+}
+
+function getSupervisorProfileIncompleteStepCount(profile: SupervisorProfileData): number {
+  return getSupervisorProfileCompletionChecks(profile).filter((c) => !c).length
 }
 
 type StepStatus = 'done' | 'current' | 'upcoming'
@@ -95,7 +132,21 @@ function hasActivePaidSupervisionSubscription(profile: SupervisorProfileData): b
 
 function getPrimaryDashboardSubscription(profile: SupervisorProfileData): Subscription | undefined {
   const subs = profile.user.subscriptions ?? []
-  return subs.find((s) => s.status === 'ACTIVE' || s.status === 'TRIALING') ?? subs[0]
+  const entitledStatuses: Subscription['status'][] = ['ACTIVE', 'TRIALING', 'PAST_DUE']
+  const isPaidStripePlan = (s: Subscription) =>
+    !!s.stripeSubscriptionId && !!s.plan && s.plan.priceInCents > 0
+
+  const entitledPaid = subs.find((s) => entitledStatuses.includes(s.status) && isPaidStripePlan(s))
+  const completingPaid = subs.find(
+    (s) => isPaidStripePlan(s) && (s.status === 'INACTIVE' || s.status === 'UNPAID'),
+  )
+
+  return (
+    entitledPaid ??
+    completingPaid ??
+    subs.find((s) => entitledStatuses.includes(s.status)) ??
+    subs[0]
+  )
 }
 
 function getChecklist(profile: SupervisorProfileData): ChecklistStep[] {
@@ -144,6 +195,11 @@ function getChecklist(profile: SupervisorProfileData): ChecklistStep[] {
       adminReviewStep: true,
     },
   ]
+}
+
+/** True when every setup checklist step is `done` (matches 5/5 in Setup Checklist). */
+function isSupervisorSetupFullyComplete(profile: SupervisorProfileData): boolean {
+  return getChecklist(profile).every((step) => step.status === 'done')
 }
 
 function formatFee(amount: number | null | undefined, type: string | null | undefined): string {
@@ -277,6 +333,8 @@ function WelcomeBanner({
   const name = profile.user.fullName ?? (composedName || profile.user.email)
   const isPending = profile.verificationStatus === 'PENDING'
 
+  const setupComplete = useMemo(() => isSupervisorSetupFullyComplete(profile), [profile])
+
   const isNewUser = useMemo(() => {
     if (!profile.user.createdAt) return false
     const now = new Date()
@@ -292,13 +350,20 @@ function WelcomeBanner({
               {isNewUser ? `Welcome, ${name}` : `Welcome back, ${name}`}
             </h1>
             <p className="mt-1 text-sm opacity-80">
-              Let&apos;s complete your supervisor setup and get your profile live.
+              {setupComplete
+                ? 'Your supervisor profile is verified and ready for supervisees.'
+                : "Let's complete your supervisor setup and get your profile live."}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
-              <span className="size-1.5 rounded-full bg-amber-300" />
-              Profile setup in progress
+              <span
+                className={cn(
+                  'size-1.5 rounded-full',
+                  setupComplete ? 'bg-emerald-300' : 'bg-amber-300',
+                )}
+              />
+              {setupComplete ? 'Setup complete' : 'Profile setup in progress'}
             </span>
             {isPending && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
@@ -324,6 +389,14 @@ function StatusCards({
   profile: SupervisorProfileData
   completion: number
 }) {
+  const stepsRemaining = getSupervisorProfileIncompleteStepCount(profile)
+  const stepsRemainingLabel =
+    stepsRemaining === 0
+      ? 'All tracked fields complete'
+      : stepsRemaining === 1
+        ? '1 step remaining'
+        : `${stepsRemaining} steps remaining`
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {/* Email */}
@@ -369,9 +442,7 @@ function StatusCards({
               style={{ width: `${completion}%` }}
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            {14 - Math.round((completion / 100) * 14)} steps remaining
-          </p>
+          <p className="text-xs text-muted-foreground">{stepsRemainingLabel}</p>
         </CardContent>
       </Card>
 
@@ -765,10 +836,13 @@ function TipsAndHelp() {
 }
 
 function BillingSection({ profile }: { profile: SupervisorProfileData }) {
-  const sub = profile.user.subscriptions?.[0]
+  const sub = getPrimaryDashboardSubscription(profile)
   if (!sub) return null
 
-  const isActive = sub.status === 'ACTIVE' || sub.status === 'TRIALING'
+  const isEntitled =
+    sub.status === 'ACTIVE' || sub.status === 'TRIALING' || sub.status === 'PAST_DUE'
+  const isCancelingAtPeriodEnd =
+    !!sub.cancelAtPeriodEnd && (sub.status === 'ACTIVE' || sub.status === 'TRIALING')
 
   return (
     <Card>
@@ -789,7 +863,12 @@ function BillingSection({ profile }: { profile: SupervisorProfileData }) {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Current Plan</p>
-            {isActive && (
+            {isCancelingAtPeriodEnd && (
+              <Badge className="border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-100">
+                Canceled · Premium until {formatDate(sub.currentPeriodEnd)}
+              </Badge>
+            )}
+            {isEntitled && !isCancelingAtPeriodEnd && (
               <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
                 ● Active
               </Badge>
@@ -812,20 +891,32 @@ function BillingSection({ profile }: { profile: SupervisorProfileData }) {
         {/* Next invoice */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Next Invoice</p>
-            {sub.cancelAtPeriodEnd && (
-              <span className="text-xs text-muted-foreground">
-                Cancels {formatDate(sub.currentPeriodEnd)}
-              </span>
+            <p className="text-sm font-medium">
+              {isCancelingAtPeriodEnd ? 'Access & billing' : 'Next Invoice'}
+            </p>
+            {isCancelingAtPeriodEnd && (
+              <span className="text-xs text-amber-800">No further charges after end date</span>
             )}
           </div>
           <div className="rounded-xl border p-4">
-            <p className="text-2xl font-bold">{formatCents(sub.plan.priceInCents)}</p>
-            <p className="text-sm text-muted-foreground">
-              Due on {formatDate(sub.currentPeriodEnd)}
-            </p>
-            {sub.currentPeriodEnd && !sub.cancelAtPeriodEnd && (
-              <span className="mt-1 inline-block text-xs text-emerald-600">● Auto-renews</span>
+            {isCancelingAtPeriodEnd ? (
+              <>
+                <p className="text-sm font-medium text-foreground">Premium access until</p>
+                <p className="mt-1 text-2xl font-bold">{formatDate(sub.currentPeriodEnd)}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Your subscription will not renew. You keep full platform access until this date.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-2xl font-bold">{formatCents(sub.plan.priceInCents)}</p>
+                <p className="text-sm text-muted-foreground">
+                  Due on {formatDate(sub.currentPeriodEnd)}
+                </p>
+                {sub.currentPeriodEnd && !sub.cancelAtPeriodEnd && (
+                  <span className="mt-1 inline-block text-xs text-emerald-600">● Auto-renews</span>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -887,6 +978,7 @@ export function SupervisorDashboard() {
           plan={primarySubscription?.plan}
           subscriptionStatus={primarySubscription?.status}
           currentPeriodEnd={primarySubscription?.currentPeriodEnd}
+          cancelAtPeriodEnd={primarySubscription?.cancelAtPeriodEnd}
           onOpenChoosePlanModal={() => setChoosePlanModalOpen(true)}
         />
         <TipsAndHelp />

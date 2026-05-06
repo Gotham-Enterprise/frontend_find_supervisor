@@ -61,11 +61,19 @@ export function isSuperviseeOnboardingProfileComplete(profile: SuperviseeProfile
   return getSuperviseeProfileCompletionChecks(profile).every(Boolean)
 }
 
-/** True when the supervisee had an accepted, active, or completed hire (counts toward "Find your first supervisor"). */
+/** Hire statuses that satisfy "Find your first supervisor" (sent a request or established/completed supervision). */
+const FIND_FIRST_SUPERVISOR_STATUSES: ReadonlyArray<HireListItem['status']> = [
+  'PENDING',
+  'ACCEPTED',
+  'ACTIVE',
+  'COMPLETED',
+  'REVIEWED',
+  'REJECTED',
+]
+
+/** True when the supervisee has any hire past initial browse (request sent, active work, completed, or reviewed). */
 export function hasMetFindFirstSupervisorGoal(hires: HireListItem[]): boolean {
-  return hires.some(
-    (h) => h.status === 'ACCEPTED' || h.status === 'ACTIVE' || h.status === 'COMPLETED',
-  )
+  return hires.some((h) => FIND_FIRST_SUPERVISOR_STATUSES.includes(h.status))
 }
 
 /**

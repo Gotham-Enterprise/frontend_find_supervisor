@@ -9,6 +9,7 @@ import type {
   HireSupervisorPayload,
   UpcomingSessionItem,
 } from '@/types/hire'
+import type { PastClientHire } from '@/types/past-clients'
 import type {
   PurchaseSubscriptionResponse,
   Subscription,
@@ -85,6 +86,25 @@ export async function listHires(
   const { data } = await apiClient.get<ApiResponse<HireListResponse>>('/supervision/hires', {
     params: { page, limit, ...(status ? { status } : {}) },
   })
+  return data.data
+}
+
+/**
+ * GET /supervision/supervisors/past-clients — completed/reviewed hires for a supervisor profile.
+ * Query `id` is the supervisor UUID (same as GET /supervision/supervisor/profile). `limit: 0` returns all.
+ */
+export async function getPastClients(params: {
+  supervisorId: string
+  page?: number
+  limit?: number
+}): Promise<PastClientHire[]> {
+  const { supervisorId, page = 1, limit = 0 } = params
+  const { data } = await apiClient.get<ApiResponse<PastClientHire[]>>(
+    '/supervision/supervisors/past-clients',
+    {
+      params: { id: supervisorId, page, limit },
+    },
+  )
   return data.data
 }
 

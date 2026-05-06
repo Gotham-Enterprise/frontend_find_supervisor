@@ -13,6 +13,8 @@ import {
 } from '@/lib/api/supervision'
 import type { HireSupervisorPayload } from '@/types/hire'
 
+import { supervisorDetailKeys } from './useSupervisor'
+
 export const hireKeys = {
   all: ['hires'] as const,
   list: (page: number, limit: number) => [...hireKeys.all, 'list', page, limit] as const,
@@ -32,8 +34,11 @@ export function useHireSupervisor() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (payload: HireSupervisorPayload) => hireSupervisor(payload),
-    onSuccess: async () => {
+    onSuccess: async (_data, variables) => {
       await invalidateHireRelatedQueries(queryClient)
+      await queryClient.invalidateQueries({
+        queryKey: supervisorDetailKeys.detail(variables.supervisorId),
+      })
     },
   })
 }
