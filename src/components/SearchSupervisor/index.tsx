@@ -126,7 +126,7 @@ export function SearchSupervisorPage() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden py-6 lg:grid lg:min-h-0 lg:grid-cols-[280px_1fr] lg:gap-8 lg:py-8">
-        <div className="min-h-0 max-h-[min(42vh,380px)] shrink-0 overflow-y-auto border-b border-border pb-4 lg:max-h-none lg:border-b-0 lg:pb-0">
+        <div className="min-h-0 max-h-[min(42vh,380px)] shrink-0 overflow-y-auto border-b border-border px-3 pb-4 lg:max-h-none lg:border-b-0 lg:pb-0">
           <SearchSupervisorFilters
             filters={filters}
             onChange={handleFiltersChange}

@@ -116,7 +116,7 @@ export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePagePro
 
         <SupervisorProfileContact profile={profile} />
 
-        <SupervisorProfilePastClients />
+        <SupervisorProfilePastClients supervisorId={supervisorId} />
         <SupervisorProfileReviews supervisorId={supervisorId} />
       </div>
     </div>

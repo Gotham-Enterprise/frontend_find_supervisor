@@ -6,7 +6,7 @@ import {
   type LucideIcon,
   MapPin,
   Monitor,
-  MoreHorizontal,
+  MoreVertical,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -172,7 +172,7 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
               <DropdownMenuTrigger
                 render={
                   <Button variant="ghost" size="icon-sm" aria-label="Request actions">
-                    <MoreHorizontal className="size-4" />
+                    <MoreVertical className="size-4" />
                   </Button>
                 }
               />

@@ -1,6 +1,6 @@
 'use client'
 
-import { CheckCircle2, Star } from 'lucide-react'
+import { AlertCircle, CalendarDays, CheckCircle2, Star } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
@@ -228,29 +228,70 @@ function SupervisorFreePlanEnrolledCard({
 function SubscribedCard({
   planName,
   nextBillingDate,
+  cancelAtPeriodEnd,
 }: {
   planName: string
   nextBillingDate: string
+  /** User canceled renewal but Stripe keeps access until current period end */
+  cancelAtPeriodEnd?: boolean
 }) {
+  const isCanceling = !!cancelAtPeriodEnd
+
   return (
-    <Card className="border-emerald-200 bg-emerald-50/30">
-      <CardHeader className="flex flex-row items-start justify-between gap-4 border-b border-emerald-100 pb-4">
+    <Card
+      className={
+        isCanceling ? 'border-amber-200 bg-amber-50/40' : 'border-emerald-200 bg-emerald-50/30'
+      }
+    >
+      <CardHeader
+        className={
+          isCanceling
+            ? 'flex flex-row items-start justify-between gap-4 border-b border-amber-100 pb-4'
+            : 'flex flex-row items-start justify-between gap-4 border-b border-emerald-100 pb-4'
+        }
+      >
         <div className="flex items-start gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
-            <CheckCircle2 className="size-4 text-emerald-700" />
+          <div
+            className={
+              isCanceling
+                ? 'flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-100'
+                : 'flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100'
+            }
+          >
+            {isCanceling ? (
+              <AlertCircle className="size-4 text-amber-800" />
+            ) : (
+              <CheckCircle2 className="size-4 text-emerald-700" />
+            )}
           </div>
           <div>
             <CardTitle className="text-base font-semibold">
-              Your supervisor plan is active
+              {isCanceling
+                ? 'Subscription canceled — premium until period end'
+                : 'Your supervisor plan is active'}
             </CardTitle>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              You have access to premium supervisor features including messaging, visibility, and
-              platform tools.
+              {isCanceling
+                ? `Your renewal is turned off. You keep full premium access until ${nextBillingDate === '—' ? 'the end of your billing period' : nextBillingDate}, with no further charges after that.`
+                : 'You have access to premium supervisor features including messaging, visibility, and platform tools.'}
             </p>
           </div>
         </div>
-        <Badge className="shrink-0 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-          ● Premium active
+        <Badge
+          className={
+            isCanceling
+              ? 'shrink-0 border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-100'
+              : 'shrink-0 bg-emerald-100 text-emerald-700 hover:bg-emerald-100'
+          }
+        >
+          {isCanceling ? (
+            <>
+              <CalendarDays className="mr-1 inline size-3.5" />
+              {nextBillingDate === '—' ? 'Canceling' : `Premium until ${nextBillingDate}`}
+            </>
+          ) : (
+            <>● Premium active</>
+          )}
         </Badge>
       </CardHeader>
 
@@ -267,36 +308,88 @@ function SubscribedCard({
             </ul>
           </div>
 
-          <div className="self-start rounded-xl border border-emerald-200 bg-emerald-50 p-5 lg:col-span-1">
+          <div
+            className={
+              isCanceling
+                ? 'self-start rounded-xl border border-amber-200 bg-amber-50 p-5 lg:col-span-1'
+                : 'self-start rounded-xl border border-emerald-200 bg-emerald-50 p-5 lg:col-span-1'
+            }
+          >
             <div className="flex items-center gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary">
-                <CheckCircle2 className="size-4 text-primary-foreground" />
+              <div
+                className={
+                  isCanceling
+                    ? 'flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-600'
+                    : 'flex size-8 shrink-0 items-center justify-center rounded-full bg-primary'
+                }
+              >
+                {isCanceling ? (
+                  <CalendarDays className="size-4 text-white" />
+                ) : (
+                  <CheckCircle2 className="size-4 text-primary-foreground" />
+                )}
               </div>
               <div>
-                <p className="text-sm font-semibold text-emerald-800">Subscription active</p>
-                <p className="text-xs text-emerald-600">Premium features enabled</p>
+                <p
+                  className={
+                    isCanceling
+                      ? 'text-sm font-semibold text-amber-950'
+                      : 'text-sm font-semibold text-emerald-800'
+                  }
+                >
+                  {isCanceling ? 'Premium access active' : 'Subscription active'}
+                </p>
+                <p className={isCanceling ? 'text-xs text-amber-800' : 'text-xs text-emerald-600'}>
+                  {isCanceling ? 'Renews off · no further charges' : 'Premium features enabled'}
+                </p>
               </div>
             </div>
 
-            <div className="mt-4 space-y-2 border-t border-emerald-200 pt-4">
+            <div
+              className={
+                isCanceling
+                  ? 'mt-4 space-y-2 border-t border-amber-200 pt-4'
+                  : 'mt-4 space-y-2 border-t border-emerald-200 pt-4'
+              }
+            >
               <div className="flex items-center justify-between text-xs">
-                <span className="text-emerald-700">Current plan</span>
-                <span className="font-semibold text-emerald-800">{planName}</span>
+                <span className={isCanceling ? 'text-amber-900' : 'text-emerald-700'}>
+                  Current plan
+                </span>
+                <span
+                  className={
+                    isCanceling ? 'font-semibold text-amber-950' : 'font-semibold text-emerald-800'
+                  }
+                >
+                  {planName}
+                </span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-emerald-700">Next billing</span>
-                <span className="text-emerald-700">{nextBillingDate}</span>
+                <span className={isCanceling ? 'text-amber-900' : 'text-emerald-700'}>
+                  {isCanceling ? 'Access ends' : 'Next billing'}
+                </span>
+                <span className={isCanceling ? 'text-amber-950' : 'text-emerald-700'}>
+                  {nextBillingDate}
+                </span>
               </div>
             </div>
 
             <Link
               href="/billing"
-              className="mt-4 flex w-full items-center justify-center rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-50"
+              className={
+                isCanceling
+                  ? 'mt-4 flex w-full items-center justify-center rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-950 transition-colors hover:bg-amber-100/80'
+                  : 'mt-4 flex w-full items-center justify-center rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-50'
+              }
             >
               Manage subscription
             </Link>
-            <p className="mt-2 text-center text-[11px] text-emerald-600">
-              Auto-renews · Cancel anytime
+            <p
+              className={`mt-2 text-center text-[11px] ${isCanceling ? 'text-amber-800' : 'text-emerald-600'}`}
+            >
+              {isCanceling
+                ? 'No further charges after access ends'
+                : 'Auto-renews · Cancel anytime'}
             </p>
           </div>
         </div>
@@ -313,6 +406,8 @@ export interface SupervisorDashboardSubscriptionProps {
   subscriptionStatus?: SubscriptionStatus | null
   /** ISO date string for next billing period end */
   currentPeriodEnd?: string | null
+  /** From profile/current-subscription: cancel scheduled at Stripe period end */
+  cancelAtPeriodEnd?: boolean | null
   /** When set, Upgrade plan opens this handler (shared modal, e.g. dashboard parent). */
   onOpenChoosePlanModal?: () => void
 }
@@ -323,14 +418,24 @@ export function SupervisorDashboardSubscription({
   plan,
   subscriptionStatus,
   currentPeriodEnd,
+  cancelAtPeriodEnd,
   onOpenChoosePlanModal,
 }: SupervisorDashboardSubscriptionProps) {
   const resolvedPlanName = planName?.trim() || ''
 
+  const showCanceling =
+    !!cancelAtPeriodEnd && (subscriptionStatus === 'ACTIVE' || subscriptionStatus === 'TRIALING')
+
   if (shouldShowSupervisionPremiumSubscriptionCard(resolvedPlanName, subscriptionStatus ?? null)) {
     const displayName = resolvedPlanName || 'Find a Supervisor Platform Access'
     const nextBilling = formatBillingDate(currentPeriodEnd ?? null)
-    return <SubscribedCard planName={displayName} nextBillingDate={nextBilling} />
+    return (
+      <SubscribedCard
+        planName={displayName}
+        nextBillingDate={nextBilling}
+        cancelAtPeriodEnd={showCanceling}
+      />
+    )
   }
 
   if (!isSubscribed) {
@@ -349,5 +454,11 @@ export function SupervisorDashboardSubscription({
   const resolvedPlan = resolvedPlanName || 'Supervisor Pro'
   const nextBilling = formatBillingDate(currentPeriodEnd ?? null)
 
-  return <SubscribedCard planName={resolvedPlan} nextBillingDate={nextBilling} />
+  return (
+    <SubscribedCard
+      planName={resolvedPlan}
+      nextBillingDate={nextBilling}
+      cancelAtPeriodEnd={showCanceling}
+    />
+  )
 }

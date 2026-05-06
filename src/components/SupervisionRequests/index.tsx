@@ -10,7 +10,7 @@ import {
   type LucideIcon,
   MapPin,
   Monitor,
-  MoreHorizontal,
+  MoreVertical,
 } from 'lucide-react'
 import * as React from 'react'
 import { useState } from 'react'
@@ -385,7 +385,7 @@ function RowActions({ hire }: RowActionsProps) {
         <DropdownMenuTrigger
           render={
             <Button variant="ghost" size="icon-sm" disabled={isMutating} aria-label="Row actions">
-              <MoreHorizontal className="size-4" />
+              <MoreVertical className="size-4" />
             </Button>
           }
         />
