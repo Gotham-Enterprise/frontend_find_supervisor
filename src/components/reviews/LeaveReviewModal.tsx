@@ -41,6 +41,11 @@ interface LeaveReviewModalProps {
   hireId: string
   supervisorName: string
   existingReview?: Review
+  /**
+   * When true (e.g. immediately after marking supervision complete), shows “Skip for now”
+   * instead of Cancel so the supervisee can dismiss without submitting a review.
+   */
+  allowSkip?: boolean
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -51,6 +56,7 @@ export function LeaveReviewModal({
   hireId,
   supervisorName,
   existingReview,
+  allowSkip = false,
 }: LeaveReviewModalProps) {
   const isEditMode = !!existingReview
 
@@ -118,7 +124,9 @@ export function LeaveReviewModal({
         <p className="mt-1 text-sm text-muted-foreground">
           {isEditMode
             ? `Update your review for ${supervisorName}.`
-            : `Share your experience with ${supervisorName}.`}
+            : allowSkip
+              ? `Supervision with ${supervisorName} is marked complete. Optionally leave a review now, or skip — you can add one anytime from this hire card.`
+              : `Share your experience with ${supervisorName}.`}
         </p>
 
         <Form {...form}>
@@ -171,7 +179,7 @@ export function LeaveReviewModal({
                 disabled={isPending}
                 onClick={() => onOpenChange(false)}
               >
-                Cancel
+                {allowSkip && !isEditMode ? 'Skip for now' : 'Cancel'}
               </Button>
               <Button type="submit" disabled={isPending}>
                 {isPending ? 'Submitting…' : isEditMode ? 'Update Review' : 'Submit Review'}

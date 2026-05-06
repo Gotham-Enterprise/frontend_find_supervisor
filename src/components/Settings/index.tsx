@@ -20,6 +20,8 @@ import {
 } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 
+import { ChangePasswordCard } from './ChangePasswordCard'
+
 // ─── Loading skeleton ─────────────────────────────────────────────────────────
 
 function SettingsSkeleton() {
@@ -188,7 +190,7 @@ export function SettingsPanel() {
   if (isError) return <SettingsError onRetry={() => refetch()} />
 
   return (
-    <>
+    <div className="flex flex-col gap-6">
       <Card className="max-w-xl">
         <CardHeader>
           <CardTitle>Notification &amp; Privacy Settings</CardTitle>
@@ -243,6 +245,8 @@ export function SettingsPanel() {
         </CardContent>
       </Card>
 
+      <ChangePasswordCard />
+
       <ConfirmDialog
         open={disableMessageOpen}
         onOpenChange={(open) => {
@@ -263,6 +267,6 @@ export function SettingsPanel() {
           rows={3}
         />
       </ConfirmDialog>
-    </>
+    </div>
   )
 }

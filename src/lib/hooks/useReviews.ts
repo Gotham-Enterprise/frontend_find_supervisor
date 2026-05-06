@@ -13,6 +13,8 @@ export const reviewKeys = {
   bySupervisor: (supervisorId: string, page: number, limit: number) =>
     [...reviewKeys.all, 'supervisor', supervisorId, page, limit] as const,
   mine: (limit: number) => [...reviewKeys.all, 'mine', limit] as const,
+  supervisorDashboard: (page: number, limit: number) =>
+    [...reviewKeys.all, 'supervisor-dashboard', page, limit] as const,
 }
 
 /** Fetches paginated reviews for a specific supervisor — used on the Supervisor Detail page. */
@@ -32,6 +34,16 @@ export function useMyReviews(limit = 0) {
     queryKey: reviewKeys.mine(limit),
     queryFn: () => getReviews({ limit }),
     staleTime: 2 * 60 * 1000,
+  })
+}
+
+/** Fetches paginated reviews submitted TO the authenticated supervisor — used on the Reviews dashboard page. */
+export function useSupervisorDashboardReviews(page = 1, limit = 10) {
+  return useQuery({
+    queryKey: reviewKeys.supervisorDashboard(page, limit),
+    queryFn: () => getReviews({ page, limit }),
+    staleTime: 2 * 60 * 1000,
+    placeholderData: (prev) => prev,
   })
 }
 

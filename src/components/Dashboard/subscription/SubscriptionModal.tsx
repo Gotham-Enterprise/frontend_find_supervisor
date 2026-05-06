@@ -28,7 +28,7 @@ import {
 
 /** Fallback features shown on the free plan card if the API returns none. */
 const FREE_PLAN_FALLBACK_FEATURES = [
-  'Receive and respond to supervisee requests',
+  'Receive supervisee requests',
   'Basic profile listing in search',
   'Platform notifications for new activity',
 ]

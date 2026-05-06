@@ -9,7 +9,7 @@ import {
   UserCheck,
   XCircle,
 } from 'lucide-react'
-import { memo } from 'react'
+import { type KeyboardEvent, memo } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -73,25 +73,43 @@ interface NotificationItemProps {
   onAction: (notificationId: string, actionKey: string) => void
   /** The actionKey that was already taken on this notification, if any */
   actedKey?: string
+  /** Row click — typically navigates using `redirectSlug` */
+  onOpen?: () => void
 }
 
 export const NotificationItem = memo(function NotificationItem({
   notification,
   onAction,
   actedKey,
+  onOpen,
 }: NotificationItemProps) {
-  const { id, type, title, message, isRead, createdAt, ctas } = notification
+  const { id, type, title, message, isRead, createdAt, ctas, redirectSlug } = notification
   const config = TYPE_CONFIG[type]
   const Icon = config.icon
 
   const showCtas = Boolean(ctas?.length) && !actedKey
   const confirmationLabel = actedKey ? (ACTION_CONFIRMATION[actedKey] ?? 'Action taken') : null
+  const canOpen = Boolean(onOpen && redirectSlug?.trim())
+
+  function handleRowKeyDown(e: KeyboardEvent) {
+    if (!canOpen) return
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onOpen?.()
+    }
+  }
 
   return (
     <div
+      role={canOpen ? 'button' : undefined}
+      tabIndex={canOpen ? 0 : undefined}
+      onClick={canOpen ? () => onOpen?.() : undefined}
+      onKeyDown={handleRowKeyDown}
+      aria-label={canOpen ? `Open: ${title}` : undefined}
       className={cn(
         'flex gap-3 px-4 py-3 transition-colors hover:bg-muted/40',
         !isRead && 'bg-brand-light/20',
+        canOpen && 'cursor-pointer select-none',
       )}
     >
       {/* Type icon */}
@@ -144,7 +162,10 @@ export const NotificationItem = memo(function NotificationItem({
                       ? 'destructive'
                       : 'outline'
                 }
-                onClick={() => onAction(id, cta.actionKey)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onAction(id, cta.actionKey)
+                }}
               >
                 {cta.label}
               </Button>

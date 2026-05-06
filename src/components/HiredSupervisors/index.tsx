@@ -22,15 +22,15 @@ function HiredSupervisorsCardsSkeleton() {
       {Array.from({ length: 4 }).map((_, i) => (
         <Card key={i} className="gap-0 overflow-hidden rounded-xl py-0 shadow-sm">
           <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
-            <div className="flex min-w-0 gap-3">
+            <div className="flex min-w-0 flex-1 gap-3">
               <Skeleton className="mt-0.5 size-11 shrink-0 rounded-full" />
               <div className="min-w-0 flex-1 space-y-1.5">
                 <Skeleton className="h-4 w-40 max-w-full" />
                 <Skeleton className="h-3 w-full max-w-[14rem]" />
+                <Skeleton className="mt-2 h-5 w-20 rounded-md" />
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <Skeleton className="h-6 w-20 rounded-full" />
+            <div className="flex shrink-0 self-start">
               <Skeleton className="size-8 rounded-md" />
             </div>
           </div>

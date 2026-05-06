@@ -1,6 +1,7 @@
 'use client'
 
 import { Bell, Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 import {
   useMarkAllNotificationsRead,
@@ -11,6 +12,8 @@ import { useTopbarDropdown } from '@/lib/hooks/useTopbarDropdown'
 import { cn } from '@/lib/utils'
 
 import { NotificationPanel } from './NotificationPanel'
+import type { AppNotification } from './types'
+import { resolveNotificationRedirect } from './utils'
 
 /**
  * Self-contained notification bell for the dashboard topbar.
@@ -20,6 +23,7 @@ import { NotificationPanel } from './NotificationPanel'
  * responds instantly without waiting for the next poll cycle.
  */
 export function NotificationBell() {
+  const router = useRouter()
   const { open, toggle, close, containerRef } = useTopbarDropdown()
 
   const { data, isLoading } = useNotifications()
@@ -31,6 +35,19 @@ export function NotificationBell() {
 
   function handleMarkRead(id: string) {
     markRead(id)
+  }
+
+  function handleNotificationOpen(notification: AppNotification) {
+    const slug = notification.redirectSlug?.trim()
+    if (!slug) return
+    markRead(notification.id)
+    close()
+    const target = resolveNotificationRedirect(slug)
+    if (target.kind === 'external') {
+      window.location.assign(target.href)
+      return
+    }
+    router.push(target.pathname)
   }
 
   function handleAction(id: string, actionKey: string) {
@@ -85,6 +102,7 @@ export function NotificationBell() {
             actedMap={{}}
             onMarkRead={handleMarkRead}
             onAction={handleAction}
+            onNotificationOpen={handleNotificationOpen}
             onMarkAllRead={handleMarkAllRead}
             onSeeAll={handleSeeAll}
           />
