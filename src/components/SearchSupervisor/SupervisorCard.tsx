@@ -1,6 +1,6 @@
 'use client'
 
-import { ClockIcon, FileTextIcon, MapPinIcon } from 'lucide-react'
+import { ClockIcon, MapPinIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
@@ -62,7 +62,6 @@ export function SupervisorCard({ supervisor }: SupervisorCardProps) {
     supervisorType,
     yearsOfExperience,
     location,
-    licenseNumber,
     formats,
     accepting,
     bio,
@@ -127,10 +126,6 @@ export function SupervisorCard({ supervisor }: SupervisorCardProps) {
           <span className="flex items-center gap-1">
             <MapPinIcon className="size-3.5 shrink-0" />
             {location}
-          </span>
-          <span className="flex items-center gap-1">
-            <FileTextIcon className="size-3.5 shrink-0" />
-            License: {licenseNumber}
           </span>
           {formats.map((fmt) => (
             <span

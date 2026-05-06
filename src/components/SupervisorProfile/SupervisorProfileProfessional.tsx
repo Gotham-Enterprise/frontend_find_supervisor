@@ -1,5 +1,3 @@
-import { FileTextIcon } from 'lucide-react'
-
 import type { SelectOption } from '@/lib/api/options'
 import { formatDate, resolveOptionLabel, resolveOptionLabels } from '@/lib/utils/profile-formatters'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
@@ -52,7 +50,6 @@ export function SupervisorProfileProfessional({
       <h2 className="mb-2 text-base font-semibold text-[#181818]">License &amp; Credentials</h2>
       <div>
         {profile.licenseType && <Row label="License Type">{licenseTypeLabel}</Row>}
-        {profile.licenseNumber && <Row label="License Number">{profile.licenseNumber}</Row>}
         {statesOfLicensure.length > 0 && (
           <Row label="States of Licensure">
             <TagRow values={statesOfLicensure} />
@@ -61,7 +58,6 @@ export function SupervisorProfileProfessional({
         {profile.licenseExpiration && (
           <Row label="License Expiration">{formatDate(profile.licenseExpiration)}</Row>
         )}
-        {profile.npiNumber && <Row label="NPI Number">{profile.npiNumber}</Row>}
         {profile.yearsOfExperience && (
           <Row label="Years of Experience">{profile.yearsOfExperience}</Row>
         )}
@@ -73,19 +69,6 @@ export function SupervisorProfileProfessional({
         {popLabels.length > 0 && (
           <Row label="Patient Population">
             <TagRow values={popLabels} />
-          </Row>
-        )}
-        {profile.licenseFileName && profile.licenseUrl && (
-          <Row label="License Document">
-            <a
-              href={profile.licenseUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[#006D36] hover:underline"
-            >
-              <FileTextIcon className="size-3.5 shrink-0" />
-              {profile.licenseFileName}
-            </a>
           </Row>
         )}
       </div>

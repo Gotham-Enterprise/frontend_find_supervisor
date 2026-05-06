@@ -7,6 +7,7 @@ import {
   ChevronRight,
   ClipboardList,
   DollarSign,
+  Info,
   type LucideIcon,
   MapPin,
   Monitor,
@@ -15,6 +16,7 @@ import {
 import * as React from 'react'
 import { useState } from 'react'
 
+import { SubscriptionModal } from '@/components/Dashboard/subscription/SubscriptionModal'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -30,12 +32,15 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { isFreePlan } from '@/lib/constants/subscription-plans'
 import {
   useAcceptHire,
   useHiresList,
   useRejectHire,
   useSuperviseeFormOptions,
+  useSupervisorProfile,
   useUserSnackbar,
+  useViewHire,
 } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
@@ -49,12 +54,24 @@ import {
   resolveSupervisorTypeLabel,
 } from '@/lib/utils/profile-formatters'
 import type { HireListItem, HireStatus } from '@/types/hire'
+import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 import { HireStatusBadge } from '../HiredSupervisors/HireStatusBadge'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 10
+
+/** Incoming hires awaiting supervisor action (not yet accepted/rejected). */
+const SUPERVISION_REQUEST_STATUS: HireStatus = 'PENDING'
+
+function hasActivePaidSupervisionSubscription(profile: SupervisorProfileData): boolean {
+  return (
+    profile.user.subscriptions?.some(
+      (s) => (s.status === 'ACTIVE' || s.status === 'TRIALING') && !!s.plan && !isFreePlan(s.plan),
+    ) ?? false
+  )
+}
 
 /** Actions available to the supervisor. Only supervisees can cancel. */
 const ALLOWED_ACTIONS: Record<HireStatus, ReadonlyArray<'accept' | 'reject'>> = {
@@ -64,7 +81,7 @@ const ALLOWED_ACTIONS: Record<HireStatus, ReadonlyArray<'accept' | 'reject'>> = 
   COMPLETED: [],
   CANCELED: [],
   REJECTED: [],
-  REVIEWED: [],
+  REVIEWED: ['accept', 'reject'],
 }
 
 // ─── Detail cell ──────────────────────────────────────────────────────────────
@@ -98,15 +115,15 @@ function SupervisionRequestsSkeleton() {
       {Array.from({ length: 4 }).map((_, i) => (
         <Card key={i} className="gap-0 overflow-hidden rounded-xl py-0 shadow-sm">
           <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
-            <div className="flex min-w-0 gap-3">
+            <div className="flex min-w-0 flex-1 gap-3">
               <Skeleton className="mt-0.5 size-11 shrink-0 rounded-full" />
               <div className="min-w-0 flex-1 space-y-1.5">
                 <Skeleton className="h-4 w-40 max-w-full" />
                 <Skeleton className="h-3 w-full max-w-[14rem]" />
+                <Skeleton className="mt-2 h-5 w-20 rounded-md" />
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <Skeleton className="h-6 w-20 rounded-full" />
+            <div className="flex shrink-0 self-start">
               <Skeleton className="size-8 rounded-md" />
             </div>
           </div>
@@ -135,7 +152,7 @@ function SupervisionRequestsEmpty() {
         </div>
         <p className="text-base font-semibold text-foreground">No supervision requests yet</p>
         <p className="mt-2 max-w-sm text-sm leading-relaxed text-foreground/80">
-          Supervisees who request your supervision will appear here.
+          Pending requests will appear here when supervisees ask you to supervise them.
         </p>
       </div>
     </Card>
@@ -330,18 +347,30 @@ type PendingAction = 'accept' | 'reject' | null
 
 interface RowActionsProps {
   hire: HireListItem
+  showHireDecisions: boolean
 }
 
-function RowActions({ hire }: RowActionsProps) {
+function RowActions({ hire, showHireDecisions }: RowActionsProps) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [rejectionReason, setRejectionReason] = useState('')
   const { showSuccess, showError } = useUserSnackbar()
 
   const allowedActions = ALLOWED_ACTIONS[hire.status] ?? []
+  const visibleActions = showHireDecisions
+    ? allowedActions
+    : allowedActions.filter((a) => a !== 'accept' && a !== 'reject')
 
   const acceptMutation = useAcceptHire()
   const rejectMutation = useRejectHire()
+  const viewMutation = useViewHire()
+
+  function handleViewDetails() {
+    setDetailsOpen(true)
+    if (hire.status === 'PENDING') {
+      viewMutation.mutate(hire.id)
+    }
+  }
 
   const isMutating = acceptMutation.isPending || rejectMutation.isPending
 
@@ -392,18 +421,18 @@ function RowActions({ hire }: RowActionsProps) {
         <DropdownMenuPortal>
           <DropdownMenuPositioner>
             <DropdownMenuPopup>
-              <DropdownMenuItem onClick={() => setDetailsOpen(true)}>View Details</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleViewDetails}>View Details</DropdownMenuItem>
 
-              {allowedActions.length > 0 && <DropdownMenuSeparator />}
+              {visibleActions.length > 0 && <DropdownMenuSeparator />}
 
-              {allowedActions.includes('accept') && (
+              {visibleActions.includes('accept') && (
                 <DropdownMenuItem onClick={() => setPendingAction('accept')}>
                   Accept
                 </DropdownMenuItem>
               )}
-              {allowedActions.includes('reject') && (
+              {visibleActions.includes('reject') && (
                 <>
-                  {allowedActions.includes('accept') && <DropdownMenuSeparator />}
+                  {visibleActions.includes('accept') && <DropdownMenuSeparator />}
                   <DropdownMenuItem destructive onClick={() => setPendingAction('reject')}>
                     Reject
                   </DropdownMenuItem>
@@ -459,7 +488,13 @@ function RowActions({ hire }: RowActionsProps) {
 
 // ─── Request card ─────────────────────────────────────────────────────────────
 
-function SupervisionRequestCard({ hire }: { hire: HireListItem }) {
+function SupervisionRequestCard({
+  hire,
+  showHireDecisions,
+}: {
+  hire: HireListItem
+  showHireDecisions: boolean
+}) {
   const superviseeName = formatDisplayName(hire.supervisee)
   const occupation = hire.supervisee.occupation?.name?.trim()
   const specialty = hire.supervisee.specialty?.name?.trim()
@@ -481,7 +516,7 @@ function SupervisionRequestCard({ hire }: { hire: HireListItem }) {
     <Card className="gap-0 overflow-hidden rounded-xl py-0 shadow-sm">
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
-        <div className="flex min-w-0 gap-3">
+        <div className="flex min-w-0 flex-1 gap-3">
           <UserAvatar
             src={hire.supervisee.profilePhotoUrl}
             name={superviseeName}
@@ -489,18 +524,20 @@ function SupervisionRequestCard({ hire }: { hire: HireListItem }) {
             size="lg"
             className="mt-0.5 shrink-0"
           />
-          <div className="min-w-0">
-            <h3 className="text-sm font-semibold leading-tight tracking-tight text-foreground">
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-sm font-semibold leading-tight tracking-tight text-foreground">
               {superviseeName}
             </h3>
             <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
               {occupationDisplay}
             </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <HireStatusBadge status={hire.status} />
+            </div>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <HireStatusBadge status={hire.status} />
-          <RowActions hire={hire} />
+        <div className="flex shrink-0 self-start">
+          <RowActions hire={hire} showHireDecisions={showHireDecisions} />
         </div>
       </div>
 
@@ -519,47 +556,91 @@ function SupervisionRequestCard({ hire }: { hire: HireListItem }) {
 
 export function SupervisionRequestsPage() {
   const [page, setPage] = useState(1)
-  const { data, isLoading, isError } = useHiresList(page, PAGE_SIZE)
+  const [planModalOpen, setPlanModalOpen] = useState(false)
+  const { data, isLoading, isError } = useHiresList(page, PAGE_SIZE, SUPERVISION_REQUEST_STATUS)
+  const { data: profile, isLoading: profileLoading, isError: profileError } = useSupervisorProfile()
+
+  const showHireDecisions =
+    profile != null &&
+    !profileLoading &&
+    !profileError &&
+    hasActivePaidSupervisionSubscription(profile)
+
+  const showUpgradeCallout =
+    profile != null &&
+    !profileLoading &&
+    !profileError &&
+    !hasActivePaidSupervisionSubscription(profile)
 
   const items = data?.items ?? []
   const totalCount = data?.totalCount ?? 0
   const totalPages = data?.totalPages ?? 1
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-2">
-        <h2 className="text-lg font-semibold tracking-tight text-foreground">Incoming requests</h2>
-        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Supervisees who have asked you to supervise them appear below. Use the menu on any card to
-          view full details, accept, reject, or cancel when allowed.
-        </p>
+    <>
+      <div className="space-y-8">
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">
+            Incoming requests
+          </h2>
+          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            Pending requests appear below (accepted, active, and completed hires are on other
+            pages). Use the menu on any card to view full details, accept, or reject when allowed.
+          </p>
+          {showUpgradeCallout && (
+            <div className="max-w-2xl rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <div className="flex min-w-0 items-start gap-2 sm:items-center">
+                  <Info className="mt-0.5 size-4 shrink-0 text-amber-600 sm:mt-0" aria-hidden />
+                  <p className="text-sm font-medium text-amber-950">
+                    Accepting supervisees is only available for upgraded plans.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="shrink-0 self-stretch sm:self-center"
+                  onClick={() => setPlanModalOpen(true)}
+                >
+                  Upgrade Plan
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {isLoading ? (
+          <SupervisionRequestsSkeleton />
+        ) : isError ? (
+          <SupervisionRequestsError />
+        ) : items.length === 0 ? (
+          <SupervisionRequestsEmpty />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {items.map((hire) => (
+                <SupervisionRequestCard
+                  key={hire.id}
+                  hire={hire}
+                  showHireDecisions={showHireDecisions}
+                />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalCount={totalCount}
+                pageSize={PAGE_SIZE}
+                onPageChange={setPage}
+              />
+            )}
+          </>
+        )}
       </div>
 
-      {isLoading ? (
-        <SupervisionRequestsSkeleton />
-      ) : isError ? (
-        <SupervisionRequestsError />
-      ) : items.length === 0 ? (
-        <SupervisionRequestsEmpty />
-      ) : (
-        <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {items.map((hire) => (
-              <SupervisionRequestCard key={hire.id} hire={hire} />
-            ))}
-          </div>
-
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={page}
-              totalPages={totalPages}
-              totalCount={totalCount}
-              pageSize={PAGE_SIZE}
-              onPageChange={setPage}
-            />
-          )}
-        </>
-      )}
-    </div>
+      <SubscriptionModal open={planModalOpen} onOpenChange={setPlanModalOpen} />
+    </>
   )
 }

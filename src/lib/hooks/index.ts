@@ -1,5 +1,6 @@
 export { useLogin, useLogout } from './useAuth'
 export { categoryKeys, useOccupations } from './useCategories'
+export { useChangePassword } from './useChangePassword'
 export {
   chatKeys,
   useConversationMessages,
@@ -21,6 +22,7 @@ export {
   usePendingRequestsCount,
   useRejectHire,
   useSuperviseeUpcomingSessions,
+  useViewHire,
 } from './useHires'
 export { useCitiesOptions, useMultiStateCityOptions, useStatesOptions } from './useLocationOptions'
 export {

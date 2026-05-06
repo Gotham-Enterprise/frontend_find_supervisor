@@ -37,7 +37,7 @@ import type { Subscription, SubscriptionStatus } from '@/types/supervisor-profil
 // ─── Feature list shared with the dashboard upgrade cards ─────────────────────
 
 const SUPERVISOR_FEATURES = [
-  { label: 'Receive and respond to supervisee requests', premium: false },
+  { label: 'Receive supervisee requests', premium: false },
   { label: 'See visibility into interested supervisees', premium: false },
   { label: 'Basic profile listing in search', premium: false },
   { label: 'Platform notifications for new activity', premium: false },

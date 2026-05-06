@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   MessageCircle,
   Settings,
+  Star,
   UserCheck,
   Users,
 } from 'lucide-react'
@@ -31,6 +32,7 @@ const navItems = [
     supervisorOnly: true,
   },
   { label: 'Messages', href: '/messages', icon: MessageCircle },
+  { label: 'Reviews', href: '/reviews', icon: Star, supervisorOnly: true },
   { label: 'Billing & Invoices', href: '/billing', icon: CreditCard, supervisorOnly: true },
   { label: 'Settings', href: '/settings', icon: Settings },
 ] as const

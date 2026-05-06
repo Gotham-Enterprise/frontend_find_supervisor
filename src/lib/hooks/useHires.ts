@@ -10,14 +10,22 @@ import {
   listHires,
   markHireAsCompleted,
   rejectHire,
+  viewHire,
 } from '@/lib/api/supervision'
-import type { HireSupervisorPayload } from '@/types/hire'
+import type { HireStatus, HireSupervisorPayload } from '@/types/hire'
 
 import { supervisorDetailKeys } from './useSupervisor'
 
 export const hireKeys = {
   all: ['hires'] as const,
-  list: (page: number, limit: number) => [...hireKeys.all, 'list', page, limit] as const,
+  list: (page: number, limit: number, status?: HireStatus | HireStatus[]) =>
+    [
+      ...hireKeys.all,
+      'list',
+      page,
+      limit,
+      Array.isArray(status) ? status.join(',') : (status ?? ''),
+    ] as const,
   pendingCount: () => [...hireKeys.all, 'pending-count'] as const,
 }
 
@@ -43,10 +51,10 @@ export function useHireSupervisor() {
   })
 }
 
-export function useHiresList(page = 1, limit = 10) {
+export function useHiresList(page = 1, limit = 10, status?: HireStatus | HireStatus[]) {
   return useQuery({
-    queryKey: hireKeys.list(page, limit),
-    queryFn: () => listHires(page, limit),
+    queryKey: hireKeys.list(page, limit, status),
+    queryFn: () => listHires(page, limit, status),
     staleTime: 2 * 60 * 1000,
   })
 }
@@ -66,6 +74,16 @@ export function usePendingRequestsCount(enabled = true) {
     queryFn: () => listHires(1, 1, 'PENDING'),
     enabled,
     select: (data) => data.totalCount,
+  })
+}
+
+export function useViewHire() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (hireId: string) => viewHire(hireId),
+    onSuccess: async () => {
+      await invalidateHireRelatedQueries(queryClient)
+    },
   })
 }
 

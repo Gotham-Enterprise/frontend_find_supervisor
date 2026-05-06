@@ -27,14 +27,20 @@ export interface SupervisionNotificationItem {
   notificationAvatarUrl: string | null
 }
 
-export interface NotificationsListResponse {
+/** GET /supervision/notifications — actual backend envelope (see supervision_controller.getNotifications). */
+export interface NotificationsListApiEnvelope {
   success: boolean
-  message: string
-  items: SupervisionNotificationItem[]
-  totalCount: number
-  currentPage: number
-  totalPages: number
-  totalNotifUnread: number
+  data: SupervisionNotificationItem[]
+  metaData: {
+    page: number
+    limit: number
+    totalPages: number
+    totalCount: number
+    currentPageTotalItems: number
+    hasNextPage: boolean
+    hasPreviousPage: boolean
+  }
+  totalNotifUnread?: number
 }
 
 export interface NotificationsListData {
@@ -86,16 +92,25 @@ export function mapApiItemToAppNotification(item: SupervisionNotificationItem): 
 // ---------------------------------------------------------------------------
 
 export async function fetchNotifications(page = 1, limit = 20): Promise<NotificationsListData> {
-  const { data } = await apiClient.get<NotificationsListResponse>('/supervision/notifications', {
-    params: { page, limit },
-  })
+  const { data: body } = await apiClient.get<NotificationsListApiEnvelope>(
+    '/supervision/notifications',
+    {
+      params: { page, limit },
+    },
+  )
+
+  const items = Array.isArray(body.data) ? body.data : []
+  const meta = body.metaData
 
   return {
-    notifications: (data.items ?? []).map(mapApiItemToAppNotification),
-    totalNotifUnread: data.totalNotifUnread,
-    totalCount: data.totalCount,
-    totalPages: data.totalPages,
-    currentPage: data.currentPage,
+    notifications: items.map(mapApiItemToAppNotification),
+    totalNotifUnread:
+      typeof body.totalNotifUnread === 'number'
+        ? body.totalNotifUnread
+        : items.filter((i) => !i.hasRead).length,
+    totalCount: meta?.totalCount ?? items.length,
+    totalPages: meta?.totalPages ?? 1,
+    currentPage: meta?.page ?? page,
   }
 }
 

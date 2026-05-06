@@ -14,6 +14,8 @@ interface NotificationPanelProps {
   actedMap: Record<string, string>
   onMarkRead: (id: string) => void
   onAction: (notificationId: string, actionKey: string) => void
+  /** Optional: open destination from `redirectSlug` (row click) */
+  onNotificationOpen?: (notification: AppNotification) => void
   /** Called when the "See previous notifications" footer is clicked */
   onSeeAll: () => void
   /** Called when the user clicks "Mark all as read". Only shown when there are unread items. */
@@ -65,6 +67,7 @@ export function NotificationPanel({
   actedMap,
   onMarkRead,
   onAction,
+  onNotificationOpen,
   onSeeAll,
   onMarkAllRead,
 }: NotificationPanelProps) {
@@ -121,6 +124,11 @@ export function NotificationPanel({
               notification={notification}
               onAction={handleAction}
               actedKey={actedMap[notification.id]}
+              onOpen={
+                onNotificationOpen && notification.redirectSlug?.trim()
+                  ? () => onNotificationOpen(notification)
+                  : undefined
+              }
             />
           ))
         )}

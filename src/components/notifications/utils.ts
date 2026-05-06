@@ -19,3 +19,20 @@ export function formatRelativeTime(date: Date): string {
 
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
+
+export type NotificationNavigationTarget =
+  | { kind: 'internal'; pathname: string }
+  | { kind: 'external'; href: string }
+
+/**
+ * Turn backend `redirectSlug` values into a client navigation target.
+ * API routes often use a `/supervision/...` prefix; this app serves the dashboard under `/`.
+ */
+export function resolveNotificationRedirect(slug: string): NotificationNavigationTarget {
+  const s = slug.trim()
+  if (!s) return { kind: 'internal', pathname: '/' }
+  if (/^https?:\/\//i.test(s)) return { kind: 'external', href: s }
+  const path = s.startsWith('/') ? s : `/${s}`
+  const pathname = path.replace(/^\/supervision(?=\/)/, '')
+  return { kind: 'internal', pathname }
+}

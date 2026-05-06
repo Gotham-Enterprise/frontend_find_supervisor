@@ -81,10 +81,16 @@ export async function hireSupervisor(payload: HireSupervisorPayload): Promise<Hi
 export async function listHires(
   page = 1,
   limit = 10,
-  status?: HireStatus,
+  status?: HireStatus | HireStatus[],
 ): Promise<HireListResponse> {
+  const statusParam =
+    status === undefined
+      ? {}
+      : {
+          status: Array.isArray(status) ? status.join(',') : status,
+        }
   const { data } = await apiClient.get<ApiResponse<HireListResponse>>('/supervision/hires', {
-    params: { page, limit, ...(status ? { status } : {}) },
+    params: { page, limit, ...statusParam },
   })
   return data.data
 }
@@ -114,6 +120,11 @@ export async function getSuperviseeUpcomingSessions(): Promise<UpcomingSessionIt
     '/supervision/supervisee/upcoming-sessions',
   )
   return data.data
+}
+
+/** PATCH /supervision/hires/:hireId/view — supervisor marks a PENDING request as viewed (REVIEWED). */
+export async function viewHire(hireId: string): Promise<void> {
+  await apiClient.patch(`/supervision/hires/${hireId}/view`)
 }
 
 /** PATCH /supervision/hires/:hireId/accept — supervisor accepts a hire request. */
@@ -188,4 +199,15 @@ export async function resendVerificationEmail(token: string): Promise<ResendEmai
       message: "We couldn't resend the verification email right now. Please try again later.",
     }
   }
+}
+
+export interface ChangePasswordPayload {
+  currentPassword: string
+  newPassword: string
+  confirmPassword: string
+}
+
+/** PUT /api/supervision/change-password — change the authenticated user's password. */
+export async function changePassword(payload: ChangePasswordPayload): Promise<void> {
+  await apiClient.put('/supervision/change-password', payload)
 }

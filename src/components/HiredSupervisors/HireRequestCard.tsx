@@ -82,6 +82,8 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
   const [cancelOpen, setCancelOpen] = useState(false)
   const [completeOpen, setCompleteOpen] = useState(false)
   const [reviewOpen, setReviewOpen] = useState(false)
+  /** True while showing the review sheet immediately after “Mark as completed” (allows skip). */
+  const [postCompleteReviewFlow, setPostCompleteReviewFlow] = useState(false)
   const { showSuccess, showError } = useUserSnackbar()
   const cancelMutation = useCancelHire()
   const completeMutation = useMarkHireAsCompleted()
@@ -112,11 +114,20 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
   const hasReview = !!existingReview
   const canReview = hire.status === 'COMPLETED' && !hasReview
 
+  function handleReviewOpenChange(open: boolean) {
+    setReviewOpen(open)
+    if (!open) {
+      setPostCompleteReviewFlow(false)
+    }
+  }
+
   function handleCompleteConfirm() {
     completeMutation.mutate(hire.id, {
       onSuccess: () => {
-        showSuccess('Supervision marked as completed.')
         setCompleteOpen(false)
+        showSuccess('Supervision marked as completed.')
+        setPostCompleteReviewFlow(true)
+        setReviewOpen(true)
       },
       onError: (err) => {
         showError(parseApiError(err))
@@ -143,31 +154,37 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
       <Card className="gap-0 overflow-hidden rounded-xl py-0 shadow-sm">
         {/* ── Header ─────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
-          {/* Avatar + identity */}
-          <Link
-            href={profileHref}
-            className="flex min-w-0 gap-3 rounded-lg outline-none ring-offset-background transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <UserAvatar
-              src={hire.supervisor.profilePhotoUrl}
-              name={supervisorName}
-              alt={`Profile photo of ${supervisorName}`}
-              size="lg"
-              className="mt-0.5 shrink-0"
-            />
-            <div className="min-w-0 py-0.5">
-              <h3 className="text-sm font-semibold leading-tight tracking-tight text-foreground">
-                {supervisorName}
-              </h3>
-              <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                {occupationDisplay}
-              </p>
+          <div className="flex min-w-0 flex-1 gap-3">
+            <Link
+              href={profileHref}
+              className="mt-0.5 shrink-0 rounded-lg outline-none ring-offset-background transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <UserAvatar
+                src={hire.supervisor.profilePhotoUrl}
+                name={supervisorName}
+                alt={`Profile photo of ${supervisorName}`}
+                size="lg"
+              />
+            </Link>
+            <div className="min-w-0 flex-1">
+              <Link
+                href={profileHref}
+                className="block rounded-lg py-0.5 outline-none ring-offset-background transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <h3 className="truncate text-sm font-semibold leading-tight tracking-tight text-foreground">
+                  {supervisorName}
+                </h3>
+                <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                  {occupationDisplay}
+                </p>
+              </Link>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <HireStatusBadge status={hire.status} />
+              </div>
             </div>
-          </Link>
+          </div>
 
-          {/* Status badge + actions menu */}
-          <div className="flex shrink-0 items-center gap-1">
-            <HireStatusBadge status={hire.status} />
+          <div className="flex shrink-0 self-start">
             <DropdownMenuRoot>
               <DropdownMenuTrigger
                 render={
@@ -206,7 +223,12 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
                     {canReview && (
                       <>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setReviewOpen(true)}>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setPostCompleteReviewFlow(false)
+                            setReviewOpen(true)
+                          }}
+                        >
                           Leave Review
                         </DropdownMenuItem>
                       </>
@@ -214,7 +236,12 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
                     {hasReview && (
                       <>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setReviewOpen(true)}>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setPostCompleteReviewFlow(false)
+                            setReviewOpen(true)
+                          }}
+                        >
                           Edit Review
                         </DropdownMenuItem>
                       </>
@@ -258,9 +285,9 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
 
       <ConfirmDialog
         open={completeOpen}
-        onOpenChange={(open) => !open && setCompleteOpen(false)}
+        onOpenChange={setCompleteOpen}
         title="Mark supervision as completed?"
-        description={`This will mark your supervision with ${supervisorName} as completed. You'll then be able to leave a review. This action cannot be undone.`}
+        description={`This will mark your supervision with ${supervisorName} as completed. You can leave an optional review next, or skip and add one later from this card. This action cannot be undone.`}
         confirmLabel="Mark as Completed"
         isPending={completeMutation.isPending}
         onConfirm={handleCompleteConfirm}
@@ -277,13 +304,14 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
         onConfirm={handleCancelConfirm}
       />
 
-      {(canReview || hasReview) && (
+      {(canReview || hasReview || postCompleteReviewFlow) && (
         <LeaveReviewModal
           open={reviewOpen}
-          onOpenChange={setReviewOpen}
+          onOpenChange={handleReviewOpenChange}
           hireId={hire.id}
           supervisorName={supervisorName}
           existingReview={existingReview}
+          allowSkip={postCompleteReviewFlow && !hasReview}
         />
       )}
     </>
