@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import axios from 'axios'
 import { AlertCircle } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { type Resolver, useForm } from 'react-hook-form'
 
 import { SupervisorProfileEditFields } from '@/components/profile-edit/SupervisorProfileEditFields'
 import { Button } from '@/components/ui/button'
@@ -13,8 +13,8 @@ import { Form } from '@/components/ui/form'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useUserSnackbar } from '@/lib/contexts/UserSnackbarContext'
 import {
+  createEditSupervisorProfileSchema,
   type EditSupervisorProfileFormValues,
-  editSupervisorProfileSchema,
   getDefaultSupervisorProfileFormValues,
   supervisorProfileFormValuesToPayload,
 } from '@/lib/forms/supervisor-profile-edit'
@@ -82,16 +82,22 @@ function SupervisorMyProfileEditor({
     [cancelLocationNonce, profile.user.state, profile.user.city, profile.user.zipcode],
   )
 
+  const editSchema = useMemo(() => createEditSupervisorProfileSchema(profile), [profile])
+
   const form = useForm<EditSupervisorProfileFormValues>({
-    resolver: zodResolver(editSupervisorProfileSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
+    resolver: zodResolver(editSchema) as Resolver<EditSupervisorProfileFormValues>,
     defaultValues: getDefaultSupervisorProfileFormValues(profile),
   })
 
   useEffect(() => {
     form.reset(getDefaultSupervisorProfileFormValues(profile))
+    queueMicrotask(() => void form.trigger())
   }, [profile, form])
 
   const isSubmitting = form.formState.isSubmitting || mutation.isPending
+  const { isValid } = form.formState
 
   async function onSubmit(values: EditSupervisorProfileFormValues) {
     try {
@@ -131,7 +137,7 @@ function SupervisorMyProfileEditor({
           <Button type="button" variant="outline" disabled={isSubmitting} onClick={handleCancel}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting || !isValid}>
             {isSubmitting ? 'Saving…' : 'Save changes'}
           </Button>
         </div>

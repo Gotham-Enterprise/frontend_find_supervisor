@@ -9,6 +9,7 @@ import { useFormContext } from 'react-hook-form'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input, type InputProps } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { capitalizePersonNameWords } from '@/lib/utils/person-name'
 
 export type FormInputFieldProps<
   TFieldValues extends FieldValues,
@@ -43,11 +44,16 @@ export type FormInputFieldProps<
    */
   passwordToggle?: boolean
   /**
-   * For `type="number"`: `onChange` uses `e.target.valueAsNumber` (matches prior signup handlers).
+   * For `type="number"`: `onChange` uses `e.target.valueAsNumber`, except empty input maps to
+   * `undefined` (avoid storing NaN).
    */
   numberValue?: boolean
   /** Call `clearErrors(name)` after each change. */
   clearErrorsOnChange?: boolean
+  /**
+   * Title-case each word as the user types (full name fields). Ignored when `numberValue` is true.
+   */
+  autoCapitalizePersonName?: boolean
 }
 
 export function FormInputField<
@@ -76,6 +82,7 @@ export function FormInputField<
   passwordToggle,
   numberValue,
   clearErrorsOnChange,
+  autoCapitalizePersonName,
 }: FormInputFieldProps<TFieldValues, TName>) {
   const { clearErrors } = useFormContext<TFieldValues>()
   const [showPassword, setShowPassword] = useState(false)
@@ -111,7 +118,12 @@ export function FormInputField<
                 : field.value
             }
             onChange={(e) => {
-              field.onChange(e.target.valueAsNumber)
+              const raw = e.target.value
+              if (raw === '') {
+                field.onChange(undefined)
+              } else {
+                field.onChange(e.target.valueAsNumber)
+              }
               if (clearErrorsOnChange) clearErrors(name)
             }}
           />
@@ -132,6 +144,12 @@ export function FormInputField<
             value={
               normalizeEmptyToString ? (field.value ?? '') : (field.value as string | undefined)
             }
+            onChange={(e) => {
+              const raw = e.target.value
+              const next = autoCapitalizePersonName ? capitalizePersonNameWords(raw) : raw
+              field.onChange(next)
+              if (clearErrorsOnChange) clearErrors(name)
+            }}
           />
         )
 

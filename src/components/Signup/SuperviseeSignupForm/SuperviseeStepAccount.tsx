@@ -68,6 +68,7 @@ export function SuperviseeStepAccount({
           label="Full Name"
           rules={superviseeFieldRules('fullName')}
           placeholder="Enter your full name"
+          autoCapitalizePersonName
           isSubmitting={isSubmitting}
           required
         />

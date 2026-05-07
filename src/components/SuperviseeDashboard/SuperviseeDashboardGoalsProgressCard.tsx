@@ -55,7 +55,7 @@ export function SuperviseeDashboardGoalsProgressCard({
                   )}
                   {step.status === 'current' && (
                     <Link
-                      href="/profile"
+                      href={step.ctaHref ?? '/profile'}
                       className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground"
                     >
                       Start →

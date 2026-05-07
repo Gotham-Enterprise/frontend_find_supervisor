@@ -2,13 +2,22 @@
 
 import { useMemo, useState } from 'react'
 
-import { useMergedSpecialtyOptions, useOccupations, useSupervisorSearch } from '@/lib/hooks'
+import {
+  useAvailabilityOptions,
+  useLicenseTypeOptions,
+  useMergedSpecialtyOptions,
+  useOccupations,
+  useStatesOptions,
+  useSuperviseeProfile,
+  useSupervisorSearch,
+} from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 
 import { DEFAULT_FILTERS, SUPERVISOR_SEARCH_PAGE_SIZE } from './helpers'
 import { SearchSupervisorFilters } from './SearchSupervisorFilters'
 import { SearchSupervisorHeader } from './SearchSupervisorHeader'
 import { SearchSupervisorResults } from './SearchSupervisorResults'
+import { mergeSuperviseeProfileIntoSearchFilters } from './superviseeSearchDefaults'
 import type { SortOption, SupervisorSearchFilters, SupervisorSearchResult } from './types'
 
 function sortSupervisorsLocal(
@@ -39,6 +48,42 @@ export function SearchSupervisorPage() {
   const [appliedFilters, setAppliedFilters] = useState<SupervisorSearchFilters>(DEFAULT_FILTERS)
   const [sortBy, setSortBy] = useState<SortOption>('best_match')
   const [page, setPage] = useState(1)
+  const [defaultsSeeded, setDefaultsSeeded] = useState(false)
+
+  const { data: superviseeProfile, isFetched: superviseeProfileFetched } = useSuperviseeProfile()
+  const licenseTypesQuery = useLicenseTypeOptions()
+  const statesQuery = useStatesOptions()
+  const availabilityQuery = useAvailabilityOptions()
+
+  const licenseTypeOptions = useMemo(() => licenseTypesQuery.data ?? [], [licenseTypesQuery.data])
+  const stateOptions = useMemo(() => statesQuery.data ?? [], [statesQuery.data])
+  const availabilityOptions = useMemo(() => availabilityQuery.data ?? [], [availabilityQuery.data])
+
+  const optionsReady =
+    superviseeProfileFetched &&
+    licenseTypesQuery.isFetched &&
+    statesQuery.isFetched &&
+    availabilityQuery.isFetched
+
+  const profileMergedDefaults = useMemo(
+    () =>
+      mergeSuperviseeProfileIntoSearchFilters(
+        superviseeProfile ?? undefined,
+        DEFAULT_FILTERS,
+        licenseTypeOptions,
+        stateOptions,
+        availabilityOptions,
+      ),
+    [superviseeProfile, licenseTypeOptions, stateOptions, availabilityOptions],
+  )
+
+  // Seed filters once option lists + profile are ready. Applying during render avoids
+  // react-hooks/set-state-in-effect; using defaultsSeeded (not a ref) satisfies react-hooks/refs.
+  if (optionsReady && !defaultsSeeded) {
+    setFilters(profileMergedDefaults)
+    setAppliedFilters(profileMergedDefaults)
+    setDefaultsSeeded(true)
+  }
 
   const { data: occupationsRes } = useOccupations({ limit: 0 })
   const { options: appliedSpecialtyOptions } = useMergedSpecialtyOptions(
@@ -69,7 +114,10 @@ export function SearchSupervisorPage() {
     [page, appliedKeyword, appliedFilters, occupationNames, specialtyNames],
   )
 
-  const { data, isLoading, isError, error, refetch } = useSupervisorSearch(searchInput)
+  const { data, isLoading, isError, error, refetch } = useSupervisorSearch(
+    searchInput,
+    defaultsSeeded,
+  )
 
   const supervisors = useMemo(() => {
     const raw = data?.results ?? []
@@ -98,16 +146,30 @@ export function SearchSupervisorPage() {
   }
 
   function handleResetSearch() {
-    setFilters(DEFAULT_FILTERS)
-    setAppliedFilters(DEFAULT_FILTERS)
+    const cleared = mergeSuperviseeProfileIntoSearchFilters(
+      superviseeProfile ?? undefined,
+      DEFAULT_FILTERS,
+      licenseTypeOptions,
+      stateOptions,
+      availabilityOptions,
+    )
+    setFilters(cleared)
+    setAppliedFilters(cleared)
     setKeyword('')
     setAppliedKeyword('')
     setPage(1)
   }
 
   function handleClearFilterPanel() {
-    setFilters(DEFAULT_FILTERS)
-    setAppliedFilters(DEFAULT_FILTERS)
+    const cleared = mergeSuperviseeProfileIntoSearchFilters(
+      superviseeProfile ?? undefined,
+      DEFAULT_FILTERS,
+      licenseTypeOptions,
+      stateOptions,
+      availabilityOptions,
+    )
+    setFilters(cleared)
+    setAppliedFilters(cleared)
     setPage(1)
   }
 
@@ -142,7 +204,7 @@ export function SearchSupervisorPage() {
             page={page}
             pageSize={SUPERVISOR_SEARCH_PAGE_SIZE}
             sortBy={sortBy}
-            isLoading={isLoading}
+            isLoading={!defaultsSeeded || isLoading}
             errorMessage={errorMessage}
             onRetry={() => void refetch()}
             onPageChange={setPage}
