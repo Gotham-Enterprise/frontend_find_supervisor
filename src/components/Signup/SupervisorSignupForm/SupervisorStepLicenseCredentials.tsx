@@ -118,7 +118,7 @@ export function SupervisorStepLicenseCredentials({
           name="npiNumber"
           label="NPI Number"
           rules={supervisorFieldRules('npiNumber')}
-          placeholder="Optional"
+          placeholder="Enter your NPI Number"
           maxLength={20}
           isSubmitting={isSubmitting}
         />

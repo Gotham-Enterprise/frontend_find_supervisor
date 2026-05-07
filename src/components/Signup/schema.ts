@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
+
 // ─── Shared options ──────────────────────────────────────────────────────────
 
 export const yearsOfExperienceOptions = [
@@ -83,9 +85,10 @@ export const supervisorSchema = accountSchema.extend({
   supervisionFeeType: z.enum(['HOURLY', 'MONTHLY'], {
     message: 'Please select a fee type',
   }),
-  supervisionFeeAmount: z
-    .number({ message: 'Fee amount is required' })
-    .min(1, 'Fee amount must be at least 1'),
+  supervisionFeeAmount: z.preprocess(
+    normalizeNumberFieldInput,
+    z.number('Please enter a fee amount').min(1, 'Fee amount must be at least $1'),
+  ),
 
   // Profile photo
   uploadProfilePhoto: z.any().refine((val) => val instanceof File, 'Please upload a profile photo'),

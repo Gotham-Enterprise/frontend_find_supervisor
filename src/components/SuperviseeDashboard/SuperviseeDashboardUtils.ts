@@ -103,16 +103,19 @@ export function getGoalSteps(
       label: 'Verify your email',
       description: 'Confirm your email address',
       status: emailVerified ? 'done' : 'current',
+      ctaHref: '/profile',
     },
     {
       label: 'Complete your profile',
       description: 'Add your supervision goals and license info',
       status: profileStepDone ? 'done' : emailVerified ? 'current' : 'upcoming',
+      ctaHref: '/profile',
     },
     {
       label: 'Find your first supervisor',
       description: 'Browse verified supervisors and send a request',
       status: hasMetFirstSupervisorGoal ? 'done' : readyToFindSupervisor ? 'current' : 'upcoming',
+      ctaHref: '/find-supervisors',
     },
   ]
 }

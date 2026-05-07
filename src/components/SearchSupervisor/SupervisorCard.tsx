@@ -143,19 +143,25 @@ export function SupervisorCard({ supervisor }: SupervisorCardProps) {
         {/* Bio */}
         <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{bio}</p>
 
-        {/* Tags */}
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          {specialties.map((tag) => (
-            <Badge key={tag} variant="outline" className="text-xs">
-              {tag}
-            </Badge>
-          ))}
-          {patientPopulation.length > 0 && (
-            <span className="ml-1 text-xs text-muted-foreground">
-              Population: {patientPopulation.join(', ')}
-            </span>
-          )}
-        </div>
+        {/* Tags & population */}
+        {(specialties.length > 0 || patientPopulation.length > 0) && (
+          <div className="mt-3 space-y-2">
+            {specialties.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {specialties.map((tag) => (
+                  <Badge key={tag} variant="outline" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {patientPopulation.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Population: {patientPopulation.join(', ')}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

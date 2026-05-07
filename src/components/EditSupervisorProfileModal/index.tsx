@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useMemo } from 'react'
-import { useForm } from 'react-hook-form'
+import { type Resolver, useForm } from 'react-hook-form'
 
 import { SupervisorProfileEditFields } from '@/components/profile-edit/SupervisorProfileEditFields'
 import { Button } from '@/components/ui/button'
@@ -10,8 +10,8 @@ import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import { Form } from '@/components/ui/form'
 import { useUser } from '@/lib/contexts/UserContext'
 import {
+  createEditSupervisorProfileSchema,
   type EditSupervisorProfileFormValues,
-  editSupervisorProfileSchema,
   getDefaultSupervisorProfileFormValues,
   supervisorProfileFormValuesToPayload,
 } from '@/lib/forms/supervisor-profile-edit'
@@ -44,16 +44,21 @@ export function EditSupervisorProfileModal({
     [open, profile.user.state, profile.user.city, profile.user.zipcode],
   )
 
+  const editSchema = useMemo(() => createEditSupervisorProfileSchema(profile), [profile])
+
   const form = useForm<EditSupervisorProfileFormValues>({
-    resolver: zodResolver(editSupervisorProfileSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
+    resolver: zodResolver(editSchema) as Resolver<EditSupervisorProfileFormValues>,
     defaultValues: getDefaultSupervisorProfileFormValues(profile),
   })
 
   useEffect(() => {
     if (open) {
       form.reset(getDefaultSupervisorProfileFormValues(profile))
+      queueMicrotask(() => void form.trigger())
     }
-  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, profile.updatedAt, form, profile])
 
   async function onSubmit(values: EditSupervisorProfileFormValues) {
     await mutation.mutateAsync(supervisorProfileFormValuesToPayload(values))
@@ -61,6 +66,7 @@ export function EditSupervisorProfileModal({
   }
 
   const isSubmitting = form.formState.isSubmitting || mutation.isPending
+  const { isValid } = form.formState
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
@@ -89,7 +95,7 @@ export function EditSupervisorProfileModal({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || !isValid}>
                 {isSubmitting ? 'Saving…' : 'Save Changes'}
               </Button>
             </div>

@@ -13,9 +13,10 @@ export const supervisorSearchKeys = {
   query: (input: SupervisorSearchQueryInput) => [...supervisorSearchKeys.all, input] as const,
 }
 
-export function useSupervisorSearch(input: SupervisorSearchQueryInput) {
+export function useSupervisorSearch(input: SupervisorSearchQueryInput, enabled = true) {
   return useQuery({
     queryKey: supervisorSearchKeys.query(input),
     queryFn: () => fetchSupervisorSearch(buildSupervisorSearchParams(input)),
+    enabled,
   })
 }

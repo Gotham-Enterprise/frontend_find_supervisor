@@ -58,7 +58,7 @@ export const YEARS_OF_EXPERIENCE_OPTIONS = [
 export const SORT_OPTIONS = [
   { label: 'Best Match', value: 'best_match' },
   { label: 'Most Reviewed', value: 'most_reviewed' },
-  { label: 'Most Experience', value: 'experience_desc' },
+  { label: 'Most Experienced', value: 'experience_desc' },
 ]
 
 export const AVATAR_COLORS = [

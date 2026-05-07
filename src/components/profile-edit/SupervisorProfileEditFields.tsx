@@ -94,7 +94,9 @@ export function SupervisorProfileEditFields({
           name="uploadProfilePhoto"
           render={({ field }) => (
             <FormItem className="flex flex-col items-center gap-1">
-              <FormLabel>Profile Photo</FormLabel>
+              <FormLabel>
+                Profile Photo <span className="text-destructive">*</span>
+              </FormLabel>
               <FormControl>
                 <ProfilePhotoUpload
                   value={field.value}
@@ -121,12 +123,14 @@ export function SupervisorProfileEditFields({
             label="Full Name"
             required
             placeholder="Jane Smith"
+            autoCapitalizePersonName
             isSubmitting={isSubmitting}
           />
           <FormInputField
             control={form.control}
             name="contactNumber"
             label="Contact Number"
+            required
             placeholder="+1 (555) 000-0000"
             isSubmitting={isSubmitting}
           />
@@ -189,6 +193,7 @@ export function SupervisorProfileEditFields({
             control={form.control}
             name="zipcode"
             label="Zipcode"
+            required
             placeholder="10001"
             isSubmitting={isSubmitting}
           />
@@ -212,6 +217,7 @@ export function SupervisorProfileEditFields({
             control={form.control}
             name="occupationId"
             label="Occupation"
+            required
             options={occupationOptions ?? []}
             placeholder="Select occupation"
             isSubmitting={isSubmitting}
@@ -239,6 +245,7 @@ export function SupervisorProfileEditFields({
             control={form.control}
             name="licenseType"
             label="License Type"
+            required
             options={licenseTypeOptions}
             placeholder="Select license type"
             isSubmitting={isSubmitting}
@@ -248,6 +255,7 @@ export function SupervisorProfileEditFields({
             control={form.control}
             name="licenseNumber"
             label="License Number"
+            required
             placeholder="LIC-12345"
             isSubmitting={isSubmitting}
           />
@@ -257,6 +265,7 @@ export function SupervisorProfileEditFields({
             control={form.control}
             name="licenseExpiration"
             label="License Expiration"
+            required
             type="date"
             isSubmitting={isSubmitting}
           />
@@ -264,6 +273,7 @@ export function SupervisorProfileEditFields({
             control={form.control}
             name="yearsOfExperience"
             label="Years of Experience"
+            required
             placeholder="e.g. 5 – 10 years"
             isSubmitting={isSubmitting}
           />
@@ -280,7 +290,9 @@ export function SupervisorProfileEditFields({
           name="stateOfLicensure"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>States of Licensure</FormLabel>
+              <FormLabel>
+                States of Licensure <span className="text-destructive">*</span>
+              </FormLabel>
               <FormControl>
                 <TagInput
                   options={stateOptions}
@@ -299,7 +311,9 @@ export function SupervisorProfileEditFields({
           name="certification"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Certifications</FormLabel>
+              <FormLabel>
+                Certifications <span className="text-destructive">*</span>
+              </FormLabel>
               <FormControl>
                 <TagInput
                   options={certificationOptions}
@@ -324,7 +338,9 @@ export function SupervisorProfileEditFields({
           name="patientPopulation"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Patient Population</FormLabel>
+              <FormLabel>
+                Patient Population <span className="text-destructive">*</span>
+              </FormLabel>
               <FormControl>
                 <TagInput
                   options={patientPopulationOptions}
@@ -343,6 +359,7 @@ export function SupervisorProfileEditFields({
             control={form.control}
             name="supervisionFormat"
             label="Supervision Format"
+            required
             options={SUPERVISOR_PROFILE_FORMAT_OPTIONS}
             placeholder="Select format"
             isSubmitting={isSubmitting}
@@ -352,6 +369,7 @@ export function SupervisorProfileEditFields({
             control={form.control}
             name="availability"
             label="Availability"
+            required
             options={availabilityOptions}
             placeholder="Select availability"
             isSubmitting={isSubmitting}
@@ -363,6 +381,7 @@ export function SupervisorProfileEditFields({
             control={form.control}
             name="supervisionFeeType"
             label="Fee Type"
+            required
             options={SUPERVISOR_PROFILE_FEE_TYPE_OPTIONS}
             placeholder="Select fee type"
             isSubmitting={isSubmitting}
@@ -372,6 +391,7 @@ export function SupervisorProfileEditFields({
             control={form.control}
             name="supervisionFeeAmount"
             label="Fee Amount ($)"
+            required
             type="number"
             numberValue
             min={0}
@@ -411,7 +431,9 @@ export function SupervisorProfileEditFields({
           name="professionalSummary"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Professional Summary</FormLabel>
+              <FormLabel>
+                Professional Summary <span className="text-destructive">*</span>
+              </FormLabel>
               <FormControl>
                 <Textarea
                   {...field}
@@ -430,7 +452,9 @@ export function SupervisorProfileEditFields({
           name="describeYourself"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Describe Yourself</FormLabel>
+              <FormLabel>
+                Describe Yourself <span className="text-destructive">*</span>
+              </FormLabel>
               <FormControl>
                 <Textarea
                   {...field}
