@@ -63,7 +63,7 @@ import { HireStatusBadge } from '../HiredSupervisors/HireStatusBadge'
 const PAGE_SIZE = 10
 
 /** Incoming hires awaiting supervisor action (not yet accepted/rejected). */
-const SUPERVISION_REQUEST_STATUS: HireStatus = 'PENDING'
+const SUPERVISION_REQUEST_STATUS: HireStatus[] = ['PENDING', 'REVIEWED']
 
 function hasActivePaidSupervisionSubscription(profile: SupervisorProfileData): boolean {
   return (

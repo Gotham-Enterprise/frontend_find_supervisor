@@ -7,6 +7,7 @@ export type ChatHireStatus =
   | 'COMPLETED'
   | 'CANCELED'
   | 'REJECTED'
+  | 'REVIEWED'
 
 export interface ChatParticipant {
   id: string
