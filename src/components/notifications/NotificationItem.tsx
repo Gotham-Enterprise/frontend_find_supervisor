@@ -49,6 +49,11 @@ const TYPE_CONFIG: Record<NotificationType, TypeConfig> = {
     iconColor: 'text-blue-500',
     iconBg: 'bg-blue-50',
   },
+  supervision_new_message: {
+    icon: MessageCircle,
+    iconColor: 'text-blue-500',
+    iconBg: 'bg-blue-50',
+  },
   session_reminder: {
     icon: Calendar,
     iconColor: 'text-amber-600',

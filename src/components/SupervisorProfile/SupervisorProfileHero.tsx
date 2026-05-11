@@ -5,9 +5,13 @@ import { Button } from '@/components/ui/button'
 import { DisabledWithTooltip } from '@/components/ui/tooltip'
 import { isSuperviseeRole } from '@/lib/auth/roles'
 import { useUser } from '@/lib/contexts/UserContext'
-import { useConversations, useCreateOrGetConversation } from '@/lib/hooks/useChat'
-import { useSuperviseeProfile } from '@/lib/hooks/useSuperviseeProfile'
-import { useSupervisionChatSocket } from '@/lib/hooks/useSupervisionChatSocket'
+import {
+  useConversations,
+  useCreateOrGetConversation,
+  useSuperviseeProfile,
+  useSupervisionChatSocket,
+  useSupervisorReviews,
+} from '@/lib/hooks'
 import { formatDisplayName, getInitials } from '@/lib/utils/profile-formatters'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
@@ -15,6 +19,8 @@ import { HireSupervisorModal } from './HireSupervisorModal'
 
 interface SupervisorProfileHeroProps {
   profile: SupervisorProfileData
+  /** Same id as the profile URL segment — passed to GET /supervision/reviews. */
+  supervisorId: string
 }
 
 function StarIcon({ filled }: { filled: boolean }) {
@@ -60,17 +66,27 @@ function ProfileAvatar({
   )
 }
 
-// Dummy rating — replace with real data when the API supports reviews
-const DUMMY_RATING = 4.8
-const DUMMY_REVIEW_COUNT = 100
+function averageRating(reviews: { rating: number }[]): number {
+  if (!reviews.length) return 0
+  return reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+}
 
-export function SupervisorProfileHero({ profile }: SupervisorProfileHeroProps) {
+export function SupervisorProfileHero({ profile, supervisorId }: SupervisorProfileHeroProps) {
   const [hireModalOpen, setHireModalOpen] = useState(false)
   const { user } = useUser()
   const router = useRouter()
   const { data: superviseeProfile } = useSuperviseeProfile()
   const { mutate: createOrGetConversation, isPending: isStartingChat } =
     useCreateOrGetConversation()
+
+  const {
+    data: reviewsData,
+    isLoading: reviewsLoading,
+    isError: reviewsError,
+  } = useSupervisorReviews(supervisorId)
+  const reviewItems = reviewsData?.items ?? []
+  const reviewTotalCount = reviewsData?.totalCount ?? 0
+  const overallRating = averageRating(reviewItems)
 
   // Check if there's an existing conversation with this supervisor (requires a hire to exist)
   const { data: conversations } = useConversations()
@@ -108,7 +124,7 @@ export function SupervisorProfileHero({ profile }: SupervisorProfileHeroProps) {
   const occupation = profile.user.occupation?.name ?? profile.occupation?.name
   const specialty = profile.user.specialty?.name ?? profile.specialty?.name
   const subline = [occupation, specialty].filter(Boolean).join(' · ')
-  const filledStars = Math.round(DUMMY_RATING)
+  const filledStars = Math.round(overallRating)
 
   return (
     <>
@@ -130,15 +146,30 @@ export function SupervisorProfileHero({ profile }: SupervisorProfileHeroProps) {
 
           {subline && <p className="text-sm text-[#6B7280]">{subline}</p>}
 
-          {/* Stars */}
-          <div className="flex items-center gap-1.5">
-            <div className="flex items-center gap-0.5">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <StarIcon key={i} filled={i < filledStars} />
-              ))}
-            </div>
-            <span className="text-sm font-medium text-[#181818]">{DUMMY_RATING}</span>
-            <span className="text-sm text-[#6B7280]">· {DUMMY_REVIEW_COUNT} reviews</span>
+          {/* Rating — from GET /supervision/reviews (same source as Reviews section) */}
+          <div className="flex min-h-[22px] items-center gap-1.5">
+            {reviewsLoading && <span className="text-sm text-[#6B7280]">Loading reviews…</span>}
+            {reviewsError && !reviewsLoading && (
+              <span className="text-sm text-[#6B7280]">Could not load reviews.</span>
+            )}
+            {!reviewsLoading && !reviewsError && reviewTotalCount === 0 && (
+              <span className="text-sm text-[#6B7280]">No reviews yet.</span>
+            )}
+            {!reviewsLoading && !reviewsError && reviewTotalCount > 0 && (
+              <>
+                <div className="flex items-center gap-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <StarIcon key={i} filled={i < filledStars} />
+                  ))}
+                </div>
+                <span className="text-sm font-medium text-[#181818]">
+                  {overallRating.toFixed(1)}
+                </span>
+                <span className="text-sm text-[#6B7280]">
+                  · {reviewTotalCount} review{reviewTotalCount !== 1 ? 's' : ''}
+                </span>
+              </>
+            )}
           </div>
         </div>
 

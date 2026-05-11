@@ -42,7 +42,7 @@ export function Sidebar() {
   const { user } = useUser()
   const { data: pendingCount } = usePendingRequestsCount(!isSuperviseeRole(user?.role))
   const { data: conversations = [] } = useConversations()
-  const totalUnreadMessages = conversations.reduce((sum, c) => sum + (c.unreadCount ?? 0), 0)
+  const totalUnreadMessages = conversations.filter((c) => (c.unreadCount ?? 0) > 0).length
 
   const visibleNavItems = navItems.filter((item) => {
     if ('superviseeOnly' in item && item.superviseeOnly) {

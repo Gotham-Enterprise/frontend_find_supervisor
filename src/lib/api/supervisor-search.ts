@@ -1,4 +1,5 @@
 import type {
+  SortOption,
   SupervisionFormat,
   SupervisorSearchFilters,
   SupervisorSearchResult,
@@ -62,6 +63,7 @@ export interface SupervisorSearchQueryInput {
   occupationNames: string[]
   /** Resolved specialty names for API (comma-joined). */
   specialtyNames: string[]
+  sortBy?: SortOption
 }
 
 function trimOrEmpty(s: string | undefined): string {
@@ -101,13 +103,24 @@ function resolveSupervisionFormat(f: SupervisorSearchFilters): string | undefine
  * Omits empty values; comma-joins multi-value fields per API contract.
  * Always sends acceptingSupervisees (true/false) so the backend receives an explicit filter.
  */
+/** Maps UI SortOption values to the API's sortBy param values. */
+const SORT_OPTION_TO_API: Partial<Record<SortOption, string>> = {
+  best_match: 'bestMatch',
+  most_reviewed: 'mostReviewed',
+  experience_desc: 'mostExperienced',
+}
+
 export function buildSupervisorSearchParams(
   input: SupervisorSearchQueryInput,
 ): Record<string, string | number | boolean> {
-  const { page, limit, keywords, filters, occupationNames, specialtyNames } = input
+  const { page, limit, keywords, filters, occupationNames, specialtyNames, sortBy } = input
   const params: Record<string, string | number | boolean> = {
     page,
     limit,
+  }
+
+  if (sortBy && SORT_OPTION_TO_API[sortBy]) {
+    params.sortBy = SORT_OPTION_TO_API[sortBy]!
   }
 
   appendIfNonEmpty(params, 'keywords', keywords)

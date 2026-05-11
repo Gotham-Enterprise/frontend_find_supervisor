@@ -282,7 +282,7 @@ export function SupervisorProfileEditFields({
           control={form.control}
           name="npiNumber"
           label="NPI Number"
-          placeholder="1234567890"
+          placeholder="Enter your NPI Number"
           isSubmitting={isSubmitting}
         />
         <FormField

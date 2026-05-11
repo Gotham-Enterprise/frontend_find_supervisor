@@ -18,25 +18,25 @@ export const SUPERVISEE_PROFILE_BUDGET_TYPE_OPTIONS = [
 export const editSuperviseeProfileSchema = z
   .object({
     fullName: z.string().min(1, 'Full name is required').max(100),
-    contactNumber: z.string().optional(),
+    contactNumber: z.string().min(1, 'Contact number is required'),
     city: z.string().min(1, 'City is required'),
     state: z.string().min(1, 'State is required'),
     zipcode: z
       .string()
+      .min(5, 'Zipcode must be at least 5 digits')
       .max(10)
-      .optional()
-      .refine((v) => !v || /^\d{5}(-\d{4})?$/.test(v), 'Enter a valid US zipcode'),
-    occupationId: z.string().optional(),
+      .regex(/^\d{5}(-\d{4})?$/, 'Enter a valid US zipcode'),
+    occupationId: z.string().min(1, 'Occupation is required'),
     specialtyId: z.string().optional(),
-    stateOfLicensure: z.array(z.string()).optional(),
-    typeOfSupervisorNeeded: z.string().optional(),
-    howSoonLooking: z.string().optional(),
+    stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
+    typeOfSupervisorNeeded: z.string().min(1, 'Type of supervisor is required'),
+    howSoonLooking: z.string().min(1, 'Please select how soon you need a supervisor'),
     lookingDate: z.string().optional(),
-    preferredFormat: z.string().optional(),
-    availability: z.string().optional(),
-    idealSupervisor: z.string().max(500).optional(),
-    stateTheyAreLookingIn: z.string().optional(),
-    budgetRangeType: z.string().optional(),
+    preferredFormat: z.string().min(1, 'Preferred format is required'),
+    availability: z.string().min(1, 'Availability is required'),
+    idealSupervisor: z.string().min(1, 'Description of ideal supervisor is required').max(500),
+    stateTheyAreLookingIn: z.string().min(1, 'Please select the state you are looking in'),
+    budgetRangeType: z.string().min(1, 'Budget type is required'),
     budgetRangeStart: z.number().min(0).optional(),
     budgetRangeEnd: z.number().min(0).optional(),
     uploadProfilePhoto: z.any().optional(),

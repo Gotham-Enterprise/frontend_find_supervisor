@@ -116,7 +116,7 @@ export function SuperviseeProfileEditFields({
             name="fullName"
             label="Full Name"
             required
-            placeholder="Jane Smith"
+            placeholder="Enter Full Name"
             autoCapitalizePersonName
             isSubmitting={isSubmitting}
           />
@@ -126,6 +126,7 @@ export function SuperviseeProfileEditFields({
             label="Contact Number"
             placeholder="+1 (555) 000-0000"
             isSubmitting={isSubmitting}
+            required
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -188,6 +189,7 @@ export function SuperviseeProfileEditFields({
             label="Zipcode"
             placeholder="10001"
             isSubmitting={isSubmitting}
+            required
           />
         </div>
       </fieldset>
@@ -204,7 +206,7 @@ export function SuperviseeProfileEditFields({
             options={occupationOptions ?? []}
             placeholder="Select occupation"
             isSubmitting={isSubmitting}
-            emptySentinel={{ value: '__none__', label: 'None' }}
+            required
           />
           <FormSelectField
             control={form.control}
@@ -222,7 +224,9 @@ export function SuperviseeProfileEditFields({
           name="stateOfLicensure"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>States of Licensure</FormLabel>
+              <FormLabel>
+                States of Licensure <span className="text-destructive">*</span>
+              </FormLabel>
               <FormControl>
                 <TagInput
                   options={stateOptions}
@@ -250,7 +254,7 @@ export function SuperviseeProfileEditFields({
             options={supervisorTypeOptions}
             placeholder="Select supervisor type"
             isSubmitting={isSubmitting}
-            emptySentinel={{ value: '__none__', label: 'None' }}
+            required
           />
           <FormSelectField
             control={form.control}
@@ -260,7 +264,7 @@ export function SuperviseeProfileEditFields({
             placeholder="Select state"
             isSubmitting={isSubmitting}
             sortOptions
-            emptySentinel={{ value: '__none__', label: 'None' }}
+            required
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -271,7 +275,7 @@ export function SuperviseeProfileEditFields({
             options={howSoonOptions}
             placeholder="Select timeline"
             isSubmitting={isSubmitting}
-            emptySentinel={{ value: '__none__', label: 'None' }}
+            required
           />
           {howSoonLooking === 'CUSTOM_DATE' && (
             <FormInputField
@@ -280,6 +284,7 @@ export function SuperviseeProfileEditFields({
               label="Looking Date"
               type="date"
               isSubmitting={isSubmitting}
+              required
             />
           )}
         </div>
@@ -291,7 +296,7 @@ export function SuperviseeProfileEditFields({
             options={SUPERVISEE_PROFILE_FORMAT_OPTIONS}
             placeholder="Select format"
             isSubmitting={isSubmitting}
-            emptySentinel={{ value: '__none__', label: 'None' }}
+            required
           />
           <FormSelectField
             control={form.control}
@@ -300,7 +305,7 @@ export function SuperviseeProfileEditFields({
             options={availabilityOptions}
             placeholder="Select availability"
             isSubmitting={isSubmitting}
-            emptySentinel={{ value: '__none__', label: 'None' }}
+            required
           />
         </div>
       </fieldset>
@@ -316,7 +321,7 @@ export function SuperviseeProfileEditFields({
           options={SUPERVISEE_PROFILE_BUDGET_TYPE_OPTIONS}
           placeholder="Select budget type"
           isSubmitting={isSubmitting}
-          emptySentinel={{ value: '__none__', label: 'None' }}
+          required
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <FormInputField
@@ -351,7 +356,9 @@ export function SuperviseeProfileEditFields({
           name="idealSupervisor"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Ideal Supervisor / About Me</FormLabel>
+              <FormLabel>
+                Ideal Supervisor / About Me <span className="text-destructive">*</span>
+              </FormLabel>
               <FormControl>
                 <Textarea
                   {...field}

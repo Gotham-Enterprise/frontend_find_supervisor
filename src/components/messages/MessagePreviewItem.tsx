@@ -100,11 +100,6 @@ export const MessagePreviewItem = memo(function MessagePreviewItem({
             <span className="text-[11px] tabular-nums text-muted-foreground">
               {formatRelativeTime(updatedAt)}
             </span>
-            {!isRead && unreadCount && unreadCount > 0 ? (
-              <span className="flex min-w-[18px] items-center justify-center rounded-full bg-primary px-1 py-px text-[10px] font-bold leading-none text-primary-foreground">
-                {unreadCount}
-              </span>
-            ) : null}
           </div>
         </div>
 
@@ -120,7 +115,9 @@ export const MessagePreviewItem = memo(function MessagePreviewItem({
             isRead ? 'text-muted-foreground' : 'font-medium text-foreground/75',
           )}
         >
-          {preview}
+          {!isRead && unreadCount != null && unreadCount > 1
+            ? `${unreadCount} new messages`
+            : preview}
         </p>
       </div>
     </button>

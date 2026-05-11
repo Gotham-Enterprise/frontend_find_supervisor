@@ -20,25 +20,19 @@ import { SearchSupervisorResults } from './SearchSupervisorResults'
 import { mergeSuperviseeProfileIntoSearchFilters } from './superviseeSearchDefaults'
 import type { SortOption, SupervisorSearchFilters, SupervisorSearchResult } from './types'
 
+// Client-side sort is only used for experience_asc — all other options are
+// handled server-side via the sortBy API param.
 function sortSupervisorsLocal(
   list: SupervisorSearchResult[],
   sortBy: SortOption,
 ): SupervisorSearchResult[] {
+  if (sortBy !== 'experience_asc') return list
   const copy = [...list]
   const exp = (s: SupervisorSearchResult) => {
     const n = parseInt(String(s.yearsOfExperience).replace(/\D/g, ''), 10)
     return Number.isFinite(n) ? n : 0
   }
-  switch (sortBy) {
-    case 'experience_desc':
-      return copy.sort((a, b) => exp(b) - exp(a))
-    case 'experience_asc':
-      return copy.sort((a, b) => exp(a) - exp(b))
-    case 'most_reviewed':
-    case 'best_match':
-    default:
-      return copy
-  }
+  return copy.sort((a, b) => exp(a) - exp(b))
 }
 
 export function SearchSupervisorPage() {
@@ -110,8 +104,9 @@ export function SearchSupervisorPage() {
       filters: appliedFilters,
       occupationNames,
       specialtyNames,
+      sortBy,
     }),
-    [page, appliedKeyword, appliedFilters, occupationNames, specialtyNames],
+    [page, appliedKeyword, appliedFilters, occupationNames, specialtyNames, sortBy],
   )
 
   const { data, isLoading, isError, error, refetch } = useSupervisorSearch(
@@ -146,30 +141,16 @@ export function SearchSupervisorPage() {
   }
 
   function handleResetSearch() {
-    const cleared = mergeSuperviseeProfileIntoSearchFilters(
-      superviseeProfile ?? undefined,
-      DEFAULT_FILTERS,
-      licenseTypeOptions,
-      stateOptions,
-      availabilityOptions,
-    )
-    setFilters(cleared)
-    setAppliedFilters(cleared)
+    setFilters(DEFAULT_FILTERS)
+    setAppliedFilters(DEFAULT_FILTERS)
     setKeyword('')
     setAppliedKeyword('')
     setPage(1)
   }
 
   function handleClearFilterPanel() {
-    const cleared = mergeSuperviseeProfileIntoSearchFilters(
-      superviseeProfile ?? undefined,
-      DEFAULT_FILTERS,
-      licenseTypeOptions,
-      stateOptions,
-      availabilityOptions,
-    )
-    setFilters(cleared)
-    setAppliedFilters(cleared)
+    setFilters(DEFAULT_FILTERS)
+    setAppliedFilters(DEFAULT_FILTERS)
     setPage(1)
   }
 
@@ -208,7 +189,10 @@ export function SearchSupervisorPage() {
             errorMessage={errorMessage}
             onRetry={() => void refetch()}
             onPageChange={setPage}
-            onSortChange={setSortBy}
+            onSortChange={(next) => {
+              setSortBy(next)
+              setPage(1)
+            }}
             onClearFilters={handleResetSearch}
           />
         </div>

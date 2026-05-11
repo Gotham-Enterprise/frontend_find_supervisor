@@ -34,7 +34,8 @@ export const ConversationListItem = memo(function ConversationListItem({
     ? formatRelativeTime(new Date(conversation.lastMessageAt))
     : null
   const hasUnread = conversation.unreadCount > 0
-  const isPending = conversation.hire.status === 'PENDING'
+  const isPending =
+    conversation.hire.status === 'PENDING' || conversation.hire.status === 'REVIEWED'
   const avatarCornerRing = isActive
     ? 'ring-brand-light'
     : hasUnread && !isActive
@@ -90,11 +91,6 @@ export const ConversationListItem = memo(function ConversationListItem({
           </span>
           <div className="flex shrink-0 items-center gap-1.5">
             {time && <span className="text-[11px] tabular-nums text-muted-foreground">{time}</span>}
-            {hasUnread && (
-              <span className="flex min-w-[18px] items-center justify-center rounded-full bg-primary px-1 py-px text-[10px] font-bold leading-none text-primary-foreground">
-                {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
-              </span>
-            )}
           </div>
         </div>
 
@@ -103,6 +99,11 @@ export const ConversationListItem = memo(function ConversationListItem({
           <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">
             {otherRole}
           </span>
+          {conversation.hire.status === 'REVIEWED' && (
+            <span className="rounded-full bg-blue-100 px-1.5 py-px text-[10px] font-semibold text-blue-700">
+              Reviewed
+            </span>
+          )}
           {isPending && conversation.remainingMessages > 0 && (
             <span className="rounded-full bg-amber-100 px-1.5 py-px text-[10px] font-semibold text-amber-700">
               {conversation.remainingMessages} msg left
@@ -116,14 +117,16 @@ export const ConversationListItem = memo(function ConversationListItem({
         </div>
 
         {/* Preview */}
-        {preview && (
+        {(preview || (hasUnread && conversation.unreadCount > 1)) && (
           <p
             className={cn(
               'mt-0.5 truncate text-[13px] leading-snug',
               hasUnread ? 'font-medium text-foreground/75' : 'text-muted-foreground',
             )}
           >
-            {preview}
+            {hasUnread && conversation.unreadCount > 1
+              ? `${conversation.unreadCount} new messages`
+              : preview}
           </p>
         )}
       </div>

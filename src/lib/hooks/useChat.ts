@@ -167,12 +167,28 @@ export function useMarkConversationRead(conversationId: string | null) {
 
     onMutate: async () => {
       if (!conversationId) return
-      // Optimistically zero out the unread badge — no invalidation needed since
-      // the conversations list is kept live via socket events.
+      // Cancel any in-flight refetches so they don't overwrite the optimistic update.
+      await queryClient.cancelQueries({ queryKey: chatKeys.conversations() })
+      // Snapshot for rollback
+      const previous = queryClient.getQueryData<Conversation[]>(chatKeys.conversations())
+      // Optimistically zero out the unread badge
       queryClient.setQueryData<Conversation[]>(chatKeys.conversations(), (old) => {
         if (!old) return old
         return old.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c))
       })
+      return { previous }
+    },
+
+    onSuccess: () => {
+      // Sync with server state after the API call confirms the read
+      void queryClient.invalidateQueries({ queryKey: chatKeys.conversations() })
+    },
+
+    onError: (_err, _vars, context) => {
+      // Roll back the optimistic update if the API call failed
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(chatKeys.conversations(), context.previous)
+      }
     },
   })
 }

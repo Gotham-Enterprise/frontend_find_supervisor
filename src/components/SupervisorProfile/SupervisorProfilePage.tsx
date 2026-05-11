@@ -89,7 +89,7 @@ export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePagePro
           {backLink.label}
         </Link>
 
-        <SupervisorProfileHero profile={profile} />
+        <SupervisorProfileHero profile={profile} supervisorId={supervisorId} />
         <SupervisorProfileAbout profile={profile} />
 
         {focusAreaLabels.length > 0 && (

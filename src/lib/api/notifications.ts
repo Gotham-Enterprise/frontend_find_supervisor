@@ -61,6 +61,7 @@ const VALID_NOTIFICATION_TYPES = new Set<NotificationType>([
   'request_rejected',
   'request_canceled',
   'new_message',
+  'supervision_new_message',
   'session_reminder',
   'profile_viewed',
 ])
