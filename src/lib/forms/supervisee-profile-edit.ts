@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 import type { UpdateSuperviseeProfilePayload } from '@/lib/api/supervisee-profile'
-import { normalizeUSPhoneNumber } from '@/lib/utils/phone'
+import { formatUSPhoneForDisplay, normalizeUSPhoneNumber } from '@/lib/utils/phone'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 export const SUPERVISEE_PROFILE_FORMAT_OPTIONS = [
@@ -65,7 +65,7 @@ export function getDefaultSuperviseeProfileFormValues(
 
   return {
     fullName: profile.user.fullName ?? '',
-    contactNumber: profile.user.contactNumber ?? '',
+    contactNumber: formatUSPhoneForDisplay(profile.user.contactNumber ?? ''),
     city: profile.user.city ?? '',
     state: profile.user.state ?? '',
     zipcode: profile.user.zipcode ?? '',

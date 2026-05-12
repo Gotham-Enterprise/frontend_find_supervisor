@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -38,6 +38,8 @@ export function LoginForm() {
     resolver: zodResolver(loginSchema),
     defaultValues,
   })
+
+  const emailForVerification = useWatch({ control: form.control, name: 'email' }) ?? ''
 
   const { setValue } = form
   useEffect(() => {
@@ -78,6 +80,22 @@ export function LoginForm() {
 
   const parsedError = error ? parseLoginError(error) : null
 
+  const emailVerificationInstructionsHref =
+    parsedError?.kind === 'email_unverified' && parsedError.activationToken
+      ? (() => {
+          const q = new URLSearchParams({
+            activationToken: parsedError.activationToken,
+          })
+          const em = emailForVerification.trim()
+          if (em) q.set('email', em)
+          const fn = parsedError.fullName?.trim()
+          if (fn) q.set('fullName', fn)
+          const r = parsedError.role?.trim()
+          if (r) q.set('role', r)
+          return `/email-verification?${q.toString()}`
+        })()
+      : null
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" noValidate>
@@ -96,15 +114,15 @@ export function LoginForm() {
             className="rounded-lg border border-amber-500/40 bg-amber-50 px-3 py-2.5 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100"
           >
             <p>{parsedError.message}</p>
-            {parsedError.activationToken ? (
+            {parsedError.activationToken && emailVerificationInstructionsHref ? (
               <Link
-                href={`/email-verification?token=${encodeURIComponent(parsedError.activationToken)}`}
+                href={emailVerificationInstructionsHref}
                 className={cn(
                   buttonVariants({ variant: 'outline', size: 'sm' }),
                   'mt-3 w-full border-amber-600/40 text-amber-950 hover:bg-amber-100 dark:text-amber-50 dark:hover:bg-amber-900/40',
                 )}
               >
-                Open verification link
+                Open verification page
               </Link>
             ) : (
               <p className="mt-2 text-xs opacity-90">
@@ -163,7 +181,7 @@ export function LoginForm() {
               <FormControl>
                 <Input
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder="Enter Email Address"
                   autoComplete="email"
                   disabled={isPending}
                   aria-invalid={fieldState.invalid}

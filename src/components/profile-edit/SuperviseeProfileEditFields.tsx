@@ -7,6 +7,7 @@ import { useWatch } from 'react-hook-form'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { FormInputField } from '@/components/ui/form-input-field'
 import { FormSelectField } from '@/components/ui/form-select-field'
+import { PhoneInput } from '@/components/ui/PhoneInput'
 import { ProfilePhotoUpload } from '@/components/ui/profile-photo-upload'
 import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
@@ -120,13 +121,26 @@ export function SuperviseeProfileEditFields({
             autoCapitalizePersonName
             isSubmitting={isSubmitting}
           />
-          <FormInputField
+          <FormField
             control={form.control}
             name="contactNumber"
-            label="Contact Number"
-            placeholder="+1 (555) 000-0000"
-            isSubmitting={isSubmitting}
-            required
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Contact Number <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <PhoneInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    ref={field.ref}
+                    disabled={isSubmitting}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -166,7 +180,7 @@ export function SuperviseeProfileEditFields({
             label="State"
             required
             options={stateOptions}
-            placeholder="Select state"
+            placeholder="Select State"
             loading={statesLoading}
             isSubmitting={isSubmitting}
             sortOptions
@@ -204,7 +218,7 @@ export function SuperviseeProfileEditFields({
             name="occupationId"
             label="Occupation"
             options={occupationOptions ?? []}
-            placeholder="Select occupation"
+            placeholder="Select Occupation"
             isSubmitting={isSubmitting}
             required
           />
@@ -213,7 +227,7 @@ export function SuperviseeProfileEditFields({
             name="specialtyId"
             label="Specialty"
             options={specialtyOptions}
-            placeholder="Select specialty"
+            placeholder="Select Specialty"
             isSubmitting={isSubmitting}
             disabled={!selectedOccupationId}
             emptySentinel={{ value: '__none__', label: 'None' }}
@@ -232,7 +246,7 @@ export function SuperviseeProfileEditFields({
                   options={stateOptions}
                   value={field.value ?? []}
                   onChange={field.onChange}
-                  placeholder="Select states..."
+                  placeholder="Select States..."
                   disabled={isSubmitting}
                 />
               </FormControl>
@@ -252,7 +266,7 @@ export function SuperviseeProfileEditFields({
             name="typeOfSupervisorNeeded"
             label="Type of Supervisor Needed"
             options={supervisorTypeOptions}
-            placeholder="Select supervisor type"
+            placeholder="Select Supervisor Type"
             isSubmitting={isSubmitting}
             required
           />
@@ -261,7 +275,7 @@ export function SuperviseeProfileEditFields({
             name="stateTheyAreLookingIn"
             label="State Looking In"
             options={stateOptions}
-            placeholder="Select state"
+            placeholder="Select State"
             isSubmitting={isSubmitting}
             sortOptions
             required
@@ -273,7 +287,7 @@ export function SuperviseeProfileEditFields({
             name="howSoonLooking"
             label="How Soon Looking"
             options={howSoonOptions}
-            placeholder="Select timeline"
+            placeholder="Select Timeline"
             isSubmitting={isSubmitting}
             required
           />
@@ -294,7 +308,7 @@ export function SuperviseeProfileEditFields({
             name="preferredFormat"
             label="Preferred Format"
             options={SUPERVISEE_PROFILE_FORMAT_OPTIONS}
-            placeholder="Select format"
+            placeholder="Select Format"
             isSubmitting={isSubmitting}
             required
           />
@@ -303,7 +317,7 @@ export function SuperviseeProfileEditFields({
             name="availability"
             label="Availability"
             options={availabilityOptions}
-            placeholder="Select availability"
+            placeholder="Select Availability"
             isSubmitting={isSubmitting}
             required
           />
@@ -319,7 +333,7 @@ export function SuperviseeProfileEditFields({
           name="budgetRangeType"
           label="Budget Type"
           options={SUPERVISEE_PROFILE_BUDGET_TYPE_OPTIONS}
-          placeholder="Select budget type"
+          placeholder="Select Budget Type"
           isSubmitting={isSubmitting}
           required
         />
@@ -363,7 +377,7 @@ export function SuperviseeProfileEditFields({
                 <Textarea
                   {...field}
                   value={field.value ?? ''}
-                  placeholder="Describe what you are looking for in a supervisor and a bit about yourself..."
+                  placeholder="Please describe what you are looking for in a supervisor and a bit about yourself..."
                   rows={4}
                   disabled={isSubmitting}
                 />

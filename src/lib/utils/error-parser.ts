@@ -10,6 +10,9 @@ interface BackendErrorBody {
 function humanize(raw: string): string {
   const lower = raw.toLowerCase()
 
+  if (lower.includes('contact number already exists')) {
+    return 'That phone number is already in use. Please enter a different contact number.'
+  }
   if (lower.includes('email already exists')) {
     return 'That email address is already registered. Please use a different email or log in.'
   }

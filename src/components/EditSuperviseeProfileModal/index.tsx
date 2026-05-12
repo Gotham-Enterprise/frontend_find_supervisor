@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import { Form } from '@/components/ui/form'
 import { useUser } from '@/lib/contexts/UserContext'
+import { useUserSnackbar } from '@/lib/contexts/UserSnackbarContext'
 import {
   type EditSuperviseeProfileFormValues,
   editSuperviseeProfileSchema,
@@ -16,6 +17,7 @@ import {
   superviseeProfileFormValuesToPayload,
 } from '@/lib/forms/supervisee-profile-edit'
 import { useUpdateSuperviseeProfile } from '@/lib/hooks/useUpdateSuperviseeProfile'
+import { parseApiError } from '@/lib/utils/error-parser'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 interface EditSuperviseeProfileModalProps {
@@ -30,6 +32,7 @@ export function EditSuperviseeProfileModal({
   profile,
 }: EditSuperviseeProfileModalProps) {
   const { user } = useUser()
+  const { showError } = useUserSnackbar()
   const userId = user?.id ?? ''
 
   const mutation = useUpdateSuperviseeProfile(userId)
@@ -51,13 +54,18 @@ export function EditSuperviseeProfileModal({
 
   useEffect(() => {
     if (open) {
+      mutation.reset()
       form.reset(getDefaultSuperviseeProfileFormValues(profile))
     }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function onSubmit(values: EditSuperviseeProfileFormValues) {
-    await mutation.mutateAsync(superviseeProfileFormValuesToPayload(values))
-    onOpenChange(false)
+    try {
+      await mutation.mutateAsync(superviseeProfileFormValuesToPayload(values))
+      onOpenChange(false)
+    } catch (err: unknown) {
+      showError(parseApiError(err))
+    }
   }
 
   const isSubmitting = form.formState.isSubmitting || mutation.isPending
@@ -75,10 +83,6 @@ export function EditSuperviseeProfileModal({
               isSubmitting={isSubmitting}
               locationSyncEpoch={locationSyncEpoch}
             />
-
-            {mutation.isError && (
-              <p className="text-sm text-destructive">Failed to save changes. Please try again.</p>
-            )}
 
             <div className="flex justify-end gap-3 border-t pt-4">
               <Button

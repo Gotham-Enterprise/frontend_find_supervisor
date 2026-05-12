@@ -1,8 +1,9 @@
 import { z } from 'zod'
 
+import { yearsOfExperienceOptions } from '@/components/Signup/schema'
 import type { UpdateSupervisorProfilePayload } from '@/lib/api/supervisor-profile'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
-import { normalizeUSPhoneNumber } from '@/lib/utils/phone'
+import { formatUSPhoneForDisplay, normalizeUSPhoneNumber } from '@/lib/utils/phone'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 export const SUPERVISOR_PROFILE_FORMAT_OPTIONS = [
@@ -68,7 +69,12 @@ const editSupervisorProfileFieldsSchema = z.object({
     .refine((s) => !isEmptySelect(s), { message: 'License type is required' }),
   licenseNumber: z.string().min(1, 'License number is required').max(50),
   licenseExpiration: licenseExpirationRefine,
-  yearsOfExperience: z.string().min(1, 'Years of experience is required'),
+  yearsOfExperience: z
+    .string()
+    .min(1, 'Years of experience is required')
+    .refine((v) => (yearsOfExperienceOptions as readonly string[]).includes(v), {
+      message: 'Please select years of experience',
+    }),
   npiNumber: z.string().max(20).optional(),
   certification: z.array(z.string()).min(1, 'Add at least one certification'),
   stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
@@ -135,7 +141,7 @@ export function getDefaultSupervisorProfileFormValues(
 
   return {
     fullName: profile.user.fullName ?? '',
-    contactNumber: profile.user.contactNumber ?? '',
+    contactNumber: formatUSPhoneForDisplay(profile.user.contactNumber ?? ''),
     city: profile.user.city ?? '',
     state: profile.user.state ?? '',
     zipcode: profile.user.zipcode ?? '',
@@ -145,7 +151,10 @@ export function getDefaultSupervisorProfileFormValues(
     licenseType: profile.licenseType ?? '',
     licenseNumber: profile.licenseNumber ?? '',
     licenseExpiration: profile.licenseExpiration ? profile.licenseExpiration.slice(0, 10) : '',
-    yearsOfExperience: profile.yearsOfExperience ?? '',
+    yearsOfExperience: (() => {
+      const raw = profile.yearsOfExperience?.trim() ?? ''
+      return (yearsOfExperienceOptions as readonly string[]).includes(raw) ? raw : ''
+    })(),
     npiNumber: profile.npiNumber ?? '',
     certification: profile.certification ?? [],
     stateOfLicensure: profile.user.stateOfLicensure ?? [],
