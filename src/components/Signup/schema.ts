@@ -14,10 +14,12 @@ export const yearsOfExperienceOptions = [
 
 // ─── Shared sub-schemas ───────────────────────────────────────────────────────
 
-const accountSchema = z.object({
+/** Shared account fields (supervisor + supervisee signup). `confirmPassword` is UI-only — strip before API. */
+export const accountSchemaBase = z.object({
   fullName: z.string().min(1, 'Full name is required').max(100),
   email: z.string().min(1, 'Email is required').email('Please enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters').max(128),
+  confirmPassword: z.string().min(1, 'Please confirm your password').max(128),
   contactNumber: z.string().min(1, 'Contact number is required'),
   // .refine(isValidUSPhoneNumber, 'Please enter a valid US phone number.'),
   city: z.string().min(1, 'City is required').max(100),
@@ -29,6 +31,13 @@ const accountSchema = z.object({
     .regex(/^\d{5}(-\d{4})?$/, 'Enter a valid US zipcode'),
 })
 
+function withPasswordConfirmation<S extends z.ZodObject<z.ZodRawShape>>(schema: S) {
+  return schema.refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
+}
+
 export const supervisionFeeTypeOptions = [
   { value: 'HOURLY', label: 'Hourly' },
   { value: 'MONTHLY', label: 'Monthly' },
@@ -36,7 +45,7 @@ export const supervisionFeeTypeOptions = [
 
 // ─── Supervisor schema ─────────────────────────────────────────────────────────
 
-export const supervisorSchema = accountSchema.extend({
+export const supervisorSchemaObject = accountSchemaBase.extend({
   // Occupation & specialty
   occupationId: z.string().min(1, 'Occupation is required'),
   specialtyId: z.string().optional(),
@@ -108,9 +117,11 @@ export const supervisorSchema = accountSchema.extend({
     .refine((val) => val === true, 'You must agree to the terms and conditions'),
 })
 
+export const supervisorSchema = withPasswordConfirmation(supervisorSchemaObject)
+
 // ─── Supervisee schema ─────────────────────────────────────────────────────────
 
-export const superviseeSchema = accountSchema.extend({
+export const superviseeSchemaObject = accountSchemaBase.extend({
   occupationId: z.string().min(1, 'Occupation is required'),
 
   stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
@@ -138,24 +149,29 @@ export const superviseeSchema = accountSchema.extend({
     .refine((val) => val === true, 'You must agree to the terms and conditions'),
 })
 
-export type SupervisorFormValues = z.infer<typeof supervisorSchema>
-export type SuperviseeFormValues = z.infer<typeof superviseeSchema>
+export const superviseeSchema = withPasswordConfirmation(superviseeSchemaObject)
+
+export type SupervisorFormValues = z.infer<typeof supervisorSchemaObject>
+export type SuperviseeFormValues = z.infer<typeof superviseeSchemaObject>
 
 // ─── Supervisor multi-step (same rules as supervisorSchema, split by step) ───
 
-export const supervisorStep1Schema = supervisorSchema.pick({
-  uploadProfilePhoto: true,
-  fullName: true,
-  email: true,
-  password: true,
-  contactNumber: true,
-  city: true,
-  state: true,
-  zipcode: true,
-  website: true,
-})
+export const supervisorStep1Schema = withPasswordConfirmation(
+  supervisorSchemaObject.pick({
+    uploadProfilePhoto: true,
+    fullName: true,
+    email: true,
+    password: true,
+    confirmPassword: true,
+    contactNumber: true,
+    city: true,
+    state: true,
+    zipcode: true,
+    website: true,
+  }),
+)
 
-export const supervisorStep2Schema = supervisorSchema.pick({
+export const supervisorStep2Schema = supervisorSchemaObject.pick({
   occupationId: true,
   specialtyId: true,
   licenseType: true,
@@ -168,7 +184,7 @@ export const supervisorStep2Schema = supervisorSchema.pick({
   stateOfLicensure: true,
 })
 
-export const supervisorStep3Schema = supervisorSchema.pick({
+export const supervisorStep3Schema = supervisorSchemaObject.pick({
   patientPopulation: true,
   supervisionFormat: true,
   availability: true,
@@ -194,6 +210,7 @@ export const SUPERVISOR_SIGNUP_STEP_FIELDS = [
     'fullName',
     'email',
     'password',
+    'confirmPassword',
     'contactNumber',
     'city',
     'state',
@@ -234,18 +251,21 @@ export const SUPERVISOR_SIGNUP_STEP_META = [
 
 // ─── Supervisee multi-step (same rules as superviseeSchema, split by step) ─────
 
-export const superviseeStep1Schema = superviseeSchema.pick({
-  uploadProfilePhoto: true,
-  fullName: true,
-  email: true,
-  password: true,
-  contactNumber: true,
-  city: true,
-  state: true,
-  zipcode: true,
-})
+export const superviseeStep1Schema = withPasswordConfirmation(
+  superviseeSchemaObject.pick({
+    uploadProfilePhoto: true,
+    fullName: true,
+    email: true,
+    password: true,
+    confirmPassword: true,
+    contactNumber: true,
+    city: true,
+    state: true,
+    zipcode: true,
+  }),
+)
 
-export const superviseeStep2Schema = superviseeSchema
+export const superviseeStep2Schema = superviseeSchemaObject
   .pick({
     occupationId: true,
     stateOfLicensure: true,
@@ -268,7 +288,7 @@ export const superviseeStep2Schema = superviseeSchema
     }
   })
 
-export const superviseeStep3Schema = superviseeSchema.pick({
+export const superviseeStep3Schema = superviseeSchemaObject.pick({
   description: true,
   agreedToPost: true,
   agreedToTerms: true,
@@ -286,6 +306,7 @@ export const SUPERVISEE_SIGNUP_STEP_FIELDS = [
     'fullName',
     'email',
     'password',
+    'confirmPassword',
     'contactNumber',
     'city',
     'state',

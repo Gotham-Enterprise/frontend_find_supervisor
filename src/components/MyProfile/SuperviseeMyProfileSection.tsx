@@ -1,7 +1,6 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import axios from 'axios'
 import { AlertCircle } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -19,6 +18,7 @@ import {
   superviseeProfileFormValuesToPayload,
 } from '@/lib/forms/supervisee-profile-edit'
 import { useSuperviseeProfile, useUpdateSuperviseeProfile, useUser } from '@/lib/hooks'
+import { parseApiError } from '@/lib/utils/error-parser'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 function SuperviseeMyProfileSkeleton() {
@@ -98,16 +98,7 @@ function SuperviseeMyProfileEditor({
       await refreshUser()
       showSuccess('Profile saved')
     } catch (err: unknown) {
-      const message =
-        axios.isAxiosError(err) &&
-        err.response?.data &&
-        typeof err.response.data === 'object' &&
-        err.response.data !== null &&
-        'message' in err.response.data &&
-        typeof (err.response.data as { message?: unknown }).message === 'string'
-          ? (err.response.data as { message: string }).message
-          : 'Could not save your profile. Please try again.'
-      showError(message)
+      showError(parseApiError(err))
     }
   }
 

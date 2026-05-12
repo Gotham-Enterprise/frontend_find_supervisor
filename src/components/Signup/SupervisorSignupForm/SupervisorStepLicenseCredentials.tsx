@@ -96,7 +96,7 @@ export function SupervisorStepLicenseCredentials({
           name="licenseNumber"
           label="License Number"
           rules={supervisorFieldRules('licenseNumber')}
-          placeholder="License number"
+          placeholder="Enter License Number"
           isSubmitting={isSubmitting}
           required
         />

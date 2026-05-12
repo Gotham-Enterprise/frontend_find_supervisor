@@ -4,13 +4,16 @@ import { useEffect, useRef } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import { useWatch } from 'react-hook-form'
 
+import { yearsOfExperienceOptions } from '@/components/Signup/schema'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { FormInputField } from '@/components/ui/form-input-field'
 import { FormSelectField } from '@/components/ui/form-select-field'
+import { PhoneInput } from '@/components/ui/PhoneInput'
 import { ProfilePhotoUpload } from '@/components/ui/profile-photo-upload'
 import { Switch } from '@/components/ui/switch'
 import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
+import type { SelectOption } from '@/lib/api/options'
 import {
   type EditSupervisorProfileFormValues,
   SUPERVISOR_PROFILE_FEE_TYPE_OPTIONS,
@@ -27,6 +30,11 @@ import {
   useStatesOptions,
 } from '@/lib/hooks'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
+
+const yearsOfExperienceSelectOptions: SelectOption[] = yearsOfExperienceOptions.map((v) => ({
+  value: v,
+  label: v,
+}))
 
 export interface SupervisorProfileEditFieldsProps {
   form: UseFormReturn<EditSupervisorProfileFormValues>
@@ -122,17 +130,30 @@ export function SupervisorProfileEditFields({
             name="fullName"
             label="Full Name"
             required
-            placeholder="Jane Smith"
+            placeholder="Enter Full Name"
             autoCapitalizePersonName
             isSubmitting={isSubmitting}
           />
-          <FormInputField
+          <FormField
             control={form.control}
             name="contactNumber"
-            label="Contact Number"
-            required
-            placeholder="+1 (555) 000-0000"
-            isSubmitting={isSubmitting}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Contact Number <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <PhoneInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    ref={field.ref}
+                    disabled={isSubmitting}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -172,7 +193,7 @@ export function SupervisorProfileEditFields({
             label="State"
             required
             options={stateOptions}
-            placeholder="Select state"
+            placeholder="Select State"
             loading={statesLoading}
             isSubmitting={isSubmitting}
             sortOptions
@@ -219,7 +240,7 @@ export function SupervisorProfileEditFields({
             label="Occupation"
             required
             options={occupationOptions ?? []}
-            placeholder="Select occupation"
+            placeholder="Select Occupation"
             isSubmitting={isSubmitting}
             emptySentinel={{ value: '__none__', label: 'None' }}
           />
@@ -228,7 +249,7 @@ export function SupervisorProfileEditFields({
             name="specialtyId"
             label="Specialty"
             options={specialtyOptions}
-            placeholder="Select specialty"
+            placeholder="Select Specialty"
             isSubmitting={isSubmitting}
             disabled={!selectedOccupationId}
             emptySentinel={{ value: '__none__', label: 'None' }}
@@ -247,7 +268,7 @@ export function SupervisorProfileEditFields({
             label="License Type"
             required
             options={licenseTypeOptions}
-            placeholder="Select license type"
+            placeholder="Select License Type"
             isSubmitting={isSubmitting}
             emptySentinel={{ value: '__none__', label: 'None' }}
           />
@@ -256,7 +277,7 @@ export function SupervisorProfileEditFields({
             name="licenseNumber"
             label="License Number"
             required
-            placeholder="LIC-12345"
+            placeholder="Enter License Number"
             isSubmitting={isSubmitting}
           />
         </div>
@@ -269,12 +290,13 @@ export function SupervisorProfileEditFields({
             type="date"
             isSubmitting={isSubmitting}
           />
-          <FormInputField
+          <FormSelectField
             control={form.control}
             name="yearsOfExperience"
             label="Years of Experience"
             required
-            placeholder="e.g. 5 – 10 years"
+            options={yearsOfExperienceSelectOptions}
+            placeholder="Select Years of Experience"
             isSubmitting={isSubmitting}
           />
         </div>
@@ -298,7 +320,7 @@ export function SupervisorProfileEditFields({
                   options={stateOptions}
                   value={field.value ?? []}
                   onChange={field.onChange}
-                  placeholder="Select states..."
+                  placeholder="Select States..."
                   disabled={isSubmitting}
                 />
               </FormControl>
@@ -319,7 +341,7 @@ export function SupervisorProfileEditFields({
                   options={certificationOptions}
                   value={field.value ?? []}
                   onChange={field.onChange}
-                  placeholder="Select certifications..."
+                  placeholder="Select Certifications..."
                   disabled={isSubmitting}
                 />
               </FormControl>
@@ -346,7 +368,7 @@ export function SupervisorProfileEditFields({
                   options={patientPopulationOptions}
                   value={field.value ?? []}
                   onChange={field.onChange}
-                  placeholder="Select patient populations..."
+                  placeholder="Select Patient Populations..."
                   disabled={isSubmitting}
                 />
               </FormControl>
@@ -361,7 +383,7 @@ export function SupervisorProfileEditFields({
             label="Supervision Format"
             required
             options={SUPERVISOR_PROFILE_FORMAT_OPTIONS}
-            placeholder="Select format"
+            placeholder="Select Format"
             isSubmitting={isSubmitting}
             emptySentinel={{ value: '__none__', label: 'None' }}
           />
@@ -371,7 +393,7 @@ export function SupervisorProfileEditFields({
             label="Availability"
             required
             options={availabilityOptions}
-            placeholder="Select availability"
+            placeholder="Select Availability"
             isSubmitting={isSubmitting}
             emptySentinel={{ value: '__none__', label: 'None' }}
           />
@@ -383,7 +405,7 @@ export function SupervisorProfileEditFields({
             label="Fee Type"
             required
             options={SUPERVISOR_PROFILE_FEE_TYPE_OPTIONS}
-            placeholder="Select fee type"
+            placeholder="Select Fee Type"
             isSubmitting={isSubmitting}
             emptySentinel={{ value: '__none__', label: 'None' }}
           />
@@ -395,7 +417,7 @@ export function SupervisorProfileEditFields({
             type="number"
             numberValue
             min={0}
-            placeholder="100"
+            placeholder="Enter Fee Amount"
             isSubmitting={isSubmitting}
           />
         </div>
@@ -438,7 +460,7 @@ export function SupervisorProfileEditFields({
                 <Textarea
                   {...field}
                   value={field.value ?? ''}
-                  placeholder="Describe your supervision style, background, and approach..."
+                  placeholder="Enter your Professional Summary"
                   rows={3}
                   disabled={isSubmitting}
                 />
@@ -459,7 +481,7 @@ export function SupervisorProfileEditFields({
                 <Textarea
                   {...field}
                   value={field.value ?? ''}
-                  placeholder="Share more about yourself and what makes you a great supervisor..."
+                  placeholder="Please describe yourself..."
                   rows={3}
                   disabled={isSubmitting}
                 />

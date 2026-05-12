@@ -45,6 +45,7 @@ function parseBudgetRange(budgetRange: string): { start: number; end: number } {
 }
 
 // ─── FormData builders ────────────────────────────────────────────────────────
+// `confirmPassword` is client-only and must not be sent to the API.
 
 export function buildSupervisorFormData(values: SupervisorFormValues): FormData {
   const fd = new FormData()
@@ -76,7 +77,8 @@ export function buildSupervisorFormData(values: SupervisorFormValues): FormData 
 
   // Practice
   values.patientPopulation.forEach((p) => fd.append('patientPopulation', p))
-  values.stateOfLicensure.forEach((s) => fd.append('stateOfLicensure', s))
+  // `field[]` so multer/append-field always yields an array (single append without [] is a string; BE uses .isArray())
+  values.stateOfLicensure.forEach((s) => fd.append('stateOfLicensure[]', s))
   fd.append('supervisionFormat', FORMAT_MAP[values.supervisionFormat])
   fd.append('availability', values.availability)
   // Backend field: acceptingSupervisees (not acceptingNewSupervisees)
@@ -113,8 +115,8 @@ export function buildSuperviseeFormData(values: SuperviseeFormValues): FormData 
 
   fd.append('occupation', values.occupationId)
 
-  // Supervision needs
-  values.stateOfLicensure.forEach((s) => fd.append('stateOfLicensure', s))
+  // Supervision needs — `stateOfLicensure[]` so a single state is still parsed as an array (multer + express-validator .isArray())
+  values.stateOfLicensure.forEach((s) => fd.append('stateOfLicensure[]', s))
   fd.append('stateTheyAreLookingIn', values.stateTheyAreLookingIn)
   // Backend field: typeOfSupervisorNeeded
   fd.append('typeOfSupervisorNeeded', values.typeOfSupervisor)

@@ -14,12 +14,17 @@ export type ParsedLoginError = {
   message: string
   /** Present when backend returns activation token for unverified email */
   activationToken?: string
+  /** Shown on email verification instructions page (supervision login) */
+  fullName?: string
+  role?: string
 }
 
 type BackendLoginErrorBody = {
   success?: boolean
   error?: string
   token?: string
+  fullName?: string
+  role?: string
 }
 
 export function parseLoginError(error: unknown): ParsedLoginError {
@@ -41,8 +46,10 @@ export function parseLoginError(error: unknown): ParsedLoginError {
     return {
       kind: 'email_unverified',
       message:
-        'Your email is not verified yet. Check your inbox for a verification link, or open the link below.',
-      activationToken: data.token,
+        'Your email is not verified yet. Check your inbox for the verification link from us, or open the page below to resend the email.',
+      activationToken: typeof data.token === 'string' ? data.token : undefined,
+      fullName: typeof data.fullName === 'string' ? data.fullName : undefined,
+      role: typeof data.role === 'string' ? data.role : undefined,
     }
   }
 

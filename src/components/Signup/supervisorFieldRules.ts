@@ -1,6 +1,6 @@
 import type { ZodTypeAny } from 'zod'
 
-import { type SupervisorFormValues, supervisorSchema } from '@/components/Signup/schema'
+import { type SupervisorFormValues, supervisorSchemaObject } from '@/components/Signup/schema'
 
 /**
  * Per-field `rules` for Controller so RHF validates after touch (`mode: 'onTouched'`) and
@@ -10,7 +10,7 @@ import { type SupervisorFormValues, supervisorSchema } from '@/components/Signup
 export function supervisorFieldRules<N extends keyof SupervisorFormValues>(name: N) {
   return {
     validate: (value: unknown): true | string => {
-      const fieldSchema = supervisorSchema.shape[name] as ZodTypeAny | undefined
+      const fieldSchema = supervisorSchemaObject.shape[name] as ZodTypeAny | undefined
       if (!fieldSchema) return true
       const result = fieldSchema.safeParse(value)
       if (result.success) return true

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import { Form } from '@/components/ui/form'
 import { useUser } from '@/lib/contexts/UserContext'
+import { useUserSnackbar } from '@/lib/contexts/UserSnackbarContext'
 import {
   createEditSupervisorProfileSchema,
   type EditSupervisorProfileFormValues,
@@ -16,6 +17,7 @@ import {
   supervisorProfileFormValuesToPayload,
 } from '@/lib/forms/supervisor-profile-edit'
 import { useUpdateSupervisorProfile } from '@/lib/hooks/useUpdateSupervisorProfile'
+import { parseApiError } from '@/lib/utils/error-parser'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 interface EditSupervisorProfileModalProps {
@@ -30,6 +32,7 @@ export function EditSupervisorProfileModal({
   profile,
 }: EditSupervisorProfileModalProps) {
   const { user } = useUser()
+  const { showError } = useUserSnackbar()
   const userId = user?.id ?? ''
 
   const mutation = useUpdateSupervisorProfile(userId)
@@ -55,14 +58,19 @@ export function EditSupervisorProfileModal({
 
   useEffect(() => {
     if (open) {
+      mutation.reset()
       form.reset(getDefaultSupervisorProfileFormValues(profile))
       queueMicrotask(() => void form.trigger())
     }
-  }, [open, profile.updatedAt, form, profile])
+  }, [open, profile.updatedAt, form, profile, mutation])
 
   async function onSubmit(values: EditSupervisorProfileFormValues) {
-    await mutation.mutateAsync(supervisorProfileFormValuesToPayload(values))
-    onOpenChange(false)
+    try {
+      await mutation.mutateAsync(supervisorProfileFormValuesToPayload(values))
+      onOpenChange(false)
+    } catch (err: unknown) {
+      showError(parseApiError(err))
+    }
   }
 
   const isSubmitting = form.formState.isSubmitting || mutation.isPending
@@ -81,10 +89,6 @@ export function EditSupervisorProfileModal({
               isSubmitting={isSubmitting}
               locationSyncEpoch={locationSyncEpoch}
             />
-
-            {mutation.isError && (
-              <p className="text-sm text-destructive">Failed to save changes. Please try again.</p>
-            )}
 
             <div className="flex justify-end gap-3 border-t pt-4">
               <Button

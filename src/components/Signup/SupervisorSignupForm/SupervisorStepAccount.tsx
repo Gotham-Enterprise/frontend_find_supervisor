@@ -61,7 +61,7 @@ export function SupervisorStepAccount({
         )}
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4">
         <FormInputField
           control={control}
           name="fullName"
@@ -72,26 +72,16 @@ export function SupervisorStepAccount({
           isSubmitting={isSubmitting}
           required
         />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormInputField
           control={control}
           name="email"
           label="Email Address"
           rules={supervisorFieldRules('email')}
           type="email"
-          placeholder="jane@example.com"
-          isSubmitting={isSubmitting}
-          required
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormInputField
-          control={control}
-          name="password"
-          label="Password"
-          rules={supervisorFieldRules('password')}
-          placeholder="Min. 8 characters"
-          passwordToggle
+          placeholder="Enter Email Address"
           isSubmitting={isSubmitting}
           required
         />
@@ -118,6 +108,29 @@ export function SupervisorStepAccount({
               <FormMessage />
             </FormItem>
           )}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormInputField
+          control={control}
+          name="password"
+          label="Password"
+          rules={supervisorFieldRules('password')}
+          placeholder="Min. 8 characters"
+          passwordToggle
+          isSubmitting={isSubmitting}
+          required
+        />
+        <FormInputField
+          control={control}
+          name="confirmPassword"
+          label="Confirm Password"
+          rules={supervisorFieldRules('confirmPassword')}
+          placeholder="Re-enter your password"
+          passwordToggle
+          isSubmitting={isSubmitting}
+          required
         />
       </div>
 
