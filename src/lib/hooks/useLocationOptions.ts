@@ -14,11 +14,12 @@ export function useStatesOptions() {
 }
 
 export function useCitiesOptions(stateCode: string) {
-  return useQuery<SelectOption[]>({
+  return useQuery({
     queryKey: ['location', 'cities', stateCode],
     queryFn: () => fetchCitiesApi(stateCode),
     enabled: !!stateCode?.trim(),
     staleTime: STALE_TIME,
+    select: (data: SelectOption[]) => [...data].sort((a, b) => a.label.localeCompare(b.label)),
   })
 }
 

@@ -74,6 +74,7 @@ export function SuperviseeProfileEditFields({
   }, [stateWatch, form])
 
   const { availability, howSoon, supervisorTypes, occupations } = useSuperviseeFormOptions()
+  const supervisorTypesLoading = supervisorTypes.isLoading
   const availabilityOptions = availability.data ?? []
   const howSoonOptions = howSoon.data ?? []
   const supervisorTypeOptions = supervisorTypes.data ?? []
@@ -260,25 +261,56 @@ export function SuperviseeProfileEditFields({
         <legend className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Supervision Needs
         </legend>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormSelectField
+        <div className="grid gap-4 sm:grid-cols-1">
+          <FormField
             control={form.control}
             name="typeOfSupervisorNeeded"
-            label="Type of Supervisor Needed"
-            options={supervisorTypeOptions}
-            placeholder="Select Supervisor Type"
-            isSubmitting={isSubmitting}
-            required
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Type of Supervision Needed <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <TagInput
+                    options={supervisorTypeOptions}
+                    value={field.value ?? []}
+                    onChange={(v) => {
+                      field.onChange(v)
+                      form.clearErrors(field.name)
+                    }}
+                    placeholder={
+                      supervisorTypesLoading ? 'Loading…' : 'Add one or more supervision types'
+                    }
+                    disabled={isSubmitting || supervisorTypesLoading}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-          <FormSelectField
+          <FormField
             control={form.control}
             name="stateTheyAreLookingIn"
-            label="State Looking In"
-            options={stateOptions}
-            placeholder="Select State"
-            isSubmitting={isSubmitting}
-            sortOptions
-            required
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  State(s) You Are Looking In <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <TagInput
+                    options={stateOptions}
+                    value={field.value ?? []}
+                    onChange={(v) => {
+                      field.onChange(v)
+                      form.clearErrors(field.name)
+                    }}
+                    placeholder={statesLoading ? 'Loading…' : 'Add a state (e.g. CA)'}
+                    disabled={isSubmitting || statesLoading}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">

@@ -26,6 +26,13 @@ export function getSuperviseeProfileCompletion(user: User): number {
   return Math.round((checks.filter(Boolean).length / checks.length) * 100)
 }
 
+/** True when profile field is a non-empty string or a non-empty string array (API may return either). */
+function hasProfileStringList(value: string | string[] | null | undefined): boolean {
+  if (value == null) return false
+  if (Array.isArray(value)) return value.some((x) => String(x).trim().length > 0)
+  return String(value).trim().length > 0
+}
+
 /** Individual checks used for dashboard completion % and onboarding goal "profile complete". */
 function getSuperviseeProfileCompletionChecks(profile: SuperviseeProfileData): boolean[] {
   const { user } = profile
@@ -37,11 +44,11 @@ function getSuperviseeProfileCompletionChecks(profile: SuperviseeProfileData): b
     !!user.state,
     !!user.contactNumber,
     (user.stateOfLicensure?.length ?? 0) > 0,
-    !!profile.typeOfSupervisorNeeded,
+    hasProfileStringList(profile.typeOfSupervisorNeeded),
     !!profile.preferredFormat,
     !!profile.availability,
     !!profile.howSoonLooking,
-    !!profile.stateTheyAreLookingIn,
+    hasProfileStringList(profile.stateTheyAreLookingIn),
     !!profile.budgetRangeType,
     !!profile.idealSupervisor,
   ]

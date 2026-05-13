@@ -59,8 +59,8 @@ export interface HireRecord {
   supervisorId: string
   preferredFormat: PreferredFormat | null
   preferredAvailability: PreferredAvailability | null
-  typeOfSupervisorNeeded: string | null
-  stateTheyAreLookingIn: string | null
+  typeOfSupervisorNeeded: string | string[] | null
+  stateTheyAreLookingIn: string | string[] | null
   preferredStartDate: string | null
   budgetRangeType: BudgetRangeType | null
   budgetRangeStart: number | null
@@ -82,8 +82,8 @@ export interface HireListItem {
   // Supervisee request snapshot
   preferredFormat: PreferredFormat | null
   preferredAvailability: PreferredAvailability | null
-  typeOfSupervisorNeeded: string | null
-  stateTheyAreLookingIn: string | null
+  typeOfSupervisorNeeded: string | string[] | null
+  stateTheyAreLookingIn: string | string[] | null
   preferredStartDate: string | null
   budgetRangeType: BudgetRangeType | null
   budgetRangeStart: number | null

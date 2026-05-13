@@ -129,20 +129,46 @@ function humanizeSupervisorTypeFallback(raw: string): string {
     .join(' ')
 }
 
+/** Normalizes API values that may be a single string or `String[]` (Prisma JSON / multipart). */
+export function coerceStringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((v) => String(v).trim()).filter(Boolean)
+  }
+  if (typeof value === 'string' && value.trim()) {
+    return [value.trim()]
+  }
+  return []
+}
+
+function resolveOneSupervisorTypeLabel(key: string, options: SelectOption[]): string {
+  const fromOptions = options.find((o) => o.value === key)?.label
+  if (fromOptions) return fromOptions
+  return humanizeSupervisorTypeFallback(key)
+}
+
 /**
  * Resolves the display label from `useSuperviseeFormOptions().supervisorTypes` (or any matching
  * `SelectOption[]`). If there is no match, returns a best-effort humanized string (not the raw
  * code) so the UI stays readable while options load or for unknown values.
+ * Accepts a single code or multiple (comma-separated in the UI).
  */
 export function resolveSupervisorTypeLabel(
-  value: string | null | undefined,
+  value: string | string[] | null | undefined,
   options: SelectOption[],
 ): string {
-  if (!value?.trim()) return 'N/A'
-  const key = value.trim()
-  const fromOptions = options.find((o) => o.value === key)?.label
-  if (fromOptions) return fromOptions
-  return humanizeSupervisorTypeFallback(key)
+  const keys = coerceStringList(value)
+  if (keys.length === 0) return 'N/A'
+  return keys.map((key) => resolveOneSupervisorTypeLabel(key, options)).join(', ')
+}
+
+/** Human-readable state list for “looking in” using US state option labels when available. */
+export function formatLookingInStatesLabel(
+  value: string | string[] | null | undefined,
+  stateOptions: SelectOption[],
+): string {
+  const keys = coerceStringList(value)
+  if (keys.length === 0) return '—'
+  return keys.map((k) => resolveOptionLabel(k, stateOptions)).join(', ')
 }
 
 // ─── Budget range ─────────────────────────────────────────────────────────────

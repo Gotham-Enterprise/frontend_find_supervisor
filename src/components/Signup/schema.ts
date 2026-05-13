@@ -125,8 +125,12 @@ export const superviseeSchemaObject = accountSchemaBase.extend({
   occupationId: z.string().min(1, 'Occupation is required'),
 
   stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
-  stateTheyAreLookingIn: z.string().min(1, 'Please select the state you are looking in'),
-  typeOfSupervisor: z.string().min(1, 'Please select a supervisor type'),
+  stateTheyAreLookingIn: z
+    .array(z.string())
+    .min(1, 'Please select at least one state you are looking in'),
+  typeOfSupervisor: z
+    .array(z.string())
+    .min(1, 'Please select at least one type of supervision needed'),
   howSoon: z.string().min(1, 'Please select how soon you need a supervisor'),
   howSoonDate: z.string().optional(),
   preferredFormat: z.enum(['virtual', 'in-person', 'hybrid'], {

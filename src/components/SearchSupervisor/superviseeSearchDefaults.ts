@@ -24,17 +24,29 @@ const FORMAT_SET = new Set<string>(['VIRTUAL', 'IN_PERSON', 'HYBRID'])
 /**
  * Maps supervisee profile "Type of Supervisor Needed" (`supervisorType` API values like
  * `LPCC_SUPERVISOR`) to supervisor search `licenseType` filter values (`LPCC`, etc.).
+ * Merges results when the profile lists multiple types.
  */
 export function mapSupervisorNeededToLicenseTypes(
-  typeNeeded: string | null | undefined,
+  typeNeeded: string | string[] | null | undefined,
   licenseTypeValues: ReadonlySet<string>,
 ): string[] {
-  if (!typeNeeded?.trim()) return []
-  const raw = typeNeeded.trim()
-  if (licenseTypeValues.has(raw)) return [raw]
-  const stripped = raw.replace(/_SUPERVISOR$/i, '')
-  if (stripped && licenseTypeValues.has(stripped)) return [stripped]
-  return []
+  const rawList = Array.isArray(typeNeeded)
+    ? typeNeeded.map((s) => String(s).trim()).filter(Boolean)
+    : typeNeeded?.trim()
+      ? [typeNeeded.trim()]
+      : []
+  const out = new Set<string>()
+  for (const raw of rawList) {
+    if (licenseTypeValues.has(raw)) {
+      out.add(raw)
+      continue
+    }
+    const stripped = raw.replace(/_SUPERVISOR$/i, '')
+    if (stripped && licenseTypeValues.has(stripped)) {
+      out.add(stripped)
+    }
+  }
+  return [...out]
 }
 
 /**
@@ -63,9 +75,12 @@ export function mergeSuperviseeProfileIntoSearchFilters(
     next.licenseTypes = licenseFromSupervisorType
   }
 
-  const stateRaw = profile.stateTheyAreLookingIn?.trim()
-  if (stateRaw && stateVals.has(stateRaw)) {
-    next.states = [stateRaw]
+  const stateKeys = (profile.stateTheyAreLookingIn ?? [])
+    .map((s) => String(s).trim())
+    .filter(Boolean)
+  const validStates = stateKeys.filter((s) => stateVals.has(s))
+  if (validStates.length > 0) {
+    next.states = validStates
     next.cities = []
   }
 

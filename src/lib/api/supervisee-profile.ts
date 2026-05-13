@@ -24,13 +24,13 @@ export interface UpdateSuperviseeProfilePayload {
   occupation?: string
   specialty?: string
   stateOfLicensure?: string[]
-  typeOfSupervisorNeeded?: string
+  typeOfSupervisorNeeded?: string[]
   howSoonLooking?: string
   lookingDate?: string
   preferredFormat?: string
   availability?: string
   idealSupervisor?: string
-  stateTheyAreLookingIn?: string
+  stateTheyAreLookingIn?: string[]
   budgetRangeType?: string
   budgetRangeStart?: number
   budgetRangeEnd?: number
@@ -43,8 +43,15 @@ export async function updateSuperviseeProfile(
 ): Promise<SuperviseeProfileData> {
   const fd = new FormData()
 
-  const { uploadProfilePhoto, stateOfLicensure, budgetRangeStart, budgetRangeEnd, ...rest } =
-    payload
+  const {
+    uploadProfilePhoto,
+    stateOfLicensure,
+    typeOfSupervisorNeeded,
+    stateTheyAreLookingIn,
+    budgetRangeStart,
+    budgetRangeEnd,
+    ...rest
+  } = payload
 
   for (const [key, value] of Object.entries(rest)) {
     if (value !== undefined && value !== null && value !== '') {
@@ -60,8 +67,16 @@ export async function updateSuperviseeProfile(
     fd.append('budgetRangeEnd', String(budgetRangeEnd))
   }
 
-  if (stateOfLicensure) {
-    stateOfLicensure.forEach((s) => fd.append('stateOfLicensure', s))
+  if (stateOfLicensure?.length) {
+    stateOfLicensure.forEach((s) => fd.append('stateOfLicensure[]', s))
+  }
+
+  if (typeOfSupervisorNeeded?.length) {
+    typeOfSupervisorNeeded.forEach((t) => fd.append('typeOfSupervisorNeeded[]', t))
+  }
+
+  if (stateTheyAreLookingIn?.length) {
+    stateTheyAreLookingIn.forEach((s) => fd.append('stateTheyAreLookingIn[]', s))
   }
 
   if (uploadProfilePhoto) {

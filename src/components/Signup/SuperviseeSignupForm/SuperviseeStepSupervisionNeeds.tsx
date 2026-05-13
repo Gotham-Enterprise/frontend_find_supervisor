@@ -123,27 +123,60 @@ export function SuperviseeStepSupervisionNeeds({
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormSelectField
+        <FormField
           control={control}
           name="stateTheyAreLookingIn"
-          label="State You Are Looking In"
           rules={superviseeFieldRules('stateTheyAreLookingIn')}
-          options={stateOptions}
-          placeholder="Select state"
-          loading={statesLoading}
-          isSubmitting={isSubmitting}
-          required
+          render={({ field }) => (
+            <FormItem className="sm:col-span-2">
+              <FormLabel>
+                State(s) You Are Looking In <span className="text-destructive">*</span>
+              </FormLabel>
+              <FormControl>
+                <TagInput
+                  options={stateOptions}
+                  value={field.value ?? []}
+                  onChange={(v) => {
+                    field.onChange(v)
+                    clearErrors(field.name)
+                  }}
+                  placeholder={statesLoading ? 'Loading…' : 'Add a state (e.g. CA)'}
+                  disabled={isSubmitting || statesLoading}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-        <FormSelectField
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormField
           control={control}
           name="typeOfSupervisor"
-          label="Type of Supervisor Needed"
           rules={superviseeFieldRules('typeOfSupervisor')}
-          options={supervisorTypeOptions}
-          placeholder="Select type"
-          loading={supervisorTypesLoading}
-          isSubmitting={isSubmitting}
-          required
+          render={({ field }) => (
+            <FormItem className="sm:col-span-2">
+              <FormLabel>
+                Type of Supervision Needed <span className="text-destructive">*</span>
+              </FormLabel>
+              <FormControl>
+                <TagInput
+                  options={supervisorTypeOptions}
+                  value={field.value ?? []}
+                  onChange={(v) => {
+                    field.onChange(v)
+                    clearErrors(field.name)
+                  }}
+                  placeholder={
+                    supervisorTypesLoading ? 'Loading…' : 'Add one or more supervision types'
+                  }
+                  disabled={isSubmitting || supervisorTypesLoading}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
       </div>
 

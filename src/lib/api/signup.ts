@@ -117,9 +117,9 @@ export function buildSuperviseeFormData(values: SuperviseeFormValues): FormData 
 
   // Supervision needs — `stateOfLicensure[]` so a single state is still parsed as an array (multer + express-validator .isArray())
   values.stateOfLicensure.forEach((s) => fd.append('stateOfLicensure[]', s))
-  fd.append('stateTheyAreLookingIn', values.stateTheyAreLookingIn)
-  // Backend field: typeOfSupervisorNeeded
-  fd.append('typeOfSupervisorNeeded', values.typeOfSupervisor)
+  values.stateTheyAreLookingIn.forEach((s) => fd.append('stateTheyAreLookingIn[]', s))
+  // Backend field: typeOfSupervisorNeeded (array — same `[]` convention as stateOfLicensure for multipart)
+  values.typeOfSupervisor.forEach((t) => fd.append('typeOfSupervisorNeeded[]', t))
   // Backend field: howSoonLooking + enum transformation
   fd.append('howSoonLooking', HOW_SOON_MAP[values.howSoon] ?? 'IMMEDIATELY')
   if (values.howSoon === 'CUSTOM_DATE' && values.howSoonDate) {

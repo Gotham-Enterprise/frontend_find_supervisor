@@ -1,8 +1,14 @@
+import { normalizeUSPhoneNumber } from '@/lib/utils/phone'
+
 import { apiClient } from './client'
 
 export interface ForgotEmailPayload {
+  /** Account phone number (same as on signup). */
   phone: string
-  newPassword: string
+  /** Current account password (used only to verify identity). */
+  password: string
+  /** Inbox where we send a message containing your login email address. */
+  recoveryEmail: string
 }
 
 export interface ForgotPasswordPayload {
@@ -10,11 +16,15 @@ export interface ForgotPasswordPayload {
 }
 
 /**
- * Recover account email by verifying phone number and setting a new password.
- * TODO: replace endpoint path once the backend route is defined.
+ * After verifying phone + password, sends the account login email to `recoveryEmail`.
  */
 export async function forgotEmail(payload: ForgotEmailPayload): Promise<void> {
-  await apiClient.post('/supervision/recover-email', payload)
+  const phoneNumber = normalizeUSPhoneNumber(payload.phone) ?? payload.phone.trim()
+  await apiClient.post('/supervision/forgot-email', {
+    phoneNumber,
+    password: payload.password,
+    recoveryEmail: payload.recoveryEmail.trim(),
+  })
 }
 
 /**
@@ -28,12 +38,17 @@ export async function forgotPassword(payload: ForgotPasswordPayload): Promise<vo
 export interface ResetPasswordPayload {
   token: string
   newPassword: string
+  confirmPassword: string
 }
 
 /**
- * Complete a password reset using the token from the reset-password email link.
- * TODO: replace endpoint path once the backend route is defined.
+ * Completes supervision password reset (token from email path `/reset-password/:token`).
+ * Backend: `PUT /api/supervision/reset-password/:resetToken` with `password` + `confirmPassword`.
  */
 export async function resetPassword(payload: ResetPasswordPayload): Promise<void> {
-  await apiClient.post('/supervision/reset-password', payload)
+  const { token, newPassword, confirmPassword } = payload
+  await apiClient.put(`/supervision/reset-password/${encodeURIComponent(token)}`, {
+    password: newPassword,
+    confirmPassword,
+  })
 }

@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import type { UpdateSuperviseeProfilePayload } from '@/lib/api/supervisee-profile'
 import { formatUSPhoneForDisplay, normalizeUSPhoneNumber } from '@/lib/utils/phone'
+import { coerceStringList } from '@/lib/utils/profile-formatters'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 export const SUPERVISEE_PROFILE_FORMAT_OPTIONS = [
@@ -29,13 +30,17 @@ export const editSuperviseeProfileSchema = z
     occupationId: z.string().min(1, 'Occupation is required'),
     specialtyId: z.string().optional(),
     stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
-    typeOfSupervisorNeeded: z.string().min(1, 'Type of supervisor is required'),
+    typeOfSupervisorNeeded: z
+      .array(z.string())
+      .min(1, 'Please select at least one type of supervision needed'),
     howSoonLooking: z.string().min(1, 'Please select how soon you need a supervisor'),
     lookingDate: z.string().optional(),
     preferredFormat: z.string().min(1, 'Preferred format is required'),
     availability: z.string().min(1, 'Availability is required'),
     idealSupervisor: z.string().min(1, 'Description of ideal supervisor is required').max(500),
-    stateTheyAreLookingIn: z.string().min(1, 'Please select the state you are looking in'),
+    stateTheyAreLookingIn: z
+      .array(z.string())
+      .min(1, 'Please select at least one state you are looking in'),
     budgetRangeType: z.string().min(1, 'Budget type is required'),
     budgetRangeStart: z.number().min(0).optional(),
     budgetRangeEnd: z.number().min(0).optional(),
@@ -72,13 +77,13 @@ export function getDefaultSuperviseeProfileFormValues(
     occupationId: defaultOccupationId,
     specialtyId: defaultSpecialtyId,
     stateOfLicensure: profile.user.stateOfLicensure ?? [],
-    typeOfSupervisorNeeded: profile.typeOfSupervisorNeeded ?? '',
+    typeOfSupervisorNeeded: coerceStringList(profile.typeOfSupervisorNeeded),
     howSoonLooking: profile.howSoonLooking ?? '',
     lookingDate: profile.lookingDate ? profile.lookingDate.slice(0, 10) : '',
     preferredFormat: profile.preferredFormat ?? '',
     availability: profile.availability ?? '',
     idealSupervisor: profile.idealSupervisor ?? '',
-    stateTheyAreLookingIn: profile.stateTheyAreLookingIn ?? '',
+    stateTheyAreLookingIn: coerceStringList(profile.stateTheyAreLookingIn),
     budgetRangeType: profile.budgetRangeType ?? '',
     budgetRangeStart: profile.budgetRangeStart ?? undefined,
     budgetRangeEnd: profile.budgetRangeEnd ?? undefined,
@@ -100,14 +105,16 @@ export function superviseeProfileFormValuesToPayload(
     occupation: values.occupationId || undefined,
     specialty: values.specialtyId || undefined,
     stateOfLicensure: values.stateOfLicensure,
-    typeOfSupervisorNeeded: values.typeOfSupervisorNeeded || undefined,
+    typeOfSupervisorNeeded:
+      values.typeOfSupervisorNeeded.length > 0 ? values.typeOfSupervisorNeeded : undefined,
     howSoonLooking: values.howSoonLooking || undefined,
     lookingDate:
       values.howSoonLooking === 'CUSTOM_DATE' ? values.lookingDate || undefined : undefined,
     preferredFormat: values.preferredFormat || undefined,
     availability: values.availability || undefined,
     idealSupervisor: values.idealSupervisor || undefined,
-    stateTheyAreLookingIn: values.stateTheyAreLookingIn || undefined,
+    stateTheyAreLookingIn:
+      values.stateTheyAreLookingIn.length > 0 ? values.stateTheyAreLookingIn : undefined,
     budgetRangeType: values.budgetRangeType || undefined,
     budgetRangeStart: values.budgetRangeStart,
     budgetRangeEnd: values.budgetRangeEnd,
