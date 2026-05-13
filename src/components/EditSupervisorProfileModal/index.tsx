@@ -62,7 +62,8 @@ export function EditSupervisorProfileModal({
       form.reset(getDefaultSupervisorProfileFormValues(profile))
       queueMicrotask(() => void form.trigger())
     }
-  }, [open, profile.updatedAt, form, profile, mutation])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, profile.updatedAt])
 
   async function onSubmit(values: EditSupervisorProfileFormValues) {
     try {
