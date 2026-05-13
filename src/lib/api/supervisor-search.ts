@@ -136,18 +136,19 @@ export function buildSupervisorSearchParams(
 
   params.acceptingSupervisees = filters.acceptingOnly
 
-  const cityFirst = filters.cities.map((c) => c.trim()).filter(Boolean)[0]
-  const stateFirst = filters.states.map((s) => s.trim()).filter(Boolean)[0]
+  const cities = filters.cities.map((c) => c.trim()).filter(Boolean)
+  const states = filters.states.map((s) => s.trim()).filter(Boolean)
 
-  appendIfNonEmpty(params, 'city', cityFirst)
-  appendIfNonEmpty(params, 'state', stateFirst)
+  appendCommaSeparated(params, 'city', cities)
+  appendCommaSeparated(params, 'state', states)
 
   appendIfNonEmpty(params, 'occupation', occupationNames.join(','))
   appendIfNonEmpty(params, 'specialty', specialtyNames.join(','))
 
-  const hasLocation = Boolean(cityFirst || stateFirst)
   const radius = filters.radiusMiles
-  if (radius > 0 && hasLocation) {
+  // Radius-based geo search requires a city to geocode from.
+  // State-only searches use text matching on the backend instead.
+  if (radius > 0 && cities.length > 0) {
     params.radius = radius
   }
 

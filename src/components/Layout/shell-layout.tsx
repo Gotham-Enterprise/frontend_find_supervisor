@@ -31,7 +31,7 @@ export function ShellLayout({ children }: ShellLayoutProps) {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <DashboardTopbar />
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background-subtle">
-          <div className="p-8">{children}</div>
+          <div className="p-6">{children}</div>
         </main>
       </div>
     </div>

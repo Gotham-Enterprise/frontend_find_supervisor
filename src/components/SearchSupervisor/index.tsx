@@ -156,7 +156,7 @@ export function SearchSupervisorPage() {
 
   return (
     <div className="flex h-[calc(100vh-60px-4rem)] min-h-0 flex-col overflow-hidden">
-      <div className="shrink-0 border-b border-border pb-6 pt-0">
+      <div className="px-3 shrink-0 border-b border-border pb-6 pt-0">
         <SearchSupervisorHeader
           keyword={keyword}
           supervisionFormats={filters.supervisionFormats}
