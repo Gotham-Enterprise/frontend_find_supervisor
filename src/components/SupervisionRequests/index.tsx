@@ -37,6 +37,7 @@ import {
   useAcceptHire,
   useHiresList,
   useRejectHire,
+  useStatesOptions,
   useSuperviseeFormOptions,
   useSupervisorProfile,
   useUserSnackbar,
@@ -50,6 +51,7 @@ import {
   formatDate,
   formatDisplayName,
   formatLocation,
+  formatLookingInStatesLabel,
   formatSupervisionFormat,
   resolveSupervisorTypeLabel,
 } from '@/lib/utils/profile-formatters'
@@ -263,6 +265,7 @@ interface SuperviseeDetailsDialogProps {
 
 function SuperviseeDetailsDialog({ hire, open, onOpenChange }: SuperviseeDetailsDialogProps) {
   const { supervisorTypes } = useSuperviseeFormOptions()
+  const { data: stateOptions = [] } = useStatesOptions()
   const supervisorTypeOptions = supervisorTypes.data ?? []
   const { supervisee } = hire
 
@@ -313,7 +316,10 @@ function SuperviseeDetailsDialog({ hire, open, onOpenChange }: SuperviseeDetails
               label="Type of Supervisor"
               value={resolveSupervisorTypeLabel(hire.typeOfSupervisorNeeded, supervisorTypeOptions)}
             />
-            <DetailItem label="Looking in State" value={hire.stateTheyAreLookingIn} />
+            <DetailItem
+              label="Looking in State"
+              value={formatLookingInStatesLabel(hire.stateTheyAreLookingIn, stateOptions)}
+            />
             <DetailItem label="Preferred Start Date" value={formatDate(hire.preferredStartDate)} />
             <DetailItem
               label="Budget"

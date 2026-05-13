@@ -4,11 +4,12 @@ import { ProfileDetailRow, ProfilePreviewCard, TagList } from '@/components/Dash
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useSuperviseeFormOptions } from '@/lib/hooks'
+import { useStatesOptions, useSuperviseeFormOptions } from '@/lib/hooks'
 import { formatUSPhoneForDisplay } from '@/lib/utils/phone'
 import {
   formatDisplayName,
   formatLocation,
+  formatLookingInStatesLabel,
   formatSupervisionFormat,
   resolveOptionLabel,
   resolveSupervisorTypeLabel,
@@ -98,6 +99,7 @@ export function SuperviseeDashboardProfileDetails({
   onEditClick,
 }: SuperviseeDashboardProfileDetailsProps) {
   const { availability, supervisorTypes } = useSuperviseeFormOptions()
+  const { data: stateOptions = [] } = useStatesOptions()
   const availabilityOptions = availability.data ?? []
   const supervisorTypeOptions = supervisorTypes.data ?? []
 
@@ -113,6 +115,7 @@ export function SuperviseeDashboardProfileDetails({
     profile.typeOfSupervisorNeeded,
     supervisorTypeOptions,
   )
+  const lookingInLabel = formatLookingInStatesLabel(profile.stateTheyAreLookingIn, stateOptions)
   const formatLabel = formatSupervisionFormat(profile.preferredFormat)
   const howSoonLabel = formatHowSoon(profile.howSoonLooking, profile.lookingDate)
   const budgetLabel = formatBudget(
@@ -120,6 +123,10 @@ export function SuperviseeDashboardProfileDetails({
     profile.budgetRangeStart,
     profile.budgetRangeEnd,
   )
+
+  const hasTypeOfSupervisorNeeded = Array.isArray(profile.typeOfSupervisorNeeded)
+    ? profile.typeOfSupervisorNeeded.length > 0
+    : Boolean(String(profile.typeOfSupervisorNeeded ?? '').trim())
 
   return (
     <ProfilePreviewCard
@@ -152,7 +159,7 @@ export function SuperviseeDashboardProfileDetails({
       }}
       stats={[
         { value: profile.completedCount, label: 'Completed' },
-        { value: profile.stateTheyAreLookingIn ?? '—', label: 'Looking In' },
+        { value: lookingInLabel !== '—' ? lookingInLabel : '—', label: 'Looking In' },
         { value: formatLabel !== 'N/A' ? formatLabel : '—', label: 'Format' },
       ]}
     >
@@ -162,7 +169,7 @@ export function SuperviseeDashboardProfileDetails({
           Supervision Needs
         </p>
         <div>
-          {profile.typeOfSupervisorNeeded && (
+          {hasTypeOfSupervisorNeeded && (
             <ProfileDetailRow label="Supervisor Type">{supervisorTypeLabel}</ProfileDetailRow>
           )}
           {profile.availability && (

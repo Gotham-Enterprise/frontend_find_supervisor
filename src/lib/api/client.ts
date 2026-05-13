@@ -34,7 +34,8 @@ apiClient.interceptors.response.use(
       typeof window !== 'undefined' &&
       axios.isAxiosError(error) &&
       error.response?.status === 401 &&
-      !error.config?.url?.includes('/supervision/login')
+      !error.config?.url?.includes('/supervision/login') &&
+      !error.config?.url?.includes('/supervision/forgot-email')
     ) {
       localStorage.removeItem(TOKEN_KEY)
       if (!isAuthEntryPath(window.location.pathname)) {

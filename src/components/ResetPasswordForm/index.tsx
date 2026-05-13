@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2, Lock } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
@@ -59,12 +59,15 @@ export function ResetPasswordPage() {
 
 function ResetPasswordForm() {
   const router = useRouter()
+  const params = useParams<{ token?: string }>()
   const searchParams = useSearchParams()
   const { showSuccess } = useUserSnackbar()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
 
-  const token = searchParams.get('token') ?? ''
+  const tokenFromPath = typeof params.token === 'string' ? params.token : ''
+  const tokenFromQuery = searchParams.get('token') ?? ''
+  const token = tokenFromPath || tokenFromQuery
 
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
@@ -95,7 +98,11 @@ function ResetPasswordForm() {
     setApiError(null)
     setIsSubmitting(true)
     try {
-      await resetPassword({ token, newPassword: values.newPassword })
+      await resetPassword({
+        token,
+        newPassword: values.newPassword,
+        confirmPassword: values.confirmPassword,
+      })
       showSuccess('Your password has been updated. You can now sign in.')
       router.push('/login')
     } catch (err) {

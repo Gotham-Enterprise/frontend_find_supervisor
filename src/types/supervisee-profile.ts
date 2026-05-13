@@ -41,8 +41,8 @@ export interface SuperviseeProfileData {
   id: string
   userId: string
 
-  /** Type of supervisor the supervisee is looking for */
-  typeOfSupervisorNeeded: string | null
+  /** Types of supervision / supervisor the supervisee is looking for */
+  typeOfSupervisorNeeded: string[] | null
   /** How soon they need to start supervision */
   howSoonLooking: LookingTimeline | null
   lookingDate: string | null
@@ -51,8 +51,8 @@ export interface SuperviseeProfileData {
   availability: string | null
   /** Free-text description of their ideal supervisor / about them */
   idealSupervisor: string | null
-  /** State the supervisee is seeking supervision in */
-  stateTheyAreLookingIn: string | null
+  /** States the supervisee is seeking supervision in */
+  stateTheyAreLookingIn: string[] | null
 
   budgetRangeType: BudgetRangeType | null
   /** Budget lower bound in whole dollars */

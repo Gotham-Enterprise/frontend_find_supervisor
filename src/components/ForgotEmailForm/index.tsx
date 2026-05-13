@@ -1,7 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2, Lock, Phone } from 'lucide-react'
+import { Loader2, Lock, Mail, Phone } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -52,7 +52,8 @@ export function ForgotEmailPage() {
                 Recover Email
               </h2>
               <p className="text-sm text-muted-foreground">
-                Enter your phone number and set a new password to recover access to your account.
+                Enter the phone number and password for your account. We will send your login email
+                address to the recovery email you choose.
               </p>
             </div>
             <ForgotEmailForm />
@@ -80,8 +81,12 @@ function ForgotEmailForm() {
     setApiError(null)
     setIsSubmitting(true)
     try {
-      await forgotEmail({ phone: values.phone, newPassword: values.newPassword })
-      showSuccess('Your password has been updated. You can now sign in with your new credentials.')
+      await forgotEmail({
+        phone: values.phone,
+        password: values.password,
+        recoveryEmail: values.recoveryEmail,
+      })
+      showSuccess('Check your recovery email for your login address, then sign in.')
       router.push('/login')
     } catch (err) {
       setApiError(parseApiError(err))
@@ -135,26 +140,26 @@ function ForgotEmailForm() {
 
         <FormInputField
           control={form.control}
-          name="newPassword"
-          label="New password"
+          name="password"
+          label="Account password"
           required
           placeholder="••••••••"
           passwordToggle
-          autoComplete="new-password"
+          autoComplete="current-password"
           isSubmitting={isSubmitting}
           startAdornment={<Lock className="size-4 text-muted-foreground" aria-hidden />}
         />
 
         <FormInputField
           control={form.control}
-          name="confirmPassword"
-          label="Confirm password"
+          name="recoveryEmail"
+          label="Recovery email"
           required
-          placeholder="••••••••"
-          passwordToggle
-          autoComplete="new-password"
+          type="email"
+          placeholder="you@example.com"
+          autoComplete="email"
           isSubmitting={isSubmitting}
-          startAdornment={<Lock className="size-4 text-muted-foreground" aria-hidden />}
+          startAdornment={<Mail className="size-4 text-muted-foreground" aria-hidden />}
         />
 
         <Button type="submit" className="h-11 w-full text-base" disabled={isSubmitting}>

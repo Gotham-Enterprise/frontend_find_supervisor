@@ -106,8 +106,8 @@ export function HireSupervisorModal({
       preferredAvailability:
         (superviseeProfile?.availability as HireSupervisorFormValues['preferredAvailability']) ??
         undefined,
-      typeOfSupervisorNeeded: superviseeProfile?.typeOfSupervisorNeeded ?? '',
-      stateTheyAreLookingIn: superviseeProfile?.stateTheyAreLookingIn ?? '',
+      typeOfSupervisorNeeded: superviseeProfile?.typeOfSupervisorNeeded?.[0] ?? '',
+      stateTheyAreLookingIn: superviseeProfile?.stateTheyAreLookingIn?.[0] ?? '',
       preferredStartDate: '',
       budgetRangeType: superviseeProfile?.budgetRangeType ?? undefined,
       budgetRangeStart: superviseeProfile?.budgetRangeStart ?? 0,
