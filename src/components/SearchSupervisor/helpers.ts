@@ -1,3 +1,4 @@
+import { yearsOfExperienceOptions } from '@/components/Signup/schema'
 import type { SelectOption } from '@/lib/api/options'
 
 import type { SupervisionFormat, SupervisorSearchFilters } from './types'
@@ -44,16 +45,11 @@ export const FORMAT_BADGE_CLASSES: Record<SupervisionFormat, string> = {
   HYBRID: 'bg-violet-50 text-violet-700 border border-violet-100',
 }
 
-/** Years range options for search TagInput. */
-export const YEARS_OF_EXPERIENCE_OPTIONS = [
-  { label: '0–1 years', value: '0_1' },
-  { label: '2–3 years', value: '2_3' },
-  { label: '4–5 years', value: '4_5' },
-  { label: '6–10 years', value: '6_10' },
-  { label: '11–15 years', value: '11_15' },
-  { label: '16–20 years', value: '16_20' },
-  { label: '20+ years', value: '20_PLUS' },
-]
+/** Years range options for search TagInput — must stay in sync with signup schema values. */
+export const YEARS_OF_EXPERIENCE_OPTIONS: SelectOption[] = yearsOfExperienceOptions.map((v) => ({
+  label: v,
+  value: v,
+}))
 
 export const SORT_OPTIONS = [
   { label: 'Best Match', value: 'best_match' },

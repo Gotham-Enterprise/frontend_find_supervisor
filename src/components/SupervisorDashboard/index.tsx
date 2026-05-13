@@ -838,6 +838,7 @@ function TipsAndHelp() {
 function BillingSection({ profile }: { profile: SupervisorProfileData }) {
   const sub = getPrimaryDashboardSubscription(profile)
   if (!sub) return null
+  if (isFreePlan(sub.plan)) return null
 
   const isEntitled =
     sub.status === 'ACTIVE' || sub.status === 'TRIALING' || sub.status === 'PAST_DUE'
