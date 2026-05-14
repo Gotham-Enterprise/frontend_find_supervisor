@@ -128,6 +128,9 @@ export interface HireListItem {
   createdAt: string
   updatedAt: string
 
+  // Review
+  hasReviewed: boolean
+
   // Nested relations
   supervisor: HireUser
   supervisee: HireUser
