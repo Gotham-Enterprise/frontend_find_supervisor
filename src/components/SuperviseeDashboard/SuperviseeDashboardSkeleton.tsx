@@ -14,7 +14,7 @@ export function SuperviseeDashboardSkeleton() {
         <Skeleton className="h-64 rounded-xl lg:col-span-3" />
         <Skeleton className="h-64 rounded-xl lg:col-span-2" />
       </div>
-      <Skeleton className="h-32 w-full rounded-xl" />
+      <Skeleton className="h-28 w-full rounded-xl" />
     </div>
   )
 }

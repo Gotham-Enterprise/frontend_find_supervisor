@@ -7,12 +7,12 @@ import { SuperviseeDashboardActiveRequests } from './SuperviseeDashboardActiveRe
 import { SuperviseeDashboardActivityCard } from './SuperviseeDashboardActivityCard'
 import { SuperviseeDashboardGoalsProgressCard } from './SuperviseeDashboardGoalsProgressCard'
 import { SuperviseeDashboardHeader } from './SuperviseeDashboardHeader'
+import { SuperviseeDashboardNeedHelp } from './SuperviseeDashboardNeedHelp'
 import {
   SuperviseeDashboardProfileDetails,
   SuperviseeDashboardProfileDetailsError,
   SuperviseeDashboardProfileDetailsSkeleton,
 } from './SuperviseeDashboardProfileDetails'
-import { SuperviseeDashboardQuickActions } from './SuperviseeDashboardQuickActions'
 import { SuperviseeDashboardRecommendedSupervisors } from './SuperviseeDashboardRecommendedSupervisors'
 import { SuperviseeDashboardSummaryCards } from './SuperviseeDashboardSummaryCards'
 import { SuperviseeDashboardUpcomingSessionsCard } from './SuperviseeDashboardUpcomingSessionsCard'
@@ -134,7 +134,7 @@ export function SuperviseeDashboardContent({
         </div>
       </div>
 
-      <SuperviseeDashboardQuickActions />
+      <SuperviseeDashboardNeedHelp />
     </div>
   )
 }
