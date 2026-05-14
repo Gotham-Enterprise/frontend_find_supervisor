@@ -46,6 +46,10 @@ interface SearchSupervisorFiltersProps {
   onApply: () => void
   /** Clears draft + applied filter state (does not clear header keyword). */
   onClearFilters: () => void
+  /** Whether filters are currently pre-filled from the supervisee's supervision needs. */
+  prefillFromProfile: boolean
+  /** Called when the user toggles the pre-fill switch. */
+  onPrefillToggle: (enabled: boolean) => void
 }
 
 function FilterLabel({ children }: { children: React.ReactNode }) {
@@ -65,6 +69,8 @@ export function SearchSupervisorFilters({
   onChange,
   onApply,
   onClearFilters,
+  prefillFromProfile,
+  onPrefillToggle,
 }: SearchSupervisorFiltersProps) {
   const {
     patientPopulations: {
@@ -175,6 +181,17 @@ export function SearchSupervisorFilters({
           </button>
         )}
       </div>
+
+      <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-muted/40 px-3 py-2.5">
+        <Switch
+          checked={prefillFromProfile}
+          onCheckedChange={onPrefillToggle}
+          className="mt-0.5 shrink-0"
+        />
+        <span className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium text-foreground">Pre-fill from my profile</span>
+        </span>
+      </label>
 
       {chips.length > 0 && (
         <ActiveFilterChips chips={chips} onRemove={(key) => onChange(removeChip(filters, key))} />

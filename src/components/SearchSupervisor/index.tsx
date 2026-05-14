@@ -43,6 +43,7 @@ export function SearchSupervisorPage() {
   const [sortBy, setSortBy] = useState<SortOption>('best_match')
   const [page, setPage] = useState(1)
   const [defaultsSeeded, setDefaultsSeeded] = useState(false)
+  const [prefillFromProfile, setPrefillFromProfile] = useState(false)
 
   const { data: superviseeProfile, isFetched: superviseeProfileFetched } = useSuperviseeProfile()
   const licenseTypesQuery = useLicenseTypeOptions()
@@ -71,12 +72,17 @@ export function SearchSupervisorPage() {
     [superviseeProfile, licenseTypeOptions, stateOptions, availabilityOptions],
   )
 
-  // Seed filters once option lists + profile are ready. Applying during render avoids
-  // react-hooks/set-state-in-effect; using defaultsSeeded (not a ref) satisfies react-hooks/refs.
+  // Mark options as ready once all data is loaded (filters always start blank).
   if (optionsReady && !defaultsSeeded) {
-    setFilters(profileMergedDefaults)
-    setAppliedFilters(profileMergedDefaults)
     setDefaultsSeeded(true)
+  }
+
+  function handlePrefillToggle(enabled: boolean) {
+    setPrefillFromProfile(enabled)
+    const next = enabled ? profileMergedDefaults : DEFAULT_FILTERS
+    setFilters(next)
+    setAppliedFilters(next)
+    setPage(1)
   }
 
   const { data: occupationsRes } = useOccupations({ limit: 0 })
@@ -175,6 +181,8 @@ export function SearchSupervisorPage() {
             onChange={handleFiltersChange}
             onApply={handleApplyFilters}
             onClearFilters={handleClearFilterPanel}
+            prefillFromProfile={prefillFromProfile}
+            onPrefillToggle={handlePrefillToggle}
           />
         </div>
 
