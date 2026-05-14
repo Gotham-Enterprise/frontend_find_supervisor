@@ -32,8 +32,8 @@ export function MessagesPage({ conversationId }: MessagesPageProps) {
   }, [router])
 
   return (
-    // Bleed to fill the shell's scrollable area — override default p-8 padding via -m-8
-    <div className="-m-8 flex h-[calc(100vh-60px)] overflow-hidden">
+    // Bleed to fill the shell's scrollable area — override default p-6 padding via -m-6
+    <div className="-m-6 flex h-[calc(100vh-60px)] overflow-hidden">
       {/* Left column — conversation list */}
       <div
         className={`flex w-80 shrink-0 flex-col border-r border-border bg-white ${
