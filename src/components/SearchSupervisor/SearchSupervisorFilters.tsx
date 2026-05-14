@@ -3,14 +3,21 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { TagInput } from '@/components/ui/tag-input'
 import {
   useAvailabilityOptions,
+  useCitiesOptions,
   useLicenseTypeOptions,
   useMergedSpecialtyOptions,
-  useMultiStateCityOptions,
   useOccupations,
   useStatesOptions,
   useSupervisorFormOptions,
@@ -29,6 +36,9 @@ import {
   YEARS_OF_EXPERIENCE_OPTIONS,
 } from './helpers'
 import type { SupervisorSearchFilters } from './types'
+
+/** `SelectItem` cannot use `value=""`; this value means no location filter. */
+const LOCATION_FILTER_NONE = '__none__'
 
 interface SearchSupervisorFiltersProps {
   filters: SupervisorSearchFilters
@@ -110,13 +120,27 @@ export function SearchSupervisorFilters({
     isError: statesError,
   } = useStatesOptions()
 
+  const stateForCities = filters.state.trim()
   const {
-    data: cityOptions,
+    data: cityOptions = [],
     isLoading: citiesLoading,
     isError: citiesError,
-  } = useMultiStateCityOptions(filters.states)
+  } = useCitiesOptions(stateForCities)
 
-  const hasStates = filters.states.length > 0
+  const hasSearchState = Boolean(stateForCities)
+
+  const cityOptionsKey = cityOptions.map((o) => o.value).join('|')
+
+  useEffect(() => {
+    const f = filtersRef.current
+    const city = f.city.trim()
+    if (!city || !stateForCities) return
+    if (citiesLoading) return
+    const valid = new Set(cityOptions.map((o) => o.value))
+    if (valid.size > 0 && !valid.has(city)) {
+      onChange({ ...f, city: '' })
+    }
+  }, [stateForCities, cityOptionsKey, citiesLoading, cityOptions, onChange])
 
   const chipOptions: ChipOptions = {
     occupationOptions,
@@ -129,17 +153,6 @@ export function SearchSupervisorFilters({
 
   function set<K extends keyof SupervisorSearchFilters>(key: K, value: SupervisorSearchFilters[K]) {
     onChange({ ...filters, [key]: value })
-  }
-
-  function handleStatesChange(newStates: string[]) {
-    onChange({ ...filters, states: newStates, cities: [] })
-  }
-
-  function getCityPlaceholder(): string {
-    if (!hasStates) return 'Select a state first…'
-    if (citiesLoading) return 'Loading cities…'
-    if (citiesError) return 'Unable to load cities'
-    return 'Select cities…'
   }
 
   function getStatePlaceholder(loading: boolean, error: boolean): string {
@@ -226,26 +239,68 @@ export function SearchSupervisorFilters({
 
       <div>
         <FilterLabel>State</FilterLabel>
-        <TagInput
-          options={stateOptions}
-          value={filters.states}
-          onChange={handleStatesChange}
-          placeholder={getStatePlaceholder(statesLoading, statesError)}
+        <Select
+          value={stateForCities ? filters.state.trim() : LOCATION_FILTER_NONE}
+          onValueChange={(v) => {
+            const nextState = v === LOCATION_FILTER_NONE ? '' : (v ?? '').trim()
+            onChange({ ...filters, state: nextState, city: '' })
+          }}
           disabled={statesLoading || statesError}
-        />
+        >
+          <SelectTrigger className="w-full" aria-label="Search by state">
+            <SelectValue>
+              {stateForCities
+                ? (stateOptions.find((o) => o.value === stateForCities)?.label ?? stateForCities)
+                : 'Any state'}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={LOCATION_FILTER_NONE}>Any state</SelectItem>
+            {stateOptions.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {statesError && <FilterError message="Unable to load states right now." />}
       </div>
 
       <div>
         <FilterLabel>City</FilterLabel>
-        <TagInput
-          options={cityOptions}
-          value={filters.cities}
-          onChange={(v) => set('cities', v)}
-          placeholder={getCityPlaceholder()}
-          disabled={!hasStates || citiesLoading || citiesError}
-        />
-        {hasStates && citiesError && (
+        <Select
+          key={stateForCities || 'no-state'}
+          value={filters.city.trim() ? filters.city.trim() : LOCATION_FILTER_NONE}
+          onValueChange={(v) => {
+            const nextCity = v === LOCATION_FILTER_NONE ? '' : (v ?? '').trim()
+            onChange({ ...filters, city: nextCity })
+          }}
+          disabled={!hasSearchState || citiesLoading || citiesError}
+        >
+          <SelectTrigger className="w-full" aria-label="Search by city">
+            <SelectValue>
+              {!hasSearchState
+                ? 'Select a state first…'
+                : citiesLoading
+                  ? 'Loading cities…'
+                  : citiesError
+                    ? 'Unable to load cities'
+                    : filters.city.trim()
+                      ? (cityOptions.find((o) => o.value === filters.city.trim())?.label ??
+                        filters.city.trim())
+                      : 'Any city'}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={LOCATION_FILTER_NONE}>Any city</SelectItem>
+            {cityOptions.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {hasSearchState && citiesError && (
           <FilterError message="Unable to load cities for the selected state." />
         )}
       </div>

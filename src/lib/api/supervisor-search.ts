@@ -101,6 +101,7 @@ function resolveSupervisionFormat(f: SupervisorSearchFilters): string | undefine
 /**
  * Maps UI state to GET /api/supervision/search query params.
  * Omits empty values; comma-joins multi-value fields per API contract.
+ * `city` and `state` are sent as single trimmed strings (matches supervisor search filter fields).
  * Always sends acceptingSupervisees (true/false) so the backend receives an explicit filter.
  */
 /** Maps UI SortOption values to the API's sortBy param values. */
@@ -113,7 +114,7 @@ const SORT_OPTION_TO_API: Partial<Record<SortOption, string>> = {
 export function buildSupervisorSearchParams(
   input: SupervisorSearchQueryInput,
 ): Record<string, string | number | boolean> {
-  const { page, limit, keywords, filters, occupationNames, specialtyNames, sortBy } = input
+  const { page, limit, keywords, filters, sortBy } = input
   const params: Record<string, string | number | boolean> = {
     page,
     limit,
@@ -136,19 +137,14 @@ export function buildSupervisorSearchParams(
 
   params.acceptingSupervisees = filters.acceptingOnly
 
-  const cities = filters.cities.map((c) => c.trim()).filter(Boolean)
-  const states = filters.states.map((s) => s.trim()).filter(Boolean)
-
-  appendCommaSeparated(params, 'city', cities)
-  appendCommaSeparated(params, 'state', states)
-
-  appendIfNonEmpty(params, 'occupation', occupationNames.join(','))
-  appendIfNonEmpty(params, 'specialty', specialtyNames.join(','))
+  appendIfNonEmpty(params, 'city', filters.city)
+  appendIfNonEmpty(params, 'state', filters.state)
 
   const radius = filters.radiusMiles
-  // Radius-based geo search requires a city to geocode from.
-  // State-only searches use text matching on the backend instead.
-  if (radius > 0 && cities.length > 0) {
+  const cityTrim = filters.city.trim()
+  const stateTrim = filters.state.trim()
+  // Radius search geocodes a single origin; backend requires both city and state.
+  if (radius > 0 && cityTrim && stateTrim) {
     params.radius = radius
   }
 

@@ -16,10 +16,20 @@ const STATUS_CONFIG: Record<HireStatus, { label: string; className: string }> = 
 
 interface HireStatusBadgeProps {
   status: HireStatus
+  /**
+   * When `status` is `REVIEWED` but supervision is already finished (`completedAt` set),
+   * show **Completed** — `REVIEWED` is also used for “supervisor viewed pending request” (no `completedAt`).
+   */
+  completedAt?: string | null
 }
 
-export function HireStatusBadge({ status }: HireStatusBadgeProps) {
-  const config = STATUS_CONFIG[status] ?? { label: status, className: '' }
+export function HireStatusBadge({ status, completedAt }: HireStatusBadgeProps) {
+  const isPostCompletionReviewed =
+    status === 'REVIEWED' && completedAt != null && String(completedAt).length > 0
+
+  const effectiveStatus: HireStatus = isPostCompletionReviewed ? 'COMPLETED' : status
+
+  const config = STATUS_CONFIG[effectiveStatus] ?? { label: status, className: '' }
   return (
     <Badge variant="outline" className={config.className}>
       {config.label}

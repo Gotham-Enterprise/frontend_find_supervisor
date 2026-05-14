@@ -75,13 +75,13 @@ function ReviewCard({ review }: { review: Review }) {
   const initials = getInitials(review.supervisee.fullName)
 
   return (
-    <div className="flex flex-col gap-2 border-t border-[#F3F4F6] py-5">
-      <div className="flex items-center gap-2.5">
+    <div className="flex min-w-0 flex-col gap-2 border-t border-[#F3F4F6] py-5">
+      <div className="flex min-w-0 items-center gap-2.5">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#E0F2FE] text-xs font-semibold text-[#0369A1]">
           {initials}
         </div>
 
-        <div className="flex flex-col gap-0.5">
+        <div className="min-w-0 flex flex-col gap-0.5">
           <span className="text-sm font-medium text-[#374151]">{reviewerName}</span>
           <div className="flex items-center gap-1">
             <div className="flex items-center gap-px">
@@ -99,7 +99,9 @@ function ReviewCard({ review }: { review: Review }) {
       </div>
 
       {review.comment && (
-        <p className="max-w-[760px] text-sm leading-[1.6] text-[#374151]">{review.comment}</p>
+        <p className="min-w-0 max-w-full break-words text-sm leading-[1.6] whitespace-pre-wrap text-[#374151] [overflow-wrap:anywhere]">
+          {review.comment}
+        </p>
       )}
     </div>
   )

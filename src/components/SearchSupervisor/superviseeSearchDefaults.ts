@@ -10,8 +10,8 @@ function cloneFilters(base: SupervisorSearchFilters): SupervisorSearchFilters {
     specialtyIds: [...base.specialtyIds],
     licenseTypes: [...base.licenseTypes],
     stateLicenses: [...base.stateLicenses],
-    cities: [...base.cities],
-    states: [...base.states],
+    city: base.city,
+    state: base.state,
     supervisionFormats: [...base.supervisionFormats],
     yearsExperience: [...base.yearsExperience],
     patientPopulation: [...base.patientPopulation],
@@ -80,8 +80,8 @@ export function mergeSuperviseeProfileIntoSearchFilters(
     .filter(Boolean)
   const validStates = stateKeys.filter((s) => stateVals.has(s))
   if (validStates.length > 0) {
-    next.states = validStates
-    next.cities = []
+    next.state = validStates[0]!
+    next.city = ''
   }
 
   const pf = profile.preferredFormat?.trim().toUpperCase()

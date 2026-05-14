@@ -133,9 +133,9 @@ function ReviewCard({ review }: { review: Review }) {
   return (
     <Card>
       <CardContent className="pt-4">
-        <div className="flex flex-col gap-3">
+        <div className="flex min-w-0 flex-col gap-3">
           {/* Reviewer row */}
-          <div className="flex items-start gap-3">
+          <div className="flex min-w-0 items-start gap-3">
             <UserAvatar
               src={review.supervisee.profilePhotoUrl}
               name={reviewerName}
@@ -159,7 +159,9 @@ function ReviewCard({ review }: { review: Review }) {
 
           {/* Comment */}
           {review.comment && (
-            <p className="text-sm leading-relaxed text-muted-foreground">{review.comment}</p>
+            <p className="min-w-0 max-w-full break-words text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]">
+              {review.comment}
+            </p>
           )}
 
           {/* Updated note */}

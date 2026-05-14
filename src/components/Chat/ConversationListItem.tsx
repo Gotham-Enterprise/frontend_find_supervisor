@@ -34,8 +34,9 @@ export const ConversationListItem = memo(function ConversationListItem({
     ? formatRelativeTime(new Date(conversation.lastMessageAt))
     : null
   const hasUnread = conversation.unreadCount > 0
-  const isPending =
-    conversation.hire.status === 'PENDING' || conversation.hire.status === 'REVIEWED'
+  const hire = conversation.hire
+  const isPreAcceptMessaging =
+    hire.status === 'PENDING' || (hire.status === 'REVIEWED' && !hire.completedAt)
   const avatarCornerRing = isActive
     ? 'ring-brand-light'
     : hasUnread && !isActive
@@ -99,17 +100,17 @@ export const ConversationListItem = memo(function ConversationListItem({
           <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">
             {otherRole}
           </span>
-          {conversation.hire.status === 'REVIEWED' && (
+          {conversation.hire.status === 'REVIEWED' && !conversation.hire.completedAt && (
             <span className="rounded-full bg-blue-100 px-1.5 py-px text-[10px] font-semibold text-blue-700">
               Reviewed
             </span>
           )}
-          {isPending && conversation.remainingMessages > 0 && (
+          {isPreAcceptMessaging && conversation.remainingMessages > 0 && (
             <span className="rounded-full bg-amber-100 px-1.5 py-px text-[10px] font-semibold text-amber-700">
               {conversation.remainingMessages} msg left
             </span>
           )}
-          {isPending && conversation.remainingMessages === 0 && (
+          {isPreAcceptMessaging && conversation.remainingMessages === 0 && (
             <span className="rounded-full bg-red-50 px-1.5 py-px text-[10px] font-semibold text-red-600">
               Limit reached
             </span>

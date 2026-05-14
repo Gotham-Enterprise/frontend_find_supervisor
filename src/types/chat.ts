@@ -20,6 +20,8 @@ export interface ChatParticipant {
 export interface ChatHire {
   id: string
   status: ChatHireStatus
+  /** Present when supervision was marked complete; distinguishes hire `REVIEWED` after review vs pre-accept `REVIEWED`. */
+  completedAt?: string | null
 }
 
 export interface Conversation {

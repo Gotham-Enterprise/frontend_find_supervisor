@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 
 import { StarRatingInput } from '@/components/reviews/StarRatingInput'
@@ -23,12 +23,20 @@ import type { Review } from '@/types/review'
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
+const REVIEW_COMMENT_MAX_LENGTH = 500
+
 const leaveReviewSchema = z.object({
   rating: z
     .number({ error: 'Rating is required' })
     .min(1, 'Rating must be at least 1')
     .max(5, 'Rating cannot exceed 5'),
-  comment: z.string().min(1, 'Comment is required'),
+  comment: z
+    .string()
+    .min(1, 'Comment is required')
+    .max(
+      REVIEW_COMMENT_MAX_LENGTH,
+      `Comment must be ${REVIEW_COMMENT_MAX_LENGTH} characters or less`,
+    ),
 })
 
 type LeaveReviewFormValues = z.infer<typeof leaveReviewSchema>
@@ -66,20 +74,24 @@ export function LeaveReviewModal({
 
   const isPending = createMutation.isPending || updateMutation.isPending
 
+  const initialComment = (existingReview?.comment ?? '').slice(0, REVIEW_COMMENT_MAX_LENGTH)
+
   const form = useForm<LeaveReviewFormValues>({
     resolver: zodResolver(leaveReviewSchema),
     defaultValues: {
       rating: existingReview?.rating ?? 0,
-      comment: existingReview?.comment ?? '',
+      comment: initialComment,
     },
   })
+
+  const commentValue = useWatch({ control: form.control, name: 'comment' }) ?? ''
 
   // Reset form whenever the modal opens, pre-filling with existing data if editing
   useEffect(() => {
     if (open) {
       form.reset({
         rating: existingReview?.rating ?? 0,
-        comment: existingReview?.comment ?? '',
+        comment: (existingReview?.comment ?? '').slice(0, REVIEW_COMMENT_MAX_LENGTH),
       })
     }
   }, [open, existingReview, form])
@@ -162,10 +174,16 @@ export function LeaveReviewModal({
                       {...field}
                       placeholder="Write your review here…"
                       rows={4}
+                      maxLength={REVIEW_COMMENT_MAX_LENGTH}
                       disabled={isPending}
                       className="resize-none"
                     />
                   </FormControl>
+                  <div className="flex justify-end">
+                    <span className="text-xs text-muted-foreground">
+                      {commentValue.length} / {REVIEW_COMMENT_MAX_LENGTH} characters
+                    </span>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
