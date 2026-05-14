@@ -3,7 +3,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 
-import { login, logout } from '@/lib/api/auth'
+import { getMe, login, logout } from '@/lib/api/auth'
 import { TOKEN_KEY } from '@/lib/api/client'
 import { useUser } from '@/lib/contexts/UserContext'
 import { disconnectSupervisionSocket } from '@/lib/socket/supervisionSocket'
@@ -15,10 +15,13 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: (credentials: LoginCredentials) => login(credentials),
-    onSuccess: (user) => {
+    onSuccess: async () => {
       // Store a flag so ShellLayout knows the session is active before context hydration
       localStorage.setItem(TOKEN_KEY, 'true')
-      setUser(user)
+      // Fetch the full user profile (includes profilePhotoUrl) rather than using
+      // the login response, which only returns the raw supervisionUser row.
+      const fullUser = await getMe()
+      setUser(fullUser)
       router.push('/dashboard')
     },
   })
