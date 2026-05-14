@@ -41,4 +41,6 @@ export interface User {
   emailVerified?: boolean
   status?: string
   permissions?: UserPermissions | null
+  /** Supervisor or supervisee profile object returned by GET /supervision/me */
+  profile?: { profilePhotoUrl?: string | null } & Record<string, unknown>
 }
