@@ -7,6 +7,7 @@ import {
   MapPin,
   Monitor,
   MoreVertical,
+  Star,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -180,6 +181,12 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
               </Link>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
+                {hire.hasReviewed && (
+                  <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                    <Star className="size-2.5 fill-amber-500 text-amber-500" aria-hidden />
+                    Reviewed
+                  </span>
+                )}
               </div>
             </div>
           </div>

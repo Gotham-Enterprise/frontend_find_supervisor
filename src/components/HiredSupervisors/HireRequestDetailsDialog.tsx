@@ -98,11 +98,6 @@ export function HireRequestDetailsDialog({
   const licenseStates =
     hire.supervisorStateLicense?.length > 0 ? hire.supervisorStateLicense.join(', ') : UNSPECIFIED
 
-  const refundRelease =
-    [hire.refundHoldStatus, hire.releaseAt ? formatDateTime(hire.releaseAt) : '']
-      .filter(Boolean)
-      .join(' · ') || null
-
   const requestedFields = [
     {
       label: 'Preferred format',
@@ -196,7 +191,6 @@ export function HireRequestDetailsDialog({
           },
         ]
       : []),
-    { label: 'Refund / release', value: displayText(refundRelease), multiline: true },
     { label: 'Notes', value: displayText(hire.notes), multiline: true },
   ]
 
