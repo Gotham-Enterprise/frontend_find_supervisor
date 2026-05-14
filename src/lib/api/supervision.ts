@@ -7,6 +7,7 @@ import type {
   HireRecord,
   HireStatus,
   HireSupervisorPayload,
+  HireSupervisorRequestInput,
   UpcomingSessionItem,
 } from '@/types/hire'
 import type { PastClientHire } from '@/types/past-clients'
@@ -71,9 +72,18 @@ export async function purchaseSubscription(
   return data.data
 }
 
+function normalizeStateTheyAreLookingIn(value: string | string[]): string[] {
+  const raw = Array.isArray(value) ? value : [value]
+  return raw.map((s) => String(s).trim()).filter((s) => s.length > 0)
+}
+
 /** POST /api/supervision/hires — supervisee hires a supervisor. */
-export async function hireSupervisor(payload: HireSupervisorPayload): Promise<HireRecord> {
-  const { data } = await apiClient.post<ApiResponse<HireRecord>>('/supervision/hires', payload)
+export async function hireSupervisor(payload: HireSupervisorRequestInput): Promise<HireRecord> {
+  const body: HireSupervisorPayload = {
+    ...payload,
+    stateTheyAreLookingIn: normalizeStateTheyAreLookingIn(payload.stateTheyAreLookingIn),
+  }
+  const { data } = await apiClient.post<ApiResponse<HireRecord>>('/supervision/hires', body)
   return data.data
 }
 

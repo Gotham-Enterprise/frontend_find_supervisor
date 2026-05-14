@@ -12,7 +12,7 @@ import {
   rejectHire,
   viewHire,
 } from '@/lib/api/supervision'
-import type { HireStatus, HireSupervisorPayload } from '@/types/hire'
+import type { HireStatus, HireSupervisorRequestInput } from '@/types/hire'
 
 import { supervisorDetailKeys } from './useSupervisor'
 
@@ -41,7 +41,7 @@ async function invalidateHireRelatedQueries(queryClient: ReturnType<typeof useQu
 export function useHireSupervisor() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (payload: HireSupervisorPayload) => hireSupervisor(payload),
+    mutationFn: (payload: HireSupervisorRequestInput) => hireSupervisor(payload),
     onSuccess: async (_data, variables) => {
       await invalidateHireRelatedQueries(queryClient)
       await queryClient.invalidateQueries({

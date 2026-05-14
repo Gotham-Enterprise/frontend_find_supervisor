@@ -37,20 +37,29 @@ export interface HireUser {
 
 // ─── POST /api/supervision/hires ──────────────────────────────────────────────
 
-/** POST /api/supervision/hires — exact backend contract from the validator. */
+/**
+ * POST /api/supervision/hires — body sent to the API after normalization in `hireSupervisor`.
+ * Matches `validateHireSupervisor` in backend `supervision_validator.js`.
+ */
 export interface HireSupervisorPayload {
   supervisorId: string
   preferredFormat: PreferredFormat
   preferredAvailability: PreferredAvailability
-  typeOfSupervisorNeeded: string
-  stateTheyAreLookingIn: string
+  /** Backend accepts a single string or a non-empty string array. */
+  typeOfSupervisorNeeded: string | string[]
+  /** Backend requires `isArray({ min: 1 })` — always send a JSON array. */
+  stateTheyAreLookingIn: string[]
   preferredStartDate: string // ISO date string
   budgetRangeType: BudgetRangeType
   budgetRangeStart: number
-  /** Response body for a newly created hire. */
   budgetRangeEnd: number
   introMessage: string
   goals: string
+}
+
+/** Client-side input: `hireSupervisor()` coerces `stateTheyAreLookingIn` to a non-empty array. */
+export type HireSupervisorRequestInput = Omit<HireSupervisorPayload, 'stateTheyAreLookingIn'> & {
+  stateTheyAreLookingIn: string | string[]
 }
 
 export interface HireRecord {
