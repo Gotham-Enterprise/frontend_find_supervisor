@@ -179,7 +179,7 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
                 </p>
               </Link>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <HireStatusBadge status={hire.status} />
+                <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
               </div>
             </div>
           </div>

@@ -13,8 +13,8 @@ export const DEFAULT_FILTERS: SupervisorSearchFilters = {
   specialtyIds: [],
   licenseTypes: [],
   stateLicenses: [],
-  cities: [],
-  states: [],
+  city: '',
+  state: '',
   radiusMiles: RADIUS_DEFAULT,
   supervisionFormats: [],
   yearsExperience: [],
@@ -113,8 +113,14 @@ export function getActiveChips(
   }
 
   filters.stateLicenses.forEach((sl) => chips.push({ key: `sl_${sl}`, label: `License: ${sl}` }))
-  filters.states.forEach((st) => chips.push({ key: `st_${st}`, label: st }))
-  filters.cities.forEach((c) => chips.push({ key: `city_${c}`, label: c }))
+  const locState = filters.state.trim()
+  if (locState) {
+    chips.push({ key: `st_${locState}`, label: locState })
+  }
+  const locCity = filters.city.trim()
+  if (locCity) {
+    chips.push({ key: `city_${encodeURIComponent(locCity)}`, label: locCity })
+  }
 
   filters.supervisionFormats.forEach((fmt) => {
     const label = FORMAT_LABELS[fmt as SupervisionFormat] ?? fmt
@@ -143,8 +149,8 @@ export function removeChip(
     specialtyIds: [...filters.specialtyIds],
     licenseTypes: [...filters.licenseTypes],
     stateLicenses: [...filters.stateLicenses],
-    cities: [...filters.cities],
-    states: [...filters.states],
+    city: filters.city,
+    state: filters.state,
     supervisionFormats: [...filters.supervisionFormats],
     yearsExperience: [...filters.yearsExperience],
     patientPopulation: [...filters.patientPopulation],
@@ -174,11 +180,10 @@ export function removeChip(
     const val = chipKey.slice(3)
     next.stateLicenses = next.stateLicenses.filter((s) => s !== val)
   } else if (chipKey.startsWith('st_')) {
-    const val = chipKey.slice(3)
-    next.states = next.states.filter((s) => s !== val)
+    next.state = ''
+    next.city = ''
   } else if (chipKey.startsWith('city_')) {
-    const val = chipKey.slice(5)
-    next.cities = next.cities.filter((c) => c !== val)
+    next.city = ''
   } else if (chipKey === 'acceptingOnly') {
     next.acceptingOnly = false
   } else if (chipKey === 'radiusMiles') {

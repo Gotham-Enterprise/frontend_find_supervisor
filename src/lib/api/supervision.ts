@@ -221,3 +221,17 @@ export interface ChangePasswordPayload {
 export async function changePassword(payload: ChangePasswordPayload): Promise<void> {
   await apiClient.put('/supervision/change-password', payload)
 }
+
+export interface ContactUsPayload {
+  fullName: string
+  email: string
+  /** Optional — max 30 chars */
+  phone?: string
+  subject: string
+  message: string
+}
+
+/** POST /supervision/contact-us — submit a contact request (public). */
+export async function submitContactUs(payload: ContactUsPayload): Promise<void> {
+  await apiClient.post('/supervision/contact-us', payload)
+}

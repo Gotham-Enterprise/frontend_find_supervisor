@@ -33,9 +33,15 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { isFreePlan } from '@/lib/constants/subscription-plans'
-import { useSupervisorProfile, useUser } from '@/lib/hooks'
+import {
+  useCertificateOptions,
+  usePatientPopulationOptions,
+  useSupervisorProfile,
+  useUser,
+} from '@/lib/hooks'
 import { mergeSupervisorProfileDisplayName } from '@/lib/profile/supervisor-profile-display'
 import { cn } from '@/lib/utils'
+import { resolveOptionLabels } from '@/lib/utils/profile-formatters'
 import type {
   Subscription,
   SupervisorProfileData,
@@ -581,19 +587,27 @@ function ProfilePreview({
   profile: SupervisorProfileData
   onEditClick: () => void
 }) {
+  const { data: certificationOptions = [] } = useCertificateOptions()
+  const { data: patientPopulationOptions = [] } = usePatientPopulationOptions()
+
   const composedName = `${profile.user.firstName ?? ''} ${profile.user.lastName ?? ''}`.trim()
   const name = profile.user.fullName ?? (composedName || '—')
   const location = [profile.user.city, profile.user.state].filter(Boolean).join(', ')
   const fmt = formatFormat(profile.supervisionFormat)
   const metaLine = location || fmt ? `${location}${location && fmt ? ' · ' : ''}${fmt}` : undefined
-  const tags = [
-    profile.user.specialty?.name,
-    profile.user.occupation?.name,
-    ...(profile.certification ?? []),
-    ...(profile.patientPopulation ?? []),
-  ]
-    .filter((v): v is string => !!v)
-    .slice(0, 5)
+
+  const tags = useMemo(() => {
+    const certLabels = resolveOptionLabels(profile.certification ?? [], certificationOptions)
+    const popLabels = resolveOptionLabels(profile.patientPopulation ?? [], patientPopulationOptions)
+    return [
+      profile.user.specialty?.name,
+      profile.user.occupation?.name,
+      ...certLabels,
+      ...popLabels,
+    ]
+      .filter((v): v is string => Boolean(v?.trim()))
+      .slice(0, 5)
+  }, [profile, certificationOptions, patientPopulationOptions])
 
   return (
     <ProfilePreviewCard
@@ -800,9 +814,12 @@ function TipsAndHelp() {
                 Learn what the admin review process involves and how to prepare your account for
                 approval.
               </p>
-              <button className="mt-1 text-sm font-medium text-primary hover:underline">
+              <Link
+                href="/verification-guide"
+                className="mt-1 inline-block text-sm font-medium text-primary hover:underline"
+              >
                 Read the guide →
-              </button>
+              </Link>
             </div>
           </CardContent>
         </Card>
@@ -812,22 +829,26 @@ function TipsAndHelp() {
             <CardTitle className="text-base font-semibold">Need Help?</CardTitle>
           </CardHeader>
           <CardContent className="divide-y pt-0">
-            {[
-              { icon: MessageCircle, label: 'Chat with support' },
-              { icon: Star, label: 'Read the FAQ' },
-              { icon: Mail, label: 'Email us' },
-            ].map(({ icon: Icon, label }) => (
-              <button
-                key={label}
-                className="flex w-full items-center justify-between py-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <span className="flex items-center gap-2">
-                  <Icon className="size-4" />
-                  {label}
-                </span>
-                <ChevronRight className="size-4" />
-              </button>
-            ))}
+            <Link
+              href="/faq"
+              className="flex w-full items-center justify-between py-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <span className="flex items-center gap-2">
+                <Star className="size-4" />
+                Read the FAQ
+              </span>
+              <ChevronRight className="size-4" />
+            </Link>
+            <Link
+              href="/contact-us"
+              className="flex w-full items-center justify-between py-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <span className="flex items-center gap-2">
+                <Mail className="size-4" />
+                Contact Us
+              </span>
+              <ChevronRight className="size-4" />
+            </Link>
           </CardContent>
         </Card>
       </div>

@@ -218,7 +218,7 @@ export function HireRequestDetailsDialog({
         <div className="space-y-6 px-6 py-5">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-muted-foreground">Status</span>
-            <HireStatusBadge status={hire.status} />
+            <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
           </div>
 
           {hasRequested && (

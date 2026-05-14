@@ -115,7 +115,8 @@ export function ConversationThread({ conversationId, onBack }: ConversationThrea
     : 'Loading…'
 
   const hireStatus = conversation?.hire.status
-  const isPending = hireStatus === 'PENDING' || hireStatus === 'REVIEWED'
+  const hireCompletedAt = conversation?.hire.completedAt
+  const isPending = hireStatus === 'PENDING' || (hireStatus === 'REVIEWED' && !hireCompletedAt)
   const remainingMessages = conversation?.remainingMessages ?? 0
 
   // Check if other participant is typing in this conversation
@@ -165,7 +166,7 @@ export function ConversationThread({ conversationId, onBack }: ConversationThrea
                   Request Pending
                 </span>
               )}
-              {hireStatus === 'REVIEWED' && (
+              {hireStatus === 'REVIEWED' && !hireCompletedAt && (
                 <span className="ml-1.5 rounded-full bg-blue-100 px-1.5 py-px text-[10px] font-semibold text-blue-700">
                   Reviewed
                 </span>

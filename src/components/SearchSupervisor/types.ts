@@ -6,8 +6,10 @@ export interface SupervisorSearchFilters {
   /** Option values from GET /api/supervision/options?param=licenseType */
   licenseTypes: string[]
   stateLicenses: string[]
-  cities: string[]
-  states: string[]
+  /** Single city value for location search (matches city option `value`). */
+  city: string
+  /** US state code for location search (matches state option `value`). */
+  state: string
   radiusMiles: number
   /** VIRTUAL | IN_PERSON | HYBRID */
   supervisionFormats: string[]
