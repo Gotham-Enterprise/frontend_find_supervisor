@@ -227,8 +227,24 @@ export interface ContactUsPayload {
   email: string
   /** Optional — max 30 chars */
   phone?: string
+  /** Topic code — must exist on `SupervisionContactUsReason` (see GET contact-us/reasons). */
+  reason: string
   subject: string
   message: string
+}
+
+export type ContactUsReasonRow = {
+  code: string
+  label: string
+  sortOrder: number
+}
+
+/** GET /supervision/contact-us/reasons — topic options for the contact form (public). */
+export async function getContactUsReasons(): Promise<ContactUsReasonRow[]> {
+  const { data } = await apiClient.get<ApiResponse<ContactUsReasonRow[]>>(
+    '/supervision/contact-us/reasons',
+  )
+  return data.data ?? []
 }
 
 /** POST /supervision/contact-us — submit a contact request (public). */

@@ -233,7 +233,7 @@ function FreePlanUpgradeCard({ planName }: { planName: string }) {
                 Current plan
               </p>
               <p className="mt-1 text-sm font-semibold text-foreground">{planName}</p>
-              <p className="mt-3 text-sm font-semibold text-foreground">Unlock premium tools</p>
+              <p className="mt-3 text-sm font-semibold text-foreground">Unlock Premium Features</p>
               <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
                 Move to Find a Supervisor Platform Access when you&apos;re ready for the full
                 supervisor experience.

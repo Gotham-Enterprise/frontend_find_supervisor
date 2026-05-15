@@ -91,11 +91,11 @@ export function SupervisorProfilePastClients({ supervisorId }: SupervisorProfile
 
   return (
     <section className="border-b border-[#E5E7EB] py-8">
-      <h2 className="mb-4 text-base font-semibold text-[#181818]">Past Clients</h2>
+      <h2 className="mb-4 text-base font-semibold text-[#181818]">Past Supervisees</h2>
 
       {isLoading && (
         <>
-          <p className="mb-4 text-sm text-[#6B7280]">Loading past clients…</p>
+          <p className="mb-4 text-sm text-[#6B7280]">Loading past supervisees…</p>
           <PastClientsSkeleton />
         </>
       )}
@@ -103,12 +103,12 @@ export function SupervisorProfilePastClients({ supervisorId }: SupervisorProfile
       {isError && !isLoading && (
         <div className="flex items-center gap-2 rounded-lg border border-[#FEE2E2] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
           <AlertCircle className="size-4 shrink-0" />
-          <span>Could not load past clients. Please try again later.</span>
+          <span>Could not load past supervisees. Please try again later.</span>
         </div>
       )}
 
       {!isLoading && !isError && rows.length === 0 && (
-        <p className="text-sm text-[#6B7280]">No past clients yet.</p>
+        <p className="text-sm text-[#6B7280]">No past supervisees yet.</p>
       )}
 
       {!isLoading && !isError && rows.length > 0 && (

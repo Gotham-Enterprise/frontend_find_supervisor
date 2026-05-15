@@ -50,7 +50,7 @@ export function SupervisorProfileConsultation({ profile }: SupervisorProfileCons
       )}
 
       <div className="flex flex-wrap gap-x-10 gap-y-3">
-        {location !== 'N/A' && <MetaItem label="From" value={location} />}
+        {location !== 'N/A' && <MetaItem label="Location" value={location} />}
         <MetaItem label="Member Since" value={memberSince} />
       </div>
     </section>

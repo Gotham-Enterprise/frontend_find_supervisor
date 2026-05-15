@@ -200,7 +200,7 @@ function SupervisorFreePlanEnrolledCard({
                 Current plan
               </p>
               <p className="mt-1 text-sm font-semibold text-foreground">{planName}</p>
-              <p className="mt-3 text-sm font-semibold text-foreground">Unlock premium tools</p>
+              <p className="mt-3 text-sm font-semibold text-foreground">Unlock Premium Features</p>
               <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
                 Move to Find a Supervisor Platform Access when you&apos;re ready for the full
                 supervisor experience.
@@ -268,7 +268,7 @@ function SubscribedCard({
             <CardTitle className="text-base font-semibold">
               {isCanceling
                 ? 'Subscription canceled — premium until period end'
-                : 'Your supervisor plan is active'}
+                : 'Your Premium plan is active'}
             </CardTitle>
             <p className="mt-0.5 text-sm text-muted-foreground">
               {isCanceling

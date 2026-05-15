@@ -18,10 +18,10 @@ export function formatPlanPriceFromCents(priceInCents: number): string {
 export function formatBillingCycleSuffix(billingCycle: string | null | undefined): string {
   if (!billingCycle) return ''
   const normalized = String(billingCycle).toUpperCase()
-  if (normalized === 'MONTHLY' || normalized === 'MONTH') return '/month'
-  if (normalized === 'YEARLY' || normalized === 'ANNUAL' || normalized === 'YEAR') return '/year'
-  if (normalized === 'QUARTERLY') return '/quarter'
-  if (normalized === 'WEEKLY') return '/week'
+  if (normalized === 'MONTHLY' || normalized === 'MONTH') return 'per month'
+  if (normalized === 'YEARLY' || normalized === 'ANNUAL' || normalized === 'YEAR') return 'per year'
+  if (normalized === 'QUARTERLY') return 'per quarter'
+  if (normalized === 'WEEKLY') return 'per week'
   return ''
 }
 

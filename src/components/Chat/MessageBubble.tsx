@@ -3,6 +3,13 @@ import { Check, CheckCheck, Clock, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ChatMessage } from '@/types/chat'
 
+/** Cap bubble width as a share of the thread; 84% ≈ 20% wider than the previous 70%. */
+const BUBBLE_MAX_WIDTH_CLASS = 'max-w-[84%]'
+
+/** Same shell as an incoming text bubble — locked previews use this so they don’t sit flat on the page. */
+const INCOMING_BUBBLE =
+  'min-w-0 max-w-full rounded-2xl rounded-tl-sm bg-white px-4 py-2.5 text-foreground shadow-sm ring-1 ring-border/50'
+
 interface MessageBubbleProps {
   message: ChatMessage
   isMine: boolean
@@ -43,21 +50,23 @@ export function MessageBubble({ message, isMine }: MessageBubbleProps) {
   if (message.locked) {
     return (
       <div className="flex justify-start">
-        <div className="min-w-0 max-w-[70%]">
-          <div className="flex min-w-0 max-w-full items-center gap-2 rounded-2xl rounded-tl-sm bg-muted/60 px-4 py-3">
-            <Lock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <div className="min-w-0">
-              <p className="select-none break-words text-[13px] italic text-muted-foreground/70 [overflow-wrap:anywhere]">
+        <div className={cn('flex min-w-0 flex-col', BUBBLE_MAX_WIDTH_CLASS)}>
+          <div className={cn('flex items-start gap-2', INCOMING_BUBBLE)}>
+            <Lock className="mt-0.5 h-4 w-4 shrink-0 text-foreground/70" aria-hidden />
+            <div className="min-w-0 flex-1">
+              <p className="select-none break-words text-sm leading-relaxed text-foreground [overflow-wrap:anywhere]">
                 {message.preview || 'Message locked'}
               </p>
-              <p className="mt-0.5 text-[11px] font-medium text-amber-600">
+              <p className="mt-1.5 text-xs font-medium text-amber-600">
                 Upgrade your plan to read full messages
               </p>
             </div>
           </div>
-          <p className="mt-1 pl-1 text-[11px] text-muted-foreground/60">
-            {formatTime(message.createdAt)}
-          </p>
+          <div className="mt-1 flex justify-start pl-1">
+            <span className="text-[11px] text-muted-foreground/60">
+              {formatTime(message.createdAt)}
+            </span>
+          </div>
         </div>
       </div>
     )
@@ -65,13 +74,12 @@ export function MessageBubble({ message, isMine }: MessageBubbleProps) {
 
   return (
     <div className={cn('flex', isMine ? 'justify-end' : 'justify-start')}>
-      <div className={cn('min-w-0 max-w-[70%]', isMine ? 'items-end' : 'items-start')}>
+      <div className={cn('min-w-0', BUBBLE_MAX_WIDTH_CLASS, isMine ? 'items-end' : 'items-start')}>
         <div
           className={cn(
-            'min-w-0 max-w-full rounded-2xl px-4 py-2.5',
             isMine
-              ? 'rounded-tr-sm bg-primary text-primary-foreground'
-              : 'rounded-tl-sm bg-white text-foreground shadow-sm ring-1 ring-border/50',
+              ? 'min-w-0 max-w-full rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-primary-foreground'
+              : INCOMING_BUBBLE,
           )}
         >
           <p className="min-w-0 break-words text-sm leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">

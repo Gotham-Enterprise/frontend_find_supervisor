@@ -904,7 +904,7 @@ function BillingSection({ profile }: { profile: SupervisorProfileData }) {
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold">{formatCents(sub.plan.priceInCents)}</p>
-                <p className="text-xs text-muted-foreground lowercase">/{sub.plan.billingCycle}</p>
+                <p className="text-xs text-muted-foreground lowercase">{sub.plan.billingCycle}</p>
               </div>
             </div>
           </div>

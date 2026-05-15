@@ -10,6 +10,7 @@ import {
   useCertificateOptions,
   useLicenseTypeOptions,
   usePatientPopulationOptions,
+  useStatesOptions,
 } from '@/lib/hooks'
 import { useSupervisor } from '@/lib/hooks/useSupervisor'
 import { cn } from '@/lib/utils'
@@ -46,6 +47,7 @@ export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePagePro
   const { data: certificationOptions = [] } = useCertificateOptions()
   const { data: patientPopulationOptions = [] } = usePatientPopulationOptions()
   const { data: licenseTypeOptions = [] } = useLicenseTypeOptions()
+  const { data: stateOptions = [] } = useStatesOptions()
   const { data: availabilityOptions = [] } = useAvailabilityOptions()
   if (isLoading) {
     return <SupervisorProfileSkeleton />
@@ -108,6 +110,7 @@ export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePagePro
           certificationOptions={certificationOptions}
           patientPopulationOptions={patientPopulationOptions}
           licenseTypeOptions={licenseTypeOptions}
+          stateOptions={stateOptions}
         />
 
         <SupervisorProfileConsultation profile={profile} />
