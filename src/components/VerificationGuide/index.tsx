@@ -115,13 +115,13 @@ function RequiredDocuments() {
     {
       required: true,
       label: 'State of Licensure',
-      detail: 'The state(s) in which you are actively licensed to practice.',
+      detail: 'The state(s) in which you are licensed to practice.',
     },
     {
       required: true,
       label: 'Certifications (select all that apply)',
       detail:
-        'Choose your certifications from the list (e.g. LCSW-S, BCBA, BLS) during signup or via Edit Profile. No file upload is needed — selecting the certification name is sufficient.',
+        'Choose your certifications from the list (e.g. EMDR, DBT, CBT) during signup or via Edit Profile. No file upload is needed — selecting the certification name is sufficient.',
     },
   ]
 
@@ -163,19 +163,20 @@ function RequiredDocuments() {
 
 function ProfileFieldsRequired() {
   const fields = [
-    { label: 'Profile photo', note: 'A clear, professional headshot' },
-    { label: 'License type', note: 'e.g. LCSW, LPC, LMFT, BCBA' },
-    { label: 'License number or uploaded license file', note: 'Number or scanned document' },
-    { label: 'State of licensure', note: 'One or more states where you hold an active license' },
-    { label: 'Occupation / profession', note: 'Your primary professional role' },
-    { label: 'Years of experience', note: 'Total years practicing in your field' },
-    { label: 'Supervision format', note: 'In-person, virtual, or hybrid' },
+    { label: 'Profile Photo', note: 'A clear, professional headshot' },
+    { label: 'License Type', note: 'e.g. LCSW, LPC, LMFT, BCBA' },
+    { label: 'License Number or Uploaded License File', note: 'Number or scanned document' },
+    { label: 'State of Licensure', note: 'One or more states where you hold an active license' },
+    { label: 'Occupation / Profession', note: 'Your primary professional role' },
+    { label: 'NPI Number', note: 'Your 10-digit National Provider Identifier' },
+    { label: 'Years of Experience', note: 'Total years practicing in your field' },
+    { label: 'Supervision Format', note: 'In-person, virtual, or hybrid' },
     { label: 'Availability', note: 'When you are available for sessions' },
-    { label: 'Supervision fee', note: 'Your rate per session, hour, or month' },
-    { label: 'Professional summary / bio', note: 'At least 2–3 sentences about your approach' },
+    { label: 'Supervision Fee', note: 'Your rate per session, hour, or month' },
+    { label: 'Professional Summary / Bio', note: 'At least 2–3 sentences about your approach' },
     { label: 'Certifications', note: 'Any additional credentials you hold' },
-    { label: 'Patient populations served', note: 'Who you specialize in working with' },
-    { label: 'City & state', note: 'Your practice location' },
+    { label: 'Patient Populations Served', note: 'Who you specialize in working with' },
+    { label: 'City & State', note: 'Your practice location' },
   ]
 
   return (
@@ -223,7 +224,7 @@ function ReviewTimeline() {
     {
       day: 'Day 1',
       title: 'Profile Submitted',
-      body: 'Once you complete all required profile fields and subscribe, your profile enters the review queue automatically.',
+      body: 'Your profile will be reviewed by the admin team for approval within 2–3 business days.',
     },
     {
       day: 'Day 1–2',
@@ -237,7 +238,7 @@ function ReviewTimeline() {
     },
     {
       day: 'Ongoing',
-      title: 'Profile Live',
+      title: 'Live Profile',
       body: 'Supervisees can now find and contact you. Keep your profile up to date — expired license documents may trigger a re-review.',
     },
   ]
@@ -315,7 +316,7 @@ function IfRejected() {
             <Link href="/my-profile" className="font-medium text-primary hover:underline">
               My Profile
             </Link>{' '}
-            and fix the flagged issues. Save your changes, and a new review will begin within 24
+            and fix the flagged issues. Save your changes, and a new review will begin within 72
             hours. There is no limit on resubmissions.
           </p>
         </div>
@@ -344,7 +345,7 @@ function TipsForFasterApproval() {
     {
       tip: 'Add certifications if you have them',
       detail:
-        'Extra credentials (LCSW-S, BCBA, etc.) increase your credibility and help admins verify your expertise faster.',
+        'Extra credentials (EMDR, DBT, CBT, etc.) increase your credibility and help admins verify your expertise faster.',
     },
     {
       tip: 'Use a professional profile photo',

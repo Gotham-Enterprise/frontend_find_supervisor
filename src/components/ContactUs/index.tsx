@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CheckCircle2, Loader2, Mail, MessageSquare, Phone } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
@@ -18,9 +18,11 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { FormInputField } from '@/components/ui/form-input-field'
+import { FormSelectField } from '@/components/ui/form-select-field'
 import { PhoneInput } from '@/components/ui/PhoneInput'
 import { Textarea } from '@/components/ui/textarea'
-import { submitContactUs } from '@/lib/api/supervision'
+import type { SelectOption } from '@/lib/api/options'
+import { getContactUsReasons, submitContactUs } from '@/lib/api/supervision'
 import { useUser } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 
@@ -38,6 +40,7 @@ const contactSchema = z.object({
     .min(1, 'Email is required.')
     .email('Please provide a valid email address.'),
   phone: z.string().trim().max(30, 'Must not exceed 30 characters.').optional().or(z.literal('')),
+  reason: z.string().trim().min(1, 'Please select what we can help with.'),
   subject: z
     .string()
     .trim()
@@ -103,6 +106,32 @@ export function ContactUsPage() {
   const { user } = useUser()
   const [submitted, setSubmitted] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
+  const [reasonOptions, setReasonOptions] = useState<SelectOption[]>([])
+  const [reasonsLoading, setReasonsLoading] = useState(true)
+  const [reasonsError, setReasonsError] = useState<string | null>(null)
+
+  const loadReasons = useCallback(async () => {
+    setReasonsLoading(true)
+    setReasonsError(null)
+    try {
+      const rows = await getContactUsReasons()
+      if (rows.length === 0) {
+        setReasonOptions([])
+        setReasonsError('No topics are available right now. Please try again later.')
+        return
+      }
+      setReasonOptions(rows.map((r) => ({ value: r.code, label: r.label })))
+    } catch (err: unknown) {
+      setReasonOptions([])
+      setReasonsError(parseApiError(err))
+    } finally {
+      setReasonsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadReasons()
+  }, [loadReasons])
 
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactSchema),
@@ -110,6 +139,7 @@ export function ContactUsPage() {
       fullName: user?.fullName ?? user?.name ?? '',
       email: user?.email ?? '',
       phone: '',
+      reason: '',
       subject: '',
       message: '',
     },
@@ -124,6 +154,7 @@ export function ContactUsPage() {
         fullName: values.fullName,
         email: values.email,
         phone: values.phone || undefined,
+        reason: values.reason,
         subject: values.subject,
         message: values.message,
       })
@@ -172,6 +203,39 @@ export function ContactUsPage() {
                         isSubmitting={isSubmitting}
                       />
                     </div>
+
+                    {reasonsError && !reasonsLoading ? (
+                      <div className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm text-destructive">{reasonsError}</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0 border-destructive/40"
+                          onClick={() => void loadReasons()}
+                        >
+                          Try again
+                        </Button>
+                      </div>
+                    ) : null}
+
+                    <FormSelectField
+                      control={form.control}
+                      name="reason"
+                      label="What can we help with?"
+                      options={reasonOptions}
+                      placeholder="Select a topic"
+                      required
+                      isSubmitting={isSubmitting}
+                      loading={reasonsLoading}
+                      loadingPlaceholder="Loading topics…"
+                      disabled={!reasonsLoading && reasonOptions.length === 0}
+                      emptySentinel={{
+                        value: '__none__',
+                        label: 'Select a topic',
+                        mapsToFieldValue: '',
+                      }}
+                    />
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <FormField

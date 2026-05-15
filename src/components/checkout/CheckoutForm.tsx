@@ -32,12 +32,151 @@ function FormSkeleton() {
   )
 }
 
-// ─── Inner form — requires Stripe Elements context ────────────────────────────
-// clientSecret is already bound to Elements; confirmPayment uses it automatically.
-
 interface CheckoutFormInnerProps {
   plan: SubscriptionPlan
 }
+
+// ─── Shared field styles ──────────────────────────────────────────────────────
+
+const inputCls =
+  'w-full rounded-[10px] border border-[#e5e7eb] bg-white px-3 py-[10px] text-sm text-[#181818] outline-none transition placeholder:text-[#9ca3af] focus:border-[#006d36] focus:ring-[3px] focus:ring-[rgba(0,109,54,0.12)]'
+
+const labelCls = 'mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#6b7280]'
+
+// ─── Billing details fields ───────────────────────────────────────────────────
+
+interface BillingDetails {
+  name: string
+  line1: string
+  line2: string
+  city: string
+  state: string
+  postalCode: string
+  country: string
+}
+
+const INITIAL_BILLING: BillingDetails = {
+  name: '',
+  line1: '',
+  line2: '',
+  city: '',
+  state: '',
+  postalCode: '',
+  country: 'US',
+}
+
+function BillingFields({
+  value,
+  onChange,
+}: {
+  value: BillingDetails
+  onChange: (next: BillingDetails) => void
+}) {
+  function set(key: keyof BillingDetails) {
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      onChange({ ...value, [key]: e.target.value })
+  }
+
+  return (
+    <section className="flex flex-col gap-4">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+        Billing information
+      </p>
+
+      {/* Cardholder name */}
+      <div>
+        <label className={labelCls}>
+          Full name <span className="text-destructive">*</span>
+        </label>
+        <input
+          type="text"
+          autoComplete="cc-name"
+          placeholder="Jane Smith"
+          required
+          value={value.name}
+          onChange={set('name')}
+          className={inputCls}
+        />
+      </div>
+
+      {/* Address line 1 */}
+      <div>
+        <label className={labelCls}>
+          Address <span className="text-destructive">*</span>
+        </label>
+        <input
+          type="text"
+          autoComplete="address-line1"
+          placeholder="123 Main St"
+          required
+          value={value.line1}
+          onChange={set('line1')}
+          className={inputCls}
+        />
+      </div>
+
+      {/* Address line 2 */}
+      <div>
+        <label className={labelCls}>Apt, suite, etc. (optional)</label>
+        <input
+          type="text"
+          autoComplete="address-line2"
+          placeholder="Apt 4B"
+          value={value.line2}
+          onChange={set('line2')}
+          className={inputCls}
+        />
+      </div>
+
+      {/* City + State */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={labelCls}>
+            City <span className="text-destructive">*</span>
+          </label>
+          <input
+            type="text"
+            autoComplete="address-level2"
+            placeholder="New York"
+            required
+            value={value.city}
+            onChange={set('city')}
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className={labelCls}>State / Province</label>
+          <input
+            type="text"
+            autoComplete="address-level1"
+            placeholder="NY"
+            value={value.state}
+            onChange={set('state')}
+            className={inputCls}
+          />
+        </div>
+      </div>
+
+      {/* ZIP */}
+      <div>
+        <label className={labelCls}>
+          ZIP code <span className="text-destructive">*</span>
+        </label>
+        <input
+          type="text"
+          autoComplete="postal-code"
+          placeholder="10001"
+          required
+          value={value.postalCode}
+          onChange={set('postalCode')}
+          className={inputCls}
+        />
+      </div>
+    </section>
+  )
+}
+
+// ─── Inner form — requires Stripe Elements context ────────────────────────────
 
 function CheckoutFormInner({ plan }: CheckoutFormInnerProps) {
   const stripe = useStripe()
@@ -45,8 +184,9 @@ function CheckoutFormInner({ plan }: CheckoutFormInnerProps) {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [billing, setBilling] = useState<BillingDetails>(INITIAL_BILLING)
 
-  const ctaPrice = `${formatPlanPriceFromCents(plan.priceInCents)}${formatBillingCycleSuffix(plan.billingCycle) || ''}`
+  const ctaPrice = `${formatPlanPriceFromCents(plan.priceInCents)} ${formatBillingCycleSuffix(plan.billingCycle) || ''}`
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -56,17 +196,26 @@ function CheckoutFormInner({ plan }: CheckoutFormInnerProps) {
     setIsSubmitting(true)
     setError(null)
 
-    // clientSecret is already bound to the Elements instance — no need to pass it here.
-    // Stripe collects and tokenises card details securely; we never touch them.
-    // On success, Stripe redirects to return_url with ?redirect_status=succeeded.
     const { error: stripeError } = await stripe.confirmPayment({
       elements,
       confirmParams: {
         return_url: `${window.location.origin}/checkout/success`,
+        payment_method_data: {
+          billing_details: {
+            name: billing.name,
+            address: {
+              line1: billing.line1,
+              line2: billing.line2 || undefined,
+              city: billing.city,
+              state: billing.state || undefined,
+              postal_code: billing.postalCode,
+              country: billing.country === 'OTHER' ? undefined : billing.country,
+            },
+          },
+        },
       },
     })
 
-    // confirmPayment only returns control here on failure (redirects on success)
     if (stripeError) {
       setError(stripeError.message ?? 'Payment failed. Please check your card and try again.')
       setIsSubmitting(false)
@@ -86,6 +235,9 @@ function CheckoutFormInner({ plan }: CheckoutFormInnerProps) {
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+        {/* Billing information — name + address */}
+        <BillingFields value={billing} onChange={setBilling} />
+
         {/* Payment method — Stripe Payment Element */}
         <section>
           <p className="mb-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -96,6 +248,12 @@ function CheckoutFormInner({ plan }: CheckoutFormInnerProps) {
             options={{
               layout: 'tabs',
               wallets: { applePay: 'auto', googlePay: 'auto' },
+              fields: {
+                billingDetails: {
+                  name: 'never',
+                  address: 'never',
+                },
+              },
             }}
           />
         </section>

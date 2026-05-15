@@ -14,10 +14,10 @@ export function FreeFeatureRow({ label }: { label: string }) {
 export function LockedFeatureRow({ label }: { label: string }) {
   return (
     <li className="flex items-center gap-2.5">
-      <div className="flex size-4 shrink-0 items-center justify-center rounded border border-border bg-muted">
-        <Lock className="size-2.5 text-muted-foreground" />
+      <div className="flex size-4 shrink-0 items-center justify-center rounded border border-amber-200 bg-amber-50">
+        <Lock className="size-2.5 text-amber-700" />
       </div>
-      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm text-foreground">{label}</span>
       <Badge className="ml-auto shrink-0 bg-amber-100 px-1.5 py-0 text-[10px] font-medium text-amber-700 hover:bg-amber-100">
         Premium
       </Badge>
@@ -29,7 +29,7 @@ export function PremiumFeaturesDivider({ label = 'Premium Features' }: { label?:
   return (
     <div className="my-4 flex items-center gap-3">
       <div className="h-px flex-1 bg-border" />
-      <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">
+      <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
         {label}
       </span>
       <div className="h-px flex-1 bg-border" />
