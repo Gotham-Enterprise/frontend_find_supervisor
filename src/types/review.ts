@@ -1,8 +1,16 @@
+export interface ReviewOccupation {
+  id: number
+  name: string
+}
+
 export interface ReviewUser {
   id: string
   fullName: string | null
   email: string
   profilePhotoUrl?: string | null
+  city?: string | null
+  state?: string | null
+  occupation?: ReviewOccupation | null
 }
 
 export interface ReviewHire {

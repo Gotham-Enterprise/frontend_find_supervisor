@@ -5,6 +5,7 @@ import { useState } from 'react'
 
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSupervisorReviews } from '@/lib/hooks'
+import { formatReviewerTitleCityState } from '@/lib/utils/review-display'
 import type { Review } from '@/types/review'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -72,6 +73,7 @@ function StarIcon({ filled, size = 14 }: { filled: boolean; size?: number }) {
 function ReviewCard({ review }: { review: Review }) {
   const filledStars = Math.round(review.rating)
   const reviewerName = review.supervisee.fullName ?? review.supervisee.email
+  const reviewerMeta = formatReviewerTitleCityState(review.supervisee)
   const initials = getInitials(review.supervisee.fullName)
 
   return (
@@ -83,6 +85,7 @@ function ReviewCard({ review }: { review: Review }) {
 
         <div className="min-w-0 flex flex-col gap-0.5">
           <span className="text-sm font-medium text-[#374151]">{reviewerName}</span>
+          {reviewerMeta && <span className="truncate text-xs text-[#6B7280]">{reviewerMeta}</span>}
           <div className="flex items-center gap-1">
             <div className="flex items-center gap-px">
               {Array.from({ length: 5 }).map((_, i) => (

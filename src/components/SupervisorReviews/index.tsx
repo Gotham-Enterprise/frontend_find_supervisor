@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { useSupervisorDashboardReviews } from '@/lib/hooks/useReviews'
+import { formatReviewerTitleCityState } from '@/lib/utils/review-display'
 import type { Review } from '@/types/review'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -124,6 +125,7 @@ function SummaryCard({ reviews, totalCount }: SummaryCardProps) {
 
 function ReviewCard({ review }: { review: Review }) {
   const reviewerName = review.supervisee.fullName ?? review.supervisee.email
+  const reviewerMeta = formatReviewerTitleCityState(review.supervisee)
   const hireInfo = review.hire
     ? review.hire.startDate
       ? `Supervision started ${new Date(review.hire.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`
@@ -144,6 +146,9 @@ function ReviewCard({ review }: { review: Review }) {
             />
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <span className="truncate text-sm font-medium text-foreground">{reviewerName}</span>
+              {reviewerMeta && (
+                <span className="truncate text-xs text-muted-foreground">{reviewerMeta}</span>
+              )}
               {hireInfo && <span className="text-xs text-muted-foreground">{hireInfo}</span>}
             </div>
             <div className="flex shrink-0 flex-col items-end gap-0.5">

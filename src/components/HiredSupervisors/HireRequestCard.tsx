@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { useCancelHire, useMarkHireAsCompleted, useUserSnackbar } from '@/lib/hooks'
+import { useConfetti } from '@/lib/hooks/useConfetti'
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
   formatDate,
@@ -86,6 +87,7 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
   /** True while showing the review sheet immediately after “Mark as completed” (allows skip). */
   const [postCompleteReviewFlow, setPostCompleteReviewFlow] = useState(false)
   const { showSuccess, showError } = useUserSnackbar()
+  const { burst } = useConfetti()
   const cancelMutation = useCancelHire()
   const completeMutation = useMarkHireAsCompleted()
 
@@ -126,6 +128,7 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
     completeMutation.mutate(hire.id, {
       onSuccess: () => {
         setCompleteOpen(false)
+        burst()
         showSuccess('Supervision marked as completed.')
         setPostCompleteReviewFlow(true)
         setReviewOpen(true)

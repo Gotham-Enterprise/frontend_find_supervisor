@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react'
 import { Toaster } from 'sonner'
 
+import { ConfettiProvider } from '@/lib/contexts/ConfettiProvider'
 import { PresenceProvider } from '@/lib/contexts/PresenceContext'
 import { UserProvider } from '@/lib/contexts/UserContext'
 import { UserSnackbarProvider } from '@/lib/contexts/UserSnackbarContext'
@@ -17,7 +18,7 @@ export function Providers({ children }: ProvidersProps) {
       <UserProvider>
         <PresenceProvider>
           <UserSnackbarProvider>
-            {children}
+            <ConfettiProvider>{children}</ConfettiProvider>
             <Toaster richColors position="top-right" closeButton />
           </UserSnackbarProvider>
         </PresenceProvider>

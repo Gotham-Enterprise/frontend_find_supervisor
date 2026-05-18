@@ -10,6 +10,7 @@ export {
   useSendMessage,
 } from './useChat'
 export { useCheckoutPlanFromUrl } from './useCheckoutPlanFromUrl'
+export { useConfetti } from './useConfetti'
 export { useCooldownTimer } from './useCooldownTimer'
 export {
   hireKeys,

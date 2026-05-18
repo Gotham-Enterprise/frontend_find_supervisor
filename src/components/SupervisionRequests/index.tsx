@@ -43,6 +43,7 @@ import {
   useUserSnackbar,
   useViewHire,
 } from '@/lib/hooks'
+import { useConfetti } from '@/lib/hooks/useConfetti'
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
   formatAvailability,
@@ -361,6 +362,7 @@ function RowActions({ hire, showHireDecisions }: RowActionsProps) {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [rejectionReason, setRejectionReason] = useState('')
   const { showSuccess, showError } = useUserSnackbar()
+  const { burst } = useConfetti()
 
   const allowedActions = ALLOWED_ACTIONS[hire.status] ?? []
   const visibleActions = showHireDecisions
@@ -388,6 +390,7 @@ function RowActions({ hire, showHireDecisions }: RowActionsProps) {
   function handleAcceptConfirm() {
     acceptMutation.mutate(hire.id, {
       onSuccess: () => {
+        burst()
         showSuccess('Supervision request accepted.')
         closeDialog()
       },
@@ -455,7 +458,7 @@ function RowActions({ hire, showHireDecisions }: RowActionsProps) {
         open={pendingAction === 'accept'}
         onOpenChange={(open) => !open && closeDialog()}
         title="Accept supervision request?"
-        description={`You are about to accept the supervision request from ${formatDisplayName(hire.supervisee)}. This will notify them and mark the hire as accepted.`}
+        description={`You are about to accept the supervision request from ${formatDisplayName(hire.supervisee)}. This will notify the supervisee that you've accepted the request.`}
         confirmLabel="Accept"
         isPending={acceptMutation.isPending}
         onConfirm={handleAcceptConfirm}
