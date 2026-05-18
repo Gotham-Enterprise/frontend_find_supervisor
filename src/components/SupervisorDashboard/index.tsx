@@ -737,7 +737,9 @@ function QuickActions({ onEditProfileClick }: { onEditProfileClick: () => void }
       label: 'Contact Support',
       description: 'Get help from our team',
       link: 'Message us →',
-      onClick: undefined,
+      onClick: () => {
+        window.location.href = '/contact-us'
+      },
     },
   ]
 

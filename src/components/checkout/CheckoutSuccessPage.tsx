@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation'
 import { useEffect } from 'react'
 
 import { useUser } from '@/lib/contexts/UserContext'
+import { useConfetti } from '@/lib/hooks/useConfetti'
 import { subscriptionKeys } from '@/lib/hooks/useSubscriptionPlans'
 
 /**
@@ -24,6 +25,7 @@ export function CheckoutSuccessPage() {
   const status = searchParams.get('redirect_status')
   const queryClient = useQueryClient()
   const { refreshUser } = useUser()
+  const { fireworks } = useConfetti()
 
   useEffect(() => {
     if (!PAYMENT_COMPLETE_STATUSES.has(status ?? '')) return
@@ -38,6 +40,12 @@ export function CheckoutSuccessPage() {
 
     void invalidateAll()
   }, [status, queryClient, refreshUser])
+
+  useEffect(() => {
+    if (status !== 'succeeded') return
+    const id = setTimeout(() => fireworks(), 400)
+    return () => clearTimeout(id)
+  }, [status, fireworks])
 
   if (status === 'succeeded') {
     return (

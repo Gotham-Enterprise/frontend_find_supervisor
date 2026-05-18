@@ -10,6 +10,7 @@ import { AUTO_REDIRECT_MS, getPostVerificationFallbackPath } from '@/lib/email-v
 import { DEFAULT_ERROR_SUPPORTING } from '@/lib/email-verification/error-copy'
 import type { EmailVerificationErrorCode } from '@/lib/email-verification/types'
 import { verifyEmailToken } from '@/lib/email-verification/verify-email-token'
+import { useConfetti } from '@/lib/hooks/useConfetti'
 
 import { EmailVerificationErrorState } from './EmailVerificationErrorState'
 import { EmailVerificationLoadingState } from './EmailVerificationLoadingState'
@@ -32,6 +33,7 @@ export function VerifyEmailFlow() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
+  const { burst } = useConfetti()
 
   const [phase, setPhase] = useState<Phase>('loading')
   const [redirectPath, setRedirectPath] = useState('/dashboard')
@@ -84,12 +86,14 @@ export function VerifyEmailFlow() {
   useEffect(() => {
     if (phase !== 'success') return
 
+    burst()
+
     const id = window.setTimeout(() => {
       void router.push(redirectPath)
     }, AUTO_REDIRECT_MS)
 
     return () => window.clearTimeout(id)
-  }, [phase, redirectPath, router])
+  }, [phase, redirectPath, router, burst])
 
   function handleContinue() {
     void router.push(redirectPath)

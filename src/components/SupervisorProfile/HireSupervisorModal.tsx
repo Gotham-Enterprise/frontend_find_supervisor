@@ -29,6 +29,7 @@ import {
   useSuperviseeFormOptions,
   useUserSnackbar,
 } from '@/lib/hooks'
+import { useConfetti } from '@/lib/hooks/useConfetti'
 import { parseApiError } from '@/lib/utils/error-parser'
 import { coerceStringList } from '@/lib/utils/profile-formatters'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
@@ -111,6 +112,7 @@ export function HireSupervisorModal({
   superviseeProfile,
 }: HireSupervisorModalProps) {
   const { showSuccess, showError } = useUserSnackbar()
+  const { burst } = useConfetti()
   const hireMutation = useHireSupervisor()
 
   // Option data from the backend options API (same sources as signup)
@@ -147,6 +149,7 @@ export function HireSupervisorModal({
   async function onSubmit(values: HireSupervisorFormValues) {
     try {
       await hireMutation.mutateAsync(values)
+      burst()
       showSuccess('Hire request sent!', {
         description: 'Your request has been sent to the supervisor.',
       })
@@ -330,7 +333,7 @@ export function HireSupervisorModal({
                       <Textarea
                         {...field}
                         disabled={isSubmitting}
-                        placeholder="Introduce yourself and explain why you're reaching out to this supervisor…"
+                        placeholder='e.g. "I am a social worker seeking supervision to support my professional growth. I am reaching out because your background and experience align with the type of guidance I am looking for."'
                         className="min-h-24"
                       />
                     </FormControl>

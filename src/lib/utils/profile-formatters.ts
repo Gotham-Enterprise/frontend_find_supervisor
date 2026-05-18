@@ -29,6 +29,17 @@ export function formatLocation(
   return zipcode ? `${parts} ${zipcode}` : parts
 }
 
+/** City and state for compact UI; null when both missing (unlike {@link formatLocation}). */
+export function formatCityStateLine(
+  city: string | null | undefined,
+  state: string | null | undefined,
+): string | null {
+  const c = city?.trim()
+  const s = state?.trim()
+  if (c && s) return `${c}, ${s}`
+  return c || s || null
+}
+
 // ─── Date ─────────────────────────────────────────────────────────────────────
 
 /** Formats an ISO date string to "April 13, 2026". Returns "N/A" for nullish. */
