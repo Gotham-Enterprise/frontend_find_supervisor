@@ -52,6 +52,8 @@ export const supervisorSchemaObject = accountSchemaBase.extend({
 
   // License & credentials
   licenseType: z.string().min(1, 'License type is required'),
+  /** API value from GET /supervision/options?param=supervisorType */
+  supervisorType: z.string().min(1, 'Supervisor type is required'),
   licenseNumber: z.string().min(1, 'License number is required').max(50),
   licenseExpiration: z
     .string()
@@ -179,6 +181,7 @@ export const supervisorStep2Schema = supervisorSchemaObject.pick({
   occupationId: true,
   specialtyId: true,
   licenseType: true,
+  supervisorType: true,
   licenseNumber: true,
   licenseExpiration: true,
   npiNumber: true,
@@ -225,6 +228,7 @@ export const SUPERVISOR_SIGNUP_STEP_FIELDS = [
     'occupationId',
     'specialtyId',
     'licenseType',
+    'supervisorType',
     'licenseNumber',
     'licenseExpiration',
     'npiNumber',

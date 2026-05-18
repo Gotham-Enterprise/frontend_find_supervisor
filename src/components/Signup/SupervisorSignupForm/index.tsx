@@ -47,6 +47,7 @@ export function SupervisorSignupForm() {
       isLoading: patientPopulationsLoading,
     },
     licenseTypes: { data: licenseTypeOptions = [], isLoading: licenseTypesLoading },
+    supervisorTypes: { data: supervisorTypeOptions = [], isLoading: supervisorTypesLoading },
     availability: { data: availabilityOptions = [], isLoading: availabilityLoading },
     occupations: { data: occupationOptions = [], isLoading: occupationsLoading },
     isError: optionsError,
@@ -204,11 +205,13 @@ export function SupervisorSignupForm() {
             occupationOptions={occupationOptions}
             specialtyOptions={specialtyOptions}
             licenseTypeOptions={licenseTypeOptions}
+            supervisorTypeOptions={supervisorTypeOptions}
             certificateOptions={certificateOptions}
             stateOptions={stateOptions}
             occupationsLoading={occupationsLoading}
             specialtiesLoading={specialtiesLoading}
             licenseTypesLoading={licenseTypesLoading}
+            supervisorTypesLoading={supervisorTypesLoading}
             certificatesLoading={certificatesLoading}
             isSubmitting={isSubmitting}
           />

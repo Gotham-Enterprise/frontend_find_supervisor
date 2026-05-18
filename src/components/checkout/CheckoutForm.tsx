@@ -91,7 +91,7 @@ function BillingFields({
         <input
           type="text"
           autoComplete="cc-name"
-          placeholder="Jane Smith"
+          placeholder="Enter your full name"
           required
           value={value.name}
           onChange={set('name')}
@@ -107,7 +107,7 @@ function BillingFields({
         <input
           type="text"
           autoComplete="address-line1"
-          placeholder="123 Main St"
+          placeholder="Enter your street address"
           required
           value={value.line1}
           onChange={set('line1')}
@@ -121,7 +121,7 @@ function BillingFields({
         <input
           type="text"
           autoComplete="address-line2"
-          placeholder="Apt 4B"
+          placeholder="Enter your apartment, suite, etc."
           value={value.line2}
           onChange={set('line2')}
           className={inputCls}
@@ -137,7 +137,7 @@ function BillingFields({
           <input
             type="text"
             autoComplete="address-level2"
-            placeholder="New York"
+            placeholder="Enter your city (e.g. New York)"
             required
             value={value.city}
             onChange={set('city')}
@@ -149,7 +149,7 @@ function BillingFields({
           <input
             type="text"
             autoComplete="address-level1"
-            placeholder="NY"
+            placeholder="Enter your state (e.g. NY)"
             value={value.state}
             onChange={set('state')}
             className={inputCls}
@@ -165,7 +165,7 @@ function BillingFields({
         <input
           type="text"
           autoComplete="postal-code"
-          placeholder="10001"
+          placeholder="Enter your ZIP code (e.g. 10001)"
           required
           value={value.postalCode}
           onChange={set('postalCode')}

@@ -136,6 +136,24 @@ function hasActivePaidSupervisionSubscription(profile: SupervisorProfileData): b
   )
 }
 
+/**
+ * True when the user previously completed a paid subscription (it was activated — has a
+ * currentPeriodStart) but it has since lapsed or been canceled. Excludes abandoned checkouts
+ * (INACTIVE with no currentPeriodStart) since those were never activated.
+ */
+function hadLapsedPaidSubscription(profile: SupervisorProfileData): boolean {
+  return (
+    profile.user.subscriptions?.some(
+      (s) =>
+        !!s.plan &&
+        !isFreePlan(s.plan) &&
+        !!s.stripeSubscriptionId &&
+        !!s.currentPeriodStart &&
+        (s.status === 'INACTIVE' || s.status === 'CANCELED'),
+    ) ?? false
+  )
+}
+
 function getPrimaryDashboardSubscription(profile: SupervisorProfileData): Subscription | undefined {
   const subs = profile.user.subscriptions ?? []
   const entitledStatuses: Subscription['status'][] = ['ACTIVE', 'TRIALING', 'PAST_DUE']
@@ -1003,6 +1021,7 @@ export function SupervisorDashboard() {
           subscriptionStatus={primarySubscription?.status}
           currentPeriodEnd={primarySubscription?.currentPeriodEnd}
           cancelAtPeriodEnd={primarySubscription?.cancelAtPeriodEnd}
+          hadPremium={hadLapsedPaidSubscription(enrichedProfile)}
           onOpenChoosePlanModal={() => setChoosePlanModalOpen(true)}
         />
         <TipsAndHelp />

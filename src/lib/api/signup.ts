@@ -67,6 +67,7 @@ export function buildSupervisorFormData(values: SupervisorFormValues): FormData 
 
   // License & credentials
   fd.append('licenseType', values.licenseType)
+  fd.append('supervisorType', values.supervisorType)
   fd.append('licenseNumber', values.licenseNumber)
   fd.append('licenseExpiration', values.licenseExpiration)
   // Backend field is singular: yearOfExperience
