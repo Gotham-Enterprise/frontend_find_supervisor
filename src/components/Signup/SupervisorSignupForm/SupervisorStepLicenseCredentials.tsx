@@ -24,11 +24,13 @@ type SupervisorStepLicenseCredentialsProps = {
   occupationOptions: SelectOption[]
   specialtyOptions: SelectOption[]
   licenseTypeOptions: SelectOption[]
+  supervisorTypeOptions: SelectOption[]
   certificateOptions: SelectOption[]
   stateOptions: SelectOption[]
   occupationsLoading: boolean
   specialtiesLoading: boolean
   licenseTypesLoading: boolean
+  supervisorTypesLoading: boolean
   certificatesLoading: boolean
   isSubmitting: boolean
 }
@@ -37,11 +39,13 @@ export function SupervisorStepLicenseCredentials({
   occupationOptions,
   specialtyOptions,
   licenseTypeOptions,
+  supervisorTypeOptions,
   certificateOptions,
   stateOptions,
   occupationsLoading,
   specialtiesLoading,
   licenseTypesLoading,
+  supervisorTypesLoading,
   certificatesLoading,
   isSubmitting,
 }: SupervisorStepLicenseCredentialsProps) {
@@ -100,6 +104,20 @@ export function SupervisorStepLicenseCredentials({
           isSubmitting={isSubmitting}
           required
         />
+        <div className="sm:col-span-2">
+          <FormSelectField
+            control={control}
+            name="supervisorType"
+            label="Supervisor Type"
+            rules={supervisorFieldRules('supervisorType')}
+            options={supervisorTypeOptions}
+            placeholder="Select supervisor type"
+            loading={supervisorTypesLoading}
+            sortOptions
+            isSubmitting={isSubmitting}
+            required
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

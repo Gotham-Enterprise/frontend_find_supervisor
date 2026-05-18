@@ -92,6 +92,7 @@ export function useSupervisorFormOptions() {
   const certificates = useCertificateOptions()
   const patientPopulations = usePatientPopulationOptions()
   const licenseTypes = useLicenseTypeOptions()
+  const supervisorTypes = useSupervisorTypeOptions()
   const availability = useAvailabilityOptions()
   const occupations = useOccupationOptions()
 
@@ -99,18 +100,21 @@ export function useSupervisorFormOptions() {
     certificates,
     patientPopulations,
     licenseTypes,
+    supervisorTypes,
     availability,
     occupations,
     isLoading:
       certificates.isLoading ||
       patientPopulations.isLoading ||
       licenseTypes.isLoading ||
+      supervisorTypes.isLoading ||
       availability.isLoading ||
       occupations.isLoading,
     isError:
       certificates.isError ||
       patientPopulations.isError ||
       licenseTypes.isError ||
+      supervisorTypes.isError ||
       availability.isError ||
       occupations.isError,
   }

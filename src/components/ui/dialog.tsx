@@ -48,7 +48,7 @@ function DialogContent({
       >
         <DialogPrimitive.Popup
           className={cn(
-            'relative my-auto w-full max-w-lg rounded-lg border border-border bg-background p-6 shadow-lg',
+            'relative my-auto w-full min-w-0 max-w-lg rounded-lg border border-border bg-background p-6 shadow-lg',
             className,
           )}
           {...props}

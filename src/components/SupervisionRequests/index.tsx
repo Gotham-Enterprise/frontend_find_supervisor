@@ -31,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
+import { textareaWrapStyle } from '@/components/ui/textarea'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { isFreePlan } from '@/lib/constants/subscription-plans'
 import {
@@ -478,7 +479,8 @@ function RowActions({ hire, showHireDecisions }: RowActionsProps) {
         <label className="block text-sm font-medium text-foreground">
           Reason <span className="text-destructive">*</span>
           <textarea
-            className="mt-1.5 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+            className="mt-1.5 min-w-0 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+            style={textareaWrapStyle}
             rows={3}
             maxLength={500}
             placeholder="Explain why you are rejecting this request…"

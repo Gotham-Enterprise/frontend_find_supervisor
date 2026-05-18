@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, CalendarDays, CheckCircle2, Star } from 'lucide-react'
+import { AlertCircle, CalendarDays, CheckCircle2, RefreshCw, Star } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
@@ -267,7 +267,7 @@ function SubscribedCard({
           <div>
             <CardTitle className="text-base font-semibold">
               {isCanceling
-                ? 'Subscription canceled — premium until period end'
+                ? 'Subscription canceled — Premium features active until period end'
                 : 'Your Premium plan is active'}
             </CardTitle>
             <p className="mt-0.5 text-sm text-muted-foreground">
@@ -398,6 +398,108 @@ function SubscribedCard({
   )
 }
 
+function LapsedCard({
+  planName,
+  accessEndedDate,
+  onOpenChoosePlanModal,
+}: {
+  planName: string
+  accessEndedDate: string
+  onOpenChoosePlanModal?: () => void
+}) {
+  const [modalOpen, setModalOpen] = useState(false)
+  const premiumFeatures = SUPERVISOR_FEATURES.filter((f) => f.premium)
+
+  const openModal = () => {
+    if (onOpenChoosePlanModal) onOpenChoosePlanModal()
+    else setModalOpen(true)
+  }
+
+  return (
+    <>
+      {!onOpenChoosePlanModal && <SubscriptionModal open={modalOpen} onOpenChange={setModalOpen} />}
+      <Card className="border-slate-200">
+        <CardHeader className="flex flex-row items-start justify-between gap-4 border-b pb-4">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+              <RefreshCw className="size-4 text-slate-500" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-semibold">
+                Your premium access has ended
+              </CardTitle>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Your <span className="font-medium text-foreground">{planName}</span> subscription
+                ended on {accessEndedDate}. Reactivate anytime to restore full access.
+              </p>
+            </div>
+          </div>
+          <Badge className="shrink-0 bg-slate-100 text-slate-600 hover:bg-slate-100">
+            Inactive
+          </Badge>
+        </CardHeader>
+
+        <CardContent className="pt-5">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Features you had access to
+              </p>
+              <ul className="space-y-2.5">
+                {SUPERVISOR_FEATURES.filter((f) => !f.premium).map((f) => (
+                  <FreeFeatureRow key={f.label} label={f.label} />
+                ))}
+              </ul>
+
+              <PremiumFeaturesDivider />
+
+              <ul className="space-y-2.5">
+                {premiumFeatures.map((f) => (
+                  <LockedFeatureRow key={f.label} label={f.label} />
+                ))}
+              </ul>
+            </div>
+
+            <div className="self-start rounded-xl border border-slate-200 bg-slate-50 p-5 lg:col-span-1">
+              <p className="text-sm font-semibold text-foreground">Reactivate your plan</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                Pick up where you left off — get messaging, visibility, and full platform tools
+                again instantly.
+              </p>
+
+              <ul className="mt-4 space-y-2">
+                {['Messaging & contacts', 'Stronger visibility', 'Full platform tools'].map(
+                  (item) => (
+                    <li
+                      key={item}
+                      className="flex items-center gap-2 text-xs text-muted-foreground"
+                    >
+                      <CheckCircle2 className="size-3.5 shrink-0 text-primary" />
+                      {item}
+                    </li>
+                  ),
+                )}
+              </ul>
+
+              <button
+                type="button"
+                onClick={openModal}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                <RefreshCw className="size-3.5" />
+                Reactivate plan
+              </button>
+              <p className="mt-2 text-center text-[11px] text-muted-foreground">
+                Cancel anytime · No hidden fees
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </>
+  )
+}
+
 export interface SupervisorDashboardSubscriptionProps {
   isSubscribed: boolean
   /** Display name for the active plan (e.g. from API) */
@@ -408,6 +510,12 @@ export interface SupervisorDashboardSubscriptionProps {
   currentPeriodEnd?: string | null
   /** From profile/current-subscription: cancel scheduled at Stripe period end */
   cancelAtPeriodEnd?: boolean | null
+  /**
+   * True when the user previously had a paid subscription that is now lapsed/canceled
+   * (status INACTIVE/CANCELED after a real billing period — not an abandoned checkout).
+   * When true, shows the "Reactivate" card instead of the generic free plan card.
+   */
+  hadPremium?: boolean
   /** When set, Upgrade plan opens this handler (shared modal, e.g. dashboard parent). */
   onOpenChoosePlanModal?: () => void
 }
@@ -419,6 +527,7 @@ export function SupervisorDashboardSubscription({
   subscriptionStatus,
   currentPeriodEnd,
   cancelAtPeriodEnd,
+  hadPremium,
   onOpenChoosePlanModal,
 }: SupervisorDashboardSubscriptionProps) {
   const resolvedPlanName = planName?.trim() || ''
@@ -443,9 +552,46 @@ export function SupervisorDashboardSubscription({
   }
 
   if (isSupervisionFreeTierSubscription(planName, plan ?? undefined)) {
+    // If the user previously had a paid plan that fully lapsed, show the reactivate card
+    // instead of the generic free plan card.
+    if (hadPremium) {
+      return (
+        <LapsedCard
+          planName={resolvedPlanName || 'Find a Supervisor Platform Access'}
+          accessEndedDate={formatBillingDate(currentPeriodEnd)}
+          onOpenChoosePlanModal={onOpenChoosePlanModal}
+        />
+      )
+    }
     return (
       <SupervisorFreePlanEnrolledCard
         planName={resolvedPlanName || 'Find a Supervisor Free Plan'}
+        onOpenChoosePlanModal={onOpenChoosePlanModal}
+      />
+    )
+  }
+
+  // Only show the premium subscribed card when the paid subscription is actually entitled.
+  // An INACTIVE/UNPAID subscription means checkout was started but not completed — fall back
+  // to the free plan card since the user's free subscription is still ACTIVE.
+  const isEntitledStatus =
+    subscriptionStatus === 'ACTIVE' ||
+    subscriptionStatus === 'TRIALING' ||
+    subscriptionStatus === 'PAST_DUE'
+
+  if (!isEntitledStatus) {
+    if (hadPremium) {
+      return (
+        <LapsedCard
+          planName={resolvedPlanName || 'Find a Supervisor Platform Access'}
+          accessEndedDate={formatBillingDate(currentPeriodEnd)}
+          onOpenChoosePlanModal={onOpenChoosePlanModal}
+        />
+      )
+    }
+    return (
+      <SupervisorFreePlanEnrolledCard
+        planName={'Find a Supervisor Free Plan'}
         onOpenChoosePlanModal={onOpenChoosePlanModal}
       />
     )

@@ -12,6 +12,7 @@ export const supervisorDefaultValues: Partial<SupervisorFormValues> = {
   occupationId: '',
   specialtyId: '',
   licenseType: '',
+  supervisorType: '',
   licenseNumber: '',
   licenseExpiration: '',
   npiNumber: '',

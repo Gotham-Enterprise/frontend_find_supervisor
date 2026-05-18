@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from 'react'
 
 import { SubscriptionModal } from '@/components/Dashboard/subscription/SubscriptionModal'
 import { Button } from '@/components/ui/button'
+import { textareaWrapStyle } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 
 interface MessageComposerProps {
@@ -155,11 +156,12 @@ export function MessageComposer({
           placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
           rows={1}
           className={cn(
-            'max-h-32 min-h-[40px] flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground',
+            'max-h-32 min-h-[40px] min-w-0 flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground',
             'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0',
             'disabled:cursor-not-allowed disabled:opacity-50',
           )}
           style={{
+            ...textareaWrapStyle,
             height: 'auto',
             overflowY: text.split('\n').length > 4 ? 'auto' : 'hidden',
           }}
