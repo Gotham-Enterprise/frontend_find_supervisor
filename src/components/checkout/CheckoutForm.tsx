@@ -145,11 +145,14 @@ function BillingFields({
           />
         </div>
         <div>
-          <label className={labelCls}>State</label>
+          <label className={labelCls}>
+            State <span className="text-destructive">*</span>
+          </label>
           <input
             type="text"
             autoComplete="address-level1"
             placeholder="Enter your state (e.g. NY)"
+            required
             value={value.state}
             onChange={set('state')}
             className={inputCls}
@@ -207,7 +210,7 @@ function CheckoutFormInner({ plan }: CheckoutFormInnerProps) {
               line1: billing.line1,
               line2: billing.line2 || undefined,
               city: billing.city,
-              state: billing.state || undefined,
+              state: billing.state,
               postal_code: billing.postalCode,
               country: billing.country === 'OTHER' ? undefined : billing.country,
             },
