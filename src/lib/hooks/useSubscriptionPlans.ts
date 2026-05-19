@@ -6,8 +6,12 @@ import {
   cancelSubscription,
   getCurrentSubscription,
   getSubscriptionPlans,
+  reactivateSubscription,
 } from '@/lib/api/supervision'
+import { useUser } from '@/lib/contexts/UserContext'
 import type { Subscription, SubscriptionPlan } from '@/types/supervisor-profile'
+
+import { supervisorProfileKeys } from './useSupervisorProfile'
 
 export const subscriptionKeys = {
   all: ['supervision', 'subscription'] as const,
@@ -18,6 +22,20 @@ export const subscriptionKeys = {
 }
 
 const STALE_MS = 60_000
+
+function useSyncSubscriptionCache() {
+  const queryClient = useQueryClient()
+  const { user } = useUser()
+
+  return (updated: Subscription) => {
+    queryClient.setQueryData(subscriptionKeys.current(), updated)
+    if (user?.id) {
+      void queryClient.invalidateQueries({
+        queryKey: supervisorProfileKeys.detail(user.id),
+      })
+    }
+  }
+}
 
 /**
  * GET /supervision/plans — use while the plan modal is open (or whenever you need the list).
@@ -59,16 +77,29 @@ export function useSubscriptionPlansMutation() {
 /**
  * POST /supervision/payments/cancel-subscription
  *
- * On success, updates the cached current-subscription entry so the UI reflects
- * the cancellation immediately without a separate refetch round-trip.
+ * On success, updates the cached current-subscription entry and invalidates
+ * the supervisor profile so the dashboard reflects the change immediately.
  */
 export function useCancelSubscription() {
-  const queryClient = useQueryClient()
+  const syncSubscriptionCache = useSyncSubscriptionCache()
 
   return useMutation({
     mutationFn: cancelSubscription,
-    onSuccess: (updated: Subscription) => {
-      queryClient.setQueryData(subscriptionKeys.current(), updated)
-    },
+    onSuccess: syncSubscriptionCache,
+  })
+}
+
+/**
+ * POST /supervision/payments/reactivate-subscription
+ *
+ * On success, updates the cached current-subscription entry and invalidates
+ * the supervisor profile so the dashboard reflects the change immediately.
+ */
+export function useReactivateSubscription() {
+  const syncSubscriptionCache = useSyncSubscriptionCache()
+
+  return useMutation({
+    mutationFn: reactivateSubscription,
+    onSuccess: syncSubscriptionCache,
   })
 }

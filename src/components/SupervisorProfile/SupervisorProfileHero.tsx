@@ -11,8 +11,13 @@ import {
   useSuperviseeProfile,
   useSupervisionChatSocket,
   useSupervisorReviews,
+  useSupervisorTypeOptions,
 } from '@/lib/hooks'
-import { formatDisplayName, getInitials } from '@/lib/utils/profile-formatters'
+import {
+  formatDisplayName,
+  formatSupervisorTypeLabel,
+  getInitials,
+} from '@/lib/utils/profile-formatters'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 import { HireSupervisorModal } from './HireSupervisorModal'
@@ -79,6 +84,7 @@ export function SupervisorProfileHero({ profile, supervisorId }: SupervisorProfi
   const { mutate: createOrGetConversation, isPending: isStartingChat } =
     useCreateOrGetConversation()
 
+  const { data: supervisorTypeOptions = [] } = useSupervisorTypeOptions()
   const {
     data: reviewsData,
     isLoading: reviewsLoading,
@@ -124,6 +130,7 @@ export function SupervisorProfileHero({ profile, supervisorId }: SupervisorProfi
   const occupation = profile.user.occupation?.name ?? profile.occupation?.name
   const specialty = profile.user.specialty?.name ?? profile.specialty?.name
   const subline = [occupation, specialty].filter(Boolean).join(' · ')
+  const roleBadgeLabel = formatSupervisorTypeLabel(profile.supervisorType, supervisorTypeOptions)
   const filledStars = Math.round(overallRating)
 
   return (
@@ -140,7 +147,7 @@ export function SupervisorProfileHero({ profile, supervisorId }: SupervisorProfi
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-bold text-[#181818]">{displayName}</h1>
             <span className="rounded-full bg-[#E2F0E8] px-2.5 py-0.5 text-xs font-medium text-[#006D36]">
-              Supervisor
+              {roleBadgeLabel}
             </span>
           </div>
 

@@ -5,11 +5,16 @@ import Link from 'next/link'
 import { useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   isSupervisionFreeTierSubscription,
   shouldShowSupervisionPremiumSubscriptionCard,
 } from '@/lib/constants/supervision-dashboard-plans'
+import { useReactivateSubscription, useUserSnackbar } from '@/lib/hooks'
+import { parseApiError } from '@/lib/utils/error-parser'
+import { isSubscriptionScheduledForCancellationFields } from '@/lib/utils/subscription-status'
 import type { SubscriptionPlan, SubscriptionStatus } from '@/types/supervisor-profile'
 
 import { FreeFeatureRow, LockedFeatureRow, PremiumFeaturesDivider } from './SubscriptionFeatureRows'
@@ -236,165 +241,214 @@ function SubscribedCard({
   cancelAtPeriodEnd?: boolean
 }) {
   const isCanceling = !!cancelAtPeriodEnd
+  const { mutateAsync: reactivateSub, isPending: isReactivating } = useReactivateSubscription()
+  const { showSuccess, showError } = useUserSnackbar()
+  const [resumeConfirmOpen, setResumeConfirmOpen] = useState(false)
+
+  async function handleConfirmResume() {
+    try {
+      const updated = await reactivateSub()
+      setResumeConfirmOpen(false)
+      const renewDate = formatBillingDate(updated.currentPeriodEnd)
+      showSuccess('Subscription resumed.', {
+        description:
+          renewDate !== '—'
+            ? `Your plan will renew on ${renewDate}.`
+            : 'Your plan will renew at the end of the current billing period.',
+      })
+    } catch (error) {
+      showError(parseApiError(error))
+    }
+  }
 
   return (
-    <Card
-      className={
-        isCanceling ? 'border-amber-200 bg-amber-50/40' : 'border-emerald-200 bg-emerald-50/30'
-      }
-    >
-      <CardHeader
+    <>
+      <ConfirmDialog
+        open={resumeConfirmOpen}
+        onOpenChange={setResumeConfirmOpen}
+        title="Resume subscription?"
+        description={
+          nextBillingDate !== '—'
+            ? `Your plan will auto-renew on ${nextBillingDate}. You will continue to be charged at the end of each billing period.`
+            : 'Your plan will auto-renew at the end of the current billing period. You will continue to be charged per your billing cycle.'
+        }
+        confirmLabel="Yes, keep my subscription"
+        cancelLabel="Not now"
+        isPending={isReactivating}
+        onConfirm={() => void handleConfirmResume()}
+      />
+      <Card
         className={
-          isCanceling
-            ? 'flex flex-row items-start justify-between gap-4 border-b border-amber-100 pb-4'
-            : 'flex flex-row items-start justify-between gap-4 border-b border-emerald-100 pb-4'
+          isCanceling ? 'border-amber-200 bg-amber-50/40' : 'border-emerald-200 bg-emerald-50/30'
         }
       >
-        <div className="flex items-start gap-3">
-          <div
+        <CardHeader
+          className={
+            isCanceling
+              ? 'flex flex-row items-start justify-between gap-4 border-b border-amber-100 pb-4'
+              : 'flex flex-row items-start justify-between gap-4 border-b border-emerald-100 pb-4'
+          }
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className={
+                isCanceling
+                  ? 'flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-100'
+                  : 'flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100'
+              }
+            >
+              {isCanceling ? (
+                <AlertCircle className="size-4 text-amber-800" />
+              ) : (
+                <CheckCircle2 className="size-4 text-emerald-700" />
+              )}
+            </div>
+            <div>
+              <CardTitle className="text-base font-semibold">
+                {isCanceling
+                  ? 'Subscription canceled — Premium features active until period end'
+                  : 'Your Premium plan is active'}
+              </CardTitle>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {isCanceling
+                  ? `Your renewal is turned off. You keep full premium access until ${nextBillingDate === '—' ? 'the end of your billing period' : nextBillingDate}, with no further charges after that.`
+                  : 'You have access to premium supervisor features including messaging, visibility, and platform tools.'}
+              </p>
+            </div>
+          </div>
+          <Badge
             className={
               isCanceling
-                ? 'flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-100'
-                : 'flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100'
+                ? 'shrink-0 border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-100'
+                : 'shrink-0 bg-emerald-100 text-emerald-700 hover:bg-emerald-100'
             }
           >
             {isCanceling ? (
-              <AlertCircle className="size-4 text-amber-800" />
+              <>
+                <CalendarDays className="mr-1 inline size-3.5" />
+                {nextBillingDate === '—' ? 'Canceling' : `Premium until ${nextBillingDate}`}
+              </>
             ) : (
-              <CheckCircle2 className="size-4 text-emerald-700" />
+              <>● Premium active</>
             )}
-          </div>
-          <div>
-            <CardTitle className="text-base font-semibold">
-              {isCanceling
-                ? 'Subscription canceled — Premium features active until period end'
-                : 'Your Premium plan is active'}
-            </CardTitle>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {isCanceling
-                ? `Your renewal is turned off. You keep full premium access until ${nextBillingDate === '—' ? 'the end of your billing period' : nextBillingDate}, with no further charges after that.`
-                : 'You have access to premium supervisor features including messaging, visibility, and platform tools.'}
-            </p>
-          </div>
-        </div>
-        <Badge
-          className={
-            isCanceling
-              ? 'shrink-0 border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-100'
-              : 'shrink-0 bg-emerald-100 text-emerald-700 hover:bg-emerald-100'
-          }
-        >
-          {isCanceling ? (
-            <>
-              <CalendarDays className="mr-1 inline size-3.5" />
-              {nextBillingDate === '—' ? 'Canceling' : `Premium until ${nextBillingDate}`}
-            </>
-          ) : (
-            <>● Premium active</>
-          )}
-        </Badge>
-      </CardHeader>
+          </Badge>
+        </CardHeader>
 
-      <CardContent className="pt-5">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Included in your plan
-            </p>
-            <ul className="space-y-2.5">
-              {SUPERVISOR_FEATURES.map((f) => (
-                <FreeFeatureRow key={f.label} label={f.label} />
-              ))}
-            </ul>
-          </div>
-
-          <div
-            className={
-              isCanceling
-                ? 'self-start rounded-xl border border-amber-200 bg-amber-50 p-5 lg:col-span-1'
-                : 'self-start rounded-xl border border-emerald-200 bg-emerald-50 p-5 lg:col-span-1'
-            }
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={
-                  isCanceling
-                    ? 'flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-600'
-                    : 'flex size-8 shrink-0 items-center justify-center rounded-full bg-primary'
-                }
-              >
-                {isCanceling ? (
-                  <CalendarDays className="size-4 text-white" />
-                ) : (
-                  <CheckCircle2 className="size-4 text-primary-foreground" />
-                )}
-              </div>
-              <div>
-                <p
-                  className={
-                    isCanceling
-                      ? 'text-sm font-semibold text-amber-950'
-                      : 'text-sm font-semibold text-emerald-800'
-                  }
-                >
-                  {isCanceling ? 'Premium access active' : 'Subscription active'}
-                </p>
-                <p className={isCanceling ? 'text-xs text-amber-800' : 'text-xs text-emerald-600'}>
-                  {isCanceling ? 'Renews off · no further charges' : 'Premium features enabled'}
-                </p>
-              </div>
+        <CardContent className="pt-5">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Included in your plan
+              </p>
+              <ul className="space-y-2.5">
+                {SUPERVISOR_FEATURES.map((f) => (
+                  <FreeFeatureRow key={f.label} label={f.label} />
+                ))}
+              </ul>
             </div>
 
             <div
               className={
                 isCanceling
-                  ? 'mt-4 space-y-2 border-t border-amber-200 pt-4'
-                  : 'mt-4 space-y-2 border-t border-emerald-200 pt-4'
+                  ? 'self-start rounded-xl border border-amber-200 bg-amber-50 p-5 lg:col-span-1'
+                  : 'self-start rounded-xl border border-emerald-200 bg-emerald-50 p-5 lg:col-span-1'
               }
             >
-              <div className="flex items-center justify-between text-xs">
-                <span className={isCanceling ? 'text-amber-900' : 'text-emerald-700'}>
-                  Current plan
-                </span>
-                <span
+              <div className="flex items-center gap-3">
+                <div
                   className={
-                    isCanceling ? 'font-semibold text-amber-950' : 'font-semibold text-emerald-800'
+                    isCanceling
+                      ? 'flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-600'
+                      : 'flex size-8 shrink-0 items-center justify-center rounded-full bg-primary'
                   }
                 >
-                  {planName}
-                </span>
+                  {isCanceling ? (
+                    <CalendarDays className="size-4 text-white" />
+                  ) : (
+                    <CheckCircle2 className="size-4 text-primary-foreground" />
+                  )}
+                </div>
+                <div>
+                  <p
+                    className={
+                      isCanceling
+                        ? 'text-sm font-semibold text-amber-950'
+                        : 'text-sm font-semibold text-emerald-800'
+                    }
+                  >
+                    {isCanceling ? 'Premium access active' : 'Subscription active'}
+                  </p>
+                  <p
+                    className={isCanceling ? 'text-xs text-amber-800' : 'text-xs text-emerald-600'}
+                  >
+                    {isCanceling ? 'Renews off · no further charges' : 'Premium features enabled'}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className={isCanceling ? 'text-amber-900' : 'text-emerald-700'}>
-                  {isCanceling ? 'Access ends' : 'Next billing'}
-                </span>
-                <span className={isCanceling ? 'text-amber-950' : 'text-emerald-700'}>
-                  {nextBillingDate}
-                </span>
-              </div>
-            </div>
 
-            <Link
-              href="/billing"
-              className={
-                isCanceling
-                  ? 'mt-4 flex w-full items-center justify-center rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-950 transition-colors hover:bg-amber-100/80'
-                  : 'mt-4 flex w-full items-center justify-center rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-50'
-              }
-            >
-              Manage subscription
-            </Link>
-            <p
-              className={`mt-2 text-center text-[11px] ${isCanceling ? 'text-amber-800' : 'text-emerald-600'}`}
-            >
-              {isCanceling
-                ? 'No further charges after access ends'
-                : 'Auto-renews · Cancel anytime'}
-            </p>
+              <div
+                className={
+                  isCanceling
+                    ? 'mt-4 space-y-2 border-t border-amber-200 pt-4'
+                    : 'mt-4 space-y-2 border-t border-emerald-200 pt-4'
+                }
+              >
+                <div className="flex items-center justify-between text-xs">
+                  <span className={isCanceling ? 'text-amber-900' : 'text-emerald-700'}>
+                    Current plan
+                  </span>
+                  <span
+                    className={
+                      isCanceling
+                        ? 'font-semibold text-amber-950'
+                        : 'font-semibold text-emerald-800'
+                    }
+                  >
+                    {planName}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className={isCanceling ? 'text-amber-900' : 'text-emerald-700'}>
+                    {isCanceling ? 'Access ends' : 'Next billing'}
+                  </span>
+                  <span className={isCanceling ? 'text-amber-950' : 'text-emerald-700'}>
+                    {nextBillingDate}
+                  </span>
+                </div>
+              </div>
+
+              {isCanceling && (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="mt-4 w-full"
+                  onClick={() => setResumeConfirmOpen(true)}
+                >
+                  Resume subscription
+                </Button>
+              )}
+              <Link
+                href="/billing"
+                className={
+                  isCanceling
+                    ? 'mt-2 flex w-full items-center justify-center rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-950 transition-colors hover:bg-amber-100/80'
+                    : 'mt-4 flex w-full items-center justify-center rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-800 transition-colors hover:bg-emerald-50'
+                }
+              >
+                Manage subscription
+              </Link>
+              <p
+                className={`mt-2 text-center text-[11px] ${isCanceling ? 'text-amber-800' : 'text-emerald-600'}`}
+              >
+                {isCanceling
+                  ? 'No further charges after access ends'
+                  : 'Auto-renews · Cancel anytime'}
+              </p>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </>
   )
 }
 
@@ -532,8 +586,10 @@ export function SupervisorDashboardSubscription({
 }: SupervisorDashboardSubscriptionProps) {
   const resolvedPlanName = planName?.trim() || ''
 
-  const showCanceling =
-    !!cancelAtPeriodEnd && (subscriptionStatus === 'ACTIVE' || subscriptionStatus === 'TRIALING')
+  const showCanceling = isSubscriptionScheduledForCancellationFields(
+    subscriptionStatus,
+    cancelAtPeriodEnd,
+  )
 
   if (shouldShowSupervisionPremiumSubscriptionCard(resolvedPlanName, subscriptionStatus ?? null)) {
     const displayName = resolvedPlanName || 'Find a Supervisor Platform Access'

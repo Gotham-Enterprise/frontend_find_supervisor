@@ -22,6 +22,7 @@ export interface UpdateSupervisorProfilePayload {
   specialty?: string
   website?: string
   licenseType?: string
+  supervisorType?: string
   licenseNumber?: string
   licenseExpiration?: string
   yearsOfExperience?: string

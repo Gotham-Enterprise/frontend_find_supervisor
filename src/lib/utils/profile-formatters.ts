@@ -149,6 +149,24 @@ export function formatAvailability(availability: string | null | undefined): str
 
 // ─── Type of supervisor (GET /supervision/options `supervisorType`; same list as signup) ─
 
+/** Stored values from the previous counseling-focused option list and older API shapes. */
+const LEGACY_SUPERVISOR_TYPE_LABELS: Record<string, string> = {
+  LPC_SUPERVISOR: 'LPC Supervisor',
+  LPCC_SUPERVISOR: 'LPCC Supervisor',
+  LMHC_SUPERVISOR: 'LMHC Supervisor',
+  LMFT_SUPERVISOR: 'LMFT Supervisor',
+  LCSW_SUPERVISOR: 'LCSW Supervisor',
+  LICSW_SUPERVISOR: 'LICSW Supervisor',
+  CLINICAL_SUPERVISOR: 'Clinical Supervisor',
+  ACS: 'Approved Clinical Supervisor (ACS)',
+  BOARD_APPROVED_SUPERVISOR: 'Board Approved Supervisor',
+  FIELD_SUPERVISOR: 'Field Supervisor',
+  Collaborating_Physician: 'Collaborating Physician',
+  Preceptor: 'Preceptor',
+  Supervising_Physician: 'Supervising Physician',
+  Supervisor: 'Supervisor',
+}
+
 /** When options are still loading or the API adds a code not yet in the list — no parallel enum map. */
 function humanizeSupervisorTypeFallback(raw: string): string {
   return raw
@@ -176,6 +194,8 @@ export function coerceStringList(value: unknown): string[] {
 function resolveOneSupervisorTypeLabel(key: string, options: SelectOption[]): string {
   const fromOptions = options.find((o) => o.value === key)?.label
   if (fromOptions) return fromOptions
+  const legacy = LEGACY_SUPERVISOR_TYPE_LABELS[key]
+  if (legacy) return legacy
   return humanizeSupervisorTypeFallback(key)
 }
 
@@ -192,6 +212,22 @@ export function resolveSupervisorTypeLabel(
   const keys = coerceStringList(value)
   if (keys.length === 0) return 'N/A'
   return keys.map((key) => resolveOneSupervisorTypeLabel(key, options)).join(', ')
+}
+
+const DEFAULT_SUPERVISOR_ROLE_LABEL = 'Supervisor'
+
+/**
+ * Badge / subtitle label for a supervisor's role: uses `supervisorType` when set,
+ * otherwise falls back to "Supervisor" (or a custom fallback).
+ */
+export function formatSupervisorTypeLabel(
+  supervisorType: string | null | undefined,
+  options: SelectOption[] = [],
+  fallback: string = DEFAULT_SUPERVISOR_ROLE_LABEL,
+): string {
+  const raw = typeof supervisorType === 'string' ? supervisorType.trim() : ''
+  if (!raw) return fallback
+  return resolveOneSupervisorTypeLabel(raw, options)
 }
 
 /** Human-readable state list for “looking in” using US state option labels when available. */

@@ -28,10 +28,15 @@ import { isSupervisionFreeTierSubscription } from '@/lib/constants/supervision-d
 import {
   useCancelSubscription,
   useCurrentSubscriptionQuery,
+  useReactivateSubscription,
   useUser,
   useUserSnackbar,
 } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
+import {
+  canResumeSubscription,
+  isSubscriptionScheduledForCancellation,
+} from '@/lib/utils/subscription-status'
 import type { Subscription, SubscriptionStatus } from '@/types/supervisor-profile'
 
 // ─── Feature list shared with the dashboard upgrade cards ─────────────────────
@@ -73,7 +78,10 @@ function formatBillingCycle(cycle: string | null | undefined): string {
 }
 
 function getStatusConfig(status: SubscriptionStatus, cancelAtPeriodEnd?: boolean) {
-  if (cancelAtPeriodEnd && (status === 'ACTIVE' || status === 'TRIALING')) {
+  if (
+    cancelAtPeriodEnd &&
+    (status === 'ACTIVE' || status === 'TRIALING' || status === 'PAST_DUE')
+  ) {
     return {
       label: 'Canceling',
       variant: 'outline' as const,
@@ -354,13 +362,16 @@ function NoSubscriptionUpgradeCard() {
 function SubscriptionCard({
   subscription,
   onCancelClick,
+  onResumeClick,
 }: {
   subscription: Subscription
   onCancelClick: () => void
+  onResumeClick: () => void
 }) {
   const statusConfig = getStatusConfig(subscription.status, subscription.cancelAtPeriodEnd)
   const canCancel = isActiveSubscription(subscription)
-  const isCancelingAtEnd = subscription.cancelAtPeriodEnd && subscription.status !== 'CANCELED'
+  const isCancelingAtEnd = isSubscriptionScheduledForCancellation(subscription)
+  const canResume = canResumeSubscription(subscription)
 
   return (
     <Card className="max-w-2xl">
@@ -412,14 +423,24 @@ function SubscriptionCard({
             Your subscription is set to cancel at the end of the current billing period. You will
             retain access until{' '}
             <span className="font-medium">{formatDate(subscription.currentPeriodEnd)}</span>.
+            {canResume && (
+              <span className="mt-1 block">You can resume auto-renewal before access ends.</span>
+            )}
           </div>
         )}
 
-        {canCancel && (
-          <div className="mt-6 flex justify-end">
-            <Button variant="destructive" size="sm" onClick={onCancelClick}>
-              Cancel Subscription
-            </Button>
+        {(canCancel || canResume) && (
+          <div className="mt-6 flex justify-end gap-2">
+            {canResume && (
+              <Button size="sm" onClick={onResumeClick}>
+                Resume subscription
+              </Button>
+            )}
+            {canCancel && (
+              <Button variant="destructive" size="sm" onClick={onCancelClick}>
+                Cancel Subscription
+              </Button>
+            )}
           </div>
         )}
       </CardContent>
@@ -465,9 +486,11 @@ function BillingContent() {
   } = useCurrentSubscriptionQuery(isSupervisor)
 
   const { mutateAsync: cancelSub, isPending: isCanceling } = useCancelSubscription()
+  const { mutateAsync: reactivateSub, isPending: isReactivating } = useReactivateSubscription()
   const { showSuccess, showError } = useUserSnackbar()
 
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [resumeConfirmOpen, setResumeConfirmOpen] = useState(false)
 
   async function handleConfirmCancel() {
     try {
@@ -475,6 +498,21 @@ function BillingContent() {
       setConfirmOpen(false)
       showSuccess('Subscription canceled.', {
         description: 'Your access will remain active until the end of the current billing period.',
+      })
+    } catch (error) {
+      showError(parseApiError(error))
+    }
+  }
+
+  async function handleConfirmResume() {
+    try {
+      const updated = await reactivateSub()
+      setResumeConfirmOpen(false)
+      const renewDate = formatDate(updated.currentPeriodEnd)
+      showSuccess('Subscription resumed.', {
+        description: renewDate
+          ? `Your plan will renew on ${renewDate}.`
+          : 'Your plan will renew at the end of the current billing period.',
       })
     } catch (error) {
       showError(parseApiError(error))
@@ -520,24 +558,41 @@ function BillingContent() {
           <SubscriptionCard
             subscription={subscription!}
             onCancelClick={() => setConfirmOpen(true)}
+            onResumeClick={() => setResumeConfirmOpen(true)}
           />
           <InvoicesCard />
         </>
       )}
 
-      {/* Cancel confirmation dialog — only rendered for paid subscribers */}
+      {/* Cancel / resume confirmation dialogs — only rendered for paid subscribers */}
       {!isFreeTier && (
-        <ConfirmDialog
-          open={confirmOpen}
-          onOpenChange={setConfirmOpen}
-          title="Cancel Subscription?"
-          description="Your subscription will remain active until the end of the current billing period. After that, you will lose access to paid features. This action cannot be undone."
-          confirmLabel="Yes, Cancel Subscription"
-          cancelLabel="Keep Subscription"
-          destructive
-          isPending={isCanceling}
-          onConfirm={() => void handleConfirmCancel()}
-        />
+        <>
+          <ConfirmDialog
+            open={confirmOpen}
+            onOpenChange={setConfirmOpen}
+            title="Cancel Subscription?"
+            description="Your subscription will remain active until the end of the current billing period. After that, you will lose access to paid features. You can resume auto-renewal before the period ends."
+            confirmLabel="Yes, Cancel Subscription"
+            cancelLabel="Keep Subscription"
+            destructive
+            isPending={isCanceling}
+            onConfirm={() => void handleConfirmCancel()}
+          />
+          <ConfirmDialog
+            open={resumeConfirmOpen}
+            onOpenChange={setResumeConfirmOpen}
+            title="Resume subscription?"
+            description={
+              subscription?.currentPeriodEnd
+                ? `Your plan will auto-renew on ${formatDate(subscription.currentPeriodEnd)}. You will continue to be charged at the end of each billing period.`
+                : 'Your plan will auto-renew at the end of the current billing period. You will continue to be charged per your billing cycle.'
+            }
+            confirmLabel="Yes, keep my subscription"
+            cancelLabel="Not now"
+            isPending={isReactivating}
+            onConfirm={() => void handleConfirmResume()}
+          />
+        </>
       )}
     </div>
   )

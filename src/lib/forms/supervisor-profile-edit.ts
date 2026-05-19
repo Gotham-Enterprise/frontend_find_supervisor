@@ -67,6 +67,10 @@ const editSupervisorProfileFieldsSchema = z.object({
     .string()
     .min(1, 'License type is required')
     .refine((s) => !isEmptySelect(s), { message: 'License type is required' }),
+  supervisorType: z
+    .string()
+    .min(1, 'Supervisor type is required')
+    .refine((s) => !isEmptySelect(s), { message: 'Supervisor type is required' }),
   licenseNumber: z.string().min(1, 'License number is required').max(50),
   licenseExpiration: licenseExpirationRefine,
   yearsOfExperience: z
@@ -149,6 +153,7 @@ export function getDefaultSupervisorProfileFormValues(
     occupationId: defaultOccupationId,
     specialtyId: defaultSpecialtyId,
     licenseType: profile.licenseType ?? '',
+    supervisorType: profile.supervisorType ?? '',
     licenseNumber: profile.licenseNumber ?? '',
     licenseExpiration: profile.licenseExpiration ? profile.licenseExpiration.slice(0, 10) : '',
     yearsOfExperience: (() => {
@@ -190,6 +195,7 @@ export function supervisorProfileFormValuesToPayload(
     specialty:
       values.specialtyId && values.specialtyId !== '__none__' ? values.specialtyId : undefined,
     licenseType: values.licenseType || undefined,
+    supervisorType: values.supervisorType || undefined,
     licenseNumber: values.licenseNumber || undefined,
     licenseExpiration: values.licenseExpiration || undefined,
     yearsOfExperience: values.yearsOfExperience || undefined,

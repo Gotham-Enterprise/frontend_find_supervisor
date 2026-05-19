@@ -63,7 +63,12 @@ const supervisorFaqs: FaqCategory[] = [
       {
         question: 'How do I cancel my subscription?',
         answer:
-          'Go to Billing & Invoices in the sidebar and click "Manage Billing." From there you can cancel your plan. After canceling, you retain full platform access until the end of your current billing period. Your profile will be hidden from search once the subscription expires.',
+          'Go to Billing & Invoices in the sidebar. On that page, use Cancel Subscription on your current plan. After canceling, you retain full platform access until the end of your current billing period. Your profile will be hidden from search once the subscription expires.',
+      },
+      {
+        question: 'Can I undo a cancellation before my billing period ends?',
+        answer:
+          'Yes. If you canceled but your access has not ended yet, open Billing & Invoices and click Resume subscription (or use the same option on your dashboard subscription card). Your plan will auto-renew on the next billing date.',
       },
       {
         question: 'What happens to my profile if my subscription lapses?',
