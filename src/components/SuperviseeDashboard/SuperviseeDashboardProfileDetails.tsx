@@ -107,7 +107,8 @@ export function SuperviseeDashboardProfileDetails({
   const location = formatLocation(profile.user.city, profile.user.state, profile.user.zipcode)
   const occupation = profile.occupation?.name ?? profile.user.occupation?.name
   const specialty = profile.specialty?.name ?? profile.user.specialty?.name
-  const subline = [occupation, specialty].filter(Boolean).join(' · ')
+  const credentialTitle = profile.title?.trim()
+  const subline = [credentialTitle, occupation, specialty].filter(Boolean).join(' · ')
   const statesOfLicensure = profile.user.stateOfLicensure ?? []
 
   const availabilityLabel = resolveOptionLabel(profile.availability, availabilityOptions)

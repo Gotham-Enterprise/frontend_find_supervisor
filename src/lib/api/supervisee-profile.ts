@@ -23,6 +23,7 @@ export interface UpdateSuperviseeProfilePayload {
   zipcode?: string
   occupation?: string
   specialty?: string
+  title?: string
   stateOfLicensure?: string[]
   typeOfSupervisorNeeded?: string[]
   howSoonLooking?: string

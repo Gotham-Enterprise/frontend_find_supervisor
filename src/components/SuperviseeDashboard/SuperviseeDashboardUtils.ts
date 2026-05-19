@@ -44,6 +44,7 @@ function getSuperviseeProfileCompletionChecks(profile: SuperviseeProfileData): b
     !!user.state,
     !!user.contactNumber,
     (user.stateOfLicensure?.length ?? 0) > 0,
+    !!profile.title?.trim(),
     hasProfileStringList(profile.typeOfSupervisorNeeded),
     !!profile.preferredFormat,
     !!profile.availability,

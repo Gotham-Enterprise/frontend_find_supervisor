@@ -125,6 +125,7 @@ export const supervisorSchema = withPasswordConfirmation(supervisorSchemaObject)
 
 export const superviseeSchemaObject = accountSchemaBase.extend({
   occupationId: z.string().min(1, 'Occupation is required'),
+  title: z.string().min(1, 'Credential or license type is required').max(100),
 
   stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
   stateTheyAreLookingIn: z
@@ -276,6 +277,7 @@ export const superviseeStep1Schema = withPasswordConfirmation(
 export const superviseeStep2Schema = superviseeSchemaObject
   .pick({
     occupationId: true,
+    title: true,
     stateOfLicensure: true,
     stateTheyAreLookingIn: true,
     typeOfSupervisor: true,
@@ -322,6 +324,7 @@ export const SUPERVISEE_SIGNUP_STEP_FIELDS = [
   ],
   [
     'occupationId',
+    'title',
     'stateOfLicensure',
     'stateTheyAreLookingIn',
     'typeOfSupervisor',

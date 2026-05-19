@@ -115,6 +115,7 @@ export function buildSuperviseeFormData(values: SuperviseeFormValues): FormData 
   fd.append('zipcode', values.zipcode)
 
   fd.append('occupation', values.occupationId)
+  fd.append('title', values.title)
 
   // Supervision needs — `stateOfLicensure[]` so a single state is still parsed as an array (multer + express-validator .isArray())
   values.stateOfLicensure.forEach((s) => fd.append('stateOfLicensure[]', s))

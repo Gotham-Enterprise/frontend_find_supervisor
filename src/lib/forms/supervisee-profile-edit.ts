@@ -16,6 +16,9 @@ export const SUPERVISEE_PROFILE_BUDGET_TYPE_OPTIONS = [
   { label: 'Monthly', value: 'MONTHLY' },
 ] as const
 
+export const SUPERVISEE_CREDENTIAL_TITLE_LABEL = 'Credential or License Type'
+export const SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER = 'e.g. AMFT, LPC-Associate, ACSW, PA'
+
 export const editSuperviseeProfileSchema = z
   .object({
     fullName: z.string().min(1, 'Full name is required').max(100),
@@ -29,6 +32,7 @@ export const editSuperviseeProfileSchema = z
       .regex(/^\d{5}(-\d{4})?$/, 'Enter a valid US zipcode'),
     occupationId: z.string().min(1, 'Occupation is required'),
     specialtyId: z.string().optional(),
+    title: z.string().min(1, 'Credential or license type is required').max(100),
     stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
     typeOfSupervisorNeeded: z
       .array(z.string())
@@ -76,6 +80,7 @@ export function getDefaultSuperviseeProfileFormValues(
     zipcode: profile.user.zipcode ?? '',
     occupationId: defaultOccupationId,
     specialtyId: defaultSpecialtyId,
+    title: profile.title ?? '',
     stateOfLicensure: profile.user.stateOfLicensure ?? [],
     typeOfSupervisorNeeded: coerceStringList(profile.typeOfSupervisorNeeded),
     howSoonLooking: profile.howSoonLooking ?? '',
@@ -104,6 +109,7 @@ export function superviseeProfileFormValuesToPayload(
     zipcode: values.zipcode || undefined,
     occupation: values.occupationId || undefined,
     specialty: values.specialtyId || undefined,
+    title: values.title.trim() || undefined,
     stateOfLicensure: values.stateOfLicensure,
     typeOfSupervisorNeeded:
       values.typeOfSupervisorNeeded.length > 0 ? values.typeOfSupervisorNeeded : undefined,
