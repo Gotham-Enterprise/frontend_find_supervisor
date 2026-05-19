@@ -1,5 +1,10 @@
 import type { SelectOption } from '@/lib/api/options'
-import { formatDate, resolveOptionLabel, resolveOptionLabels } from '@/lib/utils/profile-formatters'
+import {
+  formatDate,
+  formatSupervisorTypeLabel,
+  resolveOptionLabel,
+  resolveOptionLabels,
+} from '@/lib/utils/profile-formatters'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 interface SupervisorProfileProfessionalProps {
@@ -64,6 +69,9 @@ export function SupervisorProfileProfessional({
       <h2 className="mb-2 text-base font-semibold text-[#181818]">License &amp; Credentials</h2>
       <div>
         {profile.licenseType && <Row label="License Type">{licenseTypeLabel}</Row>}
+        {profile.supervisorType && (
+          <Row label="Supervisor Type">{formatSupervisorTypeLabel(profile.supervisorType)}</Row>
+        )}
         {statesOfLicensure.length > 0 && (
           <Row label="States of Licensure">
             <TagRow

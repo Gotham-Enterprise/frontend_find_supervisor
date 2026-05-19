@@ -68,6 +68,7 @@ export {
   subscriptionKeys,
   useCancelSubscription,
   useCurrentSubscriptionQuery,
+  useReactivateSubscription,
   useSubscriptionPlansMutation,
   useSubscriptionPlansQuery,
 } from './useSubscriptionPlans'

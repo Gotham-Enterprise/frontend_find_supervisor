@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import type { RecommendedSupervisorApiItem } from '@/lib/api/supervisors'
+import { useSupervisorTypeOptions } from '@/lib/hooks'
+import { formatSupervisorTypeLabel } from '@/lib/utils/profile-formatters'
 
 const FORMAT_LABELS: Record<string, string> = {
   VIRTUAL: 'Virtual',
@@ -41,6 +43,7 @@ interface RecommendedSupervisorRowProps {
 }
 
 function RecommendedSupervisorRow({ supervisor }: RecommendedSupervisorRowProps) {
+  const { data: supervisorTypeOptions = [] } = useSupervisorTypeOptions()
   const {
     id,
     fullName,
@@ -52,7 +55,13 @@ function RecommendedSupervisorRow({ supervisor }: RecommendedSupervisorRowProps)
     totalReviews,
   } = supervisor
 
-  const role = occupation?.name || supervisorProfile?.profession || 'Supervisor'
+  const supervisorTypeLabel = formatSupervisorTypeLabel(
+    supervisorProfile?.supervisorType,
+    supervisorTypeOptions,
+    '',
+  )
+  const role =
+    supervisorTypeLabel || occupation?.name || supervisorProfile?.profession || 'Supervisor'
   const format = supervisorProfile?.supervisionFormat ?? null
   const locationLabel = stateOfLicensure.length > 0 ? stateOfLicensure.slice(0, 2).join(', ') : null
   const hasRating = averageRating > 0

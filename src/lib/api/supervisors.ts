@@ -39,6 +39,7 @@ export interface RecommendedSupervisorApiItem {
   specialty: { id: string; name: string } | null
   supervisorProfile: {
     profession: string | null
+    supervisorType?: string | null
     supervisionFormat: string | null
     availability: string | null
     supervisionFeeAmount: number | null

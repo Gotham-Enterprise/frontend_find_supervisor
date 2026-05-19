@@ -37,11 +37,12 @@ import {
   useCertificateOptions,
   usePatientPopulationOptions,
   useSupervisorProfile,
+  useSupervisorTypeOptions,
   useUser,
 } from '@/lib/hooks'
 import { mergeSupervisorProfileDisplayName } from '@/lib/profile/supervisor-profile-display'
 import { cn } from '@/lib/utils'
-import { resolveOptionLabels } from '@/lib/utils/profile-formatters'
+import { formatSupervisorTypeLabel, resolveOptionLabels } from '@/lib/utils/profile-formatters'
 import type {
   Subscription,
   SupervisorProfileData,
@@ -82,6 +83,7 @@ function getSupervisorProfileCompletionChecks(profile: SupervisorProfileData): b
   return [
     Boolean(profile.user.profilePhotoUrl?.trim()),
     Boolean(profile.licenseType?.trim()),
+    Boolean(profile.supervisorType?.trim()),
     hasOccupation,
     hasLicenseIdOrFile,
     hasStateLicenseInfo,
@@ -607,6 +609,7 @@ function ProfilePreview({
 }) {
   const { data: certificationOptions = [] } = useCertificateOptions()
   const { data: patientPopulationOptions = [] } = usePatientPopulationOptions()
+  const { data: supervisorTypeOptions = [] } = useSupervisorTypeOptions()
 
   const composedName = `${profile.user.firstName ?? ''} ${profile.user.lastName ?? ''}`.trim()
   const name = profile.user.fullName ?? (composedName || '—')
@@ -643,7 +646,14 @@ function ProfilePreview({
       avatar={{ fullName: name, photoUrl: profile.user.profilePhotoUrl, size: 'lg' }}
       identity={{
         name,
-        subline: profile.licenseType ?? profile.profession ?? '—',
+        subline:
+          [
+            profile.licenseType,
+            formatSupervisorTypeLabel(profile.supervisorType, supervisorTypeOptions, ''),
+            profile.profession,
+          ]
+            .filter((part) => Boolean(part?.trim()))
+            .join(' · ') || '—',
         meta: metaLine,
       }}
       stats={[
@@ -884,7 +894,8 @@ function BillingSection({ profile }: { profile: SupervisorProfileData }) {
   const isEntitled =
     sub.status === 'ACTIVE' || sub.status === 'TRIALING' || sub.status === 'PAST_DUE'
   const isCancelingAtPeriodEnd =
-    !!sub.cancelAtPeriodEnd && (sub.status === 'ACTIVE' || sub.status === 'TRIALING')
+    !!sub.cancelAtPeriodEnd &&
+    (sub.status === 'ACTIVE' || sub.status === 'TRIALING' || sub.status === 'PAST_DUE')
 
   return (
     <Card>

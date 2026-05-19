@@ -28,6 +28,7 @@ import {
   usePatientPopulationOptions,
   useSpecialtiesByOccupation,
   useStatesOptions,
+  useSupervisorTypeOptions,
 } from '@/lib/hooks'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
@@ -86,6 +87,8 @@ export function SupervisorProfileEditFields({
   }, [stateWatch, form])
 
   const { data: licenseTypeOptions = [] } = useLicenseTypeOptions()
+  const { data: supervisorTypeOptions = [], isLoading: supervisorTypesLoading } =
+    useSupervisorTypeOptions()
   const { data: availabilityOptions = [] } = useAvailabilityOptions()
   const { data: certificationOptions = [] } = useCertificateOptions()
   const { data: patientPopulationOptions = [] } = usePatientPopulationOptions()
@@ -281,6 +284,18 @@ export function SupervisorProfileEditFields({
             isSubmitting={isSubmitting}
           />
         </div>
+        <FormSelectField
+          control={form.control}
+          name="supervisorType"
+          label="Supervisor Type"
+          required
+          options={supervisorTypeOptions}
+          placeholder="Select supervisor type"
+          loading={supervisorTypesLoading}
+          sortOptions
+          isSubmitting={isSubmitting}
+          emptySentinel={{ value: '__none__', label: 'None' }}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           <FormInputField
             control={form.control}

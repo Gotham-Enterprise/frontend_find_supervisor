@@ -48,6 +48,20 @@ export async function cancelSubscription(): Promise<Subscription> {
 }
 
 /**
+ * POST /supervision/payments/reactivate-subscription
+ *
+ * Undoes cancel_at_period_end on an active Stripe subscription so billing
+ * resumes at the next renewal. No request body — the backend identifies the
+ * subscription from the auth cookie.
+ */
+export async function reactivateSubscription(): Promise<Subscription> {
+  const { data } = await apiClient.post<ApiResponse<Subscription>>(
+    '/supervision/payments/reactivate-subscription',
+  )
+  return data.data
+}
+
+/**
  * POST /supervision/payments/purchase-subscription
  *
  * Initiates a Stripe subscription for the given plan. The backend:

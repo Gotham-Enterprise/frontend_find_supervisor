@@ -137,6 +137,8 @@ export interface SupervisorProfileData {
   userId: string
 
   licenseType: string | null
+  /** API value from GET /supervision/options?param=supervisorType */
+  supervisorType?: string | null
   profession: string | null
   professionOther?: string | null
   licenseNumber: string | null
