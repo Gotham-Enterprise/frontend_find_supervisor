@@ -13,6 +13,8 @@ import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
 import {
   type EditSuperviseeProfileFormValues,
+  SUPERVISEE_CREDENTIAL_TITLE_LABEL,
+  SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER,
   SUPERVISEE_PROFILE_BUDGET_TYPE_OPTIONS,
   SUPERVISEE_PROFILE_FORMAT_OPTIONS,
 } from '@/lib/forms/supervisee-profile-edit'
@@ -234,6 +236,14 @@ export function SuperviseeProfileEditFields({
             emptySentinel={{ value: '__none__', label: 'None' }}
           />
         </div>
+        <FormInputField
+          control={form.control}
+          name="title"
+          label={SUPERVISEE_CREDENTIAL_TITLE_LABEL}
+          placeholder={SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER}
+          isSubmitting={isSubmitting}
+          required
+        />
         <FormField
           control={form.control}
           name="stateOfLicensure"

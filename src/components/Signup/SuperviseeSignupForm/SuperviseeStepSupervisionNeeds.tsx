@@ -8,9 +8,14 @@ import { FormSection } from '@/components/Signup/FormSection'
 import { type SuperviseeFormValues } from '@/components/Signup/schema'
 import { superviseeFieldRules } from '@/components/Signup/superviseeFieldRules'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { FormInputField } from '@/components/ui/form-input-field'
 import { FormSelectField } from '@/components/ui/form-select-field'
 import { TagInput } from '@/components/ui/tag-input'
 import type { SelectOption } from '@/lib/api/options'
+import {
+  SUPERVISEE_CREDENTIAL_TITLE_LABEL,
+  SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER,
+} from '@/lib/forms/supervisee-profile-edit'
 import { cn } from '@/lib/utils'
 
 const superviseeFeeTypeOptions: SelectOption[] = [
@@ -93,6 +98,16 @@ export function SuperviseeStepSupervisionNeeds({
           )}
         />
       </div>
+
+      <FormInputField
+        control={control}
+        name="title"
+        label={SUPERVISEE_CREDENTIAL_TITLE_LABEL}
+        rules={superviseeFieldRules('title')}
+        placeholder={SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER}
+        isSubmitting={isSubmitting}
+        required
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField

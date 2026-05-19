@@ -48,6 +48,8 @@ export interface SuperviseeProfileData {
   lookingDate: string | null
   /** Preferred supervision delivery format */
   preferredFormat: SupervisionFormat | null
+  /** Credential or license type (e.g. AMFT, LPC-Associate, ACSW, PA) */
+  title: string | null
   availability: string | null
   /** Free-text description of their ideal supervisor / about them */
   idealSupervisor: string | null
