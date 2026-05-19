@@ -145,7 +145,7 @@ function BillingFields({
           />
         </div>
         <div>
-          <label className={labelCls}>State / Province</label>
+          <label className={labelCls}>State</label>
           <input
             type="text"
             autoComplete="address-level1"
