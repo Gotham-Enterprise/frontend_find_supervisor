@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 import { getMe } from '@/lib/api/auth'
-import { clearStoredAuthToken, getStoredAuthToken } from '@/lib/api/client'
+import { TOKEN_KEY } from '@/lib/api/client'
 import { getDashboardPathForRole } from '@/lib/auth/roles'
 import { useUser } from '@/lib/hooks'
 
@@ -16,7 +16,7 @@ interface GuestOnlyRouteGuardProps {
  * Guest-only entry pages (login, signup): if a session exists, send the user to their dashboard.
  * Does not run on public marketing pages — only wrap routes that should be hidden once authenticated.
  *
- * Uses the same session probe as {@link ShellLayout}: stored JWT + `getMe()`.
+ * Uses the same session probe as {@link ShellLayout}: `TOKEN_KEY` + `getMe()` (cookie-backed API).
  */
 export function GuestOnlyRouteGuard({ children }: GuestOnlyRouteGuardProps) {
   const router = useRouter()
@@ -32,7 +32,7 @@ export function GuestOnlyRouteGuard({ children }: GuestOnlyRouteGuardProps) {
     let cancelled = false
 
     async function run() {
-      const token = getStoredAuthToken()
+      const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null
 
       if (!token) {
         if (!cancelled) setAllowGuest(true)
@@ -52,7 +52,7 @@ export function GuestOnlyRouteGuard({ children }: GuestOnlyRouteGuardProps) {
         router.replace(getDashboardPathForRole(u.role))
       } catch {
         if (cancelled) return
-        clearStoredAuthToken()
+        localStorage.removeItem(TOKEN_KEY)
         setAllowGuest(true)
       } finally {
         if (!cancelled) setContextLoading(false)
