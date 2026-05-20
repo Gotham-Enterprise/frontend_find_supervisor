@@ -1,6 +1,7 @@
 'use client'
 
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
 
@@ -284,9 +285,12 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
 
         <p className="mt-8 text-center text-xs text-muted-foreground">
           Have questions?{' '}
-          <span className="cursor-pointer font-semibold text-primary underline underline-offset-2">
+          <Link
+            href="/contact-us"
+            className="font-semibold text-primary underline underline-offset-2"
+          >
             Contact support
-          </span>
+          </Link>
         </p>
       </DialogContent>
     </DialogRoot>

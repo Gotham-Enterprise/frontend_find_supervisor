@@ -2,7 +2,6 @@
 
 import {
   AlertCircle,
-  BadgeCheck,
   BookOpen,
   CalendarDays,
   CheckCircle2,
@@ -21,6 +20,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 
 import { ProfilePreviewCard } from '@/components/Dashboard/shared'
@@ -719,18 +719,20 @@ function VerificationPanel({ profile }: { profile: SupervisorProfileData }) {
         </p>
       </div>
       <div className="flex shrink-0 flex-col gap-2 sm:items-end">
-        <button className="flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-          <BadgeCheck className="size-4" /> Check Status
-        </button>
-        <button className="flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+        <Link
+          href="/contact-us"
+          className="flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+        >
           <MessageCircle className="size-4" /> Contact Support
-        </button>
+        </Link>
       </div>
     </div>
   )
 }
 
 function QuickActions({ onEditProfileClick }: { onEditProfileClick: () => void }) {
+  const router = useRouter()
+
   const actions = [
     {
       icon: UserCog,
@@ -766,7 +768,7 @@ function QuickActions({ onEditProfileClick }: { onEditProfileClick: () => void }
       description: 'Get help from our team',
       link: 'Message us →',
       onClick: () => {
-        window.location.href = '/contact-us'
+        router.push('/contact-us')
       },
     },
   ]

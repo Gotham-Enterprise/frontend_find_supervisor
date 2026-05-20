@@ -76,7 +76,7 @@ function PageHeader() {
   )
 }
 
-function SuccessState() {
+function SuccessState({ backHref, backLabel }: { backHref: string; backLabel: string }) {
   return (
     <Card>
       <CardContent className="flex flex-col items-center gap-4 py-16 text-center">
@@ -90,10 +90,10 @@ function SuccessState() {
           </p>
         </div>
         <Link
-          href="/dashboard"
+          href={backHref}
           className="mt-2 rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
         >
-          Back to Dashboard
+          {backLabel}
         </Link>
       </CardContent>
     </Card>
@@ -104,6 +104,8 @@ function SuccessState() {
 
 export function ContactUsPage() {
   const { user } = useUser()
+  const backHref = user ? '/dashboard' : '/login'
+  const backLabel = user ? 'Back to Dashboard' : 'Back to Sign in'
   const [submitted, setSubmitted] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
   const [reasonOptions, setReasonOptions] = useState<SelectOption[]>([])
@@ -145,6 +147,18 @@ export function ContactUsPage() {
     },
   })
 
+  useEffect(() => {
+    if (!user) return
+    form.reset({
+      fullName: user.fullName ?? user.name ?? '',
+      email: user.email ?? '',
+      phone: '',
+      reason: form.getValues('reason'),
+      subject: form.getValues('subject'),
+      message: form.getValues('message'),
+    })
+  }, [user, form])
+
   const isSubmitting = form.formState.isSubmitting
 
   async function onSubmit(values: ContactFormValues) {
@@ -172,7 +186,7 @@ export function ContactUsPage() {
         {/* Contact form */}
         <div className="lg:col-span-2">
           {submitted ? (
-            <SuccessState />
+            <SuccessState backHref={backHref} backLabel={backLabel} />
           ) : (
             <Card>
               <CardHeader className="border-b pb-3">
@@ -374,10 +388,10 @@ export function ContactUsPage() {
 
       <div className="flex justify-start">
         <Link
-          href="/dashboard"
+          href={backHref}
           className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
-          ← Back to Dashboard
+          ← {backLabel}
         </Link>
       </div>
     </div>
