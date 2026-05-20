@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 
 import { AuthPageFooter } from '@/components/Layout/auth-page-footer'
 import { PublicHeader } from '@/components/Layout/public-header'
-import { setStoredAuthToken } from '@/lib/api/client'
+import { TOKEN_KEY } from '@/lib/api/client'
 import { AUTO_REDIRECT_MS, getPostVerificationFallbackPath } from '@/lib/email-verification/config'
 import { DEFAULT_ERROR_SUPPORTING } from '@/lib/email-verification/error-copy'
 import type { EmailVerificationErrorCode } from '@/lib/email-verification/types'
@@ -71,7 +71,7 @@ export function VerifyEmailFlow() {
       }
 
       if (result.accessToken) {
-        setStoredAuthToken(result.accessToken)
+        localStorage.setItem(TOKEN_KEY, result.accessToken)
       }
       setRedirectPath(resolveRedirectPath(result.role, Boolean(result.accessToken)))
       setPhase('success')
