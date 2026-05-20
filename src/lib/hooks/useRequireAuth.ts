@@ -4,7 +4,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
 import { getMe } from '@/lib/api/auth'
-import { TOKEN_KEY } from '@/lib/api/client'
+import { clearStoredAuthToken, getStoredAuthToken } from '@/lib/api/client'
 import { useUser } from '@/lib/contexts/UserContext'
 
 /**
@@ -17,7 +17,7 @@ export function useRequireAuth() {
   const { user, setUser, setIsLoading } = useUser()
 
   useEffect(() => {
-    const token = localStorage.getItem(TOKEN_KEY)
+    const token = getStoredAuthToken()
 
     if (!token) {
       router.replace(`/login?next=${encodeURIComponent(pathname)}`)
@@ -29,7 +29,7 @@ export function useRequireAuth() {
       getMe()
         .then(setUser)
         .catch(() => {
-          localStorage.removeItem(TOKEN_KEY)
+          clearStoredAuthToken()
           router.replace(`/login?next=${encodeURIComponent(pathname)}`)
         })
         .finally(() => setIsLoading(false))

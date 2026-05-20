@@ -2,6 +2,8 @@
 
 import { io, type Socket } from 'socket.io-client'
 
+import { getStoredAuthToken } from '@/lib/api/client'
+
 function getSocketOrigin(): string {
   const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:5000/api'
   return base.replace(/\/api.*$/, '')
@@ -18,6 +20,10 @@ export function getOrCreateSupervisionSocket(): Socket {
       autoConnect: false,
     })
   }
+
+  const token = getStoredAuthToken()
+  socketSingleton.auth = token ? { token } : {}
+
   return socketSingleton
 }
 
