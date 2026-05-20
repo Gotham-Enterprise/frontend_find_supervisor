@@ -15,7 +15,7 @@ let socketSingleton: Socket | null = null
 export function getOrCreateSupervisionSocket(): Socket {
   if (!socketSingleton) {
     socketSingleton = io(`${getSocketOrigin()}/supervision`, {
-      withCredentials: true,
+      withCredentials: false,
       path: '/socket.io',
       autoConnect: false,
     })
