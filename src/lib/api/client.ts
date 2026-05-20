@@ -43,8 +43,8 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  // Send httpOnly cookies when available; Bearer token covers cross-origin (e.g. Amplify).
-  withCredentials: true,
+  // Bearer token in Authorization header is the primary auth path for cross-origin (e.g. Amplify).
+  withCredentials: false,
 })
 
 apiClient.interceptors.request.use((config) => {
