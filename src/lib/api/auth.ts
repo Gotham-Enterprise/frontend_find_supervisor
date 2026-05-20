@@ -10,9 +10,14 @@ interface LoginResponse {
   refreshToken: string
 }
 
-export async function login(credentials: LoginCredentials): Promise<User> {
+export interface LoginResult {
+  user: User
+  token: string
+}
+
+export async function login(credentials: LoginCredentials): Promise<LoginResult> {
   const { data } = await apiClient.post<LoginResponse>('/supervision/login', credentials)
-  return data.data
+  return { user: data.data, token: data.token }
 }
 
 export async function logout(): Promise<void> {
