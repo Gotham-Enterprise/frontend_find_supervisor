@@ -120,7 +120,7 @@ export function EmailVerificationErrorState({ code, message, token, onBackToLogi
         <p className="text-center text-sm text-muted-foreground">
           Still need help?{' '}
           <Link
-            href="/contact"
+            href="/contact-us"
             className="font-medium text-[#006D36] underline-offset-4 hover:underline"
           >
             Contact support

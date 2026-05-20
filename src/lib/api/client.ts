@@ -12,6 +12,8 @@ const AUTH_ENTRY_PATH_PREFIXES = [
   '/forgot-password',
   '/reset-password',
   '/email-verification',
+  '/contact-us',
+  '/contact',
 ] as const
 
 function isAuthEntryPath(pathname: string): boolean {

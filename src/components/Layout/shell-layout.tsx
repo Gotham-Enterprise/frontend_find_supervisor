@@ -2,8 +2,7 @@
 
 import { useRequireAuth } from '@/lib/hooks/useRequireAuth'
 
-import { DashboardTopbar } from './dashboard-topbar'
-import { Sidebar } from './sidebar'
+import { AppShellChrome } from './app-shell-chrome'
 
 interface ShellLayoutProps {
   children: React.ReactNode
@@ -23,17 +22,5 @@ interface ShellLayoutProps {
 export function ShellLayout({ children }: ShellLayoutProps) {
   useRequireAuth()
 
-  return (
-    <div className="flex h-screen overflow-hidden bg-white">
-      <Sidebar />
-
-      {/* Main column: topbar + scrollable content */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <DashboardTopbar />
-        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background-subtle">
-          <div className="p-6">{children}</div>
-        </main>
-      </div>
-    </div>
-  )
+  return <AppShellChrome>{children}</AppShellChrome>
 }

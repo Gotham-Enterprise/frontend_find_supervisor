@@ -128,7 +128,7 @@ export function LoginForm() {
               <p className="mt-2 text-xs opacity-90">
                 {/* Backend did not return a token; user can request help via Contact. */}
                 Need help?{' '}
-                <Link href="/contact" className="font-medium underline underline-offset-2">
+                <Link href="/contact-us" className="font-medium underline underline-offset-2">
                   Contact support
                 </Link>
                 .
