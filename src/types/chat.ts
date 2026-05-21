@@ -40,6 +40,10 @@ export interface Conversation {
   supervisor: ChatParticipant
   supervisee: ChatParticipant
   hire: ChatHire
+  /** Whether the supervisor has messaging enabled (false = messaging is disabled by supervisor). Used as initial state before any socket event arrives. */
+  supervisorCanMessage: boolean
+  /** Supervisor-provided explanation shown to supervisees when messaging is disabled. */
+  supervisorDisabledMessageInfo: string | null
 }
 
 export interface ChatMessage {

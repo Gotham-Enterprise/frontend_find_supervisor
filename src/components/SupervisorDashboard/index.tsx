@@ -893,6 +893,11 @@ function BillingSection({ profile }: { profile: SupervisorProfileData }) {
   if (!sub) return null
   if (isFreePlan(sub.plan)) return null
 
+  // Abandoned checkouts produce an INACTIVE/UNPAID record with no currentPeriodStart
+  // (Stripe keeps the subscription in default_incomplete until payment succeeds). These
+  // were never activated, so hide the section — it only applies to real subscriptions.
+  if ((sub.status === 'INACTIVE' || sub.status === 'UNPAID') && !sub.currentPeriodStart) return null
+
   const isEntitled =
     sub.status === 'ACTIVE' || sub.status === 'TRIALING' || sub.status === 'PAST_DUE'
   const isCancelingAtPeriodEnd =
