@@ -124,12 +124,17 @@ export function ConversationThread({ conversationId, onBack }: ConversationThrea
   const isOtherTyping =
     othersTyping !== undefined && othersTyping.size > 0 && !othersTyping.has(user?.id ?? '')
 
-  // Realtime messaging-disabled state from the other participant
+  // Realtime messaging-disabled state from the other participant.
+  // Fall back to the value returned by the conversations API on load so the
+  // disabled state is correct immediately on page refresh (before any socket
+  // event fires).
   const otherUserId = other?.id
   const realtimeStatus = otherUserId ? messagingStatus.get(otherUserId) : undefined
-  // canMessage defaults to true (status only arrives when it changes)
-  const messagingDisabled = realtimeStatus ? !realtimeStatus.canMessage : false
-  const disabledMessageInfo = realtimeStatus?.disabledMessageInfo ?? null
+  const messagingDisabled = realtimeStatus
+    ? !realtimeStatus.canMessage
+    : !(conversation?.supervisorCanMessage ?? true)
+  const disabledMessageInfo =
+    realtimeStatus?.disabledMessageInfo ?? conversation?.supervisorDisabledMessageInfo ?? null
 
   return (
     <div className="flex h-full flex-col">
