@@ -1,0 +1,590 @@
+/**
+ * Unified dynamic route for /supervisors/[state]/[slug]
+ *
+ * Handles two distinct page types at build/request time:
+ *
+ *  1. License-type pages  — slug is a known license slug (e.g. "lcsw")
+ *     URL: /supervisors/texas/lcsw
+ *
+ *  2. Supervisor profile pages — slug is a UUID (e.g. "46e0579d-...")
+ *     URL: /supervisors/california/46e0579d-ec2f-4893-8277-7e4e6220757d
+ *
+ * Detection is unambiguous: UUIDs match a strict regex; license slugs are
+ * short alphabetic strings drawn from a known list.
+ */
+
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+
+import { Breadcrumb } from '@/components/seo/Breadcrumb'
+import { FaqSection } from '@/components/seo/FaqSection'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { SupervisorCard } from '@/components/seo/SupervisorCard'
+import type { PublicSupervisorSummary } from '@/lib/api/public-supervisors'
+import { fetchPublicSupervisorById, fetchPublicSupervisors } from '@/lib/api/public-supervisors'
+import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
+import { getLicenseFaqs } from '@/lib/seo/faq-data'
+import { generateSupervisorJsonLd } from '@/lib/seo/jsonld'
+import {
+  isUUID,
+  isValidLicenseSlug,
+  isValidStateSlug,
+  LICENSE_TYPE_SLUGS,
+  licenseSlugToLabel,
+  stateSlugToAbbreviation,
+  stateSlugToDisplayName,
+  TOP_LICENSE_SLUGS_FOR_STATE,
+  US_STATES,
+} from '@/lib/seo/routes'
+
+const MIN_SUPERVISORS_TO_INDEX = 3
+
+interface Props {
+  params: Promise<{ state: string; slug: string }>
+}
+
+// ---------------------------------------------------------------------------
+// Static params — only pre-generate license-type pages at build time.
+// Supervisor profile pages (UUIDs) are rendered on-demand via ISR.
+// dynamicParams = true (the default) ensures unknown slugs (e.g. new supervisor
+// UUIDs added after the build) are still served — not returned as 404.
+// ---------------------------------------------------------------------------
+
+export const dynamicParams = true
+
+export function generateStaticParams() {
+  const states = Object.keys(US_STATES)
+  return states.flatMap((state) => TOP_LICENSE_SLUGS_FOR_STATE.map((slug) => ({ state, slug })))
+}
+
+// ---------------------------------------------------------------------------
+// Metadata
+// ---------------------------------------------------------------------------
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { state: stateSlug, slug } = await params
+
+  if (!isValidStateSlug(stateSlug)) {
+    return { robots: { index: false, follow: true } }
+  }
+
+  const stateName = stateSlugToDisplayName(stateSlug)
+
+  // Supervisor profile page — try to fetch real data for rich metadata
+  if (isUUID(slug)) {
+    const stateAbbreviation = stateSlugToAbbreviation(stateSlug) ?? stateSlug.toUpperCase()
+    const supervisor = await fetchPublicSupervisorById(slug, stateAbbreviation)
+
+    if (supervisor) {
+      const titleParts = [supervisor.licenseType, 'Supervisor'].filter(Boolean).join(' ')
+      return buildMetadata({
+        title: `${supervisor.fullName} — ${titleParts} in ${stateName}`,
+        description: `View ${supervisor.fullName}'s supervision profile — license type, specialties, experience, and availability in ${stateName}. Connect with verified supervisors on ${SITE_NAME}.`,
+        path: `/supervisors/${stateSlug}/${slug}`,
+        ogImage: supervisor.profilePhotoUrl ?? undefined,
+      })
+    }
+
+    return buildMetadata({
+      title: `Supervisor Profile | ${stateName} | ${SITE_NAME}`,
+      description: `View this clinical supervisor's credentials, license states, specialties, and availability in ${stateName} on ${SITE_NAME}.`,
+      path: `/supervisors/${stateSlug}/${slug}`,
+    })
+  }
+
+  // License-type page
+  if (isValidLicenseSlug(slug)) {
+    const licenseLabel = licenseSlugToLabel(slug)
+    return buildMetadata({
+      title: `${licenseLabel} Supervisors in ${stateName}`,
+      description: `Find ${licenseLabel} supervisors in ${stateName}. Browse verified ${licenseLabel} supervisors by specialty and supervision format. Connect with the right supervisor for your licensure on ${SITE_NAME}.`,
+      path: `/supervisors/${stateSlug}/${slug}`,
+    })
+  }
+
+  return { robots: { index: false, follow: true } }
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
+export default async function StateSlugPage({ params }: Props) {
+  const { state: stateSlug, slug } = await params
+
+  if (!isValidStateSlug(stateSlug)) notFound()
+
+  if (isUUID(slug)) {
+    return <SupervisorProfileView stateSlug={stateSlug} supervisorId={slug} />
+  }
+
+  if (isValidLicenseSlug(slug)) {
+    return <LicenseTypeView stateSlug={stateSlug} licenseSlug={slug} />
+  }
+
+  notFound()
+}
+
+// ---------------------------------------------------------------------------
+// License-type view
+// ---------------------------------------------------------------------------
+
+async function LicenseTypeView({
+  stateSlug,
+  licenseSlug,
+}: {
+  stateSlug: string
+  licenseSlug: string
+}) {
+  const stateName = stateSlugToDisplayName(stateSlug)
+  const stateAbbreviation = stateSlugToAbbreviation(stateSlug) ?? stateSlug.toUpperCase()
+  const licenseLabel = licenseSlugToLabel(licenseSlug)
+
+  const { supervisors, meta } = await fetchPublicSupervisors({
+    stateOfLicensure: stateAbbreviation,
+    stateFullName: stateName,
+    licenseType: licenseLabel,
+    limit: 20,
+  })
+
+  const faqs = getLicenseFaqs(licenseLabel, stateName)
+  const shouldIndex = supervisors.length >= MIN_SUPERVISORS_TO_INDEX
+
+  const breadcrumbs = [
+    { name: 'Home', href: '/' },
+    { name: 'Supervisors', href: '/supervisors' },
+    { name: stateName, href: `/supervisors/${stateSlug}` },
+    { name: licenseLabel, href: `/supervisors/${stateSlug}/${licenseSlug}` },
+  ]
+
+  return (
+    <>
+      {!shouldIndex && <meta name="robots" content="noindex, follow" />}
+
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+        <Breadcrumb items={breadcrumbs} className="mb-6" />
+
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            {licenseLabel} Supervisors in {stateName}
+          </h1>
+          <p className="mt-3 max-w-2xl text-lg text-muted-foreground">
+            Browse licensed {licenseLabel} supervisors in {stateName}. Find experienced supervisors
+            who can support your path to {licenseLabel} licensure.
+          </p>
+          {meta.totalCount > 0 && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {meta.totalCount} {licenseLabel} supervisor{meta.totalCount !== 1 ? 's' : ''} found in{' '}
+              {stateName}
+            </p>
+          )}
+        </header>
+
+        {/* Other license types */}
+        <nav aria-label="Browse other license types" className="mb-8">
+          <p className="mb-2 text-sm font-medium text-foreground">
+            Other License Types in {stateName}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {TOP_LICENSE_SLUGS_FOR_STATE.filter((s) => s !== licenseSlug).map((s) => (
+              <Link
+                key={s}
+                href={`/supervisors/${stateSlug}/${s}`}
+                className="rounded-full border px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                {licenseSlugToLabel(s)}
+              </Link>
+            ))}
+          </div>
+        </nav>
+
+        {supervisors.length === 0 ? (
+          <LicenseEmptyState
+            stateName={stateName}
+            licenseLabel={licenseLabel}
+            stateSlug={stateSlug}
+          />
+        ) : (
+          <>
+            <section aria-labelledby="supervisors-heading">
+              <h2 id="supervisors-heading" className="sr-only">
+                {licenseLabel} Supervisors in {stateName}
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {supervisors.map((supervisor) => (
+                  <SupervisorCard
+                    key={supervisor.id}
+                    supervisor={supervisor}
+                    stateSlug={stateSlug}
+                  />
+                ))}
+              </div>
+            </section>
+
+            {meta.totalCount > supervisors.length && (
+              <div className="mt-8 text-center">
+                <Link
+                  href="/login?redirect=/find-supervisors"
+                  className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  Sign in to see all {meta.totalCount} supervisors
+                </Link>
+              </div>
+            )}
+          </>
+        )}
+
+        <section aria-labelledby="about-heading" className="mt-12 rounded-xl bg-muted/40 p-6">
+          <h2 id="about-heading" className="text-xl font-bold text-foreground">
+            About {licenseLabel} Supervision in {stateName}
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            {licenseLabel} (
+            {Object.entries(LICENSE_TYPE_SLUGS).find(([, v]) => v === licenseLabel)?.[0] ??
+              licenseSlug}
+            ) is a clinical license that requires supervised practice hours under an approved
+            supervisor. Requirements in {stateName} are set by the state licensing board and include
+            the total number of hours, supervisor qualifications, and documentation standards. Using{' '}
+            {SITE_NAME}, you can filter by license type and state to find {licenseLabel} supervisors
+            who are currently accepting supervisees in {stateName}.
+          </p>
+        </section>
+
+        <FaqSection faqs={faqs} heading={`${licenseLabel} Supervision FAQs — ${stateName}`} />
+
+        <section aria-labelledby="related-heading" className="mt-12">
+          <h2 id="related-heading" className="text-lg font-semibold text-foreground">
+            {licenseLabel} Supervisors in Other States
+          </h2>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {POPULAR_STATES.filter((s) => s.slug !== stateSlug).map(({ label, slug: s }) => (
+              <Link
+                key={s}
+                href={`/supervisors/${s}/${licenseSlug}`}
+                className="rounded-md border px-3 py-1 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                {licenseLabel} in {label}
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <div className="mt-8">
+          <Link
+            href={`/supervisors/${stateSlug}`}
+            className="text-sm font-medium text-primary transition-colors hover:underline"
+          >
+            ← All supervisors in {stateName}
+          </Link>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Supervisor profile view
+// ---------------------------------------------------------------------------
+
+async function SupervisorProfileView({
+  stateSlug,
+  supervisorId,
+}: {
+  stateSlug: string
+  supervisorId: string
+}) {
+  const stateName = stateSlugToDisplayName(stateSlug)
+  const stateAbbreviation = stateSlugToAbbreviation(stateSlug) ?? stateSlug.toUpperCase()
+  const supervisor = await fetchPublicSupervisorById(supervisorId, stateAbbreviation)
+
+  const jsonLd = generateSupervisorJsonLd({
+    id: supervisorId,
+    fullName: supervisor?.fullName ?? 'Clinical Supervisor',
+    state: stateAbbreviation,
+    city: supervisor?.city ?? null,
+    licenseType: supervisor?.licenseType ?? null,
+    bio: supervisor?.bio ?? null,
+    profilePhotoUrl: supervisor?.profilePhotoUrl ?? null,
+  })
+
+  const breadcrumbName = supervisor?.fullName ?? 'Supervisor Profile'
+  const breadcrumbs = [
+    { name: 'Home', href: '/' },
+    { name: 'Supervisors', href: '/supervisors' },
+    { name: stateName, href: `/supervisors/${stateSlug}` },
+    { name: breadcrumbName, href: `/supervisors/${stateSlug}/${supervisorId}` },
+  ]
+
+  return (
+    <>
+      <JsonLd data={jsonLd} />
+
+      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <Breadcrumb items={breadcrumbs} className="mb-6" />
+
+        {supervisor ? (
+          <SupervisorPublicProfile
+            supervisor={supervisor}
+            stateSlug={stateSlug}
+            stateName={stateName}
+            supervisorId={supervisorId}
+          />
+        ) : (
+          <ProfileNotFound
+            stateSlug={stateSlug}
+            stateName={stateName}
+            supervisorId={supervisorId}
+          />
+        )}
+
+        <div className="mt-10 border-t pt-8">
+          <p className="text-sm font-semibold text-foreground">Find Supervisors in Other States</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {POPULAR_STATES.filter((s) => s.slug !== stateSlug)
+              .slice(0, 8)
+              .map(({ label, slug }) => (
+                <Link
+                  key={slug}
+                  href={`/supervisors/${slug}`}
+                  className="rounded-md border px-3 py-1 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                >
+                  {label}
+                </Link>
+              ))}
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Rich profile card (supervisor found in search)
+// ---------------------------------------------------------------------------
+
+function SupervisorPublicProfile({
+  supervisor,
+  supervisorId,
+}: {
+  supervisor: PublicSupervisorSummary
+  stateSlug: string
+  stateName: string
+  supervisorId: string
+}) {
+  const location = [supervisor.city, supervisor.state].filter(Boolean).join(', ')
+  const tags = [
+    supervisor.licenseType,
+    supervisor.supervisorType,
+    supervisor.supervisionFormat,
+  ].filter(Boolean)
+
+  return (
+    <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+      {/* Hero */}
+      <div className="flex flex-col gap-5 border-b p-6 sm:flex-row sm:items-start">
+        {/* Avatar */}
+        {supervisor.profilePhotoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={supervisor.profilePhotoUrl}
+            alt={`${supervisor.fullName} profile photo`}
+            className="size-20 shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <div
+            className="flex size-20 shrink-0 items-center justify-center rounded-full bg-[#E2F0E8] text-2xl font-semibold text-[#006D36]"
+            aria-hidden="true"
+          >
+            {initials(supervisor.fullName)}
+          </div>
+        )}
+
+        {/* Name + meta */}
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-bold text-foreground">{supervisor.fullName}</h1>
+          {location && <p className="mt-0.5 text-sm text-muted-foreground">{location}</p>}
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {supervisor.acceptingSupervisees && (
+              <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-200">
+                Accepting supervisees
+              </span>
+            )}
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full border px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Details grid */}
+      <div className="grid gap-4 p-6 sm:grid-cols-2">
+        {supervisor.yearsOfExperience && (
+          <ProfileDetail label="Years of Experience" value={supervisor.yearsOfExperience} />
+        )}
+        {supervisor.licenseType && (
+          <ProfileDetail label="License Type" value={supervisor.licenseType} />
+        )}
+        {supervisor.supervisionFormat && (
+          <ProfileDetail
+            label="Supervision Format"
+            value={formatEnum(supervisor.supervisionFormat)}
+          />
+        )}
+        {supervisor.specialty && <ProfileDetail label="Specialty" value={supervisor.specialty} />}
+      </div>
+
+      {/* Bio */}
+      {supervisor.bio && (
+        <div className="border-t px-6 pb-6 pt-4">
+          <p className="text-sm font-semibold text-foreground">About</p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{supervisor.bio}</p>
+        </div>
+      )}
+
+      {/* CTA */}
+      <div className="border-t bg-muted/30 px-6 py-5">
+        <p className="text-sm text-muted-foreground">
+          Sign in to view full credentials, contact {supervisor.fullName}, and send a hire request.
+        </p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <Link
+            href={`/login?redirect=/find-supervisors/${supervisorId}`}
+            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Sign in to connect
+          </Link>
+          <Link
+            href="/signup"
+            className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-6 text-sm font-medium transition-colors hover:bg-accent"
+          >
+            Create free account
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ProfileDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-0.5 text-sm font-medium text-foreground">{value}</p>
+    </div>
+  )
+}
+
+function formatEnum(value: string): string {
+  return value
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+// ---------------------------------------------------------------------------
+// Profile not found fallback
+// ---------------------------------------------------------------------------
+
+function ProfileNotFound({
+  stateSlug,
+  stateName,
+  supervisorId,
+}: {
+  stateSlug: string
+  stateName: string
+  supervisorId: string
+}) {
+  return (
+    <div className="rounded-2xl border border-dashed p-12 text-center">
+      <h1 className="text-2xl font-bold text-foreground">Supervisor Profile</h1>
+      <p className="mt-3 text-muted-foreground">
+        Sign in to view this supervisor&apos;s credentials, specialties, experience, and
+        availability in {stateName} — and to send a hire request or message.
+      </p>
+      <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        <Link
+          href={`/login?redirect=/find-supervisors/${supervisorId}`}
+          className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          Sign in to view profile
+        </Link>
+        <Link
+          href={`/supervisors/${stateSlug}`}
+          className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-6 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          Browse supervisors in {stateName}
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Empty state
+// ---------------------------------------------------------------------------
+
+function LicenseEmptyState({
+  stateName,
+  licenseLabel,
+  stateSlug,
+}: {
+  stateName: string
+  licenseLabel: string
+  stateSlug: string
+}) {
+  return (
+    <div className="rounded-xl border border-dashed py-16 text-center">
+      <p className="font-medium text-foreground">
+        No {licenseLabel} supervisors found in {stateName} yet.
+      </p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        New supervisors join regularly. Sign in to search across all available supervisors.
+      </p>
+      <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        <Link
+          href="/login"
+          className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          Sign in to search
+        </Link>
+        <Link
+          href={`/supervisors/${stateSlug}`}
+          className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-6 text-sm font-medium transition-colors hover:bg-accent"
+        >
+          All supervisors in {stateName}
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Static data
+// ---------------------------------------------------------------------------
+
+const POPULAR_STATES = [
+  { label: 'California', slug: 'california' },
+  { label: 'Texas', slug: 'texas' },
+  { label: 'Florida', slug: 'florida' },
+  { label: 'New York', slug: 'new-york' },
+  { label: 'Pennsylvania', slug: 'pennsylvania' },
+  { label: 'Illinois', slug: 'illinois' },
+  { label: 'Ohio', slug: 'ohio' },
+  { label: 'Georgia', slug: 'georgia' },
+  { label: 'North Carolina', slug: 'north-carolina' },
+  { label: 'Virginia', slug: 'virginia' },
+]

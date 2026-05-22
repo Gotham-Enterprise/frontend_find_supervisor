@@ -9,27 +9,38 @@ import { Input } from '@/components/ui/input'
 
 const footerColumns = [
   {
-    heading: 'Professionals',
+    heading: 'Find Supervisors',
     links: [
-      { label: 'Home', href: '/' },
+      { label: 'Browse All Supervisors', href: '/supervisors' },
+      { label: 'Supervisors in California', href: '/supervisors/california' },
+      { label: 'Supervisors in Texas', href: '/supervisors/texas' },
+      { label: 'Supervisors in Florida', href: '/supervisors/florida' },
+      { label: 'Supervisors in New York', href: '/supervisors/new-york' },
+    ],
+  },
+  {
+    heading: 'By License Type',
+    links: [
+      { label: 'LCSW Supervisors', href: '/supervisors/california/lcsw' },
+      { label: 'LMFT Supervisors', href: '/supervisors/california/lmft' },
+      { label: 'LPC Supervisors', href: '/supervisors/texas/lpc' },
+      { label: 'LMHC Supervisors', href: '/supervisors/new-york/lmhc' },
+      { label: 'LPCC Supervisors', href: '/supervisors/california/lpcc' },
+    ],
+  },
+  {
+    heading: 'Account',
+    links: [
       { label: 'Sign In', href: '/login' },
-      { label: 'Register', href: '/login' },
-      { label: 'FAQ', href: '#faq' },
+      { label: 'Create Account', href: '/signup' },
+      { label: 'For Supervisors', href: '/signup' },
+      { label: 'For Supervisees', href: '/signup' },
     ],
   },
   {
-    heading: 'Supervisors',
+    heading: 'Company',
     links: [
-      { label: 'Create Profile', href: '#' },
-      { label: 'Pricing', href: '#' },
-      { label: 'View Requests', href: '#' },
-      { label: 'FAQ', href: '#faq' },
-    ],
-  },
-  {
-    heading: 'General',
-    links: [
-      { label: 'Contact Us', href: '#' },
+      { label: 'Contact Us', href: '/contact-us' },
       { label: 'Terms & Conditions', href: '#' },
       { label: 'Privacy Policy', href: '#' },
     ],
