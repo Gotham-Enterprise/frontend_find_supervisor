@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 
 import { EmailVerificationPage } from '@/components/EmailVerification/EmailVerificationPage'
 import { VerifyEmailFlow } from '@/components/EmailVerification/VerifyEmailFlow'
+import { noIndexMetadata } from '@/lib/seo/config'
 
 interface Props {
   searchParams: Promise<{
@@ -14,8 +15,9 @@ interface Props {
 }
 
 export const metadata = {
-  title: 'Verify Your Email | Find A Supervisor',
+  title: 'Verify Your Email',
   description: 'Please verify your email address to activate your account.',
+  ...noIndexMetadata,
 }
 
 function VerifyEmailFallback() {
