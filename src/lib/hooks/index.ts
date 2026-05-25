@@ -81,6 +81,7 @@ export { pastClientsKeys, useSupervisorPastClients } from './useSupervisorPastCl
 export { useSupervisorProfile } from './useSupervisorProfile'
 export { supervisorKeys, useSupervisors } from './useSupervisors'
 export { supervisorSearchKeys, useSupervisorSearch } from './useSupervisorSearch'
+export { termsAndPrivacyKeys, useTermsAndPrivacyPolicy } from './useTermsAndPrivacyPolicy'
 export { useTopbarDropdown } from './useTopbarDropdown'
 export { useUpdateSuperviseeProfile } from './useUpdateSuperviseeProfile'
 export { useUpdateSupervisionSettings } from './useUpdateSupervisionSettings'
