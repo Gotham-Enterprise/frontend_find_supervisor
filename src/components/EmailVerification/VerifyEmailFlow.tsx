@@ -88,15 +88,18 @@ export function VerifyEmailFlow() {
 
     burst()
 
+    // Use a full-page navigation so the browser sends the new supervisionToken
+    // cookie on every subsequent request and no stale React context from a
+    // previously logged-in account is carried over.
     const id = window.setTimeout(() => {
-      void router.push(redirectPath)
+      window.location.href = redirectPath
     }, AUTO_REDIRECT_MS)
 
     return () => window.clearTimeout(id)
-  }, [phase, redirectPath, router, burst])
+  }, [phase, redirectPath, burst])
 
   function handleContinue() {
-    void router.push(redirectPath)
+    window.location.href = redirectPath
   }
 
   function handleBackToLogin() {

@@ -9,7 +9,12 @@ import Link from 'next/link'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
 import { generateOrganizationJsonLd, generateWebSiteJsonLd } from '@/lib/seo/jsonld'
-import { licenseSlugToLabel, TOP_LICENSE_SLUGS_FOR_STATE } from '@/lib/seo/routes'
+import {
+  licenseSlugToLabel,
+  stateSlugToDisplayName,
+  TOP_LICENSE_SLUGS_FOR_STATE,
+  US_STATES,
+} from '@/lib/seo/routes'
 
 export const metadata: Metadata = buildMetadata({
   title: `Find Clinical Supervisors | ${SITE_NAME}`,
@@ -17,28 +22,46 @@ export const metadata: Metadata = buildMetadata({
   path: '/supervisors',
 })
 
-const TOP_STATES = [
-  { label: 'California', slug: 'california' },
-  { label: 'Texas', slug: 'texas' },
-  { label: 'Florida', slug: 'florida' },
-  { label: 'New York', slug: 'new-york' },
-  { label: 'Pennsylvania', slug: 'pennsylvania' },
-  { label: 'Illinois', slug: 'illinois' },
-  { label: 'Ohio', slug: 'ohio' },
-  { label: 'Georgia', slug: 'georgia' },
-  { label: 'North Carolina', slug: 'north-carolina' },
-  { label: 'Virginia', slug: 'virginia' },
-  { label: 'Washington', slug: 'washington' },
-  { label: 'Colorado', slug: 'colorado' },
-  { label: 'Arizona', slug: 'arizona' },
-  { label: 'Massachusetts', slug: 'massachusetts' },
-  { label: 'Maryland', slug: 'maryland' },
-  { label: 'Michigan', slug: 'michigan' },
-  { label: 'Tennessee', slug: 'tennessee' },
-  { label: 'Indiana', slug: 'indiana' },
-  { label: 'Missouri', slug: 'missouri' },
-  { label: 'Minnesota', slug: 'minnesota' },
-] as const
+const TOP_STATE_SLUGS = [
+  'california',
+  'texas',
+  'florida',
+  'new-york',
+  'pennsylvania',
+  'illinois',
+  'ohio',
+  'georgia',
+  'north-carolina',
+  'virginia',
+  'washington',
+  'colorado',
+  'arizona',
+  'massachusetts',
+  'maryland',
+  'michigan',
+  'tennessee',
+  'indiana',
+  'missouri',
+  'minnesota',
+]
+
+const ALL_STATE_SLUGS = Object.keys(US_STATES)
+
+const OTHER_STATE_SLUGS = ALL_STATE_SLUGS.filter((s) => !TOP_STATE_SLUGS.includes(s)).sort()
+
+/**
+ * Best representative state per license type — used for the "Browse by License Type"
+ * quick links, since license pages live under /supervisors/[state]/[slug].
+ */
+const LICENSE_FEATURED_STATE: Record<string, string> = {
+  lcsw: 'california',
+  lmft: 'california',
+  lpc: 'texas',
+  lmhc: 'new-york',
+  lpcc: 'california',
+  lcpc: 'illinois',
+  lmsw: 'new-york',
+}
 
 export default function SupervisorsIndexPage() {
   return (
@@ -73,17 +96,39 @@ export default function SupervisorsIndexPage() {
 
         {/* Browse by state */}
         <section aria-labelledby="states-heading" className="mb-12">
-          <h2 id="states-heading" className="mb-4 text-2xl font-bold text-foreground">
+          <h2 id="states-heading" className="mb-6 text-2xl font-bold text-foreground">
             Browse Supervisors by State
           </h2>
-          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {TOP_STATES.map(({ label, slug }) => (
+
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Popular States
+          </h3>
+          <div className="mb-6 grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {TOP_STATE_SLUGS.map((slug) => (
               <Link
                 key={slug}
                 href={`/supervisors/${slug}`}
                 className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary"
               >
-                <span>Clinical Supervisors in {label}</span>
+                <span>Clinical Supervisors in {stateSlugToDisplayName(slug)}</span>
+                <span aria-hidden="true" className="text-muted-foreground">
+                  →
+                </span>
+              </Link>
+            ))}
+          </div>
+
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            All Other States
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {OTHER_STATE_SLUGS.map((slug) => (
+              <Link
+                key={slug}
+                href={`/supervisors/${slug}`}
+                className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary"
+              >
+                <span>Clinical Supervisors in {stateSlugToDisplayName(slug)}</span>
                 <span aria-hidden="true" className="text-muted-foreground">
                   →
                 </span>
@@ -101,15 +146,18 @@ export default function SupervisorsIndexPage() {
             Find supervisors specializing in your specific license type across all states.
           </p>
           <div className="flex flex-wrap gap-3">
-            {TOP_LICENSE_SLUGS_FOR_STATE.map((slug) => (
-              <Link
-                key={slug}
-                href={`/supervisors/texas/${slug}`}
-                className="rounded-full border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-              >
-                {licenseSlugToLabel(slug)} Supervisors
-              </Link>
-            ))}
+            {TOP_LICENSE_SLUGS_FOR_STATE.map((slug) => {
+              const stateSlug = LICENSE_FEATURED_STATE[slug] ?? 'california'
+              return (
+                <Link
+                  key={slug}
+                  href={`/supervisors/${stateSlug}/${slug}`}
+                  className="rounded-full border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                >
+                  {licenseSlugToLabel(slug)} Supervisors
+                </Link>
+              )
+            })}
           </div>
         </section>
 
