@@ -18,8 +18,8 @@ export function CtaBanner() {
           Start Your Supervision Journey Today
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-base text-white/80">
-          Join thousands of medical and mental-health professionals finding the support they need to
-          grow.
+          Join thousands of healthcare professionals finding the supervision and collaboration
+          support they need to grow.
         </p>
         <div className="mt-8">
           <Link

@@ -42,9 +42,9 @@ export function WhySupervisionMatters() {
             Why Supervision Matters
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-            Whether you&apos;re completing clinical hours, starting your first residency, or
-            advancing your mental-health career, supervision ensures you&apos;re supported,
-            compliant, and empowered.
+            Whether you&apos;re completing supervised hours, seeking a collaborating physician, or
+            advancing your healthcare career, the right supervisor keeps you supported, compliant,
+            and empowered.
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">

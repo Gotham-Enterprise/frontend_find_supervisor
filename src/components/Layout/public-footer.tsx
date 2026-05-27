@@ -13,13 +13,14 @@ const footerColumns = [
     ],
   },
   {
-    heading: 'By License Type',
+    heading: 'By Supervisor Type',
     links: [
-      { label: 'LCSW Supervisors', href: '/supervisors/california/lcsw' },
-      { label: 'LMFT Supervisors', href: '/supervisors/california/lmft' },
-      { label: 'LPC Supervisors', href: '/supervisors/texas/lpc' },
-      { label: 'LMHC Supervisors', href: '/supervisors/new-york/lmhc' },
-      { label: 'LPCC Supervisors', href: '/supervisors/california/lpcc' },
+      {
+        label: 'Mental Health Counselor Supervisors',
+        href: '/supervisors?type=mental-health-counselor',
+      },
+      { label: 'Collaborating Physicians', href: '/supervisors?type=collaborating-physician' },
+      { label: 'Supervising Physicians', href: '/supervisors?type=supervising-physician' },
     ],
   },
   {
@@ -57,8 +58,8 @@ export function PublicFooter() {
               />
             </Link>
             <p className="mt-3 text-sm text-muted-foreground">
-              The leading platform for connecting mental health and healthcare professionals with
-              licensed supervisors.
+              The leading platform for connecting healthcare professionals with licensed
+              supervisors, collaborating physicians, and supervising physicians.
             </p>
           </div>
 

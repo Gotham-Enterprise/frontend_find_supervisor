@@ -17,8 +17,9 @@ export function HeroSection() {
               Professional Journey
             </h1>
             <p className="max-w-lg text-lg text-muted-foreground">
-              Connect with licensed medical and mental-health supervisors who can support your
-              clinical hours, career growth, and long-term success.
+              Connect with licensed healthcare supervisors, collaborating physicians, and
+              supervising physicians who support your professional growth, compliance, and long-term
+              success.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Link href="/login" className={buttonVariants({ size: 'lg' })}>

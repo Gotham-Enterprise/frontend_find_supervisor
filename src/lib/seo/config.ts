@@ -10,10 +10,10 @@ export const SITE_URL =
 
 export const SITE_NAME = 'Find A Supervisor'
 
-export const DEFAULT_TITLE = 'Find A Supervisor | Licensed Clinical Supervision Made Easier'
+export const DEFAULT_TITLE = 'Find A Supervisor | Healthcare Supervisor Marketplace'
 
 export const DEFAULT_DESCRIPTION =
-  'Find licensed clinical supervisors by location, license type, specialty, and supervision needs. Connect with verified supervisors across all 50 states.'
+  'Find licensed healthcare supervisors, collaborating physicians, and supervising physicians by state, city, specialty, occupation, and supervision format. Connect with verified supervisors across all 50 states.'
 
 export const TITLE_TEMPLATE = `%s | ${SITE_NAME}`
 

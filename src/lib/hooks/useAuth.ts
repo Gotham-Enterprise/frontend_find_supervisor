@@ -22,7 +22,13 @@ export function useLogin() {
       // the login response, which only returns the raw supervisionUser row.
       const fullUser = await getMe()
       setUser(fullUser)
-      router.push('/dashboard')
+
+      // Honour the ?redirect= param if present and points to a safe internal path.
+      const params = new URLSearchParams(window.location.search)
+      const redirectTo = params.get('redirect')
+      const isSafeRedirect =
+        redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//')
+      router.push(isSafeRedirect ? redirectTo : '/dashboard')
     },
   })
 }

@@ -7,29 +7,34 @@ import { cn } from '@/lib/utils'
 
 const faqs = [
   {
+    question: 'What types of supervisors can I find on this platform?',
+    answer:
+      'Find A Supervisor supports mental health counselor supervisors, collaborating physicians for nurse practitioners, and supervising physicians for physician assistants. You can filter by supervisor type, specialty, state, and supervision format to find the right match for your profession.',
+  },
+  {
     question: 'What is the matching feature?',
     answer:
-      'Our matching feature helps you discover vetted supervisors based on your specialty, location, schedule, and supervision requirements. You can browse profiles, compare options, and connect directly with qualified professionals.',
+      'Our matching feature helps you discover vetted supervisors and collaborating physicians based on your specialty, location, schedule, and supervision requirements. You can browse profiles, compare options, and connect directly with qualified professionals.',
   },
   {
     question: 'Can I customize my messages to supervisors?',
     answer:
-      'Yes. You can personalize your introduction and messages when reaching out to supervisors. We recommend including your background, goals, and what you hope to gain from supervision to improve your response rate.',
+      'Yes. You can personalize your introduction and messages when reaching out to supervisors or collaborating physicians. We recommend including your background, goals, and what you hope to achieve to improve your response rate.',
   },
   {
     question: 'How does scheduling work?',
     answer:
-      'Once you connect with a supervisor, you can schedule sessions directly through the platform. Choose from available time slots, set up recurring meetings, and manage your supervision calendar from your dashboard.',
+      'Once you connect with a supervisor or collaborating physician, you can schedule sessions directly through the platform. Choose from available time slots, set up recurring meetings, and manage your supervision calendar from your dashboard.',
   },
   {
     question: 'Is there a limit to how many supervisors I can connect with?',
     answer:
-      'You can browse and connect with multiple supervisors. We recommend focusing on a few strong matches to ensure quality relationships and efficient progress toward your supervision goals.',
+      'You can browse and connect with multiple supervisors or collaborating physicians. We recommend focusing on a few strong matches to ensure quality professional relationships and efficient progress toward your goals.',
   },
   {
     question: 'How is this different from traditional supervision matching?',
     answer:
-      'Traditional matching requires you to manage each connection separately. With our platform, you can browse vetted supervisors, use AI-powered matching, and communicate with top matches through personalized introductions built exclusively for healthcare and mental health supervision.',
+      'Traditional matching requires you to manage each connection separately. With our platform, you can browse vetted healthcare supervisors, collaborating physicians, and supervising physicians — then communicate through personalized introductions, all in one place.',
   },
 ]
 

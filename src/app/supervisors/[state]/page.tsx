@@ -1,11 +1,12 @@
 /**
  * pSEO state landing page — /supervisors/[state]
- * e.g. /supervisors/texas → "Clinical Supervisors in Texas"
+ * e.g. /supervisors/texas → "Healthcare Supervisors in Texas"
  *
  * Targets keywords like:
- *   - "clinical supervisors in Texas"
- *   - "find a supervisor in California"
- *   - "licensed supervisor in New York"
+ *   - "healthcare supervisors in Texas"
+ *   - "collaborating physician in California"
+ *   - "find a supervisor in New York"
+ *   - "supervising physician in Florida"
  *
  * This is a fully public Server Component. Data comes from the unauthenticated
  * /supervision/search endpoint.
@@ -23,10 +24,9 @@ import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
 import { getStateFaqs } from '@/lib/seo/faq-data'
 import {
   isValidStateSlug,
-  licenseSlugToLabel,
   stateSlugToAbbreviation,
   stateSlugToDisplayName,
-  TOP_LICENSE_SLUGS_FOR_STATE,
+  SUPERVISOR_TYPE_PAGE_SLUGS,
   US_STATES,
 } from '@/lib/seo/routes'
 
@@ -59,10 +59,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const stateName = stateSlugToDisplayName(stateSlug)
+  const stateAbbreviation = stateSlugToAbbreviation(stateSlug) ?? stateSlug.toUpperCase()
+
+  // Check supervisor count to decide indexability — avoids thin-page indexing mismatch
+  const { supervisors } = await fetchPublicSupervisors({
+    stateOfLicensure: stateAbbreviation,
+    stateFullName: stateName,
+    limit: MIN_SUPERVISORS_TO_INDEX,
+  })
+
+  if (supervisors.length < MIN_SUPERVISORS_TO_INDEX) {
+    return { robots: { index: false, follow: true } }
+  }
 
   return buildMetadata({
-    title: `Clinical Supervisors in ${stateName}`,
-    description: `Find licensed clinical supervisors in ${stateName}. Browse supervisors by license type, specialty, and supervision format. Connect with verified ${stateName} supervisors on ${SITE_NAME}.`,
+    title: `Healthcare Supervisors in ${stateName}`,
+    description: `Find licensed healthcare supervisors, collaborating physicians, and supervising physicians in ${stateName}. Browse by specialty, occupation, and supervision format. Connect with verified ${stateName} supervisors on ${SITE_NAME}.`,
     path: `/supervisors/${stateSlug}`,
   })
 }
@@ -111,11 +123,12 @@ export default async function StateSupervisorsPage({ params }: Props) {
         {/* Page header */}
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Clinical Supervisors in {stateName}
+            Healthcare Supervisors in {stateName}
           </h1>
           <p className="mt-3 max-w-2xl text-lg text-muted-foreground">
-            Browse licensed clinical supervisors in {stateName}. Filter by license type, specialty,
-            and supervision format to find the right match for your licensure journey.
+            Browse licensed supervisors, collaborating physicians, and supervising physicians in{' '}
+            {stateName}. Filter by specialty, occupation, and supervision format to find the right
+            match for your professional needs.
           </p>
           {meta.totalCount > 0 && (
             <p className="mt-2 text-sm text-muted-foreground">
@@ -124,19 +137,27 @@ export default async function StateSupervisorsPage({ params }: Props) {
           )}
         </header>
 
-        {/* License type quick links */}
-        <nav aria-label="Filter by license type" className="mb-8">
-          <p className="mb-2 text-sm font-medium text-foreground">Browse by License Type</p>
+        {/* Supervisor type quick links */}
+        <nav aria-label="Browse by supervisor type" className="mb-5">
+          <p className="mb-2 text-sm font-medium text-foreground">Browse by Supervisor Type</p>
           <div className="flex flex-wrap gap-2">
-            {TOP_LICENSE_SLUGS_FOR_STATE.map((slug) => (
-              <Link
-                key={slug}
-                href={`/supervisors/${stateSlug}/${slug}`}
-                className="rounded-full border px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-              >
-                {licenseSlugToLabel(slug)} in {stateName}
-              </Link>
-            ))}
+            {SUPERVISOR_TYPE_PAGE_SLUGS.map((typeSlug) => {
+              const label =
+                typeSlug === 'mental-health-counselor-supervisors'
+                  ? 'Mental Health Counselor Supervisors'
+                  : typeSlug === 'collaborating-physicians'
+                    ? 'Collaborating Physicians'
+                    : 'Supervising Physicians'
+              return (
+                <Link
+                  key={typeSlug}
+                  href={`/supervisors/${stateSlug}/${typeSlug}`}
+                  className="rounded-full border px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                >
+                  {label} in {stateName}
+                </Link>
+              )
+            })}
           </div>
         </nav>
 
@@ -177,7 +198,7 @@ export default async function StateSupervisorsPage({ params }: Props) {
         {/* What to look for section */}
         <section aria-labelledby="guide-heading" className="mt-12 rounded-xl bg-muted/40 p-6">
           <h2 id="guide-heading" className="text-xl font-bold text-foreground">
-            What to Look for in a Clinical Supervisor in {stateName}
+            What to Look for in a Healthcare Supervisor in {stateName}
           </h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {SUPERVISOR_TIPS.map((tip) => (
@@ -261,28 +282,28 @@ function EmptyState({ stateName }: { stateName: string }) {
 
 const SUPERVISOR_TIPS = [
   {
-    title: 'License Compatibility',
-    body: 'Confirm the supervisor holds the license type required by your state board and has experience supervising candidates for your license level.',
+    title: 'Supervisor Type',
+    body: 'Identify whether you need a clinical supervisor, collaborating physician, or supervising physician based on your profession and state requirements.',
   },
   {
     title: 'Specialty Match',
-    body: 'Look for supervisors with clinical experience in your practice area — such as trauma, substance use, or child and adolescent work.',
+    body: 'Look for supervisors or collaborating physicians with experience in your practice area — whether that is mental health, family medicine, psychiatry, or another specialty.',
   },
   {
     title: 'Supervision Format',
-    body: 'Decide whether you need in-person, virtual, or hybrid supervision. Many supervisors in this state offer flexible scheduling.',
+    body: 'Decide whether you need in-person, virtual, or hybrid supervision or collaboration. Many supervisors in this state offer flexible scheduling.',
   },
   {
-    title: 'Supervisory Approach',
-    body: 'Ask about their supervisory model (developmental, reflective, CBT-based, etc.) and how they structure individual or group sessions.',
+    title: 'License & Credential Compatibility',
+    body: 'Confirm the supervisor or collaborating physician holds the credentials required by your state board and has experience working with your profession.',
   },
   {
     title: 'Documentation',
-    body: 'Ensure the supervisor can provide signed documentation of hours in the format required by your state licensing board.',
+    body: 'Ensure the supervisor or collaborating physician can provide signed documentation or collaboration agreements as required by your state licensing board.',
   },
   {
     title: 'Fees and Availability',
-    body: 'Clarify rates, billing frequency, cancellation policy, and how quickly they can take on new supervisees.',
+    body: 'Clarify rates, billing frequency, cancellation policy, and how quickly they can take on new supervisees or collaborative partners.',
   },
 ]
 
