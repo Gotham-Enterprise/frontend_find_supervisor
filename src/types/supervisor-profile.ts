@@ -177,6 +177,9 @@ export interface SupervisorProfileData {
   specialty?: SupervisorSpecialty | null
   occupationId?: number | null
   specialtyId?: number | null
+  /** Plain strings from SupervisorProfile.occupation/specialty (hierarchy-based) */
+  supervisorOccupation?: string | null
+  supervisorSpecialty?: string | null
 
   createdAt: string
   updatedAt: string

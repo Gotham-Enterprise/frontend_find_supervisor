@@ -8,10 +8,10 @@ import { type SupervisorFormValues, supervisorSchema } from '@/components/Signup
 import { Form } from '@/components/ui/form'
 import {
   useCitiesOptions,
-  useSpecialtiesByOccupation,
   useStatesOptions,
   useSupervisorFormOptions,
   useSupervisorSignup,
+  useSupervisorTypesData,
   useUserSnackbar,
 } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
@@ -46,12 +46,13 @@ export function SupervisorSignupForm() {
       data: patientPopulationOptions = [],
       isLoading: patientPopulationsLoading,
     },
-    licenseTypes: { data: licenseTypeOptions = [], isLoading: licenseTypesLoading },
-    supervisorTypes: { data: supervisorTypeOptions = [], isLoading: supervisorTypesLoading },
     availability: { data: availabilityOptions = [], isLoading: availabilityLoading },
-    occupations: { data: occupationOptions = [], isLoading: occupationsLoading },
     isError: optionsError,
   } = useSupervisorFormOptions()
+
+  const { data: supervisorTypesData = [], isLoading: supervisorTypesLoading } =
+    useSupervisorTypesData()
+  const supervisorTypeOptions = supervisorTypesData.map((t) => ({ label: t.name, value: t.name }))
 
   const form = useForm<SupervisorFormValues>({
     defaultValues: supervisorDefaultValues,
@@ -60,13 +61,9 @@ export function SupervisorSignupForm() {
     reValidateMode: 'onChange',
   })
 
-  const occupationIdValue = useWatch({ control: form.control, name: 'occupationId' }) ?? ''
   const stateValue = useWatch({ control: form.control, name: 'state' }) ?? ''
   const agreedToPost = useWatch({ control: form.control, name: 'agreedToPost' })
   const agreedToTerms = useWatch({ control: form.control, name: 'agreedToTerms' })
-
-  const { data: specialtyOptions = [], isLoading: specialtiesLoading } =
-    useSpecialtiesByOccupation(occupationIdValue)
 
   const {
     data: stateOptions = [],
@@ -83,10 +80,6 @@ export function SupervisorSignupForm() {
   const locationOptionsError = statesError || citiesError
   const { isSubmitting: formIsSubmitting } = useFormState({ control: form.control })
   const isSubmitting = formIsSubmitting || isPending
-
-  useEffect(() => {
-    form.setValue('specialtyId', '')
-  }, [occupationIdValue, form])
 
   useEffect(() => {
     form.setValue('city', '')
@@ -202,15 +195,10 @@ export function SupervisorSignupForm() {
         )}
         {step === 1 && (
           <SupervisorStepLicenseCredentials
-            occupationOptions={occupationOptions}
-            specialtyOptions={specialtyOptions}
-            licenseTypeOptions={licenseTypeOptions}
             supervisorTypeOptions={supervisorTypeOptions}
+            supervisorTypesData={supervisorTypesData}
             certificateOptions={certificateOptions}
             stateOptions={stateOptions}
-            occupationsLoading={occupationsLoading}
-            specialtiesLoading={specialtiesLoading}
-            licenseTypesLoading={licenseTypesLoading}
             supervisorTypesLoading={supervisorTypesLoading}
             certificatesLoading={certificatesLoading}
             isSubmitting={isSubmitting}

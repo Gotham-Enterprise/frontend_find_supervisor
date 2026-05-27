@@ -63,6 +63,7 @@ export {
   useSuperviseeFormOptions,
   useSupervisorFormOptions,
   useSupervisorTypeOptions,
+  useSupervisorTypesData,
 } from './useSignupOptions'
 export {
   subscriptionKeys,

@@ -61,10 +61,6 @@ export interface SupervisorSearchQueryInput {
   limit: number
   keywords: string
   filters: SupervisorSearchFilters
-  /** Resolved occupation names for API (comma-joined). */
-  occupationNames: string[]
-  /** Resolved specialty names for API (comma-joined). */
-  specialtyNames: string[]
   sortBy?: SortOption
 }
 
@@ -130,6 +126,11 @@ export function buildSupervisorSearchParams(
 
   const supervisionFormat = resolveSupervisionFormat(filters)
   appendIfNonEmpty(params, 'supervisionFormat', supervisionFormat)
+
+  // Hierarchy-based filters (plain strings on SupervisorProfile)
+  appendCommaSeparated(params, 'supervisorType', filters.supervisorTypes)
+  appendCommaSeparated(params, 'supervisorOccupation', filters.supervisorOccupations)
+  appendCommaSeparated(params, 'supervisorSpecialty', filters.supervisorSpecialties)
 
   appendCommaSeparated(params, 'licenseType', filters.licenseTypes)
   appendCommaSeparated(params, 'stateOfLicensure', filters.stateLicenses)

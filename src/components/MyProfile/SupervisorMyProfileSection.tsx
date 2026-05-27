@@ -170,7 +170,7 @@ export function SupervisorMyProfileSection() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Supervisor profile</CardTitle>
+          <CardTitle className="text-base">Supervisor Profile</CardTitle>
           <CardDescription>
             Fields match your dashboard editor. Save applies your updates immediately.
           </CardDescription>

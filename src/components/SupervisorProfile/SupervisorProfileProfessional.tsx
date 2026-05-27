@@ -2,7 +2,6 @@ import type { SelectOption } from '@/lib/api/options'
 import {
   formatDate,
   formatSupervisorTypeLabel,
-  resolveOptionLabel,
   resolveOptionLabels,
 } from '@/lib/utils/profile-formatters'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
@@ -11,7 +10,6 @@ interface SupervisorProfileProfessionalProps {
   profile: SupervisorProfileData
   certificationOptions: SelectOption[]
   patientPopulationOptions: SelectOption[]
-  licenseTypeOptions: SelectOption[]
   /** US state options (abbreviation → label); from {@link useStatesOptions}. */
   stateOptions: SelectOption[]
 }
@@ -55,10 +53,8 @@ export function SupervisorProfileProfessional({
   profile,
   certificationOptions,
   patientPopulationOptions,
-  licenseTypeOptions,
   stateOptions,
 }: SupervisorProfileProfessionalProps) {
-  const licenseTypeLabel = resolveOptionLabel(profile.licenseType, licenseTypeOptions)
   const certLabels = resolveOptionLabels(profile.certification ?? [], certificationOptions)
   const popLabels = resolveOptionLabels(profile.patientPopulation ?? [], patientPopulationOptions)
   const statesOfLicensure = profile.user.stateOfLicensure ?? []
@@ -68,7 +64,7 @@ export function SupervisorProfileProfessional({
     <section className="border-b border-[#E5E7EB] py-8">
       <h2 className="mb-2 text-base font-semibold text-[#181818]">License &amp; Credentials</h2>
       <div>
-        {profile.licenseType && <Row label="License Type">{licenseTypeLabel}</Row>}
+        {profile.licenseType && <Row label="License Type">{profile.licenseType}</Row>}
         {profile.supervisorType && (
           <Row label="Supervisor Type">{formatSupervisorTypeLabel(profile.supervisorType)}</Row>
         )}

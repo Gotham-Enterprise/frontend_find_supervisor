@@ -77,5 +77,9 @@ export interface SuperviseeProfileData {
   specialty?: SupervisorSpecialty | null
   specialtyId?: number | null
 
+  /** Supervision-needs occupation/specialty (plain strings, from SupervisorOccupation/Specialty names) */
+  superviseeOccupation?: string | null
+  superviseeSpecialty?: string | null
+
   user: SuperviseeProfileUser
 }

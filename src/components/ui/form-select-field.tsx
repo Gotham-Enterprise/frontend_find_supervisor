@@ -63,6 +63,8 @@ export type FormSelectFieldProps<
    * state”). Sentinel items are still rendered when `emptySentinel` is set.
    */
   emptyState?: { when: boolean; children: ReactNode }
+  /** Called after the field value changes (e.g. to reset dependent fields). */
+  onValueChange?: (value: string) => void
 }
 
 function defaultItemToStringLabel(
@@ -99,6 +101,7 @@ export function FormSelectField<
   formItemClassName,
   selectKey,
   emptyState,
+  onValueChange,
 }: FormSelectFieldProps<TFieldValues, TName>) {
   const resolvedPlaceholder = loading ? loadingPlaceholder : (placeholder ?? 'Select…')
   const mergedDisabled = Boolean(disabled || isSubmitting)
@@ -146,6 +149,7 @@ export function FormSelectField<
                 } else {
                   field.onChange((v ?? '') as (typeof field)['value'])
                 }
+                onValueChange?.(v ?? '')
               }}
               onOpenChange={sb.onOpenChange}
               disabled={mergedDisabled || loading}

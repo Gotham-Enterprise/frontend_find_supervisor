@@ -60,9 +60,9 @@ export function buildSupervisorFormData(values: SupervisorFormValues): FormData 
   fd.append('state', values.state)
   fd.append('zipcode', values.zipcode)
 
-  // Occupation & specialty — backend expects `occupation` / `specialty` (string IDs), not *Id keys
-  fd.append('occupation', values.occupationId)
-  if (values.specialtyId) fd.append('specialty', values.specialtyId)
+  // Occupation/specialty from the supervisor-type hierarchy — stored as plain strings on SupervisorProfile
+  fd.append('occupation', values.supervisorOccupationId)
+  if (values.supervisorSpecialtyId) fd.append('specialty', values.supervisorSpecialtyId)
   if (values.website) fd.append('website', values.website)
 
   // License & credentials
@@ -116,12 +116,17 @@ export function buildSuperviseeFormData(values: SuperviseeFormValues): FormData 
 
   fd.append('occupation', values.occupationId)
   fd.append('title', values.title)
+  if (values.specialtyId) fd.append('specialty', values.specialtyId)
 
   // Supervision needs — `stateOfLicensure[]` so a single state is still parsed as an array (multer + express-validator .isArray())
   values.stateOfLicensure.forEach((s) => fd.append('stateOfLicensure[]', s))
   values.stateTheyAreLookingIn.forEach((s) => fd.append('stateTheyAreLookingIn[]', s))
-  // Backend field: typeOfSupervisorNeeded (array — same `[]` convention as stateOfLicensure for multipart)
-  values.typeOfSupervisor.forEach((t) => fd.append('typeOfSupervisorNeeded[]', t))
+  // Backend field: typeOfSupervisorNeeded — send as single-element array to keep multipart convention
+  fd.append('typeOfSupervisorNeeded[]', values.typeOfSupervisor)
+  // Supervision-needs occupation/specialty stored as plain strings on SuperviseeProfile
+  if (values.supervisorOccupationId)
+    fd.append('superviseeOccupation', values.supervisorOccupationId)
+  if (values.supervisorSpecialtyId) fd.append('superviseeSpecialty', values.supervisorSpecialtyId)
   // Backend field: howSoonLooking + enum transformation
   fd.append('howSoonLooking', HOW_SOON_MAP[values.howSoon] ?? 'IMMEDIATELY')
   if (values.howSoon === 'CUSTOM_DATE' && values.howSoonDate) {

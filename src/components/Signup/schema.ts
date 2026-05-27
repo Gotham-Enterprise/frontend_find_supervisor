@@ -46,14 +46,13 @@ export const supervisionFeeTypeOptions = [
 // ─── Supervisor schema ─────────────────────────────────────────────────────────
 
 export const supervisorSchemaObject = accountSchemaBase.extend({
-  // Occupation & specialty
-  occupationId: z.string().min(1, 'Occupation is required'),
-  specialtyId: z.string().optional(),
+  // Step 2 — supervisor-type hierarchy cascade (stored as plain strings on SupervisorProfile)
+  supervisorType: z.string().min(1, 'Supervisor type is required'),
+  supervisorOccupationId: z.string().min(1, 'Occupation is required'),
+  supervisorSpecialtyId: z.string().optional(),
 
   // License & credentials
   licenseType: z.string().min(1, 'License type is required'),
-  /** API value from GET /supervision/options?param=supervisorType */
-  supervisorType: z.string().min(1, 'Supervisor type is required'),
   licenseNumber: z.string().min(1, 'License number is required').max(50),
   licenseExpiration: z
     .string()
@@ -124,16 +123,15 @@ export const supervisorSchema = withPasswordConfirmation(supervisorSchemaObject)
 // ─── Supervisee schema ─────────────────────────────────────────────────────────
 
 export const superviseeSchemaObject = accountSchemaBase.extend({
-  occupationId: z.string().min(1, 'Occupation is required'),
-  title: z.string().min(1, 'Credential or license type is required').max(100),
+  // Step 2 — supervisor-type cascade (UI only, not sent as category IDs to backend)
+  typeOfSupervisor: z.string().min(1, 'Please select a type of supervision needed'),
+  supervisorOccupationId: z.string().min(1, 'Occupation is required'),
+  supervisorSpecialtyId: z.string().optional(),
 
   stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
   stateTheyAreLookingIn: z
     .array(z.string())
     .min(1, 'Please select at least one state you are looking in'),
-  typeOfSupervisor: z
-    .array(z.string())
-    .min(1, 'Please select at least one type of supervision needed'),
   howSoon: z.string().min(1, 'Please select how soon you need a supervisor'),
   howSoonDate: z.string().optional(),
   preferredFormat: z.enum(['virtual', 'in-person', 'hybrid'], {
@@ -142,6 +140,12 @@ export const superviseeSchemaObject = accountSchemaBase.extend({
   feeType: z.enum(['per-session', 'monthly'], { message: 'Please select a fee type' }),
   budgetRange: z.string().min(1, 'Please select a budget range'),
   availability: z.string().min(1, 'Availability is required'),
+
+  // Step 3 — profile fields (sent to backend as numeric category IDs)
+  title: z.string().min(1, 'Credential or license type is required').max(100),
+  occupationId: z.string().min(1, 'Occupation is required'),
+  specialtyId: z.string().optional(),
+
   description: z
     .string()
     .min(20, 'Description must be at least 20 characters')
@@ -179,10 +183,10 @@ export const supervisorStep1Schema = withPasswordConfirmation(
 )
 
 export const supervisorStep2Schema = supervisorSchemaObject.pick({
-  occupationId: true,
-  specialtyId: true,
-  licenseType: true,
   supervisorType: true,
+  supervisorOccupationId: true,
+  supervisorSpecialtyId: true,
+  licenseType: true,
   licenseNumber: true,
   licenseExpiration: true,
   npiNumber: true,
@@ -226,10 +230,10 @@ export const SUPERVISOR_SIGNUP_STEP_FIELDS = [
     'website',
   ],
   [
-    'occupationId',
-    'specialtyId',
-    'licenseType',
     'supervisorType',
+    'supervisorOccupationId',
+    'supervisorSpecialtyId',
+    'licenseType',
     'licenseNumber',
     'licenseExpiration',
     'npiNumber',
@@ -276,11 +280,11 @@ export const superviseeStep1Schema = withPasswordConfirmation(
 
 export const superviseeStep2Schema = superviseeSchemaObject
   .pick({
-    occupationId: true,
-    title: true,
+    typeOfSupervisor: true,
+    supervisorOccupationId: true,
+    supervisorSpecialtyId: true,
     stateOfLicensure: true,
     stateTheyAreLookingIn: true,
-    typeOfSupervisor: true,
     howSoon: true,
     howSoonDate: true,
     preferredFormat: true,
@@ -299,6 +303,9 @@ export const superviseeStep2Schema = superviseeSchemaObject
   })
 
 export const superviseeStep3Schema = superviseeSchemaObject.pick({
+  title: true,
+  occupationId: true,
+  specialtyId: true,
   description: true,
   agreedToPost: true,
   agreedToTerms: true,
@@ -323,11 +330,11 @@ export const SUPERVISEE_SIGNUP_STEP_FIELDS = [
     'zipcode',
   ],
   [
-    'occupationId',
-    'title',
+    'typeOfSupervisor',
+    'supervisorOccupationId',
+    'supervisorSpecialtyId',
     'stateOfLicensure',
     'stateTheyAreLookingIn',
-    'typeOfSupervisor',
     'howSoon',
     'howSoonDate',
     'preferredFormat',
@@ -335,7 +342,7 @@ export const SUPERVISEE_SIGNUP_STEP_FIELDS = [
     'budgetRange',
     'availability',
   ],
-  ['description', 'agreedToPost', 'agreedToTerms'],
+  ['title', 'occupationId', 'specialtyId', 'description', 'agreedToPost', 'agreedToTerms'],
 ] as const satisfies ReadonlyArray<ReadonlyArray<keyof SuperviseeFormValues>>
 
 export const SUPERVISEE_SIGNUP_STEP_META = [

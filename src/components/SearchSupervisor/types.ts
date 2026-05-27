@@ -1,9 +1,11 @@
 export interface SupervisorSearchFilters {
-  /** Occupation ids from GET /api/categories/occupations */
-  occupationIds: string[]
-  /** Specialty ids from GET /api/categories/specialties/occupation/:id */
-  specialtyIds: string[]
-  /** Option values from GET /api/supervision/options?param=licenseType */
+  /** Supervisor type names from GET /api/supervision/supervisor-type */
+  supervisorTypes: string[]
+  /** Occupation names — cascades from selected supervisorTypes */
+  supervisorOccupations: string[]
+  /** Specialty names — cascades from selected supervisorOccupations */
+  supervisorSpecialties: string[]
+  /** License type names — sourced from the supervisor-type hierarchy */
   licenseTypes: string[]
   stateLicenses: string[]
   /** Single city value for location search (matches city option `value`). */

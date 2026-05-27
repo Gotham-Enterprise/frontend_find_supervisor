@@ -26,6 +26,8 @@ export interface UpdateSuperviseeProfilePayload {
   title?: string
   stateOfLicensure?: string[]
   typeOfSupervisorNeeded?: string[]
+  superviseeOccupation?: string
+  superviseeSpecialty?: string
   howSoonLooking?: string
   lookingDate?: string
   preferredFormat?: string

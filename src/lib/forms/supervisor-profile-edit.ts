@@ -58,19 +58,19 @@ const editSupervisorProfileFieldsSchema = z.object({
     .refine((v) => !v || v.length === 0 || /^https?:\/\/\S+/.test(v), {
       message: 'Please enter a valid URL (e.g. https://example.com)',
     }),
-  occupationId: z
-    .string()
-    .min(1, 'Occupation is required')
-    .refine((s) => !isEmptySelect(s), { message: 'Occupation is required' }),
-  specialtyId: z.string().optional(),
-  licenseType: z
-    .string()
-    .min(1, 'License type is required')
-    .refine((s) => !isEmptySelect(s), { message: 'License type is required' }),
   supervisorType: z
     .string()
     .min(1, 'Supervisor type is required')
     .refine((s) => !isEmptySelect(s), { message: 'Supervisor type is required' }),
+  supervisorOccupation: z
+    .string()
+    .min(1, 'Occupation is required')
+    .refine((s) => !isEmptySelect(s), { message: 'Occupation is required' }),
+  supervisorSpecialty: z.string().optional(),
+  licenseType: z
+    .string()
+    .min(1, 'License type is required')
+    .refine((s) => !isEmptySelect(s), { message: 'License type is required' }),
   licenseNumber: z.string().min(1, 'License number is required').max(50),
   licenseExpiration: licenseExpirationRefine,
   yearsOfExperience: z
@@ -136,13 +136,6 @@ export function createEditSupervisorProfileSchema(profile: SupervisorProfileData
 export function getDefaultSupervisorProfileFormValues(
   profile: SupervisorProfileData,
 ): EditSupervisorProfileFormValues {
-  const defaultOccupationId = String(
-    profile.occupationId ?? profile.occupation?.id ?? profile.user.occupation?.id ?? '',
-  )
-  const defaultSpecialtyId = String(
-    profile.specialtyId ?? profile.specialty?.id ?? profile.user.specialty?.id ?? '',
-  )
-
   return {
     fullName: profile.user.fullName ?? '',
     contactNumber: formatUSPhoneForDisplay(profile.user.contactNumber ?? ''),
@@ -150,10 +143,10 @@ export function getDefaultSupervisorProfileFormValues(
     state: profile.user.state ?? '',
     zipcode: profile.user.zipcode ?? '',
     website: profile.website ?? '',
-    occupationId: defaultOccupationId,
-    specialtyId: defaultSpecialtyId,
-    licenseType: profile.licenseType ?? '',
     supervisorType: profile.supervisorType ?? '',
+    supervisorOccupation: profile.supervisorOccupation ?? '',
+    supervisorSpecialty: profile.supervisorSpecialty ?? '',
+    licenseType: profile.licenseType ?? '',
     licenseNumber: profile.licenseNumber ?? '',
     licenseExpiration: profile.licenseExpiration ? profile.licenseExpiration.slice(0, 10) : '',
     yearsOfExperience: (() => {
@@ -190,12 +183,10 @@ export function supervisorProfileFormValuesToPayload(
     state: values.state,
     zipcode: values.zipcode || undefined,
     website: values.website || undefined,
-    occupation:
-      values.occupationId && values.occupationId !== '__none__' ? values.occupationId : undefined,
-    specialty:
-      values.specialtyId && values.specialtyId !== '__none__' ? values.specialtyId : undefined,
-    licenseType: values.licenseType || undefined,
     supervisorType: values.supervisorType || undefined,
+    occupation: values.supervisorOccupation || undefined,
+    specialty: values.supervisorSpecialty || undefined,
+    licenseType: values.licenseType || undefined,
     licenseNumber: values.licenseNumber || undefined,
     licenseExpiration: values.licenseExpiration || undefined,
     yearsOfExperience: values.yearsOfExperience || undefined,

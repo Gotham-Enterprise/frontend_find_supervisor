@@ -1,6 +1,7 @@
 'use client'
 
 import { CalendarDays } from 'lucide-react'
+import { useMemo } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
 
 import { FormatSelector } from '@/components/Signup/FormatSelector'
@@ -8,14 +9,9 @@ import { FormSection } from '@/components/Signup/FormSection'
 import { type SuperviseeFormValues } from '@/components/Signup/schema'
 import { superviseeFieldRules } from '@/components/Signup/superviseeFieldRules'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { FormInputField } from '@/components/ui/form-input-field'
 import { FormSelectField } from '@/components/ui/form-select-field'
 import { TagInput } from '@/components/ui/tag-input'
-import type { SelectOption } from '@/lib/api/options'
-import {
-  SUPERVISEE_CREDENTIAL_TITLE_LABEL,
-  SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER,
-} from '@/lib/forms/supervisee-profile-edit'
+import type { SelectOption, SupervisorTypeData } from '@/lib/api/options'
 import { cn } from '@/lib/utils'
 
 const superviseeFeeTypeOptions: SelectOption[] = [
@@ -24,15 +20,13 @@ const superviseeFeeTypeOptions: SelectOption[] = [
 ]
 
 type SuperviseeStepSupervisionNeedsProps = {
-  occupationOptions: SelectOption[]
-  occupationsLoading: boolean
+  supervisorTypesData: SupervisorTypeData[]
+  supervisorTypesLoading: boolean
   stateOptions: SelectOption[]
-  supervisorTypeOptions: SelectOption[]
   howSoonOptions: SelectOption[]
   availabilityOptions: SelectOption[]
   salaryRangeOptions: SelectOption[]
   statesLoading: boolean
-  supervisorTypesLoading: boolean
   howSoonLoading: boolean
   availabilityLoading: boolean
   salaryRangesLoading: boolean
@@ -40,39 +34,109 @@ type SuperviseeStepSupervisionNeedsProps = {
 }
 
 export function SuperviseeStepSupervisionNeeds({
-  occupationOptions,
-  occupationsLoading,
+  supervisorTypesData,
+  supervisorTypesLoading,
   stateOptions,
-  supervisorTypeOptions,
   howSoonOptions,
   availabilityOptions,
   salaryRangeOptions,
   statesLoading,
-  supervisorTypesLoading,
   howSoonLoading,
   availabilityLoading,
   salaryRangesLoading,
   isSubmitting,
 }: SuperviseeStepSupervisionNeedsProps) {
-  const { control, clearErrors } = useFormContext<SuperviseeFormValues>()
+  const { control, clearErrors, setValue } = useFormContext<SuperviseeFormValues>()
   const howSoon = useWatch({ control, name: 'howSoon' })
+  const typeOfSupervisor = useWatch({ control, name: 'typeOfSupervisor' })
+  const supervisorOccupationId = useWatch({ control, name: 'supervisorOccupationId' })
   const isCustomDate = howSoon === 'CUSTOM_DATE'
   const today = new Date().toISOString().split('T')[0]
 
+  // Use names as values so they can be stored directly as strings on SuperviseeProfile
+  const supervisorTypeOptions = useMemo<SelectOption[]>(
+    () => supervisorTypesData.map((t) => ({ label: t.name, value: t.name })),
+    [supervisorTypesData],
+  )
+
+  const occupationOptions = useMemo<SelectOption[]>(() => {
+    if (!typeOfSupervisor) return []
+    const selectedType = supervisorTypesData.find((t) => t.name === typeOfSupervisor)
+    return selectedType?.occupations.map((o) => ({ label: o.name, value: o.name })) ?? []
+  }, [typeOfSupervisor, supervisorTypesData])
+
+  const specialtyOptions = useMemo<SelectOption[]>(() => {
+    if (!typeOfSupervisor || !supervisorOccupationId) return []
+    const selectedType = supervisorTypesData.find((t) => t.name === typeOfSupervisor)
+    const selectedOccupation = selectedType?.occupations.find(
+      (o) => o.name === supervisorOccupationId,
+    )
+    return selectedOccupation?.specialties.map((s) => ({ label: s.name, value: s.name })) ?? []
+  }, [typeOfSupervisor, supervisorOccupationId, supervisorTypesData])
+
   return (
     <FormSection title="Supervision Needs">
+      {/* ── Type of Supervision Needed ── */}
+      <FormSelectField
+        control={control}
+        name="typeOfSupervisor"
+        label="Type of Supervision Needed"
+        rules={superviseeFieldRules('typeOfSupervisor')}
+        options={supervisorTypeOptions}
+        placeholder={supervisorTypesLoading ? 'Loading…' : 'Select type of supervision'}
+        loading={supervisorTypesLoading}
+        isSubmitting={isSubmitting}
+        required
+        onValueChange={() => {
+          setValue('supervisorOccupationId', '')
+          setValue('supervisorSpecialtyId', '')
+          clearErrors(['supervisorOccupationId', 'supervisorSpecialtyId'])
+        }}
+      />
+
+      {/* ── Occupation (filtered by supervisor type) ── */}
+      <FormSelectField
+        control={control}
+        name="supervisorOccupationId"
+        label="Occupation"
+        rules={superviseeFieldRules('supervisorOccupationId')}
+        options={occupationOptions}
+        placeholder={
+          !typeOfSupervisor
+            ? 'Select a type of supervision first'
+            : occupationOptions.length === 0
+              ? 'No occupations available'
+              : 'Select occupation'
+        }
+        loading={supervisorTypesLoading}
+        isSubmitting={isSubmitting || !typeOfSupervisor}
+        selectKey={typeOfSupervisor}
+        required
+        onValueChange={() => {
+          setValue('supervisorSpecialtyId', '')
+          clearErrors('supervisorSpecialtyId')
+        }}
+      />
+
+      {/* ── Specialty (filtered by occupation) ── */}
+      <FormSelectField
+        control={control}
+        name="supervisorSpecialtyId"
+        label="Specialty"
+        options={specialtyOptions}
+        placeholder={
+          !supervisorOccupationId
+            ? 'Select an occupation first'
+            : specialtyOptions.length === 0
+              ? 'No specialties available'
+              : 'Select specialty'
+        }
+        loading={supervisorTypesLoading}
+        isSubmitting={isSubmitting || !supervisorOccupationId}
+        selectKey={`${typeOfSupervisor}-${supervisorOccupationId}`}
+      />
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-start">
-        <FormSelectField
-          control={control}
-          name="occupationId"
-          label="Occupation"
-          rules={superviseeFieldRules('occupationId')}
-          options={occupationOptions}
-          placeholder="Select occupation"
-          loading={occupationsLoading}
-          isSubmitting={isSubmitting}
-          required
-        />
         <FormField
           control={control}
           name="preferredFormat"
@@ -98,16 +162,6 @@ export function SuperviseeStepSupervisionNeeds({
           )}
         />
       </div>
-
-      <FormInputField
-        control={control}
-        name="title"
-        label={SUPERVISEE_CREDENTIAL_TITLE_LABEL}
-        rules={superviseeFieldRules('title')}
-        placeholder={SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER}
-        isSubmitting={isSubmitting}
-        required
-      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormField
@@ -157,36 +211,6 @@ export function SuperviseeStepSupervisionNeeds({
                   }}
                   placeholder={statesLoading ? 'Loading…' : 'Add a state (e.g. CA)'}
                   disabled={isSubmitting || statesLoading}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormField
-          control={control}
-          name="typeOfSupervisor"
-          rules={superviseeFieldRules('typeOfSupervisor')}
-          render={({ field }) => (
-            <FormItem className="sm:col-span-2">
-              <FormLabel>
-                Type of Supervision Needed <span className="text-destructive">*</span>
-              </FormLabel>
-              <FormControl>
-                <TagInput
-                  options={supervisorTypeOptions}
-                  value={field.value ?? []}
-                  onChange={(v) => {
-                    field.onChange(v)
-                    clearErrors(field.name)
-                  }}
-                  placeholder={
-                    supervisorTypesLoading ? 'Loading…' : 'Add one or more supervision types'
-                  }
-                  disabled={isSubmitting || supervisorTypesLoading}
                 />
               </FormControl>
               <FormMessage />

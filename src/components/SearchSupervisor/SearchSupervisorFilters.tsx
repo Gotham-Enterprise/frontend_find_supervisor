@@ -13,14 +13,13 @@ import {
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { TagInput } from '@/components/ui/tag-input'
+import type { SelectOption } from '@/lib/api/options'
 import {
   useAvailabilityOptions,
   useCitiesOptions,
-  useLicenseTypeOptions,
-  useMergedSpecialtyOptions,
-  useOccupations,
   useStatesOptions,
   useSupervisorFormOptions,
+  useSupervisorTypesData,
 } from '@/lib/hooks'
 
 import { ActiveFilterChips } from './ActiveFilterChips'
@@ -48,6 +47,8 @@ interface SearchSupervisorFiltersProps {
   onClearFilters: () => void
   /** Whether filters are currently pre-filled from the supervisee's supervision needs. */
   prefillFromProfile: boolean
+  /** Disable pre-fill until profile + hierarchy options have loaded. */
+  prefillDisabled?: boolean
   /** Called when the user toggles the pre-fill switch. */
   onPrefillToggle: (enabled: boolean) => void
 }
@@ -70,6 +71,7 @@ export function SearchSupervisorFilters({
   onApply,
   onClearFilters,
   prefillFromProfile,
+  prefillDisabled = false,
   onPrefillToggle,
 }: SearchSupervisorFiltersProps) {
   const {
@@ -80,43 +82,119 @@ export function SearchSupervisorFilters({
     },
   } = useSupervisorFormOptions()
 
-  const { data: occupationsRes, isLoading: occupationsLoading } = useOccupations({ limit: 0 })
-  const occupationOptions = useMemo(
-    () => occupationsRes?.data?.map((o) => ({ label: o.name, value: String(o.id) })) ?? [],
-    [occupationsRes?.data],
+  // Hierarchy data from /api/supervision/supervisor-type
+  const { data: supervisorTypesData = [], isLoading: hierarchyLoading } = useSupervisorTypesData()
+
+  // Supervisor Type options — all top-level types
+  const supervisorTypeOptions = useMemo<SelectOption[]>(
+    () => supervisorTypesData.map((t) => ({ label: t.name, value: t.name })),
+    [supervisorTypesData],
   )
 
-  const { options: mergedSpecialtyOptions, isLoading: specialtiesLoading } =
-    useMergedSpecialtyOptions(filters.occupationIds)
+  // Occupation options — union of occupations across selected supervisor types
+  // (if none selected, show all occupations)
+  const occupationOptions = useMemo<SelectOption[]>(() => {
+    const types =
+      filters.supervisorTypes.length > 0
+        ? supervisorTypesData.filter((t) => filters.supervisorTypes.includes(t.name))
+        : supervisorTypesData
+    const seen = new Set<string>()
+    const opts: SelectOption[] = []
+    for (const t of types) {
+      for (const o of t.occupations) {
+        if (!seen.has(o.name)) {
+          seen.add(o.name)
+          opts.push({ label: o.name, value: o.name })
+        }
+      }
+    }
+    return opts
+  }, [filters.supervisorTypes, supervisorTypesData])
+
+  // Specialty options — union of specialties across selected occupations
+  const specialtyOptions = useMemo<SelectOption[]>(() => {
+    if (filters.supervisorOccupations.length === 0) return []
+    const seen = new Set<string>()
+    const opts: SelectOption[] = []
+    for (const t of supervisorTypesData) {
+      for (const o of t.occupations) {
+        if (filters.supervisorOccupations.includes(o.name)) {
+          for (const s of o.specialties) {
+            if (!seen.has(s.name)) {
+              seen.add(s.name)
+              opts.push({ label: s.name, value: s.name })
+            }
+          }
+        }
+      }
+    }
+    return opts
+  }, [filters.supervisorOccupations, supervisorTypesData])
+
+  // License Type options — union of license types across selected occupations
+  // (if no occupation selected, show all unique license types)
+  const licenseTypeOptions = useMemo<SelectOption[]>(() => {
+    const seen = new Set<string>()
+    const opts: SelectOption[] = []
+    for (const t of supervisorTypesData) {
+      for (const o of t.occupations) {
+        const isRelevant =
+          filters.supervisorOccupations.length === 0 ||
+          filters.supervisorOccupations.includes(o.name)
+        if (isRelevant) {
+          for (const l of o.licenseTypes) {
+            if (!seen.has(l.name)) {
+              seen.add(l.name)
+              opts.push({ label: l.name, value: l.name })
+            }
+          }
+        }
+      }
+    }
+    return opts
+  }, [filters.supervisorOccupations, supervisorTypesData])
 
   const filtersRef = useRef(filters)
   useLayoutEffect(() => {
     filtersRef.current = filters
   }, [filters])
 
-  const mergedSpecialtyKey = mergedSpecialtyOptions
+  // Prune specialty selections that no longer belong to selected occupations
+  const occupationsKey = filters.supervisorOccupations.join(',')
+  const specialtiesKey = filters.supervisorSpecialties.join(',')
+  const specialtyValuesKey = specialtyOptions
     .map((o) => o.value)
     .sort()
     .join(',')
 
-  const occupationIdsKey = filters.occupationIds.join(',')
-  const specialtyIdsKey = filters.specialtyIds.join(',')
+  useEffect(() => {
+    const f = filtersRef.current
+    if (f.supervisorOccupations.length === 0) {
+      if (f.supervisorSpecialties.length > 0) onChange({ ...f, supervisorSpecialties: [] })
+      return
+    }
+    const valid = new Set(specialtyOptions.map((o) => o.value))
+    const next = f.supervisorSpecialties.filter((v) => valid.has(v))
+    if (JSON.stringify(next) === JSON.stringify(f.supervisorSpecialties)) return
+    onChange({ ...f, supervisorSpecialties: next })
+  }, [occupationsKey, specialtiesKey, specialtyValuesKey, specialtyOptions, onChange])
+
+  // Prune occupation + specialty selections when supervisor type changes
+  const supervisorTypesKey = filters.supervisorTypes.join(',')
+  const occupationValuesKey = occupationOptions
+    .map((o) => o.value)
+    .sort()
+    .join(',')
 
   useEffect(() => {
     const f = filtersRef.current
-    if (f.occupationIds.length === 0) {
-      if (f.specialtyIds.length > 0) {
-        onChange({ ...f, specialtyIds: [] })
-      }
-      return
-    }
-    const valid = new Set(mergedSpecialtyOptions.map((o) => o.value))
-    const next = f.specialtyIds.filter((id) => valid.has(id))
-    if (JSON.stringify(next) === JSON.stringify(f.specialtyIds)) return
-    onChange({ ...f, specialtyIds: next })
-  }, [occupationIdsKey, specialtyIdsKey, mergedSpecialtyKey, mergedSpecialtyOptions, onChange])
+    if (f.supervisorOccupations.length === 0) return
+    const valid = new Set(occupationOptions.map((o) => o.value))
+    const nextOcc = f.supervisorOccupations.filter((v) => valid.has(v))
+    if (JSON.stringify(nextOcc) === JSON.stringify(f.supervisorOccupations)) return
+    onChange({ ...f, supervisorOccupations: nextOcc, supervisorSpecialties: [] })
+  }, [supervisorTypesKey, occupationValuesKey, occupationOptions, onChange])
 
-  const { data: licenseTypeOptions = [], isLoading: licenseTypesLoading } = useLicenseTypeOptions()
   const { data: availabilityOptions = [], isLoading: availabilityLoading } =
     useAvailabilityOptions()
 
@@ -149,8 +227,6 @@ export function SearchSupervisorFilters({
   }, [stateForCities, cityOptionsKey, citiesLoading, cityOptions, onChange])
 
   const chipOptions: ChipOptions = {
-    occupationOptions,
-    specialtyOptions: mergedSpecialtyOptions,
     licenseTypeOptions,
     availabilityOptions,
   }
@@ -182,10 +258,15 @@ export function SearchSupervisorFilters({
         )}
       </div>
 
-      <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-muted/40 px-3 py-2.5">
+      <label
+        className={`flex items-start gap-2.5 rounded-md border border-border bg-muted/40 px-3 py-2.5 ${
+          prefillDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+        }`}
+      >
         <Switch
           checked={prefillFromProfile}
           onCheckedChange={onPrefillToggle}
+          disabled={prefillDisabled}
           className="mt-0.5 shrink-0"
         />
         <span className="flex flex-col gap-0.5">
@@ -198,47 +279,63 @@ export function SearchSupervisorFilters({
       )}
 
       <div>
-        <FilterLabel>Occupation</FilterLabel>
+        <FilterLabel>Supervisor Type</FilterLabel>
         <TagInput
-          options={occupationOptions}
-          value={filters.occupationIds}
+          options={supervisorTypeOptions}
+          value={filters.supervisorTypes}
           onChange={(v) =>
             onChange({
               ...filters,
-              occupationIds: v,
-              specialtyIds: v.length === 0 ? [] : filters.specialtyIds,
+              supervisorTypes: v,
+              supervisorOccupations: v.length === 0 ? [] : filters.supervisorOccupations,
+              supervisorSpecialties: v.length === 0 ? [] : filters.supervisorSpecialties,
             })
           }
-          placeholder={occupationsLoading ? 'Loading…' : 'Select occupations…'}
-          disabled={occupationsLoading}
+          placeholder={hierarchyLoading ? 'Loading…' : 'Select supervisor types…'}
+          disabled={hierarchyLoading}
+        />
+      </div>
+
+      <div>
+        <FilterLabel>Occupation</FilterLabel>
+        <TagInput
+          options={occupationOptions}
+          value={filters.supervisorOccupations}
+          onChange={(v) =>
+            onChange({
+              ...filters,
+              supervisorOccupations: v,
+              supervisorSpecialties: v.length === 0 ? [] : filters.supervisorSpecialties,
+            })
+          }
+          placeholder={hierarchyLoading ? 'Loading…' : 'Select occupations…'}
+          disabled={hierarchyLoading}
         />
       </div>
 
       <div>
         <FilterLabel>Specialty</FilterLabel>
         <TagInput
-          options={mergedSpecialtyOptions}
-          value={filters.specialtyIds}
-          onChange={(v) => set('specialtyIds', v)}
+          options={specialtyOptions}
+          value={filters.supervisorSpecialties}
+          onChange={(v) => set('supervisorSpecialties', v)}
           placeholder={
-            filters.occupationIds.length === 0
+            filters.supervisorOccupations.length === 0
               ? 'Select occupation first'
-              : specialtiesLoading
-                ? 'Loading…'
-                : 'Select specialties…'
+              : 'Select specialties…'
           }
-          disabled={filters.occupationIds.length === 0 || specialtiesLoading}
+          disabled={filters.supervisorOccupations.length === 0 || hierarchyLoading}
         />
       </div>
 
       <div>
-        <FilterLabel>License type</FilterLabel>
+        <FilterLabel>License Type</FilterLabel>
         <TagInput
           options={licenseTypeOptions}
           value={filters.licenseTypes}
           onChange={(v) => set('licenseTypes', v)}
-          placeholder={licenseTypesLoading ? 'Loading…' : 'Select license types…'}
-          disabled={licenseTypesLoading}
+          placeholder={hierarchyLoading ? 'Loading…' : 'Select license types…'}
+          disabled={hierarchyLoading}
         />
       </div>
 
