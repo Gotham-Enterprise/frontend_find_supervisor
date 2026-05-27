@@ -5,13 +5,9 @@
  * can be made safely from Next.js server components and sitemap/metadata
  * generators without requiring a user session.
  *
- * The /supervision/search endpoint is public (no auth middleware on the backend).
- *
- * TODO (Backend): Add a dedicated public endpoint:
- *   GET /api/supervision/supervisor/public-profile?id=<id>
- *   This should return safe public fields only (no private contact info, no billing data)
- *   and must not require authentication. Until that endpoint exists, individual
- *   supervisor profile pages will use the search endpoint for metadata generation.
+ * Two public backend endpoints are used:
+ *  - GET /supervision/search          — paginated search with filters
+ *  - GET /supervision/supervisor/public-profile?id=<uuid>  — single profile by ID
  */
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:5000/api'
@@ -28,11 +24,16 @@ export interface PublicSupervisorSummary {
   licenseType: string
   supervisorType: string
   specialty: string
+  /** Merged bio — professionalSummary if present, otherwise describeYourself. */
   bio: string
+  professionalSummary: string | null
+  describeYourself: string | null
   profilePhotoUrl: string | null
   yearsOfExperience: string
   acceptingSupervisees: boolean
   supervisionFormat: string
+  stateOfLicensure: string[]
+  certification: string[]
   updatedAt?: string
 }
 
@@ -53,30 +54,49 @@ export interface PublicSupervisorSearchResult {
 // ---------------------------------------------------------------------------
 
 function parseRow(row: Record<string, unknown>): PublicSupervisorSummary {
-  const id = String(row.id ?? '')
-  const fullName = String(row.fullName ?? '')
+  const professionalSummary = row.professionalSummary
+    ? String(row.professionalSummary).trim()
+    : null
+  const describeYourself = row.describeYourself ? String(row.describeYourself).trim() : null
+  // The dedicated profile endpoint returns a pre-merged `bio` field;
+  // the search endpoint returns the raw columns — support both.
+  const bio = row.bio ? String(row.bio).trim() : professionalSummary || describeYourself || ''
+
   return {
-    id,
-    fullName,
+    id: String(row.id ?? ''),
+    fullName: String(row.fullName ?? ''),
     city: String(row.city ?? ''),
     state: String(row.state ?? ''),
     licenseType: String(row.licenseType ?? ''),
     supervisorType: String(row.supervisorType ?? row.profession ?? ''),
     specialty: String(row.specialty ?? ''),
-    bio: String(row.professionalSummary ?? row.describeYourself ?? '').trim(),
+    bio,
+    professionalSummary,
+    describeYourself,
     profilePhotoUrl: (row.profilePhotoUrl as string | null) ?? null,
     yearsOfExperience: String(row.yearsOfExperience ?? ''),
     acceptingSupervisees: Boolean(row.acceptingSupervisees),
     supervisionFormat: String(row.supervisionFormat ?? ''),
+    stateOfLicensure: Array.isArray(row.stateOfLicensure) ? (row.stateOfLicensure as string[]) : [],
+    certification: Array.isArray(row.certification) ? (row.certification as string[]) : [],
+    updatedAt: row.updatedAt ? String(row.updatedAt) : undefined,
   }
 }
 
-type SearchParams = {
+export type PublicSearchParams = {
   stateOfLicensure?: string
   /** Full state name (e.g. "California") sent alongside the abbreviation as a fallback,
    *  because some supervisors may have saved their state as a full name during signup. */
   stateFullName?: string
   licenseType?: string
+  /** Supervisor type name from the hierarchy (e.g. "Collaborating Physician"). */
+  supervisorType?: string
+  /** Supervision format: "VIRTUAL" | "IN_PERSON" | "HYBRID" */
+  supervisionFormat?: string
+  /** City name for city-scoped searches. */
+  city?: string
+  /** Free-text keyword search (name, specialty, etc.). */
+  keywords?: string
   page?: number
   limit?: number
 }
@@ -91,7 +111,7 @@ type SearchParams = {
  * Returns an empty result on any error — never throws.
  */
 export async function fetchPublicSupervisors(
-  params: SearchParams = {},
+  params: PublicSearchParams = {},
 ): Promise<PublicSupervisorSearchResult> {
   try {
     const query = new URLSearchParams()
@@ -105,6 +125,10 @@ export async function fetchPublicSupervisors(
       query.set('stateOfLicensure', stateParam)
     }
     if (params.licenseType) query.set('licenseType', params.licenseType)
+    if (params.supervisorType) query.set('supervisorType', params.supervisorType)
+    if (params.supervisionFormat) query.set('supervisionFormat', params.supervisionFormat)
+    if (params.city?.trim()) query.set('city', params.city.trim())
+    if (params.keywords?.trim()) query.set('keywords', params.keywords.trim())
     query.set('page', String(params.page ?? 1))
     query.set('limit', String(params.limit ?? 20))
     // Always send acceptingSupervisees=true for public SEO pages.
@@ -166,7 +190,7 @@ export async function fetchAllPublicSupervisorIds(): Promise<
     while (hasMore && page <= MAX_PAGES) {
       const { supervisors, meta } = await fetchPublicSupervisors({ page, limit: 20 })
       for (const s of supervisors) {
-        results.push({ id: s.id, state: s.state })
+        results.push({ id: s.id, state: s.state, updatedAt: s.updatedAt })
       }
       hasMore = meta.hasNextPage
       page++
@@ -179,37 +203,36 @@ export async function fetchAllPublicSupervisorIds(): Promise<
 }
 
 /**
- * Finds a single supervisor by ID by searching within their state.
- * Paginates up to MAX_LOOKUP_PAGES pages to find the supervisor.
- * Returns null if not found or on any error — never throws.
- *
- * NOTE: This is a workaround until a dedicated public profile endpoint exists:
- *   TODO (Backend): GET /api/supervision/supervisor/public-profile?id=<id>
+ * Fetches a single supervisor's public profile directly by UUID.
+ * Uses the dedicated GET /supervision/supervisor/public-profile?id=<uuid> endpoint.
+ * Returns null when the supervisor does not exist, is not approved/visible,
+ * or on any network error — never throws.
  */
 export async function fetchPublicSupervisorById(
   supervisorId: string,
-  stateAbbreviation: string,
 ): Promise<PublicSupervisorSummary | null> {
-  const MAX_LOOKUP_PAGES = 10
   try {
-    let page = 1
-    let hasMore = true
+    const url = `${API_BASE_URL}/supervision/supervisor/public-profile?id=${encodeURIComponent(supervisorId)}`
 
-    while (hasMore && page <= MAX_LOOKUP_PAGES) {
-      const { supervisors, meta } = await fetchPublicSupervisors({
-        stateOfLicensure: stateAbbreviation,
-        page,
-        limit: 20,
-      })
+    const res = await fetch(url, {
+      next: { revalidate: 3600 },
+      headers: { Accept: 'application/json' },
+    })
 
-      const match = supervisors.find((s) => s.id === supervisorId)
-      if (match) return match
+    if (res.status === 404) return null
 
-      hasMore = meta.hasNextPage
-      page++
+    if (!res.ok) {
+      console.warn(
+        `[public-supervisors] public-profile returned ${res.status} for id: ${supervisorId}`,
+      )
+      return null
     }
 
-    return null
+    const json = (await res.json()) as { success?: boolean; data?: Record<string, unknown> }
+
+    if (!json.success || !json.data) return null
+
+    return parseRow(json.data)
   } catch (err) {
     console.error('[public-supervisors] fetchPublicSupervisorById error:', err)
     return null

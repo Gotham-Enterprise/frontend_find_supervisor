@@ -22,7 +22,7 @@ export function generateWebSiteJsonLd(): JsonLdObject {
     name: SITE_NAME,
     url: SITE_URL,
     description:
-      'Find licensed clinical supervisors by location, license type, specialty, and supervision needs.',
+      'Find licensed healthcare supervisors, collaborating physicians, and supervising physicians by state, specialty, occupation, and supervision format.',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
@@ -42,7 +42,7 @@ export function generateOrganizationJsonLd(): JsonLdObject {
     url: SITE_URL,
     logo: `${SITE_URL}/logo.png`,
     description:
-      'The leading platform for connecting mental health and healthcare professionals with licensed clinical supervisors.',
+      'The leading platform for connecting healthcare professionals with licensed supervisors, collaborating physicians, and supervising physicians.',
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer support',
@@ -61,6 +61,8 @@ interface SupervisorJsonLdInput {
   city?: string | null
   state?: string | null
   licenseType?: string | null
+  /** Supervisor type name from the hierarchy (e.g. "Collaborating Physician", "Supervising Physician", "Mental Health Counselors"). */
+  supervisorType?: string | null
   specialty?: string | null
   bio?: string | null
   profilePhotoUrl?: string | null
@@ -73,18 +75,25 @@ interface SupervisorJsonLdInput {
   } | null
 }
 
+/** Resolves the jobTitle for JSON-LD based on supervisor type and license type. */
+function resolveJobTitle(supervisorType?: string | null, licenseType?: string | null): string {
+  if (supervisorType === 'Collaborating Physician') return 'Collaborating Physician'
+  if (supervisorType === 'Supervising Physician') return 'Supervising Physician'
+  return [licenseType, 'Supervisor'].filter(Boolean).join(' ') || 'Supervisor'
+}
+
 export function generateSupervisorJsonLd(supervisor: SupervisorJsonLdInput): JsonLdObject {
   const stateSlug = supervisor.state ? stateAbbreviationToSlug(supervisor.state) : null
   const profileUrl = stateSlug
     ? canonicalUrl(`/supervisors/${stateSlug}/${supervisor.id}`)
-    : canonicalUrl(`/supervisors/profile/${supervisor.id}`)
+    : canonicalUrl(`/supervisors/${supervisor.id}`)
 
   const schema: JsonLdObject = {
     '@context': 'https://schema.org',
     '@type': 'Person',
     name: supervisor.fullName ?? 'Supervisor',
     url: profileUrl,
-    jobTitle: [supervisor.licenseType, 'Clinical Supervisor'].filter(Boolean).join(' '),
+    jobTitle: resolveJobTitle(supervisor.supervisorType, supervisor.licenseType),
     description: supervisor.bio ?? undefined,
   }
 

@@ -1,16 +1,20 @@
 /**
  * Unified dynamic route for /supervisors/[state]/[slug]
  *
- * Handles two distinct page types at build/request time:
+ * Handles three distinct page types at build/request time:
  *
  *  1. License-type pages  — slug is a known license slug (e.g. "lcsw")
  *     URL: /supervisors/texas/lcsw
  *
- *  2. Supervisor profile pages — slug is a UUID (e.g. "46e0579d-...")
+ *  2. Supervisor-type pSEO pages — slug is a known supervisor type slug
+ *     URL: /supervisors/texas/collaborating-physicians
+ *     URL: /supervisors/texas/supervising-physicians
+ *     URL: /supervisors/texas/mental-health-counselor-supervisors
+ *
+ *  3. Supervisor profile pages — slug is a UUID (e.g. "46e0579d-...")
  *     URL: /supervisors/california/46e0579d-ec2f-4893-8277-7e4e6220757d
  *
- * Detection is unambiguous: UUIDs match a strict regex; license slugs are
- * short alphabetic strings drawn from a known list.
+ * Detection priority: UUID → supervisor-type slug → license slug → 404
  */
 
 import type { Metadata } from 'next'
@@ -24,21 +28,58 @@ import { SupervisorCard } from '@/components/seo/SupervisorCard'
 import type { PublicSupervisorSummary } from '@/lib/api/public-supervisors'
 import { fetchPublicSupervisorById, fetchPublicSupervisors } from '@/lib/api/public-supervisors'
 import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
-import { getLicenseFaqs } from '@/lib/seo/faq-data'
+import { getLicenseFaqs, getSupervisorTypeFaqs } from '@/lib/seo/faq-data'
 import { generateSupervisorJsonLd } from '@/lib/seo/jsonld'
 import {
   isUUID,
   isValidLicenseSlug,
   isValidStateSlug,
+  isValidSupervisorTypeSlug,
   LICENSE_TYPE_SLUGS,
   licenseSlugToLabel,
+  stateAbbreviationToDisplayName,
   stateSlugToAbbreviation,
   stateSlugToDisplayName,
+  SUPERVISOR_TYPE_PAGE_SLUG_MAP,
   TOP_LICENSE_SLUGS_FOR_STATE,
   US_STATES,
 } from '@/lib/seo/routes'
 
 const MIN_SUPERVISORS_TO_INDEX = 3
+
+// ---------------------------------------------------------------------------
+// Helpers for type-aware metadata copy
+// ---------------------------------------------------------------------------
+
+/** Builds a human-readable label for a supervisor based on their type and license. */
+function buildSupervisorTypeLabel(
+  supervisorType?: string | null,
+  licenseType?: string | null,
+): string {
+  if (supervisorType === 'Collaborating Physician') return 'Collaborating Physician'
+  if (supervisorType === 'Supervising Physician') return 'Supervising Physician'
+  return [licenseType, 'Supervisor'].filter(Boolean).join(' ') || 'Supervisor'
+}
+
+/** Builds a page title for a supervisor-type pSEO page. */
+function buildSupervisorTypePageTitle(typeSlug: string, stateName: string): string {
+  if (typeSlug === 'collaborating-physicians')
+    return `Collaborating Physicians in ${stateName} | Find A Supervisor`
+  if (typeSlug === 'supervising-physicians')
+    return `Supervising Physicians in ${stateName} | Find A Supervisor`
+  return `Mental Health Counselor Supervisors in ${stateName} | Find A Supervisor`
+}
+
+/** Builds a meta description for a supervisor-type pSEO page. */
+function buildSupervisorTypePageDescription(typeSlug: string, stateName: string): string {
+  if (typeSlug === 'collaborating-physicians') {
+    return `Find collaborating physicians in ${stateName}. Browse verified collaborating physicians by specialty, availability, and format. Ideal for nurse practitioners seeking physician collaboration agreements.`
+  }
+  if (typeSlug === 'supervising-physicians') {
+    return `Find supervising physicians in ${stateName}. Browse verified supervising physicians by specialty, availability, and format. Ideal for physician assistants seeking physician supervision.`
+  }
+  return `Find mental health counselor supervisors in ${stateName}. Browse licensed supervisors for LCSWs, LMFTs, LPCs, LMHCs, and other mental health professionals by specialty and supervision format.`
+}
 
 interface Props {
   params: Promise<{ state: string; slug: string }>
@@ -73,14 +114,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   // Supervisor profile page — try to fetch real data for rich metadata
   if (isUUID(slug)) {
-    const stateAbbreviation = stateSlugToAbbreviation(stateSlug) ?? stateSlug.toUpperCase()
-    const supervisor = await fetchPublicSupervisorById(slug, stateAbbreviation)
+    const supervisor = await fetchPublicSupervisorById(slug)
 
     if (supervisor) {
-      const titleParts = [supervisor.licenseType, 'Supervisor'].filter(Boolean).join(' ')
+      const typeLabel = buildSupervisorTypeLabel(supervisor.supervisorType, supervisor.licenseType)
+      const isPhysicianType =
+        supervisor.supervisorType === 'Collaborating Physician' ||
+        supervisor.supervisorType === 'Supervising Physician'
       return buildMetadata({
-        title: `${supervisor.fullName} — ${titleParts} in ${stateName}`,
-        description: `View ${supervisor.fullName}'s supervision profile — license type, specialties, experience, and availability in ${stateName}. Connect with verified supervisors on ${SITE_NAME}.`,
+        title: `${supervisor.fullName} — ${typeLabel} in ${stateName} | ${SITE_NAME}`,
+        description: isPhysicianType
+          ? `View ${supervisor.fullName}'s ${typeLabel} profile, specialties, location, availability, format, and professional background.`
+          : `View ${supervisor.fullName}'s supervision profile — license type, specialties, experience, and availability in ${stateName}. Connect with verified supervisors on ${SITE_NAME}.`,
         path: `/supervisors/${stateSlug}/${slug}`,
         ogImage: supervisor.profilePhotoUrl ?? undefined,
       })
@@ -88,14 +133,49 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     return buildMetadata({
       title: `Supervisor Profile | ${stateName} | ${SITE_NAME}`,
-      description: `View this clinical supervisor's credentials, license states, specialties, and availability in ${stateName} on ${SITE_NAME}.`,
+      description: `View this supervisor's credentials, specialties, and availability in ${stateName} on ${SITE_NAME}.`,
       path: `/supervisors/${stateSlug}/${slug}`,
+    })
+  }
+
+  // Supervisor-type pSEO page (e.g. /supervisors/texas/collaborating-physicians)
+  if (isValidSupervisorTypeSlug(slug)) {
+    const typePageTitle = buildSupervisorTypePageTitle(slug, stateName)
+    const typePageDesc = buildSupervisorTypePageDescription(slug, stateName)
+
+    const { supervisors } = await fetchPublicSupervisors({
+      stateOfLicensure: stateSlugToAbbreviation(stateSlug) ?? stateSlug.toUpperCase(),
+      stateFullName: stateName,
+      limit: MIN_SUPERVISORS_TO_INDEX,
+    })
+
+    if (supervisors.length < MIN_SUPERVISORS_TO_INDEX) {
+      return { robots: { index: false, follow: true } }
+    }
+
+    return buildMetadata({
+      title: typePageTitle,
+      description: typePageDesc,
+      path: `/supervisors/${stateSlug}/${slug}`,
+      og: { type: 'website' },
     })
   }
 
   // License-type page
   if (isValidLicenseSlug(slug)) {
     const licenseLabel = licenseSlugToLabel(slug)
+
+    const { supervisors } = await fetchPublicSupervisors({
+      stateOfLicensure: stateSlugToAbbreviation(stateSlug) ?? stateSlug.toUpperCase(),
+      stateFullName: stateName,
+      licenseType: licenseLabel,
+      limit: MIN_SUPERVISORS_TO_INDEX,
+    })
+
+    if (supervisors.length < MIN_SUPERVISORS_TO_INDEX) {
+      return { robots: { index: false, follow: true } }
+    }
+
     return buildMetadata({
       title: `${licenseLabel} Supervisors in ${stateName}`,
       description: `Find ${licenseLabel} supervisors in ${stateName}. Browse verified ${licenseLabel} supervisors by specialty and supervision format. Connect with the right supervisor for your licensure on ${SITE_NAME}.`,
@@ -117,6 +197,10 @@ export default async function StateSlugPage({ params }: Props) {
 
   if (isUUID(slug)) {
     return <SupervisorProfileView stateSlug={stateSlug} supervisorId={slug} />
+  }
+
+  if (isValidSupervisorTypeSlug(slug)) {
+    return <SupervisorTypeView stateSlug={stateSlug} typeSlug={slug} />
   }
 
   if (isValidLicenseSlug(slug)) {
@@ -284,6 +368,180 @@ async function LicenseTypeView({
 }
 
 // ---------------------------------------------------------------------------
+// Supervisor-type pSEO view
+// ---------------------------------------------------------------------------
+
+async function SupervisorTypeView({
+  stateSlug,
+  typeSlug,
+}: {
+  stateSlug: string
+  typeSlug: string
+}) {
+  const stateName = stateSlugToDisplayName(stateSlug)
+  const stateAbbreviation = stateSlugToAbbreviation(stateSlug) ?? stateSlug.toUpperCase()
+  const typeName =
+    SUPERVISOR_TYPE_PAGE_SLUG_MAP[typeSlug as keyof typeof SUPERVISOR_TYPE_PAGE_SLUG_MAP] ??
+    typeSlug
+
+  const { supervisors, meta } = await fetchPublicSupervisors({
+    stateOfLicensure: stateAbbreviation,
+    stateFullName: stateName,
+    limit: 20,
+  })
+
+  const faqs = getSupervisorTypeFaqs(typeSlug, stateName)
+  const shouldIndex = supervisors.length >= MIN_SUPERVISORS_TO_INDEX
+
+  const heading = buildSupervisorTypePageTitle(typeSlug, stateName).split(' | ')[0]
+
+  const breadcrumbs = [
+    { name: 'Home', href: '/' },
+    { name: 'Supervisors', href: '/supervisors' },
+    { name: stateName, href: `/supervisors/${stateSlug}` },
+    { name: typeName, href: `/supervisors/${stateSlug}/${typeSlug}` },
+  ]
+
+  const aboutText = (() => {
+    if (typeSlug === 'collaborating-physicians') {
+      return `Collaborating physicians partner with nurse practitioners and other advanced practice providers to fulfill state-mandated collaboration requirements. ${stateName} state regulations define the scope and structure of collaboration agreements. Use ${SITE_NAME} to find collaborating physicians currently accepting new collaborative partners in ${stateName}.`
+    }
+    if (typeSlug === 'supervising-physicians') {
+      return `Supervising physicians work with physician assistants to meet state-mandated supervision requirements. The ${stateName} licensing board sets the standards for supervisory relationships between PAs and physicians. Use ${SITE_NAME} to find supervising physicians currently accepting new supervisees in ${stateName}.`
+    }
+    return `Mental health counselor supervisors provide the clinical oversight required for LCSWs, LMFTs, LPCs, LMHCs, and other mental health professionals to advance toward full licensure. ${stateName}'s state licensing board defines the required supervision hours, supervisor qualifications, and documentation standards.`
+  })()
+
+  return (
+    <>
+      {!shouldIndex && <meta name="robots" content="noindex, follow" />}
+
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+        <Breadcrumb items={breadcrumbs} className="mb-6" />
+
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            {heading}
+          </h1>
+          <p className="mt-3 max-w-2xl text-lg text-muted-foreground">
+            {buildSupervisorTypePageDescription(typeSlug, stateName)}
+          </p>
+          {meta.totalCount > 0 && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {meta.totalCount} result{meta.totalCount !== 1 ? 's' : ''} found in {stateName}
+            </p>
+          )}
+        </header>
+
+        <nav aria-label="Browse other supervisor types" className="mb-8">
+          <p className="mb-2 text-sm font-medium text-foreground">Other Supervisor Types</p>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(SUPERVISOR_TYPE_PAGE_SLUG_MAP)
+              .filter(([s]) => s !== typeSlug)
+              .map(([s, label]) => (
+                <Link
+                  key={s}
+                  href={`/supervisors/${stateSlug}/${s}`}
+                  className="rounded-full border px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                >
+                  {label} in {stateName}
+                </Link>
+              ))}
+          </div>
+        </nav>
+
+        {supervisors.length === 0 ? (
+          <div className="rounded-xl border border-dashed py-16 text-center">
+            <p className="font-medium text-foreground">No results found in {stateName} yet.</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              New supervisors and physicians join regularly. Sign in to search across all available
+              listings.
+            </p>
+            <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              <Link
+                href="/login"
+                className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                Sign in to search
+              </Link>
+              <Link
+                href={`/supervisors/${stateSlug}`}
+                className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-6 text-sm font-medium transition-colors hover:bg-accent"
+              >
+                All supervisors in {stateName}
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <>
+            <section aria-labelledby="type-supervisors-heading">
+              <h2 id="type-supervisors-heading" className="sr-only">
+                {heading}
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {supervisors.map((supervisor) => (
+                  <SupervisorCard
+                    key={supervisor.id}
+                    supervisor={supervisor}
+                    stateSlug={stateSlug}
+                  />
+                ))}
+              </div>
+            </section>
+
+            {meta.totalCount > supervisors.length && (
+              <div className="mt-8 text-center">
+                <Link
+                  href="/login?redirect=/find-supervisors"
+                  className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  Sign in to see all {meta.totalCount} results
+                </Link>
+              </div>
+            )}
+          </>
+        )}
+
+        <section aria-labelledby="about-type-heading" className="mt-12 rounded-xl bg-muted/40 p-6">
+          <h2 id="about-type-heading" className="text-xl font-bold text-foreground">
+            About {typeName} in {stateName}
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{aboutText}</p>
+        </section>
+
+        <FaqSection faqs={faqs} heading={`${typeName} FAQs — ${stateName}`} />
+
+        <section aria-labelledby="related-states-heading" className="mt-12">
+          <h2 id="related-states-heading" className="text-lg font-semibold text-foreground">
+            {typeName} in Other States
+          </h2>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {POPULAR_STATES.filter((s) => s.slug !== stateSlug).map(({ label, slug: s }) => (
+              <Link
+                key={s}
+                href={`/supervisors/${s}/${typeSlug}`}
+                className="rounded-md border px-3 py-1 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                {typeName} in {label}
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <div className="mt-8">
+          <Link
+            href={`/supervisors/${stateSlug}`}
+            className="text-sm font-medium text-primary transition-colors hover:underline"
+          >
+            ← All supervisors in {stateName}
+          </Link>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Supervisor profile view
 // ---------------------------------------------------------------------------
 
@@ -296,14 +554,15 @@ async function SupervisorProfileView({
 }) {
   const stateName = stateSlugToDisplayName(stateSlug)
   const stateAbbreviation = stateSlugToAbbreviation(stateSlug) ?? stateSlug.toUpperCase()
-  const supervisor = await fetchPublicSupervisorById(supervisorId, stateAbbreviation)
+  const supervisor = await fetchPublicSupervisorById(supervisorId)
 
   const jsonLd = generateSupervisorJsonLd({
     id: supervisorId,
-    fullName: supervisor?.fullName ?? 'Clinical Supervisor',
+    fullName: supervisor?.fullName ?? 'Supervisor',
     state: stateAbbreviation,
     city: supervisor?.city ?? null,
     licenseType: supervisor?.licenseType ?? null,
+    supervisorType: supervisor?.supervisorType ?? null,
     bio: supervisor?.bio ?? null,
     profilePhotoUrl: supervisor?.profilePhotoUrl ?? null,
   })
@@ -440,11 +699,64 @@ function SupervisorPublicProfile({
         {supervisor.specialty && <ProfileDetail label="Specialty" value={supervisor.specialty} />}
       </div>
 
-      {/* Bio */}
+      {/* Bio — professionalSummary if set, otherwise describeYourself */}
       {supervisor.bio && (
         <div className="border-t px-6 pb-6 pt-4">
           <p className="text-sm font-semibold text-foreground">About</p>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{supervisor.bio}</p>
+        </div>
+      )}
+
+      {/* Licensed in */}
+      {supervisor.stateOfLicensure.length > 0 && (
+        <div className="border-t bg-[#F0F7F3] px-6 py-5">
+          <div className="flex items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="size-4 shrink-0 text-[#006D36]"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            <p className="text-sm font-semibold text-[#006D36]">
+              Licensed in {supervisor.stateOfLicensure.length} state
+              {supervisor.stateOfLicensure.length > 1 ? 's' : ''}
+            </p>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {supervisor.stateOfLicensure.map((s) => (
+              <span
+                key={s}
+                className="rounded-md border border-[#006D36]/20 bg-white px-3 py-1 text-sm font-semibold text-[#006D36]"
+              >
+                {stateAbbreviationToDisplayName(s)}{' '}
+                <span className="font-normal opacity-70">({s.toUpperCase()})</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Certifications */}
+      {supervisor.certification.length > 0 && (
+        <div className="border-t px-6 pb-6 pt-4">
+          <p className="text-sm font-semibold text-foreground">Certifications & Approaches</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {supervisor.certification.map((c) => (
+              <span
+                key={c}
+                className="rounded-md border bg-muted/40 px-2.5 py-0.5 text-xs font-medium text-foreground"
+              >
+                {formatCertification(c)}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
@@ -486,6 +798,42 @@ function formatEnum(value: string): string {
     .replace(/_/g, ' ')
     .toLowerCase()
     .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+const KNOWN_ACRONYMS = new Set([
+  'ACT',
+  'CBT',
+  'DBT',
+  'EMDR',
+  'EFT',
+  'IFS',
+  'REBT',
+  'SFBT',
+  'CPT',
+  'PE',
+  'MBSR',
+  'MBCT',
+  'ABA',
+  'CRT',
+  'TF',
+  'PCIT',
+  'MI',
+  'AEDP',
+  'ISTDP',
+  'RET',
+  'CSAT',
+  'NLP',
+])
+
+function formatCertification(value: string): string {
+  return value
+    .split('_')
+    .map((word) =>
+      KNOWN_ACRONYMS.has(word.toUpperCase())
+        ? word.toUpperCase()
+        : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
+    )
+    .join(' ')
 }
 
 function initials(name: string): string {

@@ -13,7 +13,20 @@ interface GuestOnlyRouteGuardProps {
 }
 
 /**
- * Guest-only entry pages (login, signup): if a session exists, send the user to their dashboard.
+ * Reads the `?redirect=` query param and returns it if it is a safe internal path.
+ * Falls back to the role-based dashboard path.
+ */
+function resolvePostLoginPath(role: string): string {
+  if (typeof window === 'undefined') return getDashboardPathForRole(role)
+  const params = new URLSearchParams(window.location.search)
+  const redirect = params.get('redirect')
+  const isSafe = redirect && redirect.startsWith('/') && !redirect.startsWith('//')
+  return isSafe ? redirect : getDashboardPathForRole(role)
+}
+
+/**
+ * Guest-only entry pages (login, signup): if a session exists, send the user to their dashboard
+ * (or the `?redirect=` destination if present and safe).
  * Does not run on public marketing pages — only wrap routes that should be hidden once authenticated.
  *
  * Uses the same session probe as {@link ShellLayout}: `TOKEN_KEY` + `getMe()` (cookie-backed API).
@@ -40,7 +53,7 @@ export function GuestOnlyRouteGuard({ children }: GuestOnlyRouteGuardProps) {
       }
 
       if (user) {
-        if (!cancelled) router.replace(getDashboardPathForRole(user.role))
+        if (!cancelled) router.replace(resolvePostLoginPath(user.role))
         return
       }
 
@@ -49,7 +62,7 @@ export function GuestOnlyRouteGuard({ children }: GuestOnlyRouteGuardProps) {
         const u = await getMe()
         if (cancelled) return
         setUser(u)
-        router.replace(getDashboardPathForRole(u.role))
+        router.replace(resolvePostLoginPath(u.role))
       } catch {
         if (cancelled) return
         localStorage.removeItem(TOKEN_KEY)

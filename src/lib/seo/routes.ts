@@ -136,6 +136,16 @@ export function stateSlugToAbbreviation(slug: string): string | null {
   return US_STATES[slug.toLowerCase()] ?? null
 }
 
+/**
+ * Converts a 2-letter abbreviation to a full display name.
+ * e.g. "CA" → "California", "NY" → "New York"
+ * Returns the abbreviation unchanged if unknown.
+ */
+export function stateAbbreviationToDisplayName(abbreviation: string): string {
+  const slug = STATE_ABBREVIATION_TO_SLUG[abbreviation.toUpperCase()]
+  return slug ? stateSlugToDisplayName(slug) : abbreviation
+}
+
 /** Returns true if the slug corresponds to a valid US state. */
 export function isValidStateSlug(slug: string): boolean {
   return slug.toLowerCase() in US_STATES
@@ -191,3 +201,76 @@ export const TOP_LICENSE_SLUGS_FOR_STATE = [
 ] as const
 
 export type TopLicenseSlug = (typeof TOP_LICENSE_SLUGS_FOR_STATE)[number]
+
+// ---------------------------------------------------------------------------
+// Supervisor type slugs (pSEO + URL query params)
+// ---------------------------------------------------------------------------
+
+/**
+ * Maps URL query param values to the supervisor type name stored on profiles.
+ * Used to convert /supervisors?type=collaborating-physician → filter value.
+ */
+export const SUPERVISOR_TYPE_QUERY_MAP: Record<string, string> = {
+  'mental-health-counselor': 'Mental Health Counselors',
+  'collaborating-physician': 'Collaborating Physician',
+  'supervising-physician': 'Supervising Physician',
+}
+
+/** Reverse map: supervisor type name → URL slug. */
+export const SUPERVISOR_TYPE_TO_SLUG: Record<string, string> = Object.fromEntries(
+  Object.entries(SUPERVISOR_TYPE_QUERY_MAP).map(([slug, name]) => [name, slug]),
+)
+
+/**
+ * Supervisor type slugs for pSEO pages under /supervisors/[state]/[typeSlug].
+ * Used in sitemap generation and the supervisor type section on /supervisors.
+ */
+export const SUPERVISOR_TYPE_PAGE_SLUGS = [
+  'mental-health-counselor-supervisors',
+  'collaborating-physicians',
+  'supervising-physicians',
+] as const
+
+export type SupervisorTypePageSlug = (typeof SUPERVISOR_TYPE_PAGE_SLUGS)[number]
+
+/** Maps pSEO type page slugs to supervisor type names. */
+export const SUPERVISOR_TYPE_PAGE_SLUG_MAP: Record<SupervisorTypePageSlug, string> = {
+  'mental-health-counselor-supervisors': 'Mental Health Counselors',
+  'collaborating-physicians': 'Collaborating Physician',
+  'supervising-physicians': 'Supervising Physician',
+}
+
+/** Returns true if the slug is a known supervisor-type pSEO slug. */
+export function isValidSupervisorTypeSlug(slug: string): slug is SupervisorTypePageSlug {
+  return (SUPERVISOR_TYPE_PAGE_SLUGS as readonly string[]).includes(slug)
+}
+
+/**
+ * Supervisor type display cards for the /supervisors index page.
+ * Each entry links to /supervisors filtered by type via URL query param.
+ */
+export const SUPERVISOR_TYPE_SLUGS: Array<{
+  slug: string
+  label: string
+  description: string
+  href: string
+}> = [
+  {
+    slug: 'mental-health-counselor',
+    label: 'Mental Health Counselor Supervisors',
+    description: 'For LCSWs, LMFTs, LPCs, LMHCs, and other mental health professionals.',
+    href: '/supervisors?type=mental-health-counselor',
+  },
+  {
+    slug: 'collaborating-physician',
+    label: 'Collaborating Physicians',
+    description: 'For nurse practitioners seeking physician collaboration agreements.',
+    href: '/supervisors?type=collaborating-physician',
+  },
+  {
+    slug: 'supervising-physician',
+    label: 'Supervising Physicians',
+    description: 'For physician assistants seeking physician supervision.',
+    href: '/supervisors?type=supervising-physician',
+  },
+]
