@@ -73,7 +73,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   return buildMetadata({
-    title: `Healthcare Supervisors in ${stateName}`,
+    title: `Supervisors in ${stateName}`,
     description: `Find licensed healthcare supervisors, collaborating physicians, and supervising physicians in ${stateName}. Browse by specialty, occupation, and supervision format. Connect with verified ${stateName} supervisors on ${SITE_NAME}.`,
     path: `/supervisors/${stateSlug}`,
   })
@@ -123,7 +123,7 @@ export default async function StateSupervisorsPage({ params }: Props) {
         {/* Page header */}
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Healthcare Supervisors in {stateName}
+            Supervisors in {stateName}
           </h1>
           <p className="mt-3 max-w-2xl text-lg text-muted-foreground">
             Browse licensed supervisors, collaborating physicians, and supervising physicians in{' '}
