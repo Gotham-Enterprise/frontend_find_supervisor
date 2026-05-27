@@ -7,18 +7,81 @@ import { type SuperviseeFormValues } from '@/components/Signup/schema'
 import { superviseeFieldRules } from '@/components/Signup/superviseeFieldRules'
 import { Checkbox } from '@/components/ui/checkbox'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { FormInputField } from '@/components/ui/form-input-field'
+import { FormSelectField } from '@/components/ui/form-select-field'
 import { Textarea } from '@/components/ui/textarea'
+import type { SelectOption } from '@/lib/api/options'
+import {
+  SUPERVISEE_CREDENTIAL_TITLE_LABEL,
+  SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER,
+} from '@/lib/forms/supervisee-profile-edit'
+import { useSpecialtiesByOccupation } from '@/lib/hooks/useSignupOptions'
 
 type SuperviseeStepProfileTermsProps = {
+  occupationOptions: SelectOption[]
+  occupationsLoading: boolean
   isSubmitting: boolean
 }
 
-export function SuperviseeStepProfileTerms({ isSubmitting }: SuperviseeStepProfileTermsProps) {
-  const { control } = useFormContext<SuperviseeFormValues>()
+export function SuperviseeStepProfileTerms({
+  occupationOptions,
+  occupationsLoading,
+  isSubmitting,
+}: SuperviseeStepProfileTermsProps) {
+  const { control, setValue, clearErrors } = useFormContext<SuperviseeFormValues>()
   const descriptionValue = useWatch({ control, name: 'description' }) ?? ''
+  const occupationId = useWatch({ control, name: 'occupationId' }) ?? ''
+
+  const { data: specialtyOptions = [], isLoading: specialtiesLoading } =
+    useSpecialtiesByOccupation(occupationId)
 
   return (
     <FormSection title="Profile & Terms">
+      <FormInputField
+        control={control}
+        name="title"
+        label={SUPERVISEE_CREDENTIAL_TITLE_LABEL}
+        rules={superviseeFieldRules('title')}
+        placeholder={SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER}
+        isSubmitting={isSubmitting}
+        required
+      />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormSelectField
+          control={control}
+          name="occupationId"
+          label="Occupation"
+          rules={superviseeFieldRules('occupationId')}
+          options={occupationOptions}
+          placeholder="Select occupation"
+          loading={occupationsLoading}
+          isSubmitting={isSubmitting}
+          required
+          onValueChange={() => {
+            setValue('specialtyId', '')
+            clearErrors('specialtyId')
+          }}
+        />
+
+        <FormSelectField
+          control={control}
+          name="specialtyId"
+          label="Specialty"
+          options={specialtyOptions}
+          placeholder={
+            !occupationId
+              ? 'Select an occupation first'
+              : specialtyOptions.length === 0 && !specialtiesLoading
+                ? 'No specialties available'
+                : 'Select specialty'
+          }
+          loading={specialtiesLoading}
+          isSubmitting={isSubmitting || !occupationId}
+          selectKey={occupationId}
+        />
+      </div>
+
       <FormField
         control={control}
         name="description"

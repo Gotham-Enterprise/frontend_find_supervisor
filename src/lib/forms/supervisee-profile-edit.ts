@@ -34,9 +34,9 @@ export const editSuperviseeProfileSchema = z
     specialtyId: z.string().optional(),
     title: z.string().min(1, 'Credential or license type is required').max(100),
     stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
-    typeOfSupervisorNeeded: z
-      .array(z.string())
-      .min(1, 'Please select at least one type of supervision needed'),
+    typeOfSupervisorNeeded: z.string().min(1, 'Please select a type of supervision needed'),
+    superviseeOccupation: z.string().min(1, 'Occupation is required'),
+    superviseeSpecialty: z.string().optional(),
     howSoonLooking: z.string().min(1, 'Please select how soon you need a supervisor'),
     lookingDate: z.string().optional(),
     preferredFormat: z.string().min(1, 'Preferred format is required'),
@@ -82,7 +82,9 @@ export function getDefaultSuperviseeProfileFormValues(
     specialtyId: defaultSpecialtyId,
     title: profile.title ?? '',
     stateOfLicensure: profile.user.stateOfLicensure ?? [],
-    typeOfSupervisorNeeded: coerceStringList(profile.typeOfSupervisorNeeded),
+    typeOfSupervisorNeeded: coerceStringList(profile.typeOfSupervisorNeeded)[0] ?? '',
+    superviseeOccupation: profile.superviseeOccupation ?? '',
+    superviseeSpecialty: profile.superviseeSpecialty ?? '',
     howSoonLooking: profile.howSoonLooking ?? '',
     lookingDate: profile.lookingDate ? profile.lookingDate.slice(0, 10) : '',
     preferredFormat: profile.preferredFormat ?? '',
@@ -111,8 +113,11 @@ export function superviseeProfileFormValuesToPayload(
     specialty: values.specialtyId || undefined,
     title: values.title.trim() || undefined,
     stateOfLicensure: values.stateOfLicensure,
-    typeOfSupervisorNeeded:
-      values.typeOfSupervisorNeeded.length > 0 ? values.typeOfSupervisorNeeded : undefined,
+    typeOfSupervisorNeeded: values.typeOfSupervisorNeeded
+      ? [values.typeOfSupervisorNeeded]
+      : undefined,
+    superviseeOccupation: values.superviseeOccupation || undefined,
+    superviseeSpecialty: values.superviseeSpecialty || undefined,
     howSoonLooking: values.howSoonLooking || undefined,
     lookingDate:
       values.howSoonLooking === 'CUSTOM_DATE' ? values.lookingDate || undefined : undefined,

@@ -2,6 +2,33 @@ import { apiClient } from './client'
 
 export type SelectOption = { label: string; value: string }
 
+export type SupervisorSpecialtyData = {
+  id: string
+  occupationId: string
+  name: string
+}
+
+export type SupervisorLicenseTypeData = {
+  id: string
+  occupationId: string
+  name: string
+}
+
+export type SupervisorOccupationData = {
+  id: string
+  supervisorTypeId: string
+  name: string
+  specialties: SupervisorSpecialtyData[]
+  licenseTypes: SupervisorLicenseTypeData[]
+}
+
+export type SupervisorTypeData = {
+  id: string
+  code: string
+  name: string
+  occupations: SupervisorOccupationData[]
+}
+
 type RawOption =
   | string
   | { label: string; value: string }
@@ -57,6 +84,13 @@ export async function fetchOptions(param: OptionsParam): Promise<SelectOption[]>
     { params: { param } },
   )
   return Array.isArray(res.data) ? res.data.map(normalizeOption) : []
+}
+
+export async function fetchSupervisorTypesData(): Promise<SupervisorTypeData[]> {
+  const { data: res } = await apiClient.get<{ success: boolean; data: SupervisorTypeData[] }>(
+    '/supervision/supervisor-type',
+  )
+  return Array.isArray(res.data) ? res.data : []
 }
 
 /**

@@ -8,7 +8,6 @@ import { buttonVariants } from '@/components/ui/button'
 import {
   useAvailabilityOptions,
   useCertificateOptions,
-  useLicenseTypeOptions,
   usePatientPopulationOptions,
   useStatesOptions,
 } from '@/lib/hooks'
@@ -46,7 +45,6 @@ export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePagePro
   const { data: profile, isLoading, isError } = useSupervisor(supervisorId)
   const { data: certificationOptions = [] } = useCertificateOptions()
   const { data: patientPopulationOptions = [] } = usePatientPopulationOptions()
-  const { data: licenseTypeOptions = [] } = useLicenseTypeOptions()
   const { data: stateOptions = [] } = useStatesOptions()
   const { data: availabilityOptions = [] } = useAvailabilityOptions()
   if (isLoading) {
@@ -109,7 +107,6 @@ export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePagePro
           profile={profile}
           certificationOptions={certificationOptions}
           patientPopulationOptions={patientPopulationOptions}
-          licenseTypeOptions={licenseTypeOptions}
           stateOptions={stateOptions}
         />
 

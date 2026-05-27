@@ -78,16 +78,13 @@ export function formatFeeType(feeType: string | null | undefined): string {
 // ─── Enum label resolution ────────────────────────────────────────────────────
 
 /**
- * Best-effort label for stored API enum codes (`SCREAMING_SNAKE_CASE` or long `ALL CAPS`).
- * Leaves normal phrases (mixed case, spaces, short acronyms like ACT) unchanged.
+ * Best-effort label for stored API enum codes (`SCREAMING_SNAKE_CASE`).
+ * Leaves credentials, acronyms, and normal phrases (e.g. LCMFT, LMFT, mixed case) unchanged.
  */
 export function humanizeScreamingSnakeCase(raw: string): string {
   const s = raw.trim()
   if (!s) return s
-  const hasUnderscore = s.includes('_')
-  const allCapsToken = /^[A-Z0-9]+$/.test(s)
-  const isLikelyEnumCode = hasUnderscore || (allCapsToken && s.length >= 5)
-  if (!isLikelyEnumCode) return s
+  if (!s.includes('_')) return s
   return s
     .split('_')
     .filter(Boolean)
@@ -170,12 +167,14 @@ const LEGACY_SUPERVISOR_TYPE_LABELS: Record<string, string> = {
 /** When options are still loading or the API adds a code not yet in the list — no parallel enum map. */
 function humanizeSupervisorTypeFallback(raw: string): string {
   return raw
-    .split('_')
+    .split(/[_ ]/)
+    .filter(Boolean)
     .map((part) => {
+      // Keep short ALL-CAPS acronyms (e.g. LPC, ACS) unchanged
       if (part.length >= 2 && part.length <= 6 && part === part.toUpperCase()) {
         return part
       }
-      return part.charAt(0) + part.slice(1).toLowerCase()
+      return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
     })
     .join(' ')
 }

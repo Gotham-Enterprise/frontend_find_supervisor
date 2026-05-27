@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
 
 import { FormSection } from '@/components/Signup/FormSection'
@@ -10,7 +11,7 @@ import { FormInputField } from '@/components/ui/form-input-field'
 import { FormSelectField } from '@/components/ui/form-select-field'
 import { TagInput } from '@/components/ui/tag-input'
 import { UploadFile } from '@/components/ui/upload-file'
-import type { SelectOption } from '@/lib/api/options'
+import type { SelectOption, SupervisorTypeData } from '@/lib/api/options'
 
 /** Select does not allow `SelectItem value=""`; map to empty `specialtyId` in the form. */
 const SPECIALTY_NONE_VALUE = '__none__'
@@ -21,64 +22,109 @@ const yearsOfExperienceSelectOptions: SelectOption[] = yearsOfExperienceOptions.
 }))
 
 type SupervisorStepLicenseCredentialsProps = {
-  occupationOptions: SelectOption[]
-  specialtyOptions: SelectOption[]
-  licenseTypeOptions: SelectOption[]
   supervisorTypeOptions: SelectOption[]
+  supervisorTypesData: SupervisorTypeData[]
   certificateOptions: SelectOption[]
   stateOptions: SelectOption[]
-  occupationsLoading: boolean
-  specialtiesLoading: boolean
-  licenseTypesLoading: boolean
   supervisorTypesLoading: boolean
   certificatesLoading: boolean
   isSubmitting: boolean
 }
 
 export function SupervisorStepLicenseCredentials({
-  occupationOptions,
-  specialtyOptions,
-  licenseTypeOptions,
   supervisorTypeOptions,
+  supervisorTypesData,
   certificateOptions,
   stateOptions,
-  occupationsLoading,
-  specialtiesLoading,
-  licenseTypesLoading,
   supervisorTypesLoading,
   certificatesLoading,
   isSubmitting,
 }: SupervisorStepLicenseCredentialsProps) {
-  const { control, clearErrors } = useFormContext<SupervisorFormValues>()
-  const occupationId = useWatch({ control, name: 'occupationId' }) ?? ''
-  const specialtyDisabled = occupationsLoading || specialtiesLoading || occupationId.length === 0
+  const { control, clearErrors, setValue } = useFormContext<SupervisorFormValues>()
+  const supervisorType = useWatch({ control, name: 'supervisorType' }) ?? ''
+  const supervisorOccupationId = useWatch({ control, name: 'supervisorOccupationId' }) ?? ''
+
+  // Derive occupation options directly from the hierarchy for the selected supervisor type.
+  const occupationOptions = useMemo<SelectOption[]>(() => {
+    if (!supervisorType) return []
+    const selectedType = supervisorTypesData.find((t) => t.name === supervisorType)
+    return selectedType?.occupations.map((o) => ({ label: o.name, value: o.name })) ?? []
+  }, [supervisorType, supervisorTypesData])
+
+  // Derive license type options from the hierarchy for the selected occupation.
+  const licenseTypeOptions = useMemo<SelectOption[]>(() => {
+    if (!supervisorOccupationId) return []
+    const selectedType = supervisorTypesData.find((t) => t.name === supervisorType)
+    const selectedOccupation = selectedType?.occupations.find(
+      (o) => o.name === supervisorOccupationId,
+    )
+    return selectedOccupation?.licenseTypes.map((l) => ({ label: l.name, value: l.name })) ?? []
+  }, [supervisorType, supervisorOccupationId, supervisorTypesData])
+
+  // Derive specialty options from the hierarchy for the selected occupation.
+  const specialtyOptions = useMemo<SelectOption[]>(() => {
+    if (!supervisorType || !supervisorOccupationId) return []
+    const selectedType = supervisorTypesData.find((t) => t.name === supervisorType)
+    const selectedOccupation = selectedType?.occupations.find(
+      (o) => o.name === supervisorOccupationId,
+    )
+    return selectedOccupation?.specialties.map((s) => ({ label: s.name, value: s.name })) ?? []
+  }, [supervisorType, supervisorOccupationId, supervisorTypesData])
+
+  const occupationDisabled = supervisorTypesLoading || !supervisorType
+  const licenseTypeDisabled = supervisorTypesLoading || !supervisorOccupationId
+  const specialtyDisabled = supervisorTypesLoading || supervisorOccupationId.length === 0
 
   return (
     <FormSection title="License & Credentials">
+      <FormSelectField
+        control={control}
+        name="supervisorType"
+        label="Supervisor Type"
+        rules={supervisorFieldRules('supervisorType')}
+        options={supervisorTypeOptions}
+        placeholder={supervisorTypesLoading ? 'Loading…' : 'Select supervisor type'}
+        loading={supervisorTypesLoading}
+        isSubmitting={isSubmitting}
+        required
+        onValueChange={() => {
+          setValue('supervisorOccupationId', '')
+          setValue('supervisorSpecialtyId', '')
+          setValue('licenseType', '')
+          clearErrors(['supervisorOccupationId', 'supervisorSpecialtyId', 'licenseType'])
+        }}
+      />
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormSelectField
           control={control}
-          name="occupationId"
+          name="supervisorOccupationId"
           label="Occupation"
-          rules={supervisorFieldRules('occupationId')}
+          rules={supervisorFieldRules('supervisorOccupationId')}
           options={occupationOptions}
-          placeholder="Select occupation"
-          loading={occupationsLoading}
+          placeholder={occupationDisabled ? 'Select a supervisor type first' : 'Select occupation'}
+          loading={supervisorTypesLoading}
+          disabled={occupationDisabled}
           isSubmitting={isSubmitting}
+          selectKey={supervisorType}
           required
+          onValueChange={() => {
+            setValue('supervisorSpecialtyId', '')
+            setValue('licenseType', '')
+            clearErrors(['supervisorSpecialtyId', 'licenseType'])
+          }}
         />
         <FormSelectField
           control={control}
-          name="specialtyId"
+          name="supervisorSpecialtyId"
           label="Specialty"
-          rules={supervisorFieldRules('specialtyId')}
           options={specialtyOptions}
           placeholder="Select specialty (optional)"
-          loading={specialtiesLoading}
+          loading={supervisorTypesLoading}
           disabled={specialtyDisabled}
           isSubmitting={isSubmitting}
           emptySentinel={{ value: SPECIALTY_NONE_VALUE, label: 'None' }}
-          sortOptions
+          selectKey={`${supervisorType}-${supervisorOccupationId}`}
         />
       </div>
 
@@ -89,9 +135,10 @@ export function SupervisorStepLicenseCredentials({
           label="License Type"
           rules={supervisorFieldRules('licenseType')}
           options={licenseTypeOptions}
-          placeholder="Select license type"
-          loading={licenseTypesLoading}
-          sortOptions
+          placeholder={licenseTypeDisabled ? 'Select an occupation first' : 'Select license type'}
+          loading={supervisorTypesLoading}
+          disabled={licenseTypeDisabled}
+          selectKey={supervisorOccupationId}
           isSubmitting={isSubmitting}
           required
         />
@@ -104,20 +151,6 @@ export function SupervisorStepLicenseCredentials({
           isSubmitting={isSubmitting}
           required
         />
-        <div className="sm:col-span-2">
-          <FormSelectField
-            control={control}
-            name="supervisorType"
-            label="Supervisor Type"
-            rules={supervisorFieldRules('supervisorType')}
-            options={supervisorTypeOptions}
-            placeholder="Select supervisor type"
-            loading={supervisorTypesLoading}
-            sortOptions
-            isSubmitting={isSubmitting}
-            required
-          />
-        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

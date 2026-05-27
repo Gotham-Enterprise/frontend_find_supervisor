@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import { useWatch } from 'react-hook-form'
 
@@ -11,6 +11,7 @@ import { PhoneInput } from '@/components/ui/PhoneInput'
 import { ProfilePhotoUpload } from '@/components/ui/profile-photo-upload'
 import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
+import type { SelectOption } from '@/lib/api/options'
 import {
   type EditSuperviseeProfileFormValues,
   SUPERVISEE_CREDENTIAL_TITLE_LABEL,
@@ -23,6 +24,7 @@ import {
   useSpecialtiesByOccupation,
   useStatesOptions,
   useSuperviseeFormOptions,
+  useSupervisorTypesData,
 } from '@/lib/hooks'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
@@ -75,16 +77,41 @@ export function SuperviseeProfileEditFields({
     prevStateForCityReset.current = current
   }, [stateWatch, form])
 
-  const { availability, howSoon, supervisorTypes, occupations } = useSuperviseeFormOptions()
-  const supervisorTypesLoading = supervisorTypes.isLoading
+  const { availability, howSoon, occupations } = useSuperviseeFormOptions()
   const availabilityOptions = availability.data ?? []
   const howSoonOptions = howSoon.data ?? []
-  const supervisorTypeOptions = supervisorTypes.data ?? []
   const occupationOptions = occupations.data ?? []
 
+  const { data: supervisorTypesData = [], isLoading: supervisorTypesLoading } =
+    useSupervisorTypesData()
+
   const selectedOccupationId = useWatch({ control: form.control, name: 'occupationId' }) ?? ''
+  const typeOfSupervisorNeeded =
+    useWatch({ control: form.control, name: 'typeOfSupervisorNeeded' }) ?? ''
+  const superviseeOccupation =
+    useWatch({ control: form.control, name: 'superviseeOccupation' }) ?? ''
   const howSoonLooking = useWatch({ control: form.control, name: 'howSoonLooking' })
   const { data: specialtyOptions = [] } = useSpecialtiesByOccupation(selectedOccupationId)
+
+  const supervisorTypeOptions = useMemo<SelectOption[]>(
+    () => supervisorTypesData.map((t) => ({ label: t.name, value: t.name })),
+    [supervisorTypesData],
+  )
+
+  const supervisionOccupationOptions = useMemo<SelectOption[]>(() => {
+    if (!typeOfSupervisorNeeded) return []
+    const selectedType = supervisorTypesData.find((t) => t.name === typeOfSupervisorNeeded)
+    return selectedType?.occupations.map((o) => ({ label: o.name, value: o.name })) ?? []
+  }, [typeOfSupervisorNeeded, supervisorTypesData])
+
+  const supervisionSpecialtyOptions = useMemo<SelectOption[]>(() => {
+    if (!typeOfSupervisorNeeded || !superviseeOccupation) return []
+    const selectedType = supervisorTypesData.find((t) => t.name === typeOfSupervisorNeeded)
+    const selectedOccupation = selectedType?.occupations.find(
+      (o) => o.name === superviseeOccupation,
+    )
+    return selectedOccupation?.specialties.map((s) => ({ label: s.name, value: s.name })) ?? []
+  }, [typeOfSupervisorNeeded, superviseeOccupation, supervisorTypesData])
 
   return (
     <div className="space-y-6">
@@ -271,33 +298,65 @@ export function SuperviseeProfileEditFields({
         <legend className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Supervision Needs
         </legend>
-        <div className="grid gap-4 sm:grid-cols-1">
-          <FormField
+
+        <FormSelectField
+          control={form.control}
+          name="typeOfSupervisorNeeded"
+          label="Type of Supervision Needed"
+          options={supervisorTypeOptions}
+          placeholder={supervisorTypesLoading ? 'Loading…' : 'Select type of supervision'}
+          loading={supervisorTypesLoading}
+          isSubmitting={isSubmitting}
+          required
+          onValueChange={() => {
+            form.setValue('superviseeOccupation', '')
+            form.setValue('superviseeSpecialty', '')
+            form.clearErrors(['superviseeOccupation', 'superviseeSpecialty'])
+          }}
+        />
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormSelectField
             control={form.control}
-            name="typeOfSupervisorNeeded"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  Type of Supervision Needed <span className="text-destructive">*</span>
-                </FormLabel>
-                <FormControl>
-                  <TagInput
-                    options={supervisorTypeOptions}
-                    value={field.value ?? []}
-                    onChange={(v) => {
-                      field.onChange(v)
-                      form.clearErrors(field.name)
-                    }}
-                    placeholder={
-                      supervisorTypesLoading ? 'Loading…' : 'Add one or more supervision types'
-                    }
-                    disabled={isSubmitting || supervisorTypesLoading}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            name="superviseeOccupation"
+            label="Occupation"
+            options={supervisionOccupationOptions}
+            placeholder={
+              !typeOfSupervisorNeeded
+                ? 'Select a type of supervision first'
+                : supervisionOccupationOptions.length === 0
+                  ? 'No occupations available'
+                  : 'Select occupation'
+            }
+            loading={supervisorTypesLoading}
+            isSubmitting={isSubmitting || !typeOfSupervisorNeeded}
+            selectKey={typeOfSupervisorNeeded}
+            required
+            onValueChange={() => {
+              form.setValue('superviseeSpecialty', '')
+              form.clearErrors('superviseeSpecialty')
+            }}
           />
+
+          <FormSelectField
+            control={form.control}
+            name="superviseeSpecialty"
+            label="Specialty"
+            options={supervisionSpecialtyOptions}
+            placeholder={
+              !superviseeOccupation
+                ? 'Select an occupation first'
+                : supervisionSpecialtyOptions.length === 0
+                  ? 'No specialties available'
+                  : 'Select specialty'
+            }
+            loading={supervisorTypesLoading}
+            isSubmitting={isSubmitting || !superviseeOccupation}
+            selectKey={`${typeOfSupervisorNeeded}-${superviseeOccupation}`}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-1">
           <FormField
             control={form.control}
             name="stateTheyAreLookingIn"

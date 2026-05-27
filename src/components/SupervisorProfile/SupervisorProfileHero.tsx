@@ -127,8 +127,12 @@ export function SupervisorProfileHero({ profile, supervisorId }: SupervisorProfi
     : (disabledMessageInfo ?? 'Messaging is not available for this supervisor.')
 
   const displayName = formatDisplayName(profile.user)
-  const occupation = profile.user.occupation?.name ?? profile.occupation?.name
-  const specialty = profile.user.specialty?.name ?? profile.specialty?.name
+  const occupation =
+    profile.supervisorOccupation?.trim() ||
+    profile.user.occupation?.name ||
+    profile.occupation?.name
+  const specialty =
+    profile.supervisorSpecialty?.trim() || profile.user.specialty?.name || profile.specialty?.name
   const subline = [occupation, specialty].filter(Boolean).join(' · ')
   const roleBadgeLabel = formatSupervisorTypeLabel(profile.supervisorType, supervisorTypeOptions)
   const filledStars = Math.round(overallRating)

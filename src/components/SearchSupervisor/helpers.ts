@@ -9,8 +9,9 @@ export const RADIUS_STEP = 5
 export const RADIUS_DEFAULT = 25
 
 export const DEFAULT_FILTERS: SupervisorSearchFilters = {
-  occupationIds: [],
-  specialtyIds: [],
+  supervisorTypes: [],
+  supervisorOccupations: [],
+  supervisorSpecialties: [],
   licenseTypes: [],
   stateLicenses: [],
   city: '',
@@ -76,8 +77,6 @@ export interface ActiveChip {
 }
 
 export interface ChipOptions {
-  occupationOptions?: SelectOption[]
-  specialtyOptions?: SelectOption[]
   licenseTypeOptions?: SelectOption[]
   availabilityOptions?: SelectOption[]
 }
@@ -88,14 +87,16 @@ export function getActiveChips(
 ): ActiveChip[] {
   const chips: ActiveChip[] = []
 
-  filters.occupationIds.forEach((id) => {
-    const label = chipOptions?.occupationOptions?.find((o) => o.value === id)?.label ?? id
-    chips.push({ key: `occ_${id}`, label })
+  filters.supervisorTypes.forEach((val) => {
+    chips.push({ key: `svt_${encodeURIComponent(val)}`, label: val })
   })
 
-  filters.specialtyIds.forEach((id) => {
-    const label = chipOptions?.specialtyOptions?.find((o) => o.value === id)?.label ?? id
-    chips.push({ key: `spec_${id}`, label })
+  filters.supervisorOccupations.forEach((val) => {
+    chips.push({ key: `svo_${encodeURIComponent(val)}`, label: val })
+  })
+
+  filters.supervisorSpecialties.forEach((val) => {
+    chips.push({ key: `svs_${encodeURIComponent(val)}`, label: val })
   })
 
   filters.licenseTypes.forEach((val) => {
@@ -145,8 +146,9 @@ export function removeChip(
 ): SupervisorSearchFilters {
   const next: SupervisorSearchFilters = {
     ...filters,
-    occupationIds: [...filters.occupationIds],
-    specialtyIds: [...filters.specialtyIds],
+    supervisorTypes: [...filters.supervisorTypes],
+    supervisorOccupations: [...filters.supervisorOccupations],
+    supervisorSpecialties: [...filters.supervisorSpecialties],
     licenseTypes: [...filters.licenseTypes],
     stateLicenses: [...filters.stateLicenses],
     city: filters.city,
@@ -157,13 +159,20 @@ export function removeChip(
     availability: [...filters.availability],
   }
 
-  if (chipKey.startsWith('occ_')) {
-    const id = chipKey.slice(4)
-    next.occupationIds = next.occupationIds.filter((x) => x !== id)
-    if (next.occupationIds.length === 0) next.specialtyIds = []
-  } else if (chipKey.startsWith('spec_')) {
-    const id = chipKey.slice(5)
-    next.specialtyIds = next.specialtyIds.filter((x) => x !== id)
+  if (chipKey.startsWith('svt_')) {
+    const val = decodeURIComponent(chipKey.slice(4))
+    next.supervisorTypes = next.supervisorTypes.filter((x) => x !== val)
+    // Clear downstream cascades
+    next.supervisorOccupations = []
+    next.supervisorSpecialties = []
+  } else if (chipKey.startsWith('svo_')) {
+    const val = decodeURIComponent(chipKey.slice(4))
+    next.supervisorOccupations = next.supervisorOccupations.filter((x) => x !== val)
+    // Clear specialty if no occupations remain
+    if (next.supervisorOccupations.length === 0) next.supervisorSpecialties = []
+  } else if (chipKey.startsWith('svs_')) {
+    const val = decodeURIComponent(chipKey.slice(4))
+    next.supervisorSpecialties = next.supervisorSpecialties.filter((x) => x !== val)
   } else if (chipKey.startsWith('lic_')) {
     const val = decodeURIComponent(chipKey.slice(4))
     next.licenseTypes = next.licenseTypes.filter((x) => x !== val)

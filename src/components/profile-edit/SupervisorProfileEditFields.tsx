@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import { useWatch } from 'react-hook-form'
 
@@ -23,12 +23,9 @@ import {
   useAvailabilityOptions,
   useCertificateOptions,
   useCitiesOptions,
-  useLicenseTypeOptions,
-  useOccupationOptions,
   usePatientPopulationOptions,
-  useSpecialtiesByOccupation,
   useStatesOptions,
-  useSupervisorTypeOptions,
+  useSupervisorTypesData,
 } from '@/lib/hooks'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
@@ -86,16 +83,40 @@ export function SupervisorProfileEditFields({
     prevStateForCityReset.current = current
   }, [stateWatch, form])
 
-  const { data: licenseTypeOptions = [] } = useLicenseTypeOptions()
-  const { data: supervisorTypeOptions = [], isLoading: supervisorTypesLoading } =
-    useSupervisorTypeOptions()
+  const { data: supervisorTypesData = [], isLoading: supervisorTypesLoading } =
+    useSupervisorTypesData()
   const { data: availabilityOptions = [] } = useAvailabilityOptions()
   const { data: certificationOptions = [] } = useCertificateOptions()
   const { data: patientPopulationOptions = [] } = usePatientPopulationOptions()
-  const { data: occupationOptions = [] } = useOccupationOptions()
 
-  const selectedOccupationId = useWatch({ control: form.control, name: 'occupationId' }) ?? ''
-  const { data: specialtyOptions = [] } = useSpecialtiesByOccupation(selectedOccupationId)
+  const supervisorTypeWatch = useWatch({ control: form.control, name: 'supervisorType' }) ?? ''
+  const supervisorOccupationWatch =
+    useWatch({ control: form.control, name: 'supervisorOccupation' }) ?? ''
+
+  const supervisorTypeOptions = useMemo<SelectOption[]>(
+    () => supervisorTypesData.map((t) => ({ label: t.name, value: t.name })),
+    [supervisorTypesData],
+  )
+
+  const supervisionOccupationOptions = useMemo<SelectOption[]>(() => {
+    if (!supervisorTypeWatch) return []
+    const selected = supervisorTypesData.find((t) => t.name === supervisorTypeWatch)
+    return selected?.occupations.map((o) => ({ label: o.name, value: o.name })) ?? []
+  }, [supervisorTypeWatch, supervisorTypesData])
+
+  const supervisionSpecialtyOptions = useMemo<SelectOption[]>(() => {
+    if (!supervisorTypeWatch || !supervisorOccupationWatch) return []
+    const selected = supervisorTypesData.find((t) => t.name === supervisorTypeWatch)
+    const occ = selected?.occupations.find((o) => o.name === supervisorOccupationWatch)
+    return occ?.specialties.map((s) => ({ label: s.name, value: s.name })) ?? []
+  }, [supervisorTypeWatch, supervisorOccupationWatch, supervisorTypesData])
+
+  const supervisionLicenseTypeOptions = useMemo<SelectOption[]>(() => {
+    if (!supervisorOccupationWatch) return []
+    const selected = supervisorTypesData.find((t) => t.name === supervisorTypeWatch)
+    const occ = selected?.occupations.find((o) => o.name === supervisorOccupationWatch)
+    return occ?.licenseTypes.map((l) => ({ label: l.name, value: l.name })) ?? []
+  }, [supervisorTypeWatch, supervisorOccupationWatch, supervisorTypesData])
 
   return (
     <div className="space-y-6">
@@ -234,44 +255,71 @@ export function SupervisorProfileEditFields({
 
       <fieldset className="space-y-4">
         <legend className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Occupation
+          License &amp; Credentials
         </legend>
+        <FormSelectField
+          control={form.control}
+          name="supervisorType"
+          label="Supervisor Type"
+          required
+          options={supervisorTypeOptions}
+          placeholder={supervisorTypesLoading ? 'Loading…' : 'Select supervisor type'}
+          loading={supervisorTypesLoading}
+          isSubmitting={isSubmitting}
+          emptySentinel={{ value: '__none__', label: 'None' }}
+          onValueChange={() => {
+            form.setValue('supervisorOccupation', '')
+            form.setValue('supervisorSpecialty', '')
+            form.setValue('licenseType', '')
+            form.clearErrors(['supervisorOccupation', 'supervisorSpecialty', 'licenseType'])
+          }}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           <FormSelectField
             control={form.control}
-            name="occupationId"
+            name="supervisorOccupation"
             label="Occupation"
             required
-            options={occupationOptions ?? []}
-            placeholder="Select Occupation"
+            options={supervisionOccupationOptions}
+            placeholder={
+              !supervisorTypeWatch ? 'Select a supervisor type first' : 'Select occupation'
+            }
+            loading={supervisorTypesLoading}
+            disabled={supervisorTypesLoading || !supervisorTypeWatch}
+            selectKey={supervisorTypeWatch}
             isSubmitting={isSubmitting}
-            emptySentinel={{ value: '__none__', label: 'None' }}
+            onValueChange={() => {
+              form.setValue('supervisorSpecialty', '')
+              form.setValue('licenseType', '')
+              form.clearErrors(['supervisorSpecialty', 'licenseType'])
+            }}
           />
           <FormSelectField
             control={form.control}
-            name="specialtyId"
+            name="supervisorSpecialty"
             label="Specialty"
-            options={specialtyOptions}
-            placeholder="Select Specialty"
+            options={supervisionSpecialtyOptions}
+            placeholder="Select specialty (optional)"
+            loading={supervisorTypesLoading}
+            disabled={supervisorTypesLoading || !supervisorOccupationWatch}
+            selectKey={`${supervisorTypeWatch}-${supervisorOccupationWatch}`}
             isSubmitting={isSubmitting}
-            disabled={!selectedOccupationId}
             emptySentinel={{ value: '__none__', label: 'None' }}
           />
         </div>
-      </fieldset>
-
-      <fieldset className="space-y-4">
-        <legend className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          License &amp; Credentials
-        </legend>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormSelectField
             control={form.control}
             name="licenseType"
             label="License Type"
             required
-            options={licenseTypeOptions}
-            placeholder="Select License Type"
+            options={supervisionLicenseTypeOptions}
+            placeholder={
+              !supervisorOccupationWatch ? 'Select an occupation first' : 'Select License Type'
+            }
+            loading={supervisorTypesLoading}
+            disabled={supervisorTypesLoading || !supervisorOccupationWatch}
+            selectKey={supervisorOccupationWatch}
             isSubmitting={isSubmitting}
             emptySentinel={{ value: '__none__', label: 'None' }}
           />
@@ -284,18 +332,6 @@ export function SupervisorProfileEditFields({
             isSubmitting={isSubmitting}
           />
         </div>
-        <FormSelectField
-          control={form.control}
-          name="supervisorType"
-          label="Supervisor Type"
-          required
-          options={supervisorTypeOptions}
-          placeholder="Select supervisor type"
-          loading={supervisorTypesLoading}
-          sortOptions
-          isSubmitting={isSubmitting}
-          emptySentinel={{ value: '__none__', label: 'None' }}
-        />
         <div className="grid gap-4 sm:grid-cols-2">
           <FormInputField
             control={form.control}

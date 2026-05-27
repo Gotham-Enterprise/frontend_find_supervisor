@@ -1,7 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import type { DefaultValues } from 'react-hook-form'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -26,7 +26,7 @@ import {
   useFormatOptions,
   useHireSupervisor,
   useStatesOptions,
-  useSuperviseeFormOptions,
+  useSupervisorTypesData,
   useUserSnackbar,
 } from '@/lib/hooks'
 import { useConfetti } from '@/lib/hooks/useConfetti'
@@ -47,9 +47,7 @@ const hireSupervisorSchema = z
       ['FLEXIBLE', 'WEEKDAYS', 'EVENINGS', 'WEEKENDS', 'BY_APPOINTMENT'],
       { error: 'Preferred availability is required' },
     ),
-    typeOfSupervisorNeeded: z
-      .array(z.string())
-      .min(1, 'Please select at least one type of supervision needed'),
+    typeOfSupervisorNeeded: z.string().min(1, 'Please select a type of supervision needed'),
     stateTheyAreLookingIn: z
       .array(z.string())
       .min(1, 'Please select at least one state you are looking in'),
@@ -72,16 +70,21 @@ type HireSupervisorFormValues = z.infer<typeof hireSupervisorSchema>
 function buildHireSupervisorDefaultValues(
   supervisorProfile: SupervisorProfileData,
   superviseeProfile: SuperviseeProfileData | null | undefined,
+  supervisorTypeNames: ReadonlySet<string> = new Set(),
 ): DefaultValues<HireSupervisorFormValues> {
+  const rawTypes = superviseeProfile
+    ? coerceStringList(superviseeProfile.typeOfSupervisorNeeded)
+    : []
+  const matchedTypes =
+    supervisorTypeNames.size > 0 ? rawTypes.filter((t) => supervisorTypeNames.has(t)) : rawTypes
+
   return {
     supervisorId: supervisorProfile.userId,
     preferredFormat: superviseeProfile?.preferredFormat ?? undefined,
     preferredAvailability:
       (superviseeProfile?.availability as HireSupervisorFormValues['preferredAvailability']) ??
       undefined,
-    typeOfSupervisorNeeded: superviseeProfile
-      ? coerceStringList(superviseeProfile.typeOfSupervisorNeeded)
-      : [],
+    typeOfSupervisorNeeded: matchedTypes[0] ?? '',
     stateTheyAreLookingIn: superviseeProfile
       ? coerceStringList(superviseeProfile.stateTheyAreLookingIn)
       : [],
@@ -119,9 +122,16 @@ export function HireSupervisorModal({
   const { data: formatOptions = [], isLoading: formatsLoading } = useFormatOptions()
   const { data: availabilityOptions = [], isLoading: availabilityLoading } =
     useAvailabilityOptions()
-  const { supervisorTypes } = useSuperviseeFormOptions()
-  const supervisorTypeOptions = supervisorTypes.data ?? []
-  const supervisorTypesLoading = supervisorTypes.isLoading
+  const { data: supervisorTypesData = [], isLoading: supervisorTypesLoading } =
+    useSupervisorTypesData()
+  const supervisorTypeOptions = useMemo(
+    () => supervisorTypesData.map((t) => ({ label: t.name, value: t.name })),
+    [supervisorTypesData],
+  )
+  const supervisorTypeNames = useMemo(
+    () => new Set(supervisorTypesData.map((t) => t.name)),
+    [supervisorTypesData],
+  )
   const { data: stateOptions = [], isLoading: statesLoading } = useStatesOptions()
   const { data: budgetTypeOptions = [], isLoading: budgetTypesLoading } = useBudgetTypeOptions()
 
@@ -134,14 +144,20 @@ export function HireSupervisorModal({
 
   const form = useForm<HireSupervisorFormValues>({
     resolver: zodResolver(hireSupervisorSchema),
-    defaultValues: buildHireSupervisorDefaultValues(supervisorProfile, superviseeProfile),
+    defaultValues: buildHireSupervisorDefaultValues(
+      supervisorProfile,
+      superviseeProfile,
+      supervisorTypeNames,
+    ),
   })
 
   useEffect(() => {
     if (open) {
-      form.reset(buildHireSupervisorDefaultValues(supervisorProfile, superviseeProfile))
+      form.reset(
+        buildHireSupervisorDefaultValues(supervisorProfile, superviseeProfile, supervisorTypeNames),
+      )
     }
-  }, [open, supervisorProfile, superviseeProfile, form])
+  }, [open, supervisorProfile, superviseeProfile, supervisorTypeNames, form])
 
   const { formState } = form
   const isSubmitting = formState.isSubmitting || hireMutation.isPending
@@ -154,7 +170,9 @@ export function HireSupervisorModal({
         description: 'Your request has been sent to the supervisor.',
       })
       onOpenChange(false)
-      form.reset(buildHireSupervisorDefaultValues(supervisorProfile, superviseeProfile))
+      form.reset(
+        buildHireSupervisorDefaultValues(supervisorProfile, superviseeProfile, supervisorTypeNames),
+      )
     } catch (err) {
       showError(parseApiError(err))
     }
@@ -203,33 +221,16 @@ export function HireSupervisorModal({
               </div>
 
               <div className="grid gap-4 sm:grid-cols-1">
-                <FormField
+                <FormSelectField
                   control={form.control}
                   name="typeOfSupervisorNeeded"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Type of Supervision Needed <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <TagInput
-                          options={supervisorTypeOptions}
-                          value={field.value ?? []}
-                          onChange={(v) => {
-                            field.onChange(v)
-                            form.clearErrors(field.name)
-                          }}
-                          placeholder={
-                            supervisorTypesLoading
-                              ? 'Loading…'
-                              : 'Add one or more supervision types'
-                          }
-                          disabled={isSubmitting || supervisorTypesLoading}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  label="Type of Supervision Needed"
+                  required
+                  options={supervisorTypeOptions}
+                  loading={supervisorTypesLoading}
+                  isSubmitting={isSubmitting}
+                  placeholder={supervisorTypesLoading ? 'Loading…' : 'Select type of supervision'}
+                  rules={{ required: 'Please select a type of supervision needed' }}
                 />
                 <FormField
                   control={form.control}

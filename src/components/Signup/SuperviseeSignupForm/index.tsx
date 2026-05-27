@@ -40,7 +40,7 @@ export function SuperviseeSignupForm() {
   const {
     availability: { data: availabilityOptions = [], isLoading: availabilityLoading },
     howSoon: { data: howSoonOptions = [], isLoading: howSoonLoading },
-    supervisorTypes: { data: supervisorTypeOptions = [], isLoading: supervisorTypesLoading },
+    supervisorTypesData: { data: supervisorTypesData = [], isLoading: supervisorTypesLoading },
     salaryRanges: { data: salaryRangeOptions = [], isLoading: salaryRangesLoading },
     occupations: { data: occupationOptions = [], isLoading: occupationsLoading },
     isError: optionsError,
@@ -186,22 +186,26 @@ export function SuperviseeSignupForm() {
         )}
         {step === 1 && (
           <SuperviseeStepSupervisionNeeds
-            occupationOptions={occupationOptions}
-            occupationsLoading={occupationsLoading}
+            supervisorTypesData={supervisorTypesData}
+            supervisorTypesLoading={supervisorTypesLoading}
             stateOptions={stateOptions}
-            supervisorTypeOptions={supervisorTypeOptions}
             howSoonOptions={howSoonOptions}
             availabilityOptions={availabilityOptions}
             salaryRangeOptions={salaryRangeOptions}
             statesLoading={statesLoading}
-            supervisorTypesLoading={supervisorTypesLoading}
             howSoonLoading={howSoonLoading}
             availabilityLoading={availabilityLoading}
             salaryRangesLoading={salaryRangesLoading}
             isSubmitting={isSubmitting}
           />
         )}
-        {step === 2 && <SuperviseeStepProfileTerms isSubmitting={isSubmitting} />}
+        {step === 2 && (
+          <SuperviseeStepProfileTerms
+            occupationOptions={occupationOptions}
+            occupationsLoading={occupationsLoading}
+            isSubmitting={isSubmitting}
+          />
+        )}
 
         <SuperviseeStepNavigation
           step={step}

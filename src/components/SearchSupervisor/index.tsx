@@ -4,12 +4,10 @@ import { useMemo, useState } from 'react'
 
 import {
   useAvailabilityOptions,
-  useLicenseTypeOptions,
-  useMergedSpecialtyOptions,
-  useOccupations,
   useStatesOptions,
   useSuperviseeProfile,
   useSupervisorSearch,
+  useSupervisorTypesData,
 } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 
@@ -42,21 +40,23 @@ export function SearchSupervisorPage() {
   const [appliedFilters, setAppliedFilters] = useState<SupervisorSearchFilters>(DEFAULT_FILTERS)
   const [sortBy, setSortBy] = useState<SortOption>('best_match')
   const [page, setPage] = useState(1)
-  const [defaultsSeeded, setDefaultsSeeded] = useState(false)
   const [prefillFromProfile, setPrefillFromProfile] = useState(false)
 
   const { data: superviseeProfile, isFetched: superviseeProfileFetched } = useSuperviseeProfile()
-  const licenseTypesQuery = useLicenseTypeOptions()
+  const supervisorTypesQuery = useSupervisorTypesData()
   const statesQuery = useStatesOptions()
   const availabilityQuery = useAvailabilityOptions()
 
-  const licenseTypeOptions = useMemo(() => licenseTypesQuery.data ?? [], [licenseTypesQuery.data])
+  const supervisorTypesData = useMemo(
+    () => supervisorTypesQuery.data ?? [],
+    [supervisorTypesQuery.data],
+  )
   const stateOptions = useMemo(() => statesQuery.data ?? [], [statesQuery.data])
   const availabilityOptions = useMemo(() => availabilityQuery.data ?? [], [availabilityQuery.data])
 
   const optionsReady =
     superviseeProfileFetched &&
-    licenseTypesQuery.isFetched &&
+    supervisorTypesQuery.isFetched &&
     statesQuery.isFetched &&
     availabilityQuery.isFetched
 
@@ -65,19 +65,16 @@ export function SearchSupervisorPage() {
       mergeSuperviseeProfileIntoSearchFilters(
         superviseeProfile ?? undefined,
         DEFAULT_FILTERS,
-        licenseTypeOptions,
+        [],
         stateOptions,
         availabilityOptions,
+        supervisorTypesData,
       ),
-    [superviseeProfile, licenseTypeOptions, stateOptions, availabilityOptions],
+    [superviseeProfile, stateOptions, availabilityOptions, supervisorTypesData],
   )
 
-  // Mark options as ready once all data is loaded (filters always start blank).
-  if (optionsReady && !defaultsSeeded) {
-    setDefaultsSeeded(true)
-  }
-
   function handlePrefillToggle(enabled: boolean) {
+    if (enabled && !optionsReady) return
     setPrefillFromProfile(enabled)
     const next = enabled ? profileMergedDefaults : DEFAULT_FILTERS
     setFilters(next)
@@ -85,39 +82,20 @@ export function SearchSupervisorPage() {
     setPage(1)
   }
 
-  const { data: occupationsRes } = useOccupations({ limit: 0 })
-  const { options: appliedSpecialtyOptions } = useMergedSpecialtyOptions(
-    appliedFilters.occupationIds,
-  )
-
-  const occupationNames = useMemo(() => {
-    return appliedFilters.occupationIds
-      .map((id) => occupationsRes?.data?.find((o) => String(o.id) === id)?.name?.trim())
-      .filter((n): n is string => Boolean(n))
-  }, [appliedFilters.occupationIds, occupationsRes?.data])
-
-  const specialtyNames = useMemo(() => {
-    return appliedFilters.specialtyIds
-      .map((id) => appliedSpecialtyOptions.find((s) => s.value === id)?.label?.trim())
-      .filter((n): n is string => Boolean(n))
-  }, [appliedFilters.specialtyIds, appliedSpecialtyOptions])
-
   const searchInput = useMemo(
     () => ({
       page,
       limit: SUPERVISOR_SEARCH_PAGE_SIZE,
       keywords: appliedKeyword,
       filters: appliedFilters,
-      occupationNames,
-      specialtyNames,
       sortBy,
     }),
-    [page, appliedKeyword, appliedFilters, occupationNames, specialtyNames, sortBy],
+    [page, appliedKeyword, appliedFilters, sortBy],
   )
 
   const { data, isLoading, isError, error, refetch } = useSupervisorSearch(
     searchInput,
-    defaultsSeeded,
+    optionsReady,
   )
 
   const supervisors = useMemo(() => {
@@ -182,6 +160,7 @@ export function SearchSupervisorPage() {
             onApply={handleApplyFilters}
             onClearFilters={handleClearFilterPanel}
             prefillFromProfile={prefillFromProfile}
+            prefillDisabled={!optionsReady}
             onPrefillToggle={handlePrefillToggle}
           />
         </div>
@@ -193,7 +172,7 @@ export function SearchSupervisorPage() {
             page={page}
             pageSize={SUPERVISOR_SEARCH_PAGE_SIZE}
             sortBy={sortBy}
-            isLoading={!defaultsSeeded || isLoading}
+            isLoading={!optionsReady || isLoading}
             errorMessage={errorMessage}
             onRetry={() => void refetch()}
             onPageChange={setPage}

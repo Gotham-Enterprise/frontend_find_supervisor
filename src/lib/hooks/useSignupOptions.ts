@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import {
   fetchOptions,
   fetchSpecialtiesByOccupation,
+  fetchSupervisorTypesData,
   type OptionsParam,
   type SelectOption,
+  type SupervisorTypeData,
 } from '@/lib/api/options'
 import { useOccupations } from '@/lib/hooks/useCategories'
 
@@ -41,6 +43,14 @@ export function useHowSoonOptions() {
 
 export function useSupervisorTypeOptions() {
   return useSignupOption('supervisorType')
+}
+
+export function useSupervisorTypesData() {
+  return useQuery<SupervisorTypeData[]>({
+    queryKey: ['supervisor-types-data'],
+    queryFn: fetchSupervisorTypesData,
+    staleTime: STALE_TIME,
+  })
 }
 
 export function useSalaryRangesOptions() {
@@ -124,6 +134,7 @@ export function useSuperviseeFormOptions() {
   const availability = useAvailabilityOptions()
   const howSoon = useHowSoonOptions()
   const supervisorTypes = useSupervisorTypeOptions()
+  const supervisorTypesData = useSupervisorTypesData()
   const salaryRanges = useSalaryRangesOptions()
   const occupations = useOccupationOptions()
 
@@ -131,18 +142,21 @@ export function useSuperviseeFormOptions() {
     availability,
     howSoon,
     supervisorTypes,
+    supervisorTypesData,
     salaryRanges,
     occupations,
     isLoading:
       availability.isLoading ||
       howSoon.isLoading ||
       supervisorTypes.isLoading ||
+      supervisorTypesData.isLoading ||
       salaryRanges.isLoading ||
       occupations.isLoading,
     isError:
       availability.isError ||
       howSoon.isError ||
       supervisorTypes.isError ||
+      supervisorTypesData.isError ||
       salaryRanges.isError ||
       occupations.isError,
   }

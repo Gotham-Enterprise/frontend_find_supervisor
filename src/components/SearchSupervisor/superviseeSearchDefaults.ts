@@ -1,4 +1,5 @@
-import type { SelectOption } from '@/lib/api/options'
+import type { SelectOption, SupervisorTypeData } from '@/lib/api/options'
+import { coerceStringList } from '@/lib/utils/profile-formatters'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 import type { SupervisorSearchFilters } from './types'
@@ -6,8 +7,9 @@ import type { SupervisorSearchFilters } from './types'
 function cloneFilters(base: SupervisorSearchFilters): SupervisorSearchFilters {
   return {
     ...base,
-    occupationIds: [...base.occupationIds],
-    specialtyIds: [...base.specialtyIds],
+    supervisorTypes: [...base.supervisorTypes],
+    supervisorOccupations: [...base.supervisorOccupations],
+    supervisorSpecialties: [...base.supervisorSpecialties],
     licenseTypes: [...base.licenseTypes],
     stateLicenses: [...base.stateLicenses],
     city: base.city,
@@ -20,6 +22,24 @@ function cloneFilters(base: SupervisorSearchFilters): SupervisorSearchFilters {
 }
 
 const FORMAT_SET = new Set<string>(['VIRTUAL', 'IN_PERSON', 'HYBRID'])
+
+function buildHierarchyNameSets(supervisorTypesData: SupervisorTypeData[]) {
+  const supervisorTypes = new Set<string>()
+  const occupations = new Set<string>()
+  const specialties = new Set<string>()
+  const licenseTypes = new Set<string>()
+
+  for (const type of supervisorTypesData) {
+    supervisorTypes.add(type.name)
+    for (const occupation of type.occupations) {
+      occupations.add(occupation.name)
+      for (const specialty of occupation.specialties) specialties.add(specialty.name)
+      for (const licenseType of occupation.licenseTypes) licenseTypes.add(licenseType.name)
+    }
+  }
+
+  return { supervisorTypes, occupations, specialties, licenseTypes }
+}
 
 /**
  * Maps supervisee profile "Type of Supervisor Needed" (`supervisorType` API values like
@@ -50,8 +70,9 @@ export function mapSupervisorNeededToLicenseTypes(
 }
 
 /**
- * Applies Supervision Needs from the supervisee profile onto search filters (license type,
- * state they are looking in, preferred format, availability). Unknown values are skipped.
+ * Applies Supervision Needs from the supervisee profile onto search filters (supervisor type,
+ * occupation, specialty, license type, state they are looking in, preferred format,
+ * availability). Unknown values are skipped.
  */
 export function mergeSuperviseeProfileIntoSearchFilters(
   profile: SuperviseeProfileData | null | undefined,
@@ -59,20 +80,45 @@ export function mergeSuperviseeProfileIntoSearchFilters(
   licenseTypeOptions: SelectOption[],
   stateOptions: SelectOption[],
   availabilityOptions: SelectOption[],
+  supervisorTypesData: SupervisorTypeData[] = [],
 ): SupervisorSearchFilters {
   const next = cloneFilters(base)
   if (!profile) return next
 
-  const licenseVals = new Set(licenseTypeOptions.map((o) => o.value))
+  const hierarchy = buildHierarchyNameSets(supervisorTypesData)
+  const licenseVals =
+    hierarchy.licenseTypes.size > 0
+      ? hierarchy.licenseTypes
+      : new Set(licenseTypeOptions.map((o) => o.value))
   const stateVals = new Set(stateOptions.map((o) => o.value))
   const availVals = new Set(availabilityOptions.map((o) => o.value))
+
+  const typeNeededList = coerceStringList(profile.typeOfSupervisorNeeded)
+  const validSupervisorTypes = typeNeededList.filter((t) => hierarchy.supervisorTypes.has(t))
+  if (validSupervisorTypes.length > 0) {
+    next.supervisorTypes = validSupervisorTypes
+  }
+
+  const occupation = profile.superviseeOccupation?.trim()
+  if (occupation && hierarchy.occupations.has(occupation)) {
+    next.supervisorOccupations = [occupation]
+  }
+
+  const specialty = profile.superviseeSpecialty?.trim()
+  if (specialty && hierarchy.specialties.has(specialty)) {
+    next.supervisorSpecialties = [specialty]
+  }
 
   const licenseFromSupervisorType = mapSupervisorNeededToLicenseTypes(
     profile.typeOfSupervisorNeeded,
     licenseVals,
   )
-  if (licenseFromSupervisorType.length > 0) {
-    next.licenseTypes = licenseFromSupervisorType
+  const credentialTitle = profile.title?.trim()
+  const licenseFromTitle =
+    credentialTitle && licenseVals.has(credentialTitle) ? [credentialTitle] : []
+  const licenseTypes = [...new Set([...licenseFromSupervisorType, ...licenseFromTitle])]
+  if (licenseTypes.length > 0) {
+    next.licenseTypes = licenseTypes
   }
 
   const stateKeys = (profile.stateTheyAreLookingIn ?? [])
