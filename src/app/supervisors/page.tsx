@@ -126,11 +126,11 @@ export default async function SupervisorsIndexPage({ searchParams }: PageProps) 
         {!hasFilters && (
           <header className="mb-10 text-center">
             <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-              Find Licensed Healthcare Supervisors
+              Find Licensed Supervisors
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
               Browse licensed supervisors, collaborating physicians, and supervising physicians by
-              state, specialty, occupation, and supervision format.
+              state, city, specialty, occupation, and supervision format.
             </p>
             <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <Link
@@ -251,7 +251,7 @@ export default async function SupervisorsIndexPage({ searchParams }: PageProps) 
                   href={`/supervisors/${slug}`}
                   className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary"
                 >
-                  <span>Healthcare Supervisors in {stateSlugToDisplayName(slug)}</span>
+                  <span>Supervisors in {stateSlugToDisplayName(slug)}</span>
                   <span aria-hidden="true" className="text-muted-foreground">
                     →
                   </span>
@@ -269,7 +269,7 @@ export default async function SupervisorsIndexPage({ searchParams }: PageProps) 
                   href={`/supervisors/${slug}`}
                   className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary"
                 >
-                  <span>Healthcare Supervisors in {stateSlugToDisplayName(slug)}</span>
+                  <span>Supervisors in {stateSlugToDisplayName(slug)}</span>
                   <span aria-hidden="true" className="text-muted-foreground">
                     →
                   </span>
@@ -319,7 +319,7 @@ function buildFilteredHeading({
 
   const parts: string[] = []
   if (typeLabel) parts.push(typeLabel)
-  else parts.push('Healthcare Supervisors')
+  else parts.push('Supervisors')
   if (stateLabel) parts.push(`in ${stateLabel}`)
   if (formatLabel && !typeLabel) parts.push(`— ${formatLabel}`)
   else if (formatLabel) parts.push(`(${formatLabel})`)
