@@ -24,7 +24,8 @@ const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Find Supervisors', href: '/find-supervisors', icon: Users, superviseeOnly: true },
   { label: 'Hired Supervisors', href: '/hired-supervisors', icon: Briefcase, superviseeOnly: true },
-  { label: 'Supervisees', href: '/supervisees', icon: UserCheck, supervisorOnly: true },
+  { label: 'Find Supervisees', href: '/find-supervisees', icon: Users, supervisorOnly: true },
+  { label: 'My Supervisees', href: '/supervisees', icon: UserCheck, supervisorOnly: true },
   {
     label: 'Supervision Requests',
     href: '/supervision-requests',

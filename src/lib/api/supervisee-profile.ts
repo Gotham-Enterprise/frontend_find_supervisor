@@ -1,14 +1,14 @@
 import type { ApiResponse } from '@/types'
-import type { SuperviseeProfileData } from '@/types/supervisee-profile'
+import type { SuperviseeProfileData, SuperviseeProfileViewData } from '@/types/supervisee-profile'
 
 import { apiClient } from './client'
 
 /**
  * GET /supervision/supervisee/profile?id=<userId>
- * Authenticated — returns the supervisee's own profile by userId.
+ * Authenticated — returns the supervisee profile by userId.
  */
-export async function getSuperviseeProfile(userId: string): Promise<SuperviseeProfileData> {
-  const { data } = await apiClient.get<ApiResponse<SuperviseeProfileData>>(
+export async function getSuperviseeProfile(userId: string): Promise<SuperviseeProfileViewData> {
+  const { data } = await apiClient.get<ApiResponse<SuperviseeProfileViewData>>(
     '/supervision/supervisee/profile',
     { params: { id: userId } },
   )

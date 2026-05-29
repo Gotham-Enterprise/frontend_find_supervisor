@@ -55,6 +55,7 @@ import {
   formatLocation,
   formatLookingInStatesLabel,
   formatSupervisionFormat,
+  formatSupervisionHours,
   resolveSupervisorTypeLabel,
 } from '@/lib/utils/profile-formatters'
 import type { HireListItem, HireStatus } from '@/types/hire'
@@ -323,6 +324,12 @@ function SuperviseeDetailsDialog({ hire, open, onOpenChange }: SuperviseeDetails
               value={formatLookingInStatesLabel(hire.stateTheyAreLookingIn, stateOptions)}
             />
             <DetailItem label="Preferred Start Date" value={formatDate(hire.preferredStartDate)} />
+            {hire.supervisionHours != null && (
+              <DetailItem
+                label="Supervision Hours Needed"
+                value={formatSupervisionHours(hire.supervisionHours)}
+              />
+            )}
             <DetailItem
               label="Budget"
               value={formatBudgetRange(

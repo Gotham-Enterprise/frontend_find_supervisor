@@ -35,6 +35,7 @@ import {
   formatDisplayName,
   formatLocation,
   formatSupervisionFormat,
+  formatSupervisionHours,
 } from '@/lib/utils/profile-formatters'
 import type { HireListItem, HireStatus } from '@/types/hire'
 
@@ -289,6 +290,12 @@ function SuperviseeDetailsDialog({
               label="Start Date"
               value={formatDate(hire.startDate ?? hire.preferredStartDate)}
             />
+            {hire.supervisionHours != null && (
+              <DetailItem
+                label="Supervision Hours Needed"
+                value={formatSupervisionHours(hire.supervisionHours)}
+              />
+            )}
             <DetailItem
               label="Status"
               value={<HireStatusBadge status={hire.status} completedAt={hire.completedAt} />}

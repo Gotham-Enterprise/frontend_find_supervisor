@@ -1,6 +1,7 @@
 import axios from 'axios'
 
 import { parseApiError } from '@/lib/utils/error-parser'
+import { requiresSupervisionHours } from '@/lib/utils/profile-formatters'
 import type { ApiResponse } from '@/types/api'
 import type {
   HireListResponse,
@@ -91,11 +92,27 @@ function normalizeStateTheyAreLookingIn(value: string | string[]): string[] {
   return raw.map((s) => String(s).trim()).filter((s) => s.length > 0)
 }
 
+function normalizeSupervisionHours(
+  typeOfSupervisorNeeded: string | string[],
+  supervisionHours: number | null | undefined,
+): number | null {
+  const type = Array.isArray(typeOfSupervisorNeeded)
+    ? typeOfSupervisorNeeded[0]
+    : typeOfSupervisorNeeded
+  if (!requiresSupervisionHours(type)) return null
+  if (supervisionHours == null || Number.isNaN(supervisionHours)) return null
+  return supervisionHours
+}
+
 /** POST /api/supervision/hires — supervisee hires a supervisor. */
 export async function hireSupervisor(payload: HireSupervisorRequestInput): Promise<HireRecord> {
   const body: HireSupervisorPayload = {
     ...payload,
     stateTheyAreLookingIn: normalizeStateTheyAreLookingIn(payload.stateTheyAreLookingIn),
+    supervisionHours: normalizeSupervisionHours(
+      payload.typeOfSupervisorNeeded,
+      payload.supervisionHours,
+    ),
   }
   const { data } = await apiClient.post<ApiResponse<HireRecord>>('/supervision/hires', body)
   return data.data

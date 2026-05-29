@@ -2,53 +2,14 @@
 
 import { ClockIcon, MapPinIcon } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 import { FORMAT_BADGE_CLASSES, FORMAT_LABELS } from './helpers'
+import { SearchResultAvatar } from './SearchResultAvatar'
 import type { SupervisorSearchResult } from './types'
-
-/** Avatar for search results: photo when URL loads; initials fallback when missing or on error. */
-function SupervisorSearchAvatar({
-  photoUrl,
-  initials,
-  avatarColor,
-}: {
-  photoUrl: string | undefined
-  initials: string
-  avatarColor: string
-}) {
-  const [loadFailed, setLoadFailed] = useState(false)
-  const url = photoUrl?.trim()
-  const showImage = Boolean(url && !loadFailed)
-
-  if (!showImage) {
-    return (
-      <div
-        className={cn(
-          'flex size-14 items-center justify-center rounded-full text-lg font-bold text-white',
-          avatarColor,
-        )}
-        aria-hidden
-      >
-        {initials}
-      </div>
-    )
-  }
-
-  return (
-    // eslint-disable-next-line @next/next/no-img-element -- external profile URLs from API
-    <img
-      src={url}
-      alt=""
-      className="size-14 shrink-0 rounded-full object-cover"
-      onError={() => setLoadFailed(true)}
-    />
-  )
-}
 
 interface SupervisorCardProps {
   supervisor: SupervisorSearchResult
@@ -78,7 +39,7 @@ export function SupervisorCard({ supervisor }: SupervisorCardProps) {
     <div className="flex gap-5 rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
       {/* Avatar column */}
       <div className="flex shrink-0 flex-col items-center gap-2">
-        <SupervisorSearchAvatar
+        <SearchResultAvatar
           key={photoUrl ?? 'no-photo'}
           photoUrl={photoUrl}
           initials={initials}

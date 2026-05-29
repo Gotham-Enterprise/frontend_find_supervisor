@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useMemo } from 'react'
 import type { DefaultValues } from 'react-hook-form'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/form'
 import { FormInputField } from '@/components/ui/form-input-field'
 import { FormSelectField } from '@/components/ui/form-select-field'
+import { Input } from '@/components/ui/input'
 import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -31,7 +32,12 @@ import {
 } from '@/lib/hooks'
 import { useConfetti } from '@/lib/hooks/useConfetti'
 import { parseApiError } from '@/lib/utils/error-parser'
-import { coerceStringList } from '@/lib/utils/profile-formatters'
+import {
+  coerceStringList,
+  isValidSupervisionHoursInput,
+  parseSupervisionHoursInput,
+  requiresSupervisionHours,
+} from '@/lib/utils/profile-formatters'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
@@ -59,10 +65,22 @@ const hireSupervisorSchema = z
     budgetRangeEnd: z.number({ error: 'Must be a number' }).min(0, 'Must be 0 or greater'),
     introMessage: z.string().min(1, 'Intro message is required'),
     goals: z.string().min(1, 'Goals for supervision are required'),
+    supervisionHours: z.string().optional(),
   })
   .refine((d) => d.budgetRangeEnd >= d.budgetRangeStart, {
     message: 'Max budget must be greater than or equal to min budget',
     path: ['budgetRangeEnd'],
+  })
+  .superRefine((data, ctx) => {
+    if (!requiresSupervisionHours(data.typeOfSupervisorNeeded)) return
+    const raw = data.supervisionHours?.trim() ?? ''
+    if (!raw || !isValidSupervisionHoursInput(raw)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Enter a valid whole number of hours (no leading zeros)',
+        path: ['supervisionHours'],
+      })
+    }
   })
 
 type HireSupervisorFormValues = z.infer<typeof hireSupervisorSchema>
@@ -94,6 +112,7 @@ function buildHireSupervisorDefaultValues(
     budgetRangeEnd: superviseeProfile?.budgetRangeEnd ?? 0,
     introMessage: '',
     goals: '',
+    supervisionHours: '',
   }
 }
 
@@ -159,12 +178,30 @@ export function HireSupervisorModal({
     }
   }, [open, supervisorProfile, superviseeProfile, supervisorTypeNames, form])
 
+  const typeOfSupervisorNeeded = useWatch({
+    control: form.control,
+    name: 'typeOfSupervisorNeeded',
+  })
+  const showSupervisionHours = requiresSupervisionHours(typeOfSupervisorNeeded)
+
+  useEffect(() => {
+    if (!showSupervisionHours) {
+      form.setValue('supervisionHours', '')
+      form.clearErrors('supervisionHours')
+    }
+  }, [showSupervisionHours, form])
+
   const { formState } = form
   const isSubmitting = formState.isSubmitting || hireMutation.isPending
 
   async function onSubmit(values: HireSupervisorFormValues) {
     try {
-      await hireMutation.mutateAsync(values)
+      await hireMutation.mutateAsync({
+        ...values,
+        supervisionHours: showSupervisionHours
+          ? parseSupervisionHoursInput(values.supervisionHours)
+          : null,
+      })
       burst()
       showSuccess('Hire request sent!', {
         description: 'Your request has been sent to the supervisor.',
@@ -232,6 +269,38 @@ export function HireSupervisorModal({
                   placeholder={supervisorTypesLoading ? 'Loading…' : 'Select type of supervision'}
                   rules={{ required: 'Please select a type of supervision needed' }}
                 />
+                {showSupervisionHours && (
+                  <FormField
+                    control={form.control}
+                    name="supervisionHours"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Supervision Hours Needed <span className="text-destructive">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="off"
+                            disabled={isSubmitting}
+                            placeholder="e.g. 100"
+                            value={field.value ?? ''}
+                            onChange={(e) => {
+                              const next = e.target.value
+                              if (next === '' || isValidSupervisionHoursInput(next)) {
+                                field.onChange(next)
+                                form.clearErrors('supervisionHours')
+                              }
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 <FormField
                   control={form.control}
                   name="stateTheyAreLookingIn"

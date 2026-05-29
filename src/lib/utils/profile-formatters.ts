@@ -1,4 +1,5 @@
 import type { SelectOption } from '@/lib/api/options'
+import { SUPERVISOR_TYPE_QUERY_MAP } from '@/lib/seo/routes'
 import { formatUSPhoneForDisplay } from '@/lib/utils/phone'
 
 // ─── Display name ──────────────────────────────────────────────────────────────
@@ -229,6 +230,37 @@ export function formatSupervisorTypeLabel(
   return resolveOneSupervisorTypeLabel(raw, options)
 }
 
+/** Supervisor type for mental health counselor supervisees (MHC). */
+export const MHC_SUPERVISOR_TYPE = SUPERVISOR_TYPE_QUERY_MAP['mental-health-counselor']!
+
+/** MHC supervisees track required supervision hours; PA/NP hire flows do not. */
+export function requiresSupervisionHours(
+  typeOfSupervisorNeeded: string | null | undefined,
+): boolean {
+  return (typeOfSupervisorNeeded?.trim() ?? '') === MHC_SUPERVISOR_TYPE
+}
+
+/** Positive whole numbers only — rejects 0, 01, 001, etc. */
+export const SUPERVISION_HOURS_INPUT_PATTERN = /^[1-9]\d*$/
+
+export function isValidSupervisionHoursInput(value: string): boolean {
+  return SUPERVISION_HOURS_INPUT_PATTERN.test(value.trim())
+}
+
+export function parseSupervisionHoursInput(
+  value: string | number | null | undefined,
+): number | null {
+  if (value == null) return null
+  const raw = String(value).trim()
+  if (!isValidSupervisionHoursInput(raw)) return null
+  return parseInt(raw, 10)
+}
+
+export function formatSupervisionHours(value: number | null | undefined): string {
+  if (value == null) return ''
+  return `${value} hour${value === 1 ? '' : 's'}`
+}
+
 /** Human-readable state list for “looking in” using US state option labels when available. */
 export function formatLookingInStatesLabel(
   value: string | string[] | null | undefined,
@@ -256,6 +288,48 @@ export function formatBudgetRange(
   if (start != null && end != null) return `$${start}–$${end}${suffix}`
   if (start != null) return `From $${start}${suffix}`
   return `Up to $${end}${suffix}`
+}
+
+// ─── How soon looking ─────────────────────────────────────────────────────────
+
+const HOW_SOON_LABELS: Record<string, string> = {
+  IMMEDIATELY: 'As soon as possible',
+  WITHIN_2_WEEKS: 'Within 2 weeks',
+  WITHIN_1_MONTH: 'Within 1 month',
+  WITHIN_2_MONTHS: 'Within 3 months',
+  WITHIN_6_MONTHS: 'Just exploring',
+  CUSTOM_DATE: 'Custom date',
+}
+
+const HOW_SOON_LABELS_COMPACT: Record<string, string> = {
+  IMMEDIATELY: 'ASAP',
+  WITHIN_2_WEEKS: 'Within 2 weeks',
+  WITHIN_1_MONTH: 'Within 1 month',
+  WITHIN_2_MONTHS: 'Within 3 months',
+  WITHIN_6_MONTHS: 'Exploring',
+  CUSTOM_DATE: 'Custom date',
+}
+
+/** Formats supervisee howSoonLooking (+ optional custom date). */
+export function formatHowSoonLooking(
+  value: string | null | undefined,
+  lookingDate?: string | null | undefined,
+  options?: { compact?: boolean; emptyFallback?: string },
+): string {
+  const emptyFallback = options?.emptyFallback ?? 'N/A'
+  if (!value) return emptyFallback
+
+  if (value === 'CUSTOM_DATE') {
+    if (!lookingDate) return options?.compact ? 'Custom date' : 'Custom date'
+    return new Date(lookingDate).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  }
+
+  const labels = options?.compact ? HOW_SOON_LABELS_COMPACT : HOW_SOON_LABELS
+  return labels[value] ?? value
 }
 
 // ─── Phone ────────────────────────────────────────────────────────────────────

@@ -13,6 +13,7 @@ import {
   formatFeeAmount,
   formatLookingInStatesLabel,
   formatSupervisionFormat,
+  formatSupervisionHours,
   resolveSupervisorTypeLabel,
 } from '@/lib/utils/profile-formatters'
 import type { HireListItem } from '@/types/hire'
@@ -128,6 +129,14 @@ export function HireRequestDetailsDialog({
       label: 'Preferred start date',
       value: displayText(hire.preferredStartDate, formatDate(hire.preferredStartDate)),
     },
+    ...(hire.supervisionHours != null
+      ? [
+          {
+            label: 'Supervision hours needed',
+            value: displayText(null, formatSupervisionHours(hire.supervisionHours)),
+          },
+        ]
+      : []),
     {
       label: 'Budget range',
       value: displayText(
