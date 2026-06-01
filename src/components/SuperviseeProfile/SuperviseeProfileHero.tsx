@@ -1,13 +1,27 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useMemo, useState } from 'react'
 
+import { SubscriptionModal } from '@/components/Dashboard/subscription/SubscriptionModal'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DisabledWithTooltip } from '@/components/ui/tooltip'
-import { useConversations } from '@/lib/hooks'
+import { isSupervisorRole } from '@/lib/auth/roles'
+import { useConversations, useSupervisorProfile, useUser, useUserSnackbar } from '@/lib/hooks'
+import { useCheckConnectionAvailability } from '@/lib/hooks/useConnections'
+import { getMakeConnectionAccess } from '@/lib/utils/make-connection-access'
 import { formatDisplayName, getInitials } from '@/lib/utils/profile-formatters'
+import {
+  getConnectionBadgeClassName,
+  getConnectionStatusLabel,
+  getHireBadgeClassName,
+  getHireStatusLabel,
+  isAcceptedConnectionStatus,
+} from '@/lib/utils/supervision-status'
 import type { SuperviseeProfileViewData } from '@/types/supervisee-profile'
+
+import { MakeConnectionModal } from './MakeConnectionModal'
 
 interface SuperviseeProfileHeroProps {
   profile: SuperviseeProfileViewData
@@ -46,25 +60,73 @@ function ProfileAvatar({
   )
 }
 
-function hireStatusLabel(status: string | undefined): string | null {
-  switch (status) {
-    case 'PENDING':
-      return 'Request pending'
-    case 'REVIEWED':
-      return 'Under review'
-    case 'ACCEPTED':
-    case 'ACTIVE':
-      return 'Active supervisee'
-    case 'COMPLETED':
-      return 'Completed supervision'
-    default:
-      return status ? status.replace(/_/g, ' ').toLowerCase() : null
+// ─── Connection button label / disabled ───────────────────────────────────────
+
+type ConnectionButtonState =
+  | { label: string; disabled: true; tooltip: string }
+  | { label: string; disabled: false; tooltip: '' }
+
+function resolveConnectionButtonState(
+  connectionAccess: ReturnType<typeof getMakeConnectionAccess>,
+  checkIsLoading: boolean,
+  checkError: boolean,
+  canRequest: boolean | undefined,
+  reason: string | null | undefined,
+): ConnectionButtonState {
+  // While access details are still loading, show a disabled button
+  if (connectionAccess.allowed === false && connectionAccess.reason === 'loading') {
+    return { label: 'Make A Connection', disabled: true, tooltip: 'Loading your account details…' }
   }
+
+  // If the user cannot access (no subscription, not supervisor, etc.) — active/clickable
+  // so the hero's handleClick can show the appropriate prompt
+  if (!connectionAccess.allowed) {
+    return { label: 'Make A Connection', disabled: false, tooltip: '' }
+  }
+
+  // Access is allowed — check availability result
+  if (checkIsLoading) {
+    return { label: 'Make A Connection', disabled: false, tooltip: '' }
+  }
+
+  // If check failed silently, still allow the submit (409 is handled on submit)
+  if (checkError || canRequest === undefined) {
+    return { label: 'Make A Connection', disabled: false, tooltip: '' }
+  }
+
+  if (!canRequest) {
+    switch (reason) {
+      case 'ALREADY_APPROVED':
+        return {
+          label: 'Connected',
+          disabled: true,
+          tooltip: 'This connection request was already approved.',
+        }
+      case 'PENDING_REQUEST_EXISTS':
+      case 'COOLDOWN_ACTIVE':
+      default:
+        return {
+          label: 'Request Sent',
+          disabled: true,
+          tooltip: 'You already sent a connection request to this professional.',
+        }
+    }
+  }
+
+  return { label: 'Make A Connection', disabled: false, tooltip: '' }
 }
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
   const router = useRouter()
+  const pathname = usePathname()
+  const { user: authUser } = useUser()
+  const { showInfo } = useUserSnackbar()
+  const [connectionModalOpen, setConnectionModalOpen] = useState(false)
+  const [planModalOpen, setPlanModalOpen] = useState(false)
   const { data: conversations } = useConversations()
+  const { data: supervisorProfile, isLoading: supervisorProfileLoading } = useSupervisorProfile()
 
   const user = profile.user
   const displayName = formatDisplayName(user)
@@ -75,14 +137,79 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
 
   const existingConversation = conversations?.find((c) => c.superviseeId === user.id)
   const isInMyHireList = profile.isInMyHireList ?? false
-  const hireStatus = hireStatusLabel(profile.hiredInfo?.status)
-  const canMessage = (profile.canMessage ?? false) && !!existingConversation
 
-  const messageDisabledTooltip = !isInMyHireList
-    ? 'You can message this supervisee after they send you a supervision request.'
-    : !existingConversation
-      ? 'Open Messages once a conversation exists for this supervisee.'
-      : 'Messaging is not available for this supervisee.'
+  const connectionAccess = useMemo(
+    () =>
+      getMakeConnectionAccess({
+        user: authUser,
+        supervisorProfile,
+        profileLoading: supervisorProfileLoading,
+      }),
+    [authUser, supervisorProfile, supervisorProfileLoading],
+  )
+
+  // Only call the check endpoint when access is allowed (logged in + subscription)
+  const checkEnabled = connectionAccess.allowed && isSupervisorRole(authUser?.role)
+  const {
+    data: checkData,
+    isLoading: checkLoading,
+    isError: checkError,
+  } = useCheckConnectionAvailability(
+    checkEnabled ? user.id : null,
+    checkEnabled ? (authUser?.email ?? null) : null,
+  )
+
+  const isConnectionApproved = isAcceptedConnectionStatus(checkData?.reason)
+
+  // Messaging requires a conversation to navigate to, plus either an accepted
+  // connection (connection flow) or profile.canMessage (hire flow).
+  const canMessage =
+    !!existingConversation && (isConnectionApproved || (profile.canMessage ?? false))
+
+  const showMakeConnectionButton = isSupervisorRole(authUser?.role)
+
+  const {
+    label: connectionButtonLabel,
+    disabled: connectionButtonDisabled,
+    tooltip: connectionButtonTooltip,
+  } = resolveConnectionButtonState(
+    connectionAccess,
+    checkLoading,
+    checkError,
+    checkData?.canRequest,
+    checkData?.reason,
+  )
+
+  // Tooltip is only rendered while the Message button is disabled.
+  const messageDisabledTooltip =
+    isConnectionApproved && !existingConversation
+      ? 'Connection accepted. Open Messages to find this conversation.'
+      : 'You can message this supervisee once your connection request has been accepted.'
+
+  function handleMakeConnectionClick() {
+    if (connectionAccess.allowed) {
+      setConnectionModalOpen(true)
+      return
+    }
+
+    switch (connectionAccess.reason) {
+      case 'logged_out': {
+        const redirect = encodeURIComponent(pathname)
+        router.push(`/login?redirect=${redirect}`)
+        break
+      }
+      case 'no_subscription':
+        showInfo('Make A Connection requires an active subscription.', {
+          description: 'Upgrade your plan to introduce yourself to supervisees.',
+        })
+        setPlanModalOpen(true)
+        break
+      case 'loading':
+      case 'not_supervisor':
+      default:
+        break
+    }
+  }
 
   return (
     <div className="flex flex-col items-start gap-6 border-b border-[#E5E7EB] py-8 sm:flex-row">
@@ -101,16 +228,39 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
         </div>
 
         {subline && <p className="text-sm text-[#6B7280]">{subline}</p>}
+
+        {/* Relationship status badges — rendered for supervisors once check data loads */}
+        {(checkData !== undefined || isInMyHireList) && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {checkData !== undefined && (
+              <Badge variant="outline" className={getConnectionBadgeClassName(checkData.reason)}>
+                {getConnectionStatusLabel(checkData.reason)}
+              </Badge>
+            )}
+            {isInMyHireList && (
+              <Badge variant="outline" className={getHireBadgeClassName(profile.hiredInfo?.status)}>
+                {getHireStatusLabel(profile.hiredInfo?.status)}
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
-      <div className="flex shrink-0 gap-2">
-        {isInMyHireList && hireStatus && (
-          <span
-            className="inline-flex h-9 items-center px-3 text-sm font-medium text-[#6B7280]"
-            role="status"
+      <div className="flex w-full shrink-0 flex-wrap gap-2 sm:w-auto">
+        {showMakeConnectionButton && (
+          <DisabledWithTooltip
+            tooltip={connectionButtonTooltip}
+            disabled={connectionButtonDisabled}
           >
-            {hireStatus}
-          </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={connectionButtonDisabled}
+              onClick={handleMakeConnectionClick}
+            >
+              {connectionButtonLabel}
+            </Button>
+          </DisabledWithTooltip>
         )}
         <DisabledWithTooltip tooltip={messageDisabledTooltip} disabled={!canMessage}>
           <Button
@@ -126,6 +276,16 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
           </Button>
         </DisabledWithTooltip>
       </div>
+
+      <MakeConnectionModal
+        open={connectionModalOpen}
+        onOpenChange={setConnectionModalOpen}
+        superviseeId={user.id}
+        superviseeName={displayName}
+        canAccess={connectionAccess.allowed}
+      />
+
+      <SubscriptionModal open={planModalOpen} onOpenChange={setPlanModalOpen} />
     </div>
   )
 }

@@ -1,4 +1,9 @@
-import type { Subscription, SubscriptionStatus } from '@/types/supervisor-profile'
+import { isFreePlan } from '@/lib/constants/subscription-plans'
+import type {
+  Subscription,
+  SubscriptionStatus,
+  SupervisorProfileData,
+} from '@/types/supervisor-profile'
 
 const SCHEDULED_CANCEL_STATUSES: SubscriptionStatus[] = ['ACTIVE', 'TRIALING', 'PAST_DUE']
 
@@ -19,4 +24,16 @@ export function isSubscriptionScheduledForCancellationFields(
 ): boolean {
   if (!status || !cancelAtPeriodEnd) return false
   return SCHEDULED_CANCEL_STATUSES.includes(status)
+}
+
+/**
+ * True when the supervisor has an active paid platform subscription (ACTIVE or TRIALING,
+ * excluding the default free tier). Used to gate premium supervisor features.
+ */
+export function hasActiveSupervisorSubscription(profile: SupervisorProfileData): boolean {
+  return (
+    profile.user.subscriptions?.some(
+      (s) => (s.status === 'ACTIVE' || s.status === 'TRIALING') && !!s.plan && !isFreePlan(s.plan),
+    ) ?? false
+  )
 }

@@ -1,6 +1,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DisabledWithTooltip } from '@/components/ui/tooltip'
 import { isSuperviseeRole } from '@/lib/auth/roles'
@@ -13,11 +14,20 @@ import {
   useSupervisorReviews,
   useSupervisorTypeOptions,
 } from '@/lib/hooks'
+import { useCheckConnectionAvailability } from '@/lib/hooks/useConnections'
 import {
   formatDisplayName,
   formatSupervisorTypeLabel,
   getInitials,
 } from '@/lib/utils/profile-formatters'
+import {
+  getConnectionBadgeClassName,
+  getConnectionStatusLabel,
+  getHireBadgeClassName,
+  getHireStatusLabel,
+  isAcceptedConnectionStatus,
+  isPendingConnectionStatus,
+} from '@/lib/utils/supervision-status'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 import { HireSupervisorModal } from './HireSupervisorModal'
@@ -94,7 +104,7 @@ export function SupervisorProfileHero({ profile, supervisorId }: SupervisorProfi
   const reviewTotalCount = reviewsData?.totalCount ?? 0
   const overallRating = averageRating(reviewItems)
 
-  // Check if there's an existing conversation with this supervisor (requires a hire to exist)
+  // Check if there's an existing conversation with this supervisor
   const { data: conversations } = useConversations()
   const existingConversation = conversations?.find((c) => c.supervisorId === profile.user.id)
 
@@ -113,18 +123,34 @@ export function SupervisorProfileHero({ profile, supervisorId }: SupervisorProfi
     profile.user.supervisorSettings?.disabledMessageInfo?.trim() ||
     null
 
-  // Only supervisees can message from the profile page; always disabled for non-supervisees.
-  const messageDisabled = isSuperviseeRole(user?.role) ? !supervisorCanMessage : false
-
-  // If no hire exists with this supervisor, messaging requires hiring first.
-  // const noHireExists =
-  //   isSuperviseeRole(user?.role) && !existingConversation && conversations !== undefined
   const isInMyHireList = profile.isInMyHireList ?? false
-  const hirePending = isInMyHireList && profile.hiredInfo?.status === 'PENDING'
 
-  const messageDisabledTooltip = !isInMyHireList
-    ? 'You need to submit a hire request before messaging this supervisor.'
-    : (disabledMessageInfo ?? 'Messaging is not available for this supervisor.')
+  // Check connection status: supervisee (current user) is the receiver of the request,
+  // supervisor (profile) is the requester identified by email.
+  const isSupervisee = isSuperviseeRole(user?.role)
+  const { data: connectionCheckData } = useCheckConnectionAvailability(
+    isSupervisee ? (user?.id ?? null) : null,
+    isSupervisee ? profile.user.email : null,
+  )
+  const isConnectionApproved = isAcceptedConnectionStatus(connectionCheckData?.reason)
+
+  // Messaging is unlocked by either an accepted connection OR an existing hire.
+  const hasMessagingRelationship = isConnectionApproved || isInMyHireList
+
+  // Supervisor may have disabled messaging on their account — respect that regardless.
+  const supervisorMessagingDisabled = isSupervisee && !supervisorCanMessage
+
+  const isMessageDisabled = !hasMessagingRelationship || supervisorMessagingDisabled
+
+  const messageDisabledTooltip = (() => {
+    if (!hasMessagingRelationship) {
+      if (isPendingConnectionStatus(connectionCheckData?.reason)) {
+        return 'You can message this supervisor once your connection request has been accepted.'
+      }
+      return 'You need to connect with this supervisor before messaging.'
+    }
+    return disabledMessageInfo ?? 'Messaging is not available for this supervisor.'
+  })()
 
   const displayName = formatDisplayName(profile.user)
   const occupation =
@@ -182,6 +208,26 @@ export function SupervisorProfileHero({ profile, supervisorId }: SupervisorProfi
               </>
             )}
           </div>
+
+          {/* Relationship status badges — only rendered for supervisees once check data loads */}
+          {isSupervisee && connectionCheckData !== undefined && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge
+                variant="outline"
+                className={getConnectionBadgeClassName(connectionCheckData.reason)}
+              >
+                {getConnectionStatusLabel(connectionCheckData.reason)}
+              </Badge>
+              {isInMyHireList && (
+                <Badge
+                  variant="outline"
+                  className={getHireBadgeClassName(profile.hiredInfo?.status)}
+                >
+                  {getHireStatusLabel(profile.hiredInfo?.status)}
+                </Badge>
+              )}
+            </div>
+          )}
         </div>
 
         {/* CTA buttons */}
@@ -191,28 +237,32 @@ export function SupervisorProfileHero({ profile, supervisorId }: SupervisorProfi
               className="inline-flex h-9 items-center px-3 text-sm font-medium text-[#6B7280]"
               role="status"
             >
-              {hirePending ? 'Waiting for approval' : 'Hired'}
+              {profile.hiredInfo?.status === 'PENDING' ? 'Waiting for approval' : 'Hired'}
             </span>
           ) : (
             <Button size="sm" onClick={() => setHireModalOpen(true)}>
               Hire as Supervisor
             </Button>
           )}
-          <DisabledWithTooltip
-            tooltip={messageDisabledTooltip}
-            disabled={messageDisabled || !isInMyHireList}
-          >
+          <DisabledWithTooltip tooltip={messageDisabledTooltip} disabled={isMessageDisabled}>
             <Button
               size="sm"
               variant="outline"
-              disabled={messageDisabled || !isInMyHireList || isStartingChat}
+              disabled={isMessageDisabled || isStartingChat}
               onClick={() => {
-                if (messageDisabled || !isInMyHireList) return
-                // If a conversation already exists, navigate directly without hitting the API
+                if (isMessageDisabled) return
+                // Navigate directly when a conversation already exists
                 if (existingConversation) {
                   router.push(`/messages/${existingConversation.id}`)
                   return
                 }
+                // Connection-approved path: conversation was created on approval;
+                // if it's not in the cache yet, fall back to the messages inbox.
+                if (isConnectionApproved) {
+                  router.push('/messages')
+                  return
+                }
+                // Hire path: create or retrieve the conversation via the chat API
                 createOrGetConversation(profile.user.id, {
                   onSuccess: (conversation) => {
                     router.push(`/messages/${conversation.id}`)

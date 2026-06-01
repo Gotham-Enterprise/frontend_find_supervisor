@@ -29,6 +29,8 @@ const PAGE_TITLES: Array<{ prefix: string; title: string }> = [
   { prefix: '/supervisees', title: 'Supervisees' },
   { prefix: '/hired-supervisors', title: 'Hired Supervisors' },
   { prefix: '/supervision-requests', title: 'Supervision Requests' },
+  { prefix: '/connections/received', title: 'Connection Requests' },
+  { prefix: '/connections/sent', title: 'Sent Connections' },
   { prefix: '/billing', title: 'Billing & Invoices' },
   { prefix: '/messages', title: 'Messages' },
   { prefix: '/settings', title: 'Settings' },

@@ -30,6 +30,7 @@ interface SuperviseeProfilePageProps {
 const BACK_LINK_CONFIG: Record<string, { href: string; label: string }> = {
   dashboard: { href: '/dashboard', label: 'Back to Dashboard' },
   supervisees: { href: '/supervisees', label: 'Back to My Supervisees' },
+  'sent-connections': { href: '/connections/sent', label: 'Back to Sent Connections' },
 }
 
 const DEFAULT_BACK = { href: '/find-supervisees', label: 'Back to Find Supervisees' }

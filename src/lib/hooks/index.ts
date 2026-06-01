@@ -11,6 +11,16 @@ export {
 } from './useChat'
 export { useCheckoutPlanFromUrl } from './useCheckoutPlanFromUrl'
 export { useConfetti } from './useConfetti'
+export {
+  connectionKeys,
+  useApproveConnection,
+  useCancelConnection,
+  useCheckConnectionAvailability,
+  useDeclineConnection,
+  useMakeConnection,
+  useReceivedConnections,
+  useSentConnections,
+} from './useConnections'
 export { useCooldownTimer } from './useCooldownTimer'
 export {
   hireKeys,

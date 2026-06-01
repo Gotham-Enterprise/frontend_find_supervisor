@@ -114,8 +114,8 @@ export function ConversationThread({ conversationId, onBack }: ConversationThrea
     ? other.fullName || [other.firstName, other.lastName].filter(Boolean).join(' ')
     : 'Loading…'
 
-  const hireStatus = conversation?.hire.status
-  const hireCompletedAt = conversation?.hire.completedAt
+  const hireStatus = conversation?.hire?.status ?? null
+  const hireCompletedAt = conversation?.hire?.completedAt ?? null
   const isPending = hireStatus === 'PENDING' || (hireStatus === 'REVIEWED' && !hireCompletedAt)
   const remainingMessages = conversation?.remainingMessages ?? 0
 

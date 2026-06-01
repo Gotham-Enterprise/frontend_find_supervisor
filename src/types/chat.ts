@@ -28,7 +28,8 @@ export interface Conversation {
   id: string
   supervisorId: string
   superviseeId: string
-  hireId: string
+  /** Null for conversations created via connection-request approval (no hire involved). */
+  hireId: string | null
   status: ConversationStatus
   lastMessageAt: string | null
   lastMessagePreview: string | null
@@ -39,7 +40,8 @@ export interface Conversation {
   locked: boolean
   supervisor: ChatParticipant
   supervisee: ChatParticipant
-  hire: ChatHire
+  /** Null for conversations created via connection-request approval (no hire involved). */
+  hire: ChatHire | null
   /** Whether the supervisor has messaging enabled (false = messaging is disabled by supervisor). Used as initial state before any socket event arrives. */
   supervisorCanMessage: boolean
   /** Supervisor-provided explanation shown to supervisees when messaging is disabled. */
