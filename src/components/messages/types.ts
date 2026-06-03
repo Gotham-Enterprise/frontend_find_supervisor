@@ -8,6 +8,8 @@ export interface ConversationPreview {
   participantName: string
   /** Their role in the platform — used for avatar color + context label */
   participantRole: ParticipantRole
+  /** Profile photo URL for the other participant; falls back to initials when absent */
+  participantPhotoUrl?: string | null
   /** Most recent message body (pre-truncated or raw; the UI truncates as needed) */
   lastMessage: string
   /** Whether the current user sent the last message */

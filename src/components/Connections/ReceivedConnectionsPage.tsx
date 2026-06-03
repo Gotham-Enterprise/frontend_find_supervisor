@@ -17,6 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ExpandableText } from '@/components/ui/expandable-text'
 import { PaginationControls } from '@/components/ui/pagination-controls'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
@@ -41,6 +42,7 @@ const STATUS_TABS: { label: string; value: string }[] = [
   { label: 'Pending', value: 'PENDING' },
   { label: 'Approved', value: 'APPROVED' },
   { label: 'Declined', value: 'DECLINED' },
+  { label: 'Cancelled', value: 'CANCELED' },
 ]
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -328,9 +330,7 @@ function ReceivedRequestCard({ request }: { request: ConnectionRequest }) {
       {/* Message */}
       {request.message && (
         <div className="border-t border-border/50 px-5 py-3">
-          <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
-            {request.message}
-          </p>
+          <ExpandableText maxLines={3}>{request.message}</ExpandableText>
         </div>
       )}
 

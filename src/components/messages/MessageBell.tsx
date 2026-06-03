@@ -27,6 +27,7 @@ function mapConversationToPreview(
     id: conversation.id,
     participantName: otherName,
     participantRole: isSupervisee ? 'supervisor' : 'supervisee',
+    participantPhotoUrl: other.profilePhotoUrl,
     lastMessage: conversation.lastMessagePreview ?? '',
     lastMessageSender: conversation.lastMessageAt && !conversation.unreadCount ? 'me' : 'them',
     isRead: conversation.unreadCount === 0,

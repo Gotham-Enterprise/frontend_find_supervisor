@@ -124,6 +124,7 @@ export function SuperviseeStepSupervisionNeeds({
         name="supervisorSpecialtyId"
         label="Specialty"
         options={specialtyOptions}
+        sortOptions
         placeholder={
           !supervisorOccupationId
             ? 'Select an occupation first'

@@ -32,6 +32,8 @@ import {
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
+const INTRODUCTION_MESSAGE_MAX_LENGTH = 500
+
 const makeConnectionSchema = z.object({
   fullName: z
     .string()
@@ -58,7 +60,10 @@ const makeConnectionSchema = z.object({
     .trim()
     .min(1, 'Introduction message is required.')
     .min(10, 'Must be at least 10 characters.')
-    .max(1000, 'Must not exceed 1000 characters.'),
+    .max(
+      INTRODUCTION_MESSAGE_MAX_LENGTH,
+      `Must not exceed ${INTRODUCTION_MESSAGE_MAX_LENGTH} characters.`,
+    ),
 })
 
 type MakeConnectionFormValues = z.infer<typeof makeConnectionSchema>
@@ -262,9 +267,14 @@ export function MakeConnectionModal({
                       disabled={isSubmitting}
                       placeholder="Briefly introduce yourself and explain why you'd like to connect."
                       className="min-h-28"
-                      maxLength={1000}
+                      maxLength={INTRODUCTION_MESSAGE_MAX_LENGTH}
                     />
                   </FormControl>
+                  <div className="flex justify-end">
+                    <span className="text-xs text-muted-foreground">
+                      {(field.value ?? '').length} / {INTRODUCTION_MESSAGE_MAX_LENGTH} characters
+                    </span>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
