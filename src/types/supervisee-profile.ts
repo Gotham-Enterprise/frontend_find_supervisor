@@ -83,3 +83,24 @@ export interface SuperviseeProfileData {
 
   user: SuperviseeProfileUser
 }
+
+/** Fields returned when a supervisor views a supervisee profile. */
+export interface SuperviseeProfileViewExtras {
+  isInMyHireList?: boolean
+  canMessage?: boolean
+  hiredInfo?: {
+    hireId: string
+    status: string
+    hiredAt: string
+    acceptedAt: string | null
+    completedAt: string | null
+    hiredBy?: {
+      id: string
+      fullName?: string | null
+      email?: string
+      profilePhotoUrl?: string | null
+    }
+  } | null
+}
+
+export type SuperviseeProfileViewData = SuperviseeProfileData & SuperviseeProfileViewExtras

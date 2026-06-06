@@ -11,6 +11,16 @@ export {
 } from './useChat'
 export { useCheckoutPlanFromUrl } from './useCheckoutPlanFromUrl'
 export { useConfetti } from './useConfetti'
+export {
+  connectionKeys,
+  useApproveConnection,
+  useCancelConnection,
+  useCheckConnectionAvailability,
+  useDeclineConnection,
+  useMakeConnection,
+  useReceivedConnections,
+  useSentConnections,
+} from './useConnections'
 export { useCooldownTimer } from './useCooldownTimer'
 export {
   hireKeys,
@@ -73,8 +83,13 @@ export {
   useSubscriptionPlansMutation,
   useSubscriptionPlansQuery,
 } from './useSubscriptionPlans'
-export { superviseeProfileKeys, useSuperviseeProfile } from './useSuperviseeProfile'
+export {
+  superviseeProfileKeys,
+  useSuperviseeProfile,
+  useSuperviseeProfileById,
+} from './useSuperviseeProfile'
 export { superviseeKeys, useSupervisees } from './useSupervisees'
+export { superviseeSearchKeys, useSuperviseeSearch } from './useSuperviseeSearch'
 export { useSupervisionChatSocket } from './useSupervisionChatSocket'
 export { supervisionSettingsKeys, useSupervisionSettings } from './useSupervisionSettings'
 export { supervisorDetailKeys, useSupervisor } from './useSupervisor'

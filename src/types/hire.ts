@@ -55,6 +55,8 @@ export interface HireSupervisorPayload {
   budgetRangeEnd: number
   introMessage: string
   goals: string
+  /** Required for MHC supervisees; null for PA/NP hire requests. */
+  supervisionHours: number | null
 }
 
 /** Client-side input: `hireSupervisor()` coerces `stateTheyAreLookingIn` to a non-empty array. */
@@ -75,6 +77,7 @@ export interface HireRecord {
   budgetRangeStart: number | null
   budgetRangeEnd: number | null
   introMessage: string | null
+  supervisionHours: number | null
 }
 // ─── GET /api/supervision/hires ───────────────────────────────────────────────
 
@@ -99,6 +102,7 @@ export interface HireListItem {
   budgetRangeEnd: number | null
   introMessage: string | null
   goals: string | null
+  supervisionHours: number | null
 
   // Supervisor info snapshot at time of request
   supervisorProfession: string | null

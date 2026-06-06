@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { memo } from 'react'
 
 import { formatRelativeTime } from '@/components/notifications/utils'
@@ -54,6 +55,7 @@ export const MessagePreviewItem = memo(function MessagePreviewItem({
     id,
     participantName,
     participantRole,
+    participantPhotoUrl,
     lastMessage,
     lastMessageSender,
     isRead,
@@ -75,15 +77,25 @@ export const MessagePreviewItem = memo(function MessagePreviewItem({
       )}
     >
       {/* Avatar */}
-      <span
-        className={cn(
-          'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold',
-          color.bg,
-          color.fg,
-        )}
-      >
-        {initials}
-      </span>
+      {participantPhotoUrl ? (
+        <Image
+          src={participantPhotoUrl}
+          alt={participantName}
+          width={36}
+          height={36}
+          className="mt-0.5 h-9 w-9 shrink-0 rounded-full object-cover"
+        />
+      ) : (
+        <span
+          className={cn(
+            'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold',
+            color.bg,
+            color.fg,
+          )}
+        >
+          {initials}
+        </span>
+      )}
 
       <div className="min-w-0 flex-1">
         {/* Name + timestamp + unread badge */}

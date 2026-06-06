@@ -35,6 +35,7 @@ import {
   formatDisplayName,
   formatLocation,
   formatSupervisionFormat,
+  formatSupervisionHours,
 } from '@/lib/utils/profile-formatters'
 import type { HireListItem, HireStatus } from '@/types/hire'
 
@@ -289,6 +290,12 @@ function SuperviseeDetailsDialog({
               label="Start Date"
               value={formatDate(hire.startDate ?? hire.preferredStartDate)}
             />
+            {hire.supervisionHours != null && (
+              <DetailItem
+                label="Supervision Hours Needed"
+                value={formatSupervisionHours(hire.supervisionHours)}
+              />
+            )}
             <DetailItem
               label="Status"
               value={<HireStatusBadge status={hire.status} completedAt={hire.completedAt} />}
@@ -437,24 +444,24 @@ export function SuperviseesPage() {
         </p>
       </div>
 
-      {/* ── Tab bar ─────────────────────────────────────────────────── */}
+      {/* Status filter tabs */}
       <div
-        className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1"
+        className="flex flex-wrap gap-2"
         role="tablist"
         aria-label="Filter supervisees by status"
       >
         {TABS.map((tab) => (
           <button
             key={tab.id}
+            type="button"
             role="tab"
             aria-selected={activeTab === tab.id}
             onClick={() => handleTabChange(tab.id)}
-            className={[
-              'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
               activeTab === tab.id
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            ].join(' ')}
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border bg-background text-foreground hover:bg-muted'
+            }`}
           >
             {tab.label}
           </button>

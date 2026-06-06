@@ -34,9 +34,9 @@ export const ConversationListItem = memo(function ConversationListItem({
     ? formatRelativeTime(new Date(conversation.lastMessageAt))
     : null
   const hasUnread = conversation.unreadCount > 0
-  const hire = conversation.hire
+  const hire = conversation.hire ?? null
   const isPreAcceptMessaging =
-    hire.status === 'PENDING' || (hire.status === 'REVIEWED' && !hire.completedAt)
+    hire?.status === 'PENDING' || (hire?.status === 'REVIEWED' && !hire?.completedAt)
   const avatarCornerRing = isActive
     ? 'ring-brand-light'
     : hasUnread && !isActive
@@ -100,7 +100,7 @@ export const ConversationListItem = memo(function ConversationListItem({
           <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">
             {otherRole}
           </span>
-          {conversation.hire.status === 'REVIEWED' && !conversation.hire.completedAt && (
+          {conversation.hire?.status === 'REVIEWED' && !conversation.hire?.completedAt && (
             <span className="rounded-full bg-blue-100 px-1.5 py-px text-[10px] font-semibold text-blue-700">
               Reviewed
             </span>
