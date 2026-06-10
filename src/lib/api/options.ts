@@ -14,12 +14,19 @@ export type SupervisorLicenseTypeData = {
   name: string
 }
 
+export type SupervisorDegreeTypeData = {
+  id: string
+  occupationId: string
+  name: string
+}
+
 export type SupervisorOccupationData = {
   id: string
   supervisorTypeId: string
   name: string
   specialties: SupervisorSpecialtyData[]
   licenseTypes: SupervisorLicenseTypeData[]
+  degreeTypes: SupervisorDegreeTypeData[]
 }
 
 export type SupervisorTypeData = {

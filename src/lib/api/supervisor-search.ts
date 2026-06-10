@@ -5,6 +5,7 @@ import type {
   SupervisorSearchResult,
 } from '@/components/SearchSupervisor/types'
 import { formatSupervisorTypeLabel } from '@/lib/utils/profile-formatters'
+import { getSupervisorDisplayCredential } from '@/lib/utils/supervisor-type'
 
 import { apiClient } from './client'
 
@@ -25,6 +26,7 @@ export interface SupervisorSearchApiRow {
   state?: string
   location?: string
   licenseType?: string
+  degreeType?: string
   supervisorType?: string
   profession?: string
   licenseNumber?: string
@@ -192,7 +194,11 @@ export function mapApiRowToSupervisorSearchResult(
     id: String(row.id),
     fullName,
     credentials: '',
-    licenseType: row.licenseType ?? '',
+    licenseType: getSupervisorDisplayCredential({
+      supervisorType: row.supervisorType,
+      licenseType: row.licenseType,
+      degreeType: row.degreeType,
+    }),
     supervisorType: formatSupervisorTypeLabel(row.supervisorType?.trim() || row.profession?.trim()),
     yearsOfExperience: row.yearsOfExperience != null ? String(row.yearsOfExperience) : '',
     city: row.city ?? '',

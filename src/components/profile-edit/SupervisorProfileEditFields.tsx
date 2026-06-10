@@ -27,6 +27,12 @@ import {
   useStatesOptions,
   useSupervisorTypesData,
 } from '@/lib/hooks'
+import {
+  getSupervisorCredentialSelectOptions,
+  getSupervisorCredentialTypeLabel,
+  isPhysicianSupervisorType,
+  PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE,
+} from '@/lib/utils/supervisor-type'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 const yearsOfExperienceSelectOptions: SelectOption[] = yearsOfExperienceOptions.map((v) => ({
@@ -111,12 +117,24 @@ export function SupervisorProfileEditFields({
     return occ?.specialties.map((s) => ({ label: s.name, value: s.name })) ?? []
   }, [supervisorTypeWatch, supervisorOccupationWatch, supervisorTypesData])
 
-  const supervisionLicenseTypeOptions = useMemo<SelectOption[]>(() => {
-    if (!supervisorOccupationWatch) return []
+  const physicianSupervisorType = isPhysicianSupervisorType(supervisorTypeWatch)
+  const credentialTypeLabel = getSupervisorCredentialTypeLabel(supervisorTypeWatch)
+  const credentialFieldName = physicianSupervisorType ? 'degreeType' : 'licenseType'
+  const credentialOptions = useMemo<SelectOption[]>(() => {
     const selected = supervisorTypesData.find((t) => t.name === supervisorTypeWatch)
     const occ = selected?.occupations.find((o) => o.name === supervisorOccupationWatch)
-    return occ?.licenseTypes.map((l) => ({ label: l.name, value: l.name })) ?? []
+    return getSupervisorCredentialSelectOptions(selected, occ)
   }, [supervisorTypeWatch, supervisorOccupationWatch, supervisorTypesData])
+  const credentialFieldDisabled = physicianSupervisorType
+    ? supervisorTypesLoading
+    : supervisorTypesLoading || !supervisorOccupationWatch
+  const credentialPlaceholder = credentialFieldDisabled
+    ? physicianSupervisorType
+      ? 'Select degree type'
+      : 'Select an occupation first'
+    : physicianSupervisorType
+      ? 'Select degree type'
+      : 'Select license type'
 
   return (
     <div className="space-y-6">
@@ -271,7 +289,15 @@ export function SupervisorProfileEditFields({
             form.setValue('supervisorOccupation', '')
             form.setValue('supervisorSpecialty', '')
             form.setValue('licenseType', '')
-            form.clearErrors(['supervisorOccupation', 'supervisorSpecialty', 'licenseType'])
+            form.setValue('degreeType', '')
+            form.setValue('certification', [])
+            form.clearErrors([
+              'supervisorOccupation',
+              'supervisorSpecialty',
+              'licenseType',
+              'degreeType',
+              'certification',
+            ])
           }}
         />
         <div className="grid gap-4 sm:grid-cols-2">
@@ -291,7 +317,8 @@ export function SupervisorProfileEditFields({
             onValueChange={() => {
               form.setValue('supervisorSpecialty', '')
               form.setValue('licenseType', '')
-              form.clearErrors(['supervisorSpecialty', 'licenseType'])
+              form.setValue('degreeType', '')
+              form.clearErrors(['supervisorSpecialty', 'licenseType', 'degreeType'])
             }}
           />
           <FormSelectField
@@ -310,15 +337,13 @@ export function SupervisorProfileEditFields({
         <div className="grid gap-4 sm:grid-cols-2">
           <FormSelectField
             control={form.control}
-            name="licenseType"
-            label="License Type"
+            name={credentialFieldName}
+            label={credentialTypeLabel}
             required
-            options={supervisionLicenseTypeOptions}
-            placeholder={
-              !supervisorOccupationWatch ? 'Select an occupation first' : 'Select License Type'
-            }
+            options={credentialOptions}
+            placeholder={credentialPlaceholder}
             loading={supervisorTypesLoading}
-            disabled={supervisorTypesLoading || !supervisorOccupationWatch}
+            disabled={credentialFieldDisabled}
             selectKey={supervisorOccupationWatch}
             isSubmitting={isSubmitting}
             emptySentinel={{ value: '__none__', label: 'None' }}
@@ -385,17 +410,33 @@ export function SupervisorProfileEditFields({
           render={({ field }) => (
             <FormItem>
               <FormLabel>
-                Certifications <span className="text-destructive">*</span>
+                Certifications
+                {!physicianSupervisorType ? <span className="text-destructive"> *</span> : null}
               </FormLabel>
               <FormControl>
-                <TagInput
-                  options={certificationOptions}
-                  value={field.value ?? []}
-                  onChange={field.onChange}
-                  placeholder="Select Certifications..."
-                  disabled={isSubmitting}
-                />
+                <div
+                  title={
+                    physicianSupervisorType ? PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE : undefined
+                  }
+                >
+                  <TagInput
+                    options={certificationOptions}
+                    value={field.value ?? []}
+                    onChange={field.onChange}
+                    placeholder={
+                      physicianSupervisorType
+                        ? 'Not applicable for this supervisor type'
+                        : 'Select Certifications...'
+                    }
+                    disabled={physicianSupervisorType || isSubmitting}
+                  />
+                </div>
               </FormControl>
+              {physicianSupervisorType ? (
+                <p className="text-xs text-muted-foreground">
+                  {PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE}
+                </p>
+              ) : null}
               <FormMessage />
             </FormItem>
           )}

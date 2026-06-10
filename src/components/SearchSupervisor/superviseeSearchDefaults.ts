@@ -35,6 +35,7 @@ function buildHierarchyNameSets(supervisorTypesData: SupervisorTypeData[]) {
       occupations.add(occupation.name)
       for (const specialty of occupation.specialties) specialties.add(specialty.name)
       for (const licenseType of occupation.licenseTypes) licenseTypes.add(licenseType.name)
+      for (const degreeType of occupation.degreeTypes ?? []) licenseTypes.add(degreeType.name)
     }
   }
 

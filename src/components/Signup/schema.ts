@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
+import { applySupervisorPhysicianRules } from '@/lib/utils/supervisor-type'
 
 // ─── Shared options ──────────────────────────────────────────────────────────
 
@@ -52,7 +53,8 @@ export const supervisorSchemaObject = accountSchemaBase.extend({
   supervisorSpecialtyId: z.string().optional(),
 
   // License & credentials
-  licenseType: z.string().min(1, 'License type is required'),
+  licenseType: z.string(),
+  degreeType: z.string(),
   licenseNumber: z.string().min(1, 'License number is required').max(50),
   licenseExpiration: z
     .string()
@@ -68,7 +70,7 @@ export const supervisorSchemaObject = accountSchemaBase.extend({
       { message: 'License expiration cannot be a past date' },
     ),
   npiNumber: z.string().max(20).optional(),
-  certifications: z.array(z.string()).min(1, 'Add at least one certification'),
+  certifications: z.array(z.string()),
   yearsOfExperience: z.string().min(1, 'Years of experience is required'),
   licenseDoc: z
     .any()
@@ -118,7 +120,9 @@ export const supervisorSchemaObject = accountSchemaBase.extend({
     .refine((val) => val === true, 'You must agree to the terms and conditions'),
 })
 
-export const supervisorSchema = withPasswordConfirmation(supervisorSchemaObject)
+export const supervisorSchema = withPasswordConfirmation(
+  supervisorSchemaObject.superRefine(applySupervisorPhysicianRules),
+)
 
 // ─── Supervisee schema ─────────────────────────────────────────────────────────
 
@@ -182,19 +186,22 @@ export const supervisorStep1Schema = withPasswordConfirmation(
   }),
 )
 
-export const supervisorStep2Schema = supervisorSchemaObject.pick({
-  supervisorType: true,
-  supervisorOccupationId: true,
-  supervisorSpecialtyId: true,
-  licenseType: true,
-  licenseNumber: true,
-  licenseExpiration: true,
-  npiNumber: true,
-  certifications: true,
-  yearsOfExperience: true,
-  licenseDoc: true,
-  stateOfLicensure: true,
-})
+export const supervisorStep2Schema = supervisorSchemaObject
+  .pick({
+    supervisorType: true,
+    supervisorOccupationId: true,
+    supervisorSpecialtyId: true,
+    licenseType: true,
+    degreeType: true,
+    licenseNumber: true,
+    licenseExpiration: true,
+    npiNumber: true,
+    certifications: true,
+    yearsOfExperience: true,
+    licenseDoc: true,
+    stateOfLicensure: true,
+  })
+  .superRefine(applySupervisorPhysicianRules)
 
 export const supervisorStep3Schema = supervisorSchemaObject.pick({
   patientPopulation: true,
@@ -234,6 +241,7 @@ export const SUPERVISOR_SIGNUP_STEP_FIELDS = [
     'supervisorOccupationId',
     'supervisorSpecialtyId',
     'licenseType',
+    'degreeType',
     'licenseNumber',
     'licenseExpiration',
     'npiNumber',

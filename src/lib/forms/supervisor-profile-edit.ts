@@ -4,6 +4,7 @@ import { yearsOfExperienceOptions } from '@/components/Signup/schema'
 import type { UpdateSupervisorProfilePayload } from '@/lib/api/supervisor-profile'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
 import { formatUSPhoneForDisplay, normalizeUSPhoneNumber } from '@/lib/utils/phone'
+import { isPhysicianSupervisorType, isValidPhysicianDegreeType } from '@/lib/utils/supervisor-type'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 export const SUPERVISOR_PROFILE_FORMAT_OPTIONS = [
@@ -67,10 +68,8 @@ const editSupervisorProfileFieldsSchema = z.object({
     .min(1, 'Occupation is required')
     .refine((s) => !isEmptySelect(s), { message: 'Occupation is required' }),
   supervisorSpecialty: z.string().optional(),
-  licenseType: z
-    .string()
-    .min(1, 'License type is required')
-    .refine((s) => !isEmptySelect(s), { message: 'License type is required' }),
+  licenseType: z.string(),
+  degreeType: z.string(),
   licenseNumber: z.string().min(1, 'License number is required').max(50),
   licenseExpiration: licenseExpirationRefine,
   yearsOfExperience: z
@@ -80,7 +79,7 @@ const editSupervisorProfileFieldsSchema = z.object({
       message: 'Please select years of experience',
     }),
   npiNumber: z.string().max(20).optional(),
-  certification: z.array(z.string()).min(1, 'Add at least one certification'),
+  certification: z.array(z.string()),
   stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
   patientPopulation: z.array(z.string()).min(1, 'Add at least one patient population'),
   supervisionFormat: z
@@ -130,12 +129,45 @@ export function createEditSupervisorProfileSchema(profile: SupervisorProfileData
         path: ['uploadProfilePhoto'],
       })
     }
+
+    const physician = isPhysicianSupervisorType(data.supervisorType)
+    if (physician) {
+      if (!data.degreeType?.trim() || isEmptySelect(data.degreeType)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['degreeType'],
+          message: 'Degree type is required',
+        })
+      } else if (!isValidPhysicianDegreeType(data.degreeType)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['degreeType'],
+          message: 'Degree type must be MD or DO',
+        })
+      }
+    } else if (!data.licenseType?.trim() || isEmptySelect(data.licenseType)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['licenseType'],
+        message: 'License type is required',
+      })
+    }
+
+    if (!physician && data.certification.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['certification'],
+        message: 'Add at least one certification',
+      })
+    }
   })
 }
 
 export function getDefaultSupervisorProfileFormValues(
   profile: SupervisorProfileData,
 ): EditSupervisorProfileFormValues {
+  const physician = isPhysicianSupervisorType(profile.supervisorType ?? '')
+
   return {
     fullName: profile.user.fullName ?? '',
     contactNumber: formatUSPhoneForDisplay(profile.user.contactNumber ?? ''),
@@ -146,7 +178,8 @@ export function getDefaultSupervisorProfileFormValues(
     supervisorType: profile.supervisorType ?? '',
     supervisorOccupation: profile.supervisorOccupation ?? '',
     supervisorSpecialty: profile.supervisorSpecialty ?? '',
-    licenseType: profile.licenseType ?? '',
+    licenseType: physician ? '' : (profile.licenseType ?? ''),
+    degreeType: physician ? (profile.degreeType ?? profile.licenseType ?? '') : '',
     licenseNumber: profile.licenseNumber ?? '',
     licenseExpiration: profile.licenseExpiration ? profile.licenseExpiration.slice(0, 10) : '',
     yearsOfExperience: (() => {
@@ -154,7 +187,7 @@ export function getDefaultSupervisorProfileFormValues(
       return (yearsOfExperienceOptions as readonly string[]).includes(raw) ? raw : ''
     })(),
     npiNumber: profile.npiNumber ?? '',
-    certification: profile.certification ?? [],
+    certification: physician ? [] : (profile.certification ?? []),
     stateOfLicensure: profile.user.stateOfLicensure ?? [],
     patientPopulation: profile.patientPopulation ?? [],
     supervisionFormat: profile.supervisionFormat ?? '',
@@ -186,12 +219,14 @@ export function supervisorProfileFormValuesToPayload(
     supervisorType: values.supervisorType || undefined,
     occupation: values.supervisorOccupation || undefined,
     specialty: values.supervisorSpecialty || undefined,
-    licenseType: values.licenseType || undefined,
+    ...(isPhysicianSupervisorType(values.supervisorType)
+      ? { degreeType: values.degreeType || undefined }
+      : { licenseType: values.licenseType || undefined }),
     licenseNumber: values.licenseNumber || undefined,
     licenseExpiration: values.licenseExpiration || undefined,
     yearsOfExperience: values.yearsOfExperience || undefined,
     npiNumber: values.npiNumber || undefined,
-    certification: values.certification,
+    certification: isPhysicianSupervisorType(values.supervisorType) ? [] : values.certification,
     stateOfLicensure: values.stateOfLicensure,
     patientPopulation: values.patientPopulation,
     supervisionFormat: values.supervisionFormat || undefined,
