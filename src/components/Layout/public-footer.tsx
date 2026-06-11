@@ -28,8 +28,8 @@ const footerColumns = [
     links: [
       { label: 'Sign In', href: '/login' },
       { label: 'Create Account', href: '/signup' },
-      { label: 'For Supervisors', href: '/signup' },
-      { label: 'For Supervisees', href: '/signup' },
+      { label: 'For Supervisors', href: '/signup?type=supervisor' },
+      { label: 'For Supervisees', href: '/signup?type=supervisee' },
     ],
   },
   {
