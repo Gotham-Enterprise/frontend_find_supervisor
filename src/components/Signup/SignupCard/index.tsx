@@ -7,8 +7,12 @@ import { SuperviseeSignupForm } from '../SuperviseeSignupForm'
 import { SupervisorSignupForm } from '../SupervisorSignupForm'
 import type { SignupRole } from '../types'
 
-export function SignupCard() {
-  const [role, setRole] = useState<SignupRole>('supervisor')
+type SignupCardProps = {
+  initialRole?: SignupRole
+}
+
+export function SignupCard({ initialRole = 'supervisor' }: SignupCardProps) {
+  const [role, setRole] = useState<SignupRole>(initialRole)
 
   return (
     <div className="w-full rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">

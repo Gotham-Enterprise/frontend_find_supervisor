@@ -1,4 +1,9 @@
 import type { SuperviseeFormValues, SupervisorFormValues } from './schema'
+import type { SignupRole } from './types'
+
+export function parseSignupRoleFromType(type?: string | null): SignupRole {
+  return type === 'supervisee' ? 'supervisee' : 'supervisor'
+}
 
 export const supervisorDefaultValues: Partial<SupervisorFormValues> = {
   fullName: '',
