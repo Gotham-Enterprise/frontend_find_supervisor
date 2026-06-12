@@ -1,5 +1,6 @@
 import type { SuperviseeFormValues, SupervisorFormValues } from '@/components/Signup/schema'
 import { normalizeUSPhoneNumber } from '@/lib/utils/phone'
+import { isPhysicianSupervisorType } from '@/lib/utils/supervisor-type'
 
 import { apiClient } from './client'
 
@@ -66,15 +67,20 @@ export function buildSupervisorFormData(values: SupervisorFormValues): FormData 
   if (values.website) fd.append('website', values.website)
 
   // License & credentials
-  fd.append('licenseType', values.licenseType)
+  if (isPhysicianSupervisorType(values.supervisorType)) {
+    fd.append('degreeType', values.degreeType)
+  } else {
+    fd.append('licenseType', values.licenseType)
+  }
   fd.append('supervisorType', values.supervisorType)
   fd.append('licenseNumber', values.licenseNumber)
   fd.append('licenseExpiration', values.licenseExpiration)
   // Backend field is singular: yearOfExperience
   fd.append('yearsOfExperience', values.yearsOfExperience)
   if (values.npiNumber) fd.append('npiNumber', values.npiNumber)
-  // Backend field is singular: certification
-  values.certifications.forEach((cert) => fd.append('certification', cert))
+  if (!isPhysicianSupervisorType(values.supervisorType)) {
+    values.certifications.forEach((cert) => fd.append('certification', cert))
+  }
 
   // Practice
   values.patientPopulation.forEach((p) => fd.append('patientPopulation', p))

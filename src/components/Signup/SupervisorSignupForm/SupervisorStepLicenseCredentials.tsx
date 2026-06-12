@@ -12,6 +12,12 @@ import { FormSelectField } from '@/components/ui/form-select-field'
 import { TagInput } from '@/components/ui/tag-input'
 import { UploadFile } from '@/components/ui/upload-file'
 import type { SelectOption, SupervisorTypeData } from '@/lib/api/options'
+import {
+  getSupervisorCredentialSelectOptions,
+  getSupervisorCredentialTypeLabel,
+  isPhysicianSupervisorType,
+  PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE,
+} from '@/lib/utils/supervisor-type'
 
 /** Select does not allow `SelectItem value=""`; map to empty `specialtyId` in the form. */
 const SPECIALTY_NONE_VALUE = '__none__'
@@ -43,6 +49,10 @@ export function SupervisorStepLicenseCredentials({
   const { control, clearErrors, setValue } = useFormContext<SupervisorFormValues>()
   const supervisorType = useWatch({ control, name: 'supervisorType' }) ?? ''
   const supervisorOccupationId = useWatch({ control, name: 'supervisorOccupationId' }) ?? ''
+  const physicianSupervisorType = isPhysicianSupervisorType(supervisorType)
+  const credentialTypeLabel = getSupervisorCredentialTypeLabel(supervisorType)
+  const credentialFieldName = physicianSupervisorType ? 'degreeType' : 'licenseType'
+  const certificationsDisabled = physicianSupervisorType || certificatesLoading || isSubmitting
 
   // Derive occupation options directly from the hierarchy for the selected supervisor type.
   const occupationOptions = useMemo<SelectOption[]>(() => {
@@ -51,14 +61,12 @@ export function SupervisorStepLicenseCredentials({
     return selectedType?.occupations.map((o) => ({ label: o.name, value: o.name })) ?? []
   }, [supervisorType, supervisorTypesData])
 
-  // Derive license type options from the hierarchy for the selected occupation.
-  const licenseTypeOptions = useMemo<SelectOption[]>(() => {
-    if (!supervisorOccupationId) return []
+  const credentialOptions = useMemo<SelectOption[]>(() => {
     const selectedType = supervisorTypesData.find((t) => t.name === supervisorType)
     const selectedOccupation = selectedType?.occupations.find(
       (o) => o.name === supervisorOccupationId,
     )
-    return selectedOccupation?.licenseTypes.map((l) => ({ label: l.name, value: l.name })) ?? []
+    return getSupervisorCredentialSelectOptions(selectedType, selectedOccupation)
   }, [supervisorType, supervisorOccupationId, supervisorTypesData])
 
   // Derive specialty options from the hierarchy for the selected occupation.
@@ -72,8 +80,17 @@ export function SupervisorStepLicenseCredentials({
   }, [supervisorType, supervisorOccupationId, supervisorTypesData])
 
   const occupationDisabled = supervisorTypesLoading || !supervisorType
-  const licenseTypeDisabled = supervisorTypesLoading || !supervisorOccupationId
+  const credentialFieldDisabled = physicianSupervisorType
+    ? supervisorTypesLoading
+    : supervisorTypesLoading || !supervisorOccupationId
   const specialtyDisabled = supervisorTypesLoading || supervisorOccupationId.length === 0
+  const credentialPlaceholder = credentialFieldDisabled
+    ? physicianSupervisorType
+      ? 'Select degree type'
+      : 'Select an occupation first'
+    : physicianSupervisorType
+      ? 'Select degree type'
+      : 'Select license type'
 
   return (
     <FormSection title="License & Credentials">
@@ -91,7 +108,15 @@ export function SupervisorStepLicenseCredentials({
           setValue('supervisorOccupationId', '')
           setValue('supervisorSpecialtyId', '')
           setValue('licenseType', '')
-          clearErrors(['supervisorOccupationId', 'supervisorSpecialtyId', 'licenseType'])
+          setValue('degreeType', '')
+          setValue('certifications', [])
+          clearErrors([
+            'supervisorOccupationId',
+            'supervisorSpecialtyId',
+            'licenseType',
+            'degreeType',
+            'certifications',
+          ])
         }}
       />
 
@@ -111,7 +136,8 @@ export function SupervisorStepLicenseCredentials({
           onValueChange={() => {
             setValue('supervisorSpecialtyId', '')
             setValue('licenseType', '')
-            clearErrors(['supervisorSpecialtyId', 'licenseType'])
+            setValue('degreeType', '')
+            clearErrors(['supervisorSpecialtyId', 'licenseType', 'degreeType'])
           }}
         />
         <FormSelectField
@@ -131,13 +157,13 @@ export function SupervisorStepLicenseCredentials({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormSelectField
           control={control}
-          name="licenseType"
-          label="License Type"
-          rules={supervisorFieldRules('licenseType')}
-          options={licenseTypeOptions}
-          placeholder={licenseTypeDisabled ? 'Select an occupation first' : 'Select license type'}
+          name={credentialFieldName}
+          label={credentialTypeLabel}
+          rules={supervisorFieldRules(credentialFieldName)}
+          options={credentialOptions}
+          placeholder={credentialPlaceholder}
           loading={supervisorTypesLoading}
-          disabled={licenseTypeDisabled}
+          disabled={credentialFieldDisabled}
           selectKey={supervisorOccupationId}
           isSubmitting={isSubmitting}
           required
@@ -193,20 +219,38 @@ export function SupervisorStepLicenseCredentials({
         render={({ field }) => (
           <FormItem>
             <FormLabel>
-              Certifications <span className="text-destructive">*</span>
+              Certifications
+              {!physicianSupervisorType ? <span className="text-destructive"> *</span> : null}
             </FormLabel>
             <FormControl>
-              <TagInput
-                options={certificateOptions.sort((a, b) => a.label.localeCompare(b.label))}
-                value={field.value ?? []}
-                onChange={(v) => {
-                  field.onChange(v)
-                  clearErrors(field.name)
-                }}
-                placeholder={certificatesLoading ? 'Loading…' : 'Add certification (e.g. BLS)'}
-                disabled={certificatesLoading || isSubmitting}
-              />
+              <div
+                title={
+                  physicianSupervisorType ? PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE : undefined
+                }
+              >
+                <TagInput
+                  options={certificateOptions.sort((a, b) => a.label.localeCompare(b.label))}
+                  value={field.value ?? []}
+                  onChange={(v) => {
+                    field.onChange(v)
+                    clearErrors(field.name)
+                  }}
+                  placeholder={
+                    physicianSupervisorType
+                      ? 'Not applicable for this supervisor type'
+                      : certificatesLoading
+                        ? 'Loading…'
+                        : 'Add certification (e.g. BLS)'
+                  }
+                  disabled={certificationsDisabled}
+                />
+              </div>
             </FormControl>
+            {physicianSupervisorType ? (
+              <p className="text-xs text-muted-foreground">
+                {PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE}
+              </p>
+            ) : null}
             <FormMessage />
           </FormItem>
         )}

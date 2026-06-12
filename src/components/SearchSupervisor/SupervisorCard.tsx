@@ -64,8 +64,12 @@ export function SupervisorCard({ supervisor }: SupervisorCardProps) {
           <div className="min-w-0">
             <h3 className="truncate text-base font-semibold text-foreground">{fullName}</h3>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              {licenseType}
-              <span className="mx-1.5 text-border">·</span>
+              {licenseType ? (
+                <>
+                  {licenseType}
+                  <span className="mx-1.5 text-border">·</span>
+                </>
+              ) : null}
               {supervisorType}
             </p>
           </div>

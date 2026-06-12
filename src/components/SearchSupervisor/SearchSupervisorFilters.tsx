@@ -148,6 +148,12 @@ export function SearchSupervisorFilters({
               opts.push({ label: l.name, value: l.name })
             }
           }
+          for (const d of o.degreeTypes ?? []) {
+            if (!seen.has(d.name)) {
+              seen.add(d.name)
+              opts.push({ label: d.name, value: d.name })
+            }
+          }
         }
       }
     }

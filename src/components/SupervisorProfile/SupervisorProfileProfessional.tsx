@@ -4,6 +4,10 @@ import {
   formatSupervisorTypeLabel,
   resolveOptionLabels,
 } from '@/lib/utils/profile-formatters'
+import {
+  getSupervisorCredentialTypeLabel,
+  getSupervisorDisplayCredential,
+} from '@/lib/utils/supervisor-type'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 interface SupervisorProfileProfessionalProps {
@@ -59,12 +63,14 @@ export function SupervisorProfileProfessional({
   const popLabels = resolveOptionLabels(profile.patientPopulation ?? [], patientPopulationOptions)
   const statesOfLicensure = profile.user.stateOfLicensure ?? []
   const licensureLabels = resolveOptionLabels(statesOfLicensure, stateOptions)
+  const credentialLabel = getSupervisorCredentialTypeLabel(profile.supervisorType ?? '')
+  const credentialValue = getSupervisorDisplayCredential(profile)
 
   return (
     <section className="border-b border-[#E5E7EB] py-8">
       <h2 className="mb-2 text-base font-semibold text-[#181818]">License &amp; Credentials</h2>
       <div>
-        {profile.licenseType && <Row label="License Type">{profile.licenseType}</Row>}
+        {credentialValue && <Row label={credentialLabel}>{credentialValue}</Row>}
         {profile.supervisorType && (
           <Row label="Supervisor Type">{formatSupervisorTypeLabel(profile.supervisorType)}</Row>
         )}
