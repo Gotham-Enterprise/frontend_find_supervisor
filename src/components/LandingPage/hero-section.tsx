@@ -22,7 +22,7 @@ export function HeroSection() {
               success.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Link href="/login" className={buttonVariants({ size: 'lg' })}>
+              <Link href="/supervisors" className={buttonVariants({ size: 'lg' })}>
                 Find My Supervisor
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

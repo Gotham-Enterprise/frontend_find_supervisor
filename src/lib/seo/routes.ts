@@ -258,19 +258,19 @@ export const SUPERVISOR_TYPE_SLUGS: Array<{
   {
     slug: 'mental-health-counselor',
     label: 'Mental Health Counselor Supervisors',
-    description: 'For LCSWs, LMFTs, LPCs, LMHCs, and other mental health professionals.',
+    description: 'For LCSWs, LMFTs, LPCs, LMHCs, and other Mental Health Professionals.',
     href: '/supervisors?type=mental-health-counselor',
   },
   {
     slug: 'collaborating-physician',
     label: 'Collaborating Physicians',
-    description: 'For nurse practitioners seeking physician collaboration agreements.',
+    description: 'For Nurse Practitioners seeking Physician collaboration agreements.',
     href: '/supervisors?type=collaborating-physician',
   },
   {
     slug: 'supervising-physician',
     label: 'Supervising Physicians',
-    description: 'For physician assistants seeking physician supervision.',
+    description: 'For Physician Assistants seeking Physician supervision.',
     href: '/supervisors?type=supervising-physician',
   },
 ]
