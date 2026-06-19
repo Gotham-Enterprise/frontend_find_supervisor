@@ -454,21 +454,21 @@ async function SupervisorTypeView({
           <div className="rounded-xl border border-dashed py-16 text-center">
             <p className="font-medium text-foreground">No results found in {stateName} yet.</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              New supervisors and physicians join regularly. Sign in to search across all available
-              listings.
+              New supervisors and physicians join regularly. Try browsing all supervisor types in
+              this state.
             </p>
             <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <Link
-                href="/login"
+                href={`/supervisors/${stateSlug}`}
                 className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                Sign in to search
+                All supervisors in {stateName}
               </Link>
               <Link
-                href={`/supervisors/${stateSlug}`}
+                href="/supervisors"
                 className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-6 text-sm font-medium transition-colors hover:bg-accent"
               >
-                All supervisors in {stateName}
+                Browse all states
               </Link>
             </div>
           </div>
@@ -760,10 +760,11 @@ function SupervisorPublicProfile({
         </div>
       )}
 
-      {/* CTA */}
+      {/* CTA — sign-in required only to contact or hire */}
       <div className="border-t bg-muted/30 px-6 py-5">
         <p className="text-sm text-muted-foreground">
-          Sign in to view full credentials, contact {supervisor.fullName}, and send a hire request.
+          Ready to connect? Sign in or create a free account to contact {supervisor.fullName} and
+          send a hire request.
         </p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <Link
@@ -850,7 +851,6 @@ function initials(name: string): string {
 function ProfileNotFound({
   stateSlug,
   stateName,
-  supervisorId,
 }: {
   stateSlug: string
   stateName: string
@@ -858,23 +858,23 @@ function ProfileNotFound({
 }) {
   return (
     <div className="rounded-2xl border border-dashed p-12 text-center">
-      <h1 className="text-2xl font-bold text-foreground">Supervisor Profile</h1>
+      <h1 className="text-2xl font-bold text-foreground">Supervisor Not Found</h1>
       <p className="mt-3 text-muted-foreground">
-        Sign in to view this supervisor&apos;s credentials, specialties, experience, and
-        availability in {stateName} — and to send a hire request or message.
+        This supervisor profile could not be found or may have been removed. Browse other
+        supervisors in {stateName} to find the right match.
       </p>
       <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <Link
-          href={`/login?redirect=/find-supervisors/${supervisorId}`}
+          href={`/supervisors/${stateSlug}`}
           className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          Sign in to view profile
+          Browse supervisors in {stateName}
         </Link>
         <Link
-          href={`/supervisors/${stateSlug}`}
+          href="/supervisors"
           className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-6 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
         >
-          Browse supervisors in {stateName}
+          Browse all states
         </Link>
       </div>
     </div>
@@ -900,20 +900,20 @@ function LicenseEmptyState({
         No {licenseLabel} supervisors found in {stateName} yet.
       </p>
       <p className="mt-2 text-sm text-muted-foreground">
-        New supervisors join regularly. Sign in to search across all available supervisors.
+        New supervisors join regularly. Try browsing all supervisors in this state.
       </p>
       <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <Link
-          href="/login"
+          href={`/supervisors/${stateSlug}`}
           className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          Sign in to search
+          All supervisors in {stateName}
         </Link>
         <Link
-          href={`/supervisors/${stateSlug}`}
+          href="/supervisors"
           className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-6 text-sm font-medium transition-colors hover:bg-accent"
         >
-          All supervisors in {stateName}
+          Browse all states
         </Link>
       </div>
     </div>

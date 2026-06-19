@@ -20,7 +20,7 @@ export function useRequireAuth() {
     const token = localStorage.getItem(TOKEN_KEY)
 
     if (!token) {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`)
+      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`)
       return
     }
 
@@ -30,7 +30,7 @@ export function useRequireAuth() {
         .then(setUser)
         .catch(() => {
           localStorage.removeItem(TOKEN_KEY)
-          router.replace(`/login?next=${encodeURIComponent(pathname)}`)
+          router.replace(`/login?redirect=${encodeURIComponent(pathname)}`)
         })
         .finally(() => setIsLoading(false))
     }

@@ -23,7 +23,7 @@ export function CtaBanner() {
         </p>
         <div className="mt-8">
           <Link
-            href="/login"
+            href="/supervisors"
             className={buttonVariants({
               size: 'lg',
               variant: 'outline',

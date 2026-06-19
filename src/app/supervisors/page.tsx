@@ -129,21 +129,21 @@ export default async function SupervisorsIndexPage({ searchParams }: PageProps) 
               Find Licensed Supervisors
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-              Browse licensed supervisors, collaborating physicians, and supervising physicians by
+              Browse licensed supervisors, collaborating Physicians, and supervising Physicians by
               state, city, specialty, occupation, and supervision format.
             </p>
             <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <Link
-                href="/login"
+                href="/signup"
                 className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                Find My Supervisor
+                Create Free Account
               </Link>
               <Link
-                href="/signup"
+                href="/login"
                 className="inline-flex h-11 items-center justify-center rounded-md border border-input bg-background px-8 text-sm font-medium transition-colors hover:bg-accent"
               >
-                Create Free Account
+                Sign In
               </Link>
             </div>
           </header>
@@ -218,7 +218,7 @@ export default async function SupervisorsIndexPage({ searchParams }: PageProps) 
               Browse by Supervisor Type
             </h2>
             <p className="mb-4 text-muted-foreground">
-              Find the right type of supervisor or collaborating physician for your profession and
+              Find the right type of supervisor or collaborating Physician for your profession and
               state requirements.
             </p>
             <div className="grid gap-4 sm:grid-cols-3">
@@ -340,23 +340,24 @@ function NoResultsState({ hasFilters }: { hasFilters: boolean }) {
       <p className="mt-2 text-sm text-muted-foreground">
         {hasFilters
           ? 'Try broadening your search — remove a filter or change the state.'
-          : 'New supervisors join regularly. Sign in to access the full directory.'}
+          : 'New supervisors join regularly. Check back soon or browse by state.'}
       </p>
       <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-        {hasFilters && (
+        {hasFilters ? (
           <Link
             href="/supervisors"
-            className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-6 text-sm font-medium transition-colors hover:bg-accent"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Clear all filters
           </Link>
+        ) : (
+          <Link
+            href="/supervisors"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Browse all supervisors
+          </Link>
         )}
-        <Link
-          href="/login"
-          className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-        >
-          Sign in to search all supervisors
-        </Link>
       </div>
     </div>
   )

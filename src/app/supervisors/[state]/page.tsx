@@ -255,19 +255,12 @@ function EmptyState({ stateName }: { stateName: string }) {
     <div className="rounded-xl border border-dashed py-16 text-center">
       <p className="font-medium text-foreground">No supervisors found in {stateName} yet.</p>
       <p className="mt-2 text-sm text-muted-foreground">
-        New supervisors join regularly. Sign in to search across all available supervisors or
-        broaden your search to a nearby state.
+        New supervisors join regularly. Try broadening your search to a nearby state.
       </p>
       <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <Link
-          href="/login"
-          className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-        >
-          Sign in to search
-        </Link>
-        <Link
           href="/supervisors"
-          className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-6 text-sm font-medium transition-colors hover:bg-accent"
+          className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
           Browse all states
         </Link>
