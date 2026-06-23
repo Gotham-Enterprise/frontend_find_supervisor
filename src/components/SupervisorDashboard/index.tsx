@@ -423,6 +423,12 @@ function StatusCards({
         ? '1 step remaining'
         : `${stepsRemaining} steps remaining`
 
+  // Public visibility uses the same gate the backend search applies:
+  // approved AND not hidden. `hideProfile` (settings) is the source of truth —
+  // the admin hide toggle sets it, while `visibilityStatus` can be stale.
+  const isProfileHidden = profile.user.supervisorSettings?.hideProfile === true
+  const isPubliclyVisible = profile.verificationStatus === 'APPROVED' && !isProfileHidden
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {/* Email */}
@@ -497,22 +503,24 @@ function StatusCards({
           <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Profile Visibility
           </CardTitle>
-          {profile.visibilityStatus === 'VISIBLE' ? (
+          {isPubliclyVisible ? (
             <Eye className="size-4 text-muted-foreground" />
           ) : (
             <EyeOff className="size-4 text-muted-foreground" />
           )}
         </CardHeader>
         <CardContent className="space-y-1">
-          {profile.verificationStatus === 'APPROVED' ? (
+          {isPubliclyVisible ? (
             <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">● Public</Badge>
           ) : (
             <Badge className="bg-muted text-muted-foreground hover:bg-muted">● Hidden</Badge>
           )}
           <p className="text-sm text-muted-foreground">
-            {profile.verificationStatus === 'APPROVED'
-              ? 'Visible to supervisees'
-              : 'Visible after verification'}
+            {isProfileHidden
+              ? 'Hidden from supervisees'
+              : profile.verificationStatus === 'APPROVED'
+                ? 'Visible to supervisees'
+                : 'Visible after verification'}
           </p>
         </CardContent>
       </Card>

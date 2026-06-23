@@ -11,13 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import type { UpdateSupervisionSettingsPayload } from '@/lib/api/supervision-settings'
-import { isSupervisorRole } from '@/lib/auth/roles'
-import {
-  useSupervisionSettings,
-  useUpdateSupervisionSettings,
-  useUser,
-  useUserSnackbar,
-} from '@/lib/hooks'
+import { useSupervisionSettings, useUpdateSupervisionSettings, useUserSnackbar } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 
 import { ChangePasswordCard } from './ChangePasswordCard'
@@ -122,9 +116,6 @@ function SettingRow({
 type SettingsField = 'notificationAlert' | 'canMessage' | 'emailAlert' | 'hideProfile'
 
 export function SettingsPanel() {
-  const { user } = useUser()
-  const isSupervisor = isSupervisorRole(user?.role)
-
   const { data: settings, isLoading, isError, refetch } = useSupervisionSettings()
   const { mutateAsync, isPending } = useUpdateSupervisionSettings()
   const { showError } = useUserSnackbar()
@@ -231,17 +222,15 @@ export function SettingsPanel() {
             helperText={!getValue('canMessage') ? settings?.disabledMessageInfo : null}
           />
 
-          {isSupervisor && (
-            <SettingRow
-              id="hideProfile"
-              icon={<Eye className="h-4 w-4" />}
-              label="Hide Profile"
-              description="When enabled, your profile will not appear in search results."
-              checked={getValue('hideProfile')}
-              onCheckedChange={() => handleToggle('hideProfile')}
-              disabled={isPending}
-            />
-          )}
+          <SettingRow
+            id="hideProfile"
+            icon={<Eye className="h-4 w-4" />}
+            label="Hide Profile"
+            description="When enabled, your profile will not appear in search results."
+            checked={getValue('hideProfile')}
+            onCheckedChange={() => handleToggle('hideProfile')}
+            disabled={isPending}
+          />
         </CardContent>
       </Card>
 
