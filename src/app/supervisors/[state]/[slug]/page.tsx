@@ -44,6 +44,7 @@ import {
   TOP_LICENSE_SLUGS_FOR_STATE,
   US_STATES,
 } from '@/lib/seo/routes'
+import { formatFeeAmount, formatFeeType } from '@/lib/utils/profile-formatters'
 
 const MIN_SUPERVISORS_TO_INDEX = 3
 
@@ -740,6 +741,19 @@ function SupervisorPublicProfile({
               </span>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Supervision rate */}
+      {supervisor.supervisionFeeAmount != null && (
+        <div className="grid gap-4 border-t p-6 sm:grid-cols-2">
+          {supervisor.supervisionFeeType && (
+            <ProfileDetail label="Rate Type" value={formatFeeType(supervisor.supervisionFeeType)} />
+          )}
+          <ProfileDetail
+            label="Rate"
+            value={formatFeeAmount(supervisor.supervisionFeeAmount, supervisor.supervisionFeeType)}
+          />
         </div>
       )}
 

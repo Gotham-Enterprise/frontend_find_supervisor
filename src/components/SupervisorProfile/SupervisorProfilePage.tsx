@@ -91,6 +91,7 @@ export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePagePro
         </Link>
 
         <SupervisorProfileHero profile={profile} supervisorId={supervisorId} />
+        <SupervisorProfileContact profile={profile} />
         <SupervisorProfileAbout profile={profile} />
 
         {focusAreaLabels.length > 0 && (
@@ -114,8 +115,6 @@ export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePagePro
         <SupervisorProfileConsultation profile={profile} />
 
         <SupervisorProfilePractice profile={profile} availabilityOptions={availabilityOptions} />
-
-        <SupervisorProfileContact profile={profile} />
 
         <SupervisorProfilePastClients supervisorId={supervisorId} />
         <SupervisorProfileReviews supervisorId={supervisorId} />

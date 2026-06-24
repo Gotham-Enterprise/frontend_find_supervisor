@@ -34,6 +34,10 @@ export interface PublicSupervisorSummary {
   supervisionFormat: string
   stateOfLicensure: string[]
   certification: string[]
+  /** Fee cadence, e.g. 'HOURLY' | 'MONTHLY' | 'PER_SESSION'. */
+  supervisionFeeType: string | null
+  /** Fee in whole dollars, e.g. 100 = $100. */
+  supervisionFeeAmount: number | null
   updatedAt?: string
 }
 
@@ -52,6 +56,31 @@ export interface PublicSupervisorSearchResult {
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
+
+/** Reads a fee column from the flat row or the nested `supervisorProfile` object. */
+function readFeeField(row: Record<string, unknown>, key: string): unknown {
+  if (row[key] != null) return row[key]
+  const profile = row.supervisorProfile
+  if (profile && typeof profile === 'object') {
+    return (profile as Record<string, unknown>)[key]
+  }
+  return undefined
+}
+
+function parseFeeType(row: Record<string, unknown>): string | null {
+  const raw = readFeeField(row, 'supervisionFeeType')
+  if (raw == null || raw === '') return null
+  // Normalize free-text variants (e.g. "hourly", "per session") to the
+  // SCREAMING_SNAKE_CASE codes the fee formatters expect.
+  return String(raw).trim().toUpperCase().replace(/\s+/g, '_')
+}
+
+function parseFeeAmount(row: Record<string, unknown>): number | null {
+  const raw = readFeeField(row, 'supervisionFeeAmount')
+  if (raw == null || raw === '') return null
+  const amount = Number(raw)
+  return Number.isFinite(amount) && amount > 0 ? amount : null
+}
 
 function parseRow(row: Record<string, unknown>): PublicSupervisorSummary {
   const professionalSummary = row.professionalSummary
@@ -79,6 +108,10 @@ function parseRow(row: Record<string, unknown>): PublicSupervisorSummary {
     supervisionFormat: String(row.supervisionFormat ?? ''),
     stateOfLicensure: Array.isArray(row.stateOfLicensure) ? (row.stateOfLicensure as string[]) : [],
     certification: Array.isArray(row.certification) ? (row.certification as string[]) : [],
+    // The search endpoint nests fee fields under `supervisorProfile`; the
+    // public-profile endpoint flattens them to the top level — support both.
+    supervisionFeeType: parseFeeType(row),
+    supervisionFeeAmount: parseFeeAmount(row),
     updatedAt: row.updatedAt ? String(row.updatedAt) : undefined,
   }
 }
