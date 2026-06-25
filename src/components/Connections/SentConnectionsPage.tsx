@@ -287,7 +287,7 @@ export function SentConnectionsPage() {
 
   return (
     <div className="space-y-8">
-      <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+      <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
         Connection requests you have sent to supervisees. Pending requests can be cancelled if you
         change your mind.
       </p>
@@ -298,7 +298,7 @@ export function SentConnectionsPage() {
           <button
             key={tab.value}
             onClick={() => handleTabChange(tab.value)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+            className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
               statusFilter === tab.value
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-background text-foreground hover:bg-muted'

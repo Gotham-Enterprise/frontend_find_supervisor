@@ -22,7 +22,7 @@ export function SearchSuperviseeHeader({
   return (
     <div className="pb-0">
       <div className="w-full px-0">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           Browse supervisees looking for supervision matched to your specialty, licensure, and
           location.
         </p>

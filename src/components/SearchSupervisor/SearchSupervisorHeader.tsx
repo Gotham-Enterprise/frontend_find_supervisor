@@ -29,7 +29,7 @@ export function SearchSupervisorHeader({
   return (
     <div className="pb-0">
       <div className="w-full px-0">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           Browse verified supervisors matched to your license, location, and goals.
         </p>
 

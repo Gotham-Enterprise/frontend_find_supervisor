@@ -165,8 +165,8 @@ export function HiredSupervisorsPage() {
   return (
     <div className="space-y-8">
       <div className="space-y-2">
-        <h2 className="text-lg font-semibold tracking-tight text-foreground">Your hire requests</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        <h2 className="text-xl font-semibold tracking-tight text-foreground">Your hire requests</h2>
+        <p className="mt-2 max-w-2xl text-base leading-relaxed text-muted-foreground">
           Everyone you&apos;ve asked to supervise you is listed here. Each card shows format, fee,
           and current status. Open the menu to view a supervisor&apos;s profile, see full request
           details, or take other actions.
