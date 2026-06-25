@@ -437,8 +437,8 @@ export function SuperviseesPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h2 className="text-lg font-semibold tracking-tight text-foreground">My Supervisees</h2>
-        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        <h2 className="text-xl font-semibold tracking-tight text-foreground">My Supervisees</h2>
+        <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
           Everyone who has requested your supervision is listed here. Use the tabs to filter by
           status, and open the menu on any card to view full profile and supervision details.
         </p>
@@ -457,7 +457,7 @@ export function SuperviseesPage() {
             role="tab"
             aria-selected={activeTab === tab.id}
             onClick={() => handleTabChange(tab.id)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+            className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
               activeTab === tab.id
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-background text-foreground hover:bg-muted'

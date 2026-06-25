@@ -598,10 +598,10 @@ export function SupervisionRequestsPage() {
     <>
       <div className="space-y-8">
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold tracking-tight text-foreground">
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">
             Incoming requests
           </h2>
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
             Pending requests appear below (accepted, active, and completed hires are on other
             pages). Use the menu on any card to view full details, accept, or reject when allowed.
           </p>
@@ -609,8 +609,8 @@ export function SupervisionRequestsPage() {
             <div className="max-w-2xl rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <div className="flex min-w-0 items-start gap-2 sm:items-center">
-                  <Info className="mt-0.5 size-4 shrink-0 text-amber-600 sm:mt-0" aria-hidden />
-                  <p className="text-sm font-medium text-amber-950">
+                  <Info className="mt-0.5 size-5 shrink-0 text-amber-600 sm:mt-0" aria-hidden />
+                  <p className="text-base font-medium text-amber-950">
                     Accepting supervisees is only available for upgraded plans.
                   </p>
                 </div>
