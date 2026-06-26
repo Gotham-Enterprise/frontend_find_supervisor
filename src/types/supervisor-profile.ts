@@ -90,6 +90,11 @@ export interface SupervisorSpecialty {
 export interface SupervisorUserSettings {
   canMessage: boolean
   disabledMessageInfo?: string | null
+  /**
+   * Source of truth for public visibility (set by the admin hide toggle and
+   * self-service settings). When true the profile is excluded from search.
+   */
+  hideProfile?: boolean | null
 }
 
 /** Hire row summary returned with GET supervisor profile when the viewer is the supervisee. */
