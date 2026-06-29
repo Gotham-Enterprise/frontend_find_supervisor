@@ -18,6 +18,46 @@ export function formatDisplayName(user: {
   return 'Unknown'
 }
 
+/**
+ * Mask a full name to first name + last initial, e.g. "Katie Cruz" → "Katie C".
+ * Used to protect a person's identity until they're connected with the viewer.
+ * The initial comes from the last token that begins with a letter, so trailing
+ * suffixes that aren't surnames (e.g. account numbers: "Jim Santiano 02" → "Jim S")
+ * don't leak through. Single-word or empty names are returned unchanged.
+ */
+export function maskNameToFirstInitial(fullName: string | null | undefined): string {
+  const parts = (fullName ?? '').trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return ''
+  const first = parts[0]
+  for (let i = parts.length - 1; i >= 1; i--) {
+    const initial = parts[i][0]
+    if (/\p{L}/u.test(initial)) {
+      return `${first} ${initial.toUpperCase()}`
+    }
+  }
+  return first
+}
+
+/**
+ * Hire statuses for which a supervisor is considered "connected" to a supervisee and may
+ * see their full name. Anything else (NOT_HIRED, PENDING, REJECTED, CANCELED) stays masked.
+ */
+const CONNECTED_HIRE_STATUSES = new Set(['ACCEPTED', 'ACTIVE', 'COMPLETED', 'REVIEWED'])
+
+export function isConnectedHireStatus(hireStatus: string | null | undefined): boolean {
+  return CONNECTED_HIRE_STATUSES.has((hireStatus ?? '').toUpperCase())
+}
+
+/** Full name when connected, otherwise masked to first name + last initial. */
+export function formatSuperviseeDisplayName(
+  fullName: string | null | undefined,
+  hireStatus: string | null | undefined,
+): string {
+  return isConnectedHireStatus(hireStatus)
+    ? (fullName ?? '').trim()
+    : maskNameToFirstInitial(fullName)
+}
+
 // ─── Location ─────────────────────────────────────────────────────────────────
 
 export function formatLocation(

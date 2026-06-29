@@ -16,7 +16,8 @@ export type BudgetRangeType = 'PER_SESSION' | 'MONTHLY'
 
 export interface SuperviseeProfileUser {
   id: string
-  email: string
+  /** null when the viewing supervisor isn't yet allowed to see contact details */
+  email: string | null
   userName?: string
   role?: string
   firstName?: string | null
@@ -88,6 +89,8 @@ export interface SuperviseeProfileData {
 export interface SuperviseeProfileViewExtras {
   isInMyHireList?: boolean
   canMessage?: boolean
+  /** True only once the supervisee accepted the supervisor's request — gates contact details. */
+  canViewContact?: boolean
   hiredInfo?: {
     hireId: string
     status: string

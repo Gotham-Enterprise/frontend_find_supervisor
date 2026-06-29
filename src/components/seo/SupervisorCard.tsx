@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import type { PublicSupervisorSummary } from '@/lib/api/public-supervisors'
 import { stateAbbreviationToSlug } from '@/lib/seo/routes'
+import { maskNameToFirstInitial } from '@/lib/utils/profile-formatters'
 
 interface SupervisorCardProps {
   supervisor: PublicSupervisorSummary
@@ -25,6 +26,8 @@ export function SupervisorCard({ supervisor, stateSlug }: SupervisorCardProps) {
       : `/supervisors/${resolvedStateSlug}/${supervisor.id}`
   const location = [supervisor.city, supervisor.state].filter(Boolean).join(', ')
   const tags = [supervisor.licenseType, supervisor.specialty].filter(Boolean)
+  // Guests only see a supervisor's first name + last initial ("Jim S") in listings.
+  const displayName = maskNameToFirstInitial(supervisor.fullName)
 
   return (
     <article className="flex flex-col gap-3 rounded-xl border bg-card p-5 transition-shadow hover:shadow-md">
@@ -34,7 +37,7 @@ export function SupervisorCard({ supervisor, stateSlug }: SupervisorCardProps) {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={supervisor.profilePhotoUrl}
-            alt={`${supervisor.fullName} profile photo`}
+            alt={`${displayName} profile photo`}
             className="size-12 shrink-0 rounded-full object-cover"
             loading="lazy"
           />
@@ -43,11 +46,11 @@ export function SupervisorCard({ supervisor, stateSlug }: SupervisorCardProps) {
             className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#E2F0E8] text-base font-semibold text-[#006D36]"
             aria-hidden="true"
           >
-            {initials(supervisor.fullName)}
+            {initials(displayName)}
           </div>
         )}
         <div className="min-w-0">
-          <h3 className="truncate font-semibold text-foreground">{supervisor.fullName}</h3>
+          <h3 className="truncate font-semibold text-foreground">{displayName}</h3>
           {location && <p className="text-sm text-muted-foreground">{location}</p>}
         </div>
       </div>

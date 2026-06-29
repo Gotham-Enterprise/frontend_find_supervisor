@@ -31,6 +31,7 @@ export interface SuperviseeSearchResult {
   initials: string
   avatarColor: string
   hireStatusWithCurrentSupervisor: string
+  isConnectedWithCurrentSupervisor: boolean
 }
 
 export type SortOption = 'best_match' | 'newest'

@@ -11,7 +11,12 @@ import { isSupervisorRole } from '@/lib/auth/roles'
 import { useConversations, useSupervisorProfile, useUser, useUserSnackbar } from '@/lib/hooks'
 import { useCheckConnectionAvailability } from '@/lib/hooks/useConnections'
 import { getMakeConnectionAccess } from '@/lib/utils/make-connection-access'
-import { formatDisplayName, getInitials } from '@/lib/utils/profile-formatters'
+import {
+  formatDisplayName,
+  getInitials,
+  isConnectedHireStatus,
+  maskNameToFirstInitial,
+} from '@/lib/utils/profile-formatters'
 import {
   getConnectionBadgeClassName,
   getConnectionStatusLabel,
@@ -129,7 +134,7 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
   const { data: supervisorProfile, isLoading: supervisorProfileLoading } = useSupervisorProfile()
 
   const user = profile.user
-  const displayName = formatDisplayName(user)
+  const fullName = formatDisplayName(user)
   const occupation = user.occupation?.name ?? profile.superviseeOccupation
   const specialty = user.specialty?.name ?? profile.superviseeSpecialty
   const subline = [occupation, specialty].filter(Boolean).join(' · ')
@@ -160,6 +165,11 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
   )
 
   const isConnectionApproved = isAcceptedConnectionStatus(checkData?.reason)
+
+  // Reveal the supervisee's full name only once connected (accepted connection or an
+  // accepted-onward hire); otherwise mask to first name + last initial ("Katie C").
+  const isConnected = isConnectionApproved || isConnectedHireStatus(profile.hiredInfo?.status)
+  const displayName = isConnected ? fullName : maskNameToFirstInitial(fullName)
 
   // Messaging requires a conversation to navigate to, plus either an accepted
   // connection (connection flow) or profile.canMessage (hire flow).
