@@ -85,7 +85,7 @@ export function SearchSuperviseeResults({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pt-4">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-4 pt-4">
         <div className="space-y-3">
           {isLoading ? (
             Array.from({ length: 3 }).map((_, i) => <SupervisorCardSkeleton key={i} />)

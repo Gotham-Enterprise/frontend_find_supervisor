@@ -7,6 +7,7 @@ import { getMe, login, logout } from '@/lib/api/auth'
 import { TOKEN_KEY } from '@/lib/api/client'
 import { useUser } from '@/lib/contexts/UserContext'
 import { disconnectSupervisionSocket } from '@/lib/socket/supervisionSocket'
+import { isSafeInternalPath } from '@/lib/utils/safe-redirect'
 import type { LoginCredentials } from '@/types'
 
 export function useLogin() {
@@ -26,9 +27,7 @@ export function useLogin() {
       // Honour the ?redirect= param if present and points to a safe internal path.
       const params = new URLSearchParams(window.location.search)
       const redirectTo = params.get('redirect')
-      const isSafeRedirect =
-        redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//')
-      router.push(isSafeRedirect ? redirectTo : '/dashboard')
+      router.push(isSafeInternalPath(redirectTo) ? redirectTo : '/dashboard')
     },
   })
 }

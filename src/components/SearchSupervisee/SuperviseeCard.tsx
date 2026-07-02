@@ -1,6 +1,6 @@
 'use client'
 
-import { ClockIcon, MapPinIcon } from 'lucide-react'
+import { BadgeCheckIcon, ClockIcon, MapPinIcon } from 'lucide-react'
 import Link from 'next/link'
 
 import { Badge } from '@/components/ui/badge'
@@ -31,8 +31,11 @@ export function SuperviseeCard({ supervisee }: SuperviseeCardProps) {
     initials,
     avatarColor,
     profilePhotoUrl,
+    isConnectedWithCurrentSupervisor,
   } = supervisee
 
+  // The API already masks fullName to "Katie C" until the supervisor is connected
+  // with this supervisee, so it can be rendered directly.
   const credentialLine = [title, occupation, specialty].filter(Boolean).join(' · ')
   const timelineLabel = howSoonLooking
     ? formatHowSoonLooking(howSoonLooking, undefined, {
@@ -55,7 +58,18 @@ export function SuperviseeCard({ supervisee }: SuperviseeCardProps) {
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h3 className="truncate text-base font-semibold text-foreground">{fullName}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="truncate text-base font-semibold text-foreground">{fullName}</h3>
+              {isConnectedWithCurrentSupervisor && (
+                <Badge
+                  variant="outline"
+                  className="shrink-0 gap-1 border-emerald-200 bg-emerald-50 text-emerald-700"
+                >
+                  <BadgeCheckIcon className="size-3.5" />
+                  Connected
+                </Badge>
+              )}
+            </div>
             {credentialLine && (
               <p className="mt-0.5 truncate text-sm text-muted-foreground">{credentialLine}</p>
             )}

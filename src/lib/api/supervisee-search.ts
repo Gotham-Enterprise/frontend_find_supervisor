@@ -28,6 +28,7 @@ export interface SuperviseeSearchApiRow {
   budgetRangeStart?: number | null
   budgetRangeEnd?: number | null
   hireStatusWithCurrentSupervisor?: string
+  isConnectedWithCurrentSupervisor?: boolean
 }
 
 export interface SuperviseeSearchMetaData {
@@ -141,6 +142,7 @@ export function mapApiRowToSuperviseeSearchResult(
     initials: initialsFromName(fullName),
     avatarColor: getAvatarColor(index),
     hireStatusWithCurrentSupervisor: row.hireStatusWithCurrentSupervisor ?? 'NOT_HIRED',
+    isConnectedWithCurrentSupervisor: row.isConnectedWithCurrentSupervisor ?? false,
   }
 }
 

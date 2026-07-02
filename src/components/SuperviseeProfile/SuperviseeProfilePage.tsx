@@ -69,7 +69,9 @@ export function SuperviseeProfilePage({ superviseeId }: SuperviseeProfilePagePro
     )
   }
 
-  const showContactInfo = profile.isInMyHireList ?? false
+  // Contact details surface only after the supervisee accepts the request; the
+  // backend enforces this and echoes `canViewContact` (and strips email/phone otherwise).
+  const showContactInfo = profile.canViewContact ?? false
   const lookingInLabels = resolveOptionLabels(
     coerceStringList(profile.stateTheyAreLookingIn),
     stateOptions,
@@ -87,6 +89,7 @@ export function SuperviseeProfilePage({ superviseeId }: SuperviseeProfilePagePro
         </Link>
 
         <SuperviseeProfileHero profile={profile} />
+        {showContactInfo && <SuperviseeProfileContact profile={profile} />}
         <SuperviseeProfileAbout profile={profile} />
         {lookingInLabels.length > 0 && (
           <SupervisorProfileCheckList title="Looking for Supervision In" items={lookingInLabels} />
@@ -101,7 +104,6 @@ export function SuperviseeProfilePage({ superviseeId }: SuperviseeProfilePagePro
           profile={profile}
           availabilityOptions={availabilityOptions}
         />
-        {showContactInfo && <SuperviseeProfileContact profile={profile} />}
       </div>
     </div>
   )

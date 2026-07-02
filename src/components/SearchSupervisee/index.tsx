@@ -107,7 +107,7 @@ export function SearchSuperviseePage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-60px-4rem)] min-h-0 flex-col overflow-hidden">
+    <div className="flex h-[calc(100vh-60px-3rem)] min-h-0 flex-col overflow-hidden">
       <div className="shrink-0 border-b border-border px-3 pb-6 pt-0">
         <SearchSuperviseeHeader
           keyword={keyword}
