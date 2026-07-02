@@ -1,6 +1,7 @@
 'use client'
 
-import { usePathname, useRouter } from 'next/navigation'
+import { LockIcon } from 'lucide-react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useMemo, useState } from 'react'
 
 import { SubscriptionModal } from '@/components/Dashboard/subscription/SubscriptionModal'
@@ -8,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DisabledWithTooltip } from '@/components/ui/tooltip'
 import { isSupervisorRole } from '@/lib/auth/roles'
-import { useConversations, useSupervisorProfile, useUser, useUserSnackbar } from '@/lib/hooks'
+import { useConversations, useSupervisorProfile, useUser } from '@/lib/hooks'
 import { useCheckConnectionAvailability } from '@/lib/hooks/useConnections'
 import { getMakeConnectionAccess } from '@/lib/utils/make-connection-access'
 import {
@@ -83,23 +84,9 @@ function resolveConnectionButtonState(
     return { label: 'Make A Connection', disabled: true, tooltip: 'Loading your account details…' }
   }
 
-  // If the user cannot access (no subscription, not supervisor, etc.) — active/clickable
-  // so the hero's handleClick can show the appropriate prompt
-  if (!connectionAccess.allowed) {
-    return { label: 'Make A Connection', disabled: false, tooltip: '' }
-  }
-
-  // Access is allowed — check availability result
-  if (checkIsLoading) {
-    return { label: 'Make A Connection', disabled: false, tooltip: '' }
-  }
-
-  // If check failed silently, still allow the submit (409 is handled on submit)
-  if (checkError || canRequest === undefined) {
-    return { label: 'Make A Connection', disabled: false, tooltip: '' }
-  }
-
-  if (!canRequest) {
+  // An existing request takes precedence over subscription gating so a supervisor
+  // whose subscription lapsed still sees the true state of a connection they made.
+  if (!checkIsLoading && !checkError && canRequest === false) {
     switch (reason) {
       case 'ALREADY_APPROVED':
         return {
@@ -118,6 +105,9 @@ function resolveConnectionButtonState(
     }
   }
 
+  // Otherwise the button stays clickable: with access it opens the connection form;
+  // without (no subscription, logged out) the hero's handleClick shows the right prompt.
+  // A silently failed check also falls through here — 409s are handled on submit.
   return { label: 'Make A Connection', disabled: false, tooltip: '' }
 }
 
@@ -126,9 +116,10 @@ function resolveConnectionButtonState(
 export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { user: authUser } = useUser()
-  const { showInfo } = useUserSnackbar()
   const [connectionModalOpen, setConnectionModalOpen] = useState(false)
+  const [autoOpenDismissed, setAutoOpenDismissed] = useState(false)
   const [planModalOpen, setPlanModalOpen] = useState(false)
   const { data: conversations } = useConversations()
   const { data: supervisorProfile, isLoading: supervisorProfileLoading } = useSupervisorProfile()
@@ -153,8 +144,10 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
     [authUser, supervisorProfile, supervisorProfileLoading],
   )
 
-  // Only call the check endpoint when access is allowed (logged in + subscription)
-  const checkEnabled = connectionAccess.allowed && isSupervisorRole(authUser?.role)
+  // Run the availability check for any signed-in supervisor (the endpoint needs no
+  // auth) so existing request/connection states stay visible even when the
+  // subscription has lapsed or was never purchased.
+  const checkEnabled = isSupervisorRole(authUser?.role) && !!authUser?.email
   const {
     data: checkData,
     isLoading: checkLoading,
@@ -190,6 +183,33 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
     checkData?.reason,
   )
 
+  // Upfront hint that connecting is a paid feature — clicking still opens the
+  // upgrade prompt rather than being dead.
+  const needsSubscription =
+    !connectionButtonDisabled &&
+    connectionAccess.allowed === false &&
+    connectionAccess.reason === 'no_subscription'
+
+  // After returning from checkout (?connect=1) reopen the connection form so the
+  // supervisor can finish the request they started before paying. Derived from the
+  // URL param rather than synced into state, per react-hooks/set-state-in-effect;
+  // it activates once access and the availability check settle post-payment.
+  const returnedFromCheckout = searchParams.get('connect') === '1'
+  const autoOpenConnection =
+    returnedFromCheckout &&
+    !autoOpenDismissed &&
+    connectionAccess.allowed &&
+    !checkLoading &&
+    checkData?.canRequest !== false
+
+  function handleConnectionModalOpenChange(open: boolean) {
+    setConnectionModalOpen(open)
+    if (!open && returnedFromCheckout) {
+      setAutoOpenDismissed(true)
+      router.replace(pathname, { scroll: false })
+    }
+  }
+
   // Tooltip is only rendered while the Message button is disabled.
   const messageDisabledTooltip =
     isConnectionApproved && !existingConversation
@@ -209,9 +229,6 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
         break
       }
       case 'no_subscription':
-        showInfo('Make A Connection requires an active subscription.', {
-          description: 'Upgrade your plan to introduce yourself to supervisees.',
-        })
         setPlanModalOpen(true)
         break
       case 'loading':
@@ -259,8 +276,14 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
       <div className="flex w-full shrink-0 flex-wrap gap-2 sm:w-auto">
         {showMakeConnectionButton && (
           <DisabledWithTooltip
-            tooltip={connectionButtonTooltip}
-            disabled={connectionButtonDisabled}
+            // The subscription hint shows on hover while the button stays clickable —
+            // the wrapper only intercepts hover, not clicks.
+            tooltip={
+              needsSubscription
+                ? 'Requires an active subscription. Click to view plans.'
+                : connectionButtonTooltip
+            }
+            disabled={connectionButtonDisabled || needsSubscription}
           >
             <Button
               size="sm"
@@ -268,6 +291,7 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
               disabled={connectionButtonDisabled}
               onClick={handleMakeConnectionClick}
             >
+              {needsSubscription && <LockIcon aria-hidden />}
               {connectionButtonLabel}
             </Button>
           </DisabledWithTooltip>
@@ -288,14 +312,22 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
       </div>
 
       <MakeConnectionModal
-        open={connectionModalOpen}
-        onOpenChange={setConnectionModalOpen}
+        open={connectionModalOpen || autoOpenConnection}
+        onOpenChange={handleConnectionModalOpenChange}
         superviseeId={user.id}
         superviseeName={displayName}
         canAccess={connectionAccess.allowed}
       />
 
-      <SubscriptionModal open={planModalOpen} onOpenChange={setPlanModalOpen} />
+      <SubscriptionModal
+        open={planModalOpen}
+        onOpenChange={setPlanModalOpen}
+        checkoutRedirect={`${pathname}?connect=1`}
+        notice={{
+          title: 'Make A Connection requires an active subscription.',
+          description: 'Upgrade your plan to introduce yourself to supervisees.',
+        }}
+      />
     </div>
   )
 }

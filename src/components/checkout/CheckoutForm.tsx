@@ -4,12 +4,14 @@ import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-
 import type { StripeElementsOptions } from '@stripe/stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
 import { AlertCircle, CheckCircle2, Lock, ShieldCheck } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { purchaseSubscription } from '@/lib/api/supervision'
 import { useCheckoutPlanFromUrl } from '@/lib/hooks/useCheckoutPlanFromUrl'
 import { parseApiError } from '@/lib/utils/error-parser'
 import { formatBillingCycleSuffix, formatPlanPriceFromCents } from '@/lib/utils/plan-formatting'
+import { isSafeInternalPath } from '@/lib/utils/safe-redirect'
 import type { SubscriptionPlan } from '@/types/supervisor-profile'
 
 // Stripe publishable key — safe to expose in client code.
@@ -184,6 +186,8 @@ function BillingFields({
 function CheckoutFormInner({ plan }: CheckoutFormInnerProps) {
   const stripe = useStripe()
   const elements = useElements()
+  const searchParams = useSearchParams()
+  const redirectAfterSuccess = searchParams.get('redirect')
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -199,10 +203,17 @@ function CheckoutFormInner({ plan }: CheckoutFormInnerProps) {
     setIsSubmitting(true)
     setError(null)
 
+    // Stripe preserves existing query params on return_url and appends its own
+    // (redirect_status, payment_intent, …), so the success page can honour ?redirect=.
+    const returnUrl = new URL('/checkout/success', window.location.origin)
+    if (isSafeInternalPath(redirectAfterSuccess)) {
+      returnUrl.searchParams.set('redirect', redirectAfterSuccess)
+    }
+
     const { error: stripeError } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/checkout/success`,
+        return_url: returnUrl.toString(),
         payment_method_data: {
           billing_details: {
             name: billing.name,

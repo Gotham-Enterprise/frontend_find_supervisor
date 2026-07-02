@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Info } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
@@ -22,6 +22,7 @@ import {
   formatBillingCycleSuffix,
   formatPlanPriceFromCents,
 } from '@/lib/utils/plan-formatting'
+import { isSafeInternalPath } from '@/lib/utils/safe-redirect'
 import {
   planMatchesSubscription,
   resolveCurrentChoosablePlan,
@@ -45,9 +46,21 @@ const PAID_PLAN_FALLBACK_FEATURES = [
 interface SubscriptionModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /**
+   * Internal path to return to after a successful checkout (e.g. the supervisee
+   * profile the user was viewing). Carried through checkout as `?redirect=`.
+   */
+  checkoutRedirect?: string
+  /** Contextual notice shown inside the modal explaining why the paywall appeared. */
+  notice?: { title: string; description?: string }
 }
 
-export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps) {
+export function SubscriptionModal({
+  open,
+  onOpenChange,
+  checkoutRedirect,
+  notice,
+}: SubscriptionModalProps) {
   const router = useRouter()
 
   const {
@@ -81,7 +94,9 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
 
   function goToCheckout(planId: string) {
     onOpenChange(false)
-    router.push(`/checkout?planId=${encodeURIComponent(planId)}`)
+    const params = new URLSearchParams({ planId })
+    if (isSafeInternalPath(checkoutRedirect)) params.set('redirect', checkoutRedirect)
+    router.push(`/checkout?${params.toString()}`)
   }
 
   const gridClass =
@@ -101,6 +116,21 @@ export function SubscriptionModal({ open, onOpenChange }: SubscriptionModalProps
             <p className="mt-2 text-xs text-muted-foreground">Checking your subscription…</p>
           )}
         </div>
+
+        {notice && (
+          <div
+            className="mb-6 flex items-start gap-3 rounded-lg border border-blue-500/30 bg-blue-500/5 px-4 py-3 text-sm text-foreground"
+            role="status"
+          >
+            <Info className="mt-0.5 size-4 shrink-0 text-blue-600" />
+            <div className="flex-1 text-left">
+              <p className="font-semibold">{notice.title}</p>
+              {notice.description && (
+                <p className="mt-1 text-muted-foreground">{notice.description}</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {plansError && (
           <div
