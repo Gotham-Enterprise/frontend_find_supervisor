@@ -7,6 +7,11 @@ import { cn } from '@/lib/utils'
 
 const faqs = [
   {
+    question: 'How does Find A Supervisor work?',
+    answer:
+      'Supervisors create a profile that is verified by our admin team before appearing in search. Supervisees then browse and filter verified supervisors and send a supervision request or message to the ones that fit. To accept a request and start the relationship, the supervisor needs an active Platform Access subscription — on the Free Plan, requests stay pending until they upgrade. Once connected, both sides manage messaging, requests, and reviews from their dashboard.',
+  },
+  {
     question: 'What types of supervisors can I find on this platform?',
     answer:
       'Find A Supervisor supports mental health counselor supervisors, collaborating physicians for nurse practitioners, and supervising physicians for physician assistants. You can filter by supervisor type, specialty, state, and supervision format to find the right match for your profession.',
@@ -24,12 +29,22 @@ const faqs = [
   {
     question: 'How does scheduling work?',
     answer:
-      'Once you connect with a supervisor or collaborating physician, you can schedule sessions directly through the platform. Choose from available time slots, set up recurring meetings, and manage your supervision calendar from your dashboard.',
+      'Once you connect with a supervisor or collaborating physician, you coordinate session timing directly with them through the built-in messaging. Your upcoming supervision sessions are shown on your dashboard so you always know what is next.',
   },
   {
     question: 'Is there a limit to how many supervisors I can connect with?',
     answer:
       'You can browse and connect with multiple supervisors or collaborating physicians. We recommend focusing on a few strong matches to ensure quality professional relationships and efficient progress toward your goals.',
+  },
+  {
+    question: 'Is it free for supervisors to join?',
+    answer:
+      'Yes. Every supervisor starts on the Find a Supervisor Free Plan, which includes a basic profile listing in search, visibility into interested supervisees, the ability to receive and view supervision requests, and platform notifications for new activity. There is no time limit — you can stay on the Free Plan for as long as you like.',
+  },
+  {
+    question: 'What is the difference between the Free Plan and Platform Access?',
+    answer:
+      'Every supervisor starts on the Find a Supervisor Free Plan. It lets you receive and view supervisee requests, see which supervisees are interested in you, appear in search results with a basic profile listing, and get platform notifications for new activity. Upgrading to Find a Supervisor Platform Access unlocks accepting supervisee requests, full messaging with supervisees, viewing supervisee contact details where applicable, improved discoverability and profile exposure, and the full set of supervisor platform tools.',
   },
   {
     question: 'How is this different from traditional supervision matching?',

@@ -23,7 +23,8 @@ const features = [
   {
     number: '5',
     title: 'Communication Tools Built In',
-    description: 'Chat, schedule sessions, and track supervision hours—all in one place.',
+    description:
+      'Real-time chat and notifications keep you and your supervisor connected in one place.',
   },
 ]
 

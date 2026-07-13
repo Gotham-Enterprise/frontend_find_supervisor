@@ -53,17 +53,47 @@ const supervisorFaqs: FaqCategory[] = [
     ],
   },
   {
+    title: 'Free vs Paid Plans',
+    items: [
+      {
+        question: 'What is the difference between the Free Plan and Platform Access?',
+        answer:
+          'Every supervisor starts on the Find a Supervisor Free Plan. It lets you receive and view supervisee requests, see which supervisees are interested in you, appear in search results with a basic profile listing, and get platform notifications for new activity. Upgrading to Find a Supervisor Platform Access unlocks accepting supervisee requests, full messaging with supervisees, viewing supervisee contact details where applicable, improved discoverability and profile exposure, and the full set of supervisor platform tools.',
+      },
+      {
+        question: 'What happens to supervision requests while I am on the Free Plan?',
+        answer:
+          'You still receive and can view every request, but accepting supervisees is only available on the Platform Access plan. Incoming requests stay pending until you upgrade — nothing is lost, and you can accept them as soon as you move to a paid plan.',
+      },
+      {
+        question: 'Why are supervisee names and contact details partially hidden?',
+        answer:
+          'To protect supervisee privacy, names are masked to a first name and last initial (e.g. "Katie C") until a supervision connection is accepted. Once you are connected, the full name is shown. Supervisee contact details are available on the Platform Access plan where applicable.',
+      },
+      {
+        question: 'How do I upgrade to Platform Access?',
+        answer:
+          'Go to Billing & Invoices in the sidebar, or use the Upgrade option on your dashboard subscription card, and choose the Platform Access plan. Checkout is handled securely through Stripe, and paid features unlock as soon as your payment is confirmed.',
+      },
+      {
+        question: 'Can I stay on the Free Plan indefinitely?',
+        answer:
+          'Yes. The Free Plan does not expire — your profile stays listed in search and you keep receiving requests and notifications. Many supervisors start on the Free Plan to gauge supervisee interest, then upgrade when they are ready to accept supervisees and start messaging.',
+      },
+    ],
+  },
+  {
     title: 'Subscription & Billing',
     items: [
       {
         question: 'Do I need a paid subscription to get verified?',
         answer:
-          'Yes. Subscribing to a paid plan is one of the steps in the setup checklist before your profile enters the admin review queue. Without an active subscription, your profile will not be reviewed.',
+          'No. Every supervisor account starts on the Free Plan automatically, and your profile enters the admin review queue once your email is verified and your full profile details are complete. A paid subscription is not required for verification — upgrading to Platform Access unlocks accepting requests, messaging, and improved discoverability.',
       },
       {
         question: 'How do I cancel my subscription?',
         answer:
-          'Go to Billing & Invoices in the sidebar. On that page, use Cancel Subscription on your current plan. After canceling, you retain full platform access until the end of your current billing period. Your profile will be hidden from search once the subscription expires.',
+          'Go to Billing & Invoices in the sidebar. On that page, use Cancel Subscription on your current plan. After canceling, you retain full platform access until the end of your current billing period. Once it expires you move back to the Free Plan — you keep a basic search listing and can still view incoming requests, but paid features like accepting requests and messaging are locked.',
       },
       {
         question: 'Can I undo a cancellation before my billing period ends?',
@@ -73,7 +103,7 @@ const supervisorFaqs: FaqCategory[] = [
       {
         question: 'What happens to my profile if my subscription lapses?',
         answer:
-          'Your profile will be hidden from supervisee searches if your subscription becomes inactive or unpaid. Reactivating your subscription will restore visibility (assuming your profile was previously approved).',
+          'If your Platform Access subscription becomes inactive or unpaid, you move back to the Free Plan rather than losing your account. Your basic profile listing remains in search and you can still receive and view requests, but accepting requests, messaging, and premium discoverability are locked until you reactivate. Reactivating restores full access (assuming your profile was previously approved).',
       },
       {
         question: 'Can I switch between plans?',
@@ -113,7 +143,7 @@ const supervisorFaqs: FaqCategory[] = [
       {
         question: 'How do I accept or decline a supervision request?',
         answer:
-          "Go to Supervision Requests in the sidebar. Each request shows the supervisee's details and what they are looking for. You can accept or decline directly from that page. Accepted requests move the supervisee into your active Supervisees list.",
+          "Go to Supervision Requests in the sidebar. Each request shows the supervisee's details and what they are looking for. You can accept or decline directly from that page. Accepted requests move the supervisee into your active Supervisees list. Note that accepting requests requires the Platform Access plan — on the Free Plan, requests remain pending until you upgrade.",
       },
       {
         question: 'How do I leave or view reviews?',
@@ -281,7 +311,7 @@ function FaqCategoryCard({ title, items }: FaqCategory) {
 function PageHeader({ role }: { role: 'supervisor' | 'supervisee' | 'general' }) {
   const subtitle =
     role === 'supervisor'
-      ? 'Answers to common questions about verification, billing, profiles, and managing your supervisees.'
+      ? 'Answers to common questions about verification, plans and billing, profiles, and managing your supervisees.'
       : role === 'supervisee'
         ? 'Answers to common questions about finding supervisors, hire requests, messaging, and reviews.'
         : 'Answers to common questions about the platform.'
