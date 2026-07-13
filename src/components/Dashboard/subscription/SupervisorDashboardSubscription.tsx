@@ -26,10 +26,11 @@ interface FeatureItem {
 }
 
 const SUPERVISOR_FEATURES: FeatureItem[] = [
-  { label: 'Receive supervisee requests', premium: false },
+  { label: 'Receive and view supervisee requests', premium: false },
   { label: 'See visibility into interested supervisees', premium: false },
   { label: 'Basic profile listing in search', premium: false },
   { label: 'Platform notifications for new activity', premium: false },
+  { label: 'Accept supervisee requests', premium: true },
   { label: 'Full messaging with supervisees', premium: true },
   { label: 'View supervisee contact details where applicable', premium: true },
   { label: 'Improved discoverability and profile exposure', premium: true },

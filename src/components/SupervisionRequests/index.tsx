@@ -611,7 +611,8 @@ export function SupervisionRequestsPage() {
                 <div className="flex min-w-0 items-start gap-2 sm:items-center">
                   <Info className="mt-0.5 size-5 shrink-0 text-amber-600 sm:mt-0" aria-hidden />
                   <p className="text-base font-medium text-amber-950">
-                    Accepting supervisees is only available for upgraded plans.
+                    Accepting supervisees is only available for upgraded plans. You can still
+                    receive and view requests — they stay pending until you upgrade.
                   </p>
                 </div>
                 <Button
