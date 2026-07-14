@@ -46,7 +46,7 @@ export function SupervisorStepLicenseCredentials({
   certificatesLoading,
   isSubmitting,
 }: SupervisorStepLicenseCredentialsProps) {
-  const { control, clearErrors, setValue } = useFormContext<SupervisorFormValues>()
+  const { control, clearErrors, setValue, trigger } = useFormContext<SupervisorFormValues>()
   const supervisorType = useWatch({ control, name: 'supervisorType' }) ?? ''
   const supervisorOccupationId = useWatch({ control, name: 'supervisorOccupationId' }) ?? ''
   const physicianSupervisorType = isPhysicianSupervisorType(supervisorType)
@@ -295,11 +295,17 @@ export function SupervisorStepLicenseCredentials({
               <UploadFile
                 inputRef={ref}
                 value={value}
-                onChange={onChange}
+                onChange={(file) => {
+                  onChange(file)
+                  // The hidden file input is never "touched" (mode: 'onTouched'), so RHF skips
+                  // re-validation on change and stale manual setError messages stick after
+                  // delete/re-upload. Force validation so the error always matches the value.
+                  void trigger('licenseDoc')
+                }}
                 onBlur={onBlur}
                 accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/*"
                 uploadTitle="Upload license or verification document"
-                uploadHint="PDF, JPG, or PNG · Click to browse"
+                uploadHint="PDF, JPG, or PNG (max 5 MB) · Click to browse"
                 removeFileAriaLabel="Remove license document"
                 disabled={isSubmitting}
               />

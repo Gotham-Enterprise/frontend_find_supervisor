@@ -5,6 +5,9 @@ import { applySupervisorPhysicianRules } from '@/lib/utils/supervisor-type'
 
 // ─── Shared options ──────────────────────────────────────────────────────────
 
+export const MAX_LICENSE_DOC_SIZE_BYTES = 5 * 1024 * 1024
+export const MAX_LICENSE_DOC_SIZE_LABEL = '5 MB'
+
 export const yearsOfExperienceOptions = [
   '0 – 2 years',
   '2 – 5 years',
@@ -74,7 +77,11 @@ export const supervisorSchemaObject = accountSchemaBase.extend({
   yearsOfExperience: z.string().min(1, 'Years of experience is required'),
   licenseDoc: z
     .any()
-    .refine((val) => val instanceof File, 'Please upload your license or verification doc'),
+    .refine((val) => val instanceof File, 'Please upload your license or verification doc')
+    .refine(
+      (val) => !(val instanceof File) || val.size <= MAX_LICENSE_DOC_SIZE_BYTES,
+      `File is too large. Please upload a file under ${MAX_LICENSE_DOC_SIZE_LABEL}.`,
+    ),
   stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
 
   // Practice details
