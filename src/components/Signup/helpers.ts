@@ -1,8 +1,16 @@
-import type { SuperviseeFormValues, SupervisorFormValues } from './schema'
+import type { LicenseEntryValues, SuperviseeFormValues, SupervisorFormValues } from './schema'
 import type { SignupRole } from './types'
 
 export function parseSignupRoleFromType(type?: string | null): SignupRole {
   return type === 'supervisee' ? 'supervisee' : 'supervisor'
+}
+
+/** Blank license entry for field arrays ("Add another license" + defaults). */
+export const emptyLicenseEntry: LicenseEntryValues = {
+  licenseType: '',
+  licenseNumber: '',
+  state: '',
+  licenseExpiration: '',
 }
 
 export const supervisorDefaultValues: Partial<SupervisorFormValues> = {
@@ -18,14 +26,11 @@ export const supervisorDefaultValues: Partial<SupervisorFormValues> = {
   supervisorType: '',
   supervisorOccupationId: '',
   supervisorSpecialtyId: '',
-  licenseType: '',
   degreeType: '',
-  licenseNumber: '',
-  licenseExpiration: '',
+  licenses: [{ ...emptyLicenseEntry }],
   npiNumber: '',
   certifications: [],
   yearsOfExperience: '',
-  stateOfLicensure: [],
   patientPopulation: [],
   supervisionFormat: 'virtual',
   availability: '',

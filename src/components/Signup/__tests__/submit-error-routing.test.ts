@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  licenseEntrySchema,
   SUPERVISEE_SIGNUP_STEP_FIELDS,
   SUPERVISOR_SIGNUP_STEP_FIELDS,
-  supervisorSchemaObject,
 } from '@/components/Signup/schema'
 import { findFirstStepWithError } from '@/components/Signup/SupervisorSignupForm/applyZodIssuesToForm'
 import { toLocalISODate } from '@/lib/utils/date'
@@ -26,7 +26,7 @@ describe('findFirstStepWithError', () => {
   })
 
   it('matches nested paths on their root field', () => {
-    expect(findFirstStepWithError(['stateOfLicensure.0'], SUPERVISOR_SIGNUP_STEP_FIELDS)).toBe(1)
+    expect(findFirstStepWithError(['licenses.0.state'], SUPERVISOR_SIGNUP_STEP_FIELDS)).toBe(1)
   })
 
   it('returns -1 when no path belongs to any step', () => {
@@ -36,7 +36,7 @@ describe('findFirstStepWithError', () => {
 })
 
 describe('licenseExpiration (timezone-safe)', () => {
-  const schema = supervisorSchemaObject.shape.licenseExpiration
+  const schema = licenseEntrySchema.shape.licenseExpiration
   const DAY_MS = 24 * 60 * 60 * 1000
 
   it('accepts a license expiring today (local date)', () => {

@@ -72,21 +72,30 @@ function getSupervisorProfileCompletionChecks(profile: SupervisorProfileData): b
   )
 
   const hasLicenseIdOrFile =
+    (profile.licenses?.some((license) => license.licenseNumber?.trim()) ?? false) ||
     Boolean(profile.licenseNumber?.trim()) ||
     Boolean(profile.licenseUrl?.trim()) ||
     Boolean(profile.licenseObjectKey?.trim())
 
   const hasStateLicenseInfo =
-    Boolean(profile.stateLicense?.trim()) || (profile.user.stateOfLicensure?.length ?? 0) > 0
+    (profile.licenses?.some((license) => license.state?.trim()) ?? false) ||
+    Boolean(profile.stateLicense?.trim()) ||
+    (profile.user.stateOfLicensure?.length ?? 0) > 0
 
   const hasFee = Boolean(profile.supervisionFeeAmount)
 
   const hasBio =
     Boolean(profile.professionalSummary?.trim()) || Boolean(profile.describeYourself?.trim())
 
+  const hasCredentialType = Boolean(
+    profile.licenseType?.trim() ||
+    profile.degreeType?.trim() ||
+    profile.licenses?.some((license) => license.licenseType?.trim()),
+  )
+
   return [
     Boolean(profile.user.profilePhotoUrl?.trim()),
-    Boolean(profile.licenseType?.trim()),
+    hasCredentialType,
     Boolean(profile.supervisorType?.trim()),
     hasOccupation,
     hasLicenseIdOrFile,
@@ -408,6 +417,45 @@ function WelcomeBanner({
           <span className="text-xs font-medium opacity-70">Profile Completion</span>
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Owner-only nudge for legacy-migrated license data: shown when a migrated
+ * license row awaits state confirmation or a licensed state has no license
+ * details yet. Informational only — never blocks the supervisor.
+ */
+function LicenseReviewBanner({
+  profile,
+  onEditClick,
+}: {
+  profile: SupervisorProfileData
+  onEditClick: () => void
+}) {
+  const statesNeedingDetails = profile.statesNeedingDetails ?? []
+
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-start gap-3">
+        <AlertCircle className="mt-0.5 size-5 shrink-0 text-amber-600" />
+        <div>
+          <p className="text-sm font-medium text-amber-900">Confirm your license details</p>
+          <p className="text-sm text-amber-800">
+            {statesNeedingDetails.length > 0
+              ? `We have license details for some of your licensed states, but not for ${statesNeedingDetails.join(', ')}. `
+              : ''}
+            Please review each license and confirm its number, state, and expiration date.
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onEditClick}
+        className="shrink-0 rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
+      >
+        Review licenses
+      </button>
     </div>
   )
 }
@@ -1028,6 +1076,12 @@ export function SupervisorDashboard() {
     <>
       <div className="space-y-6">
         <WelcomeBanner profile={enrichedProfile} completion={completion} />
+        {profile.licenseReviewNeeded ? (
+          <LicenseReviewBanner
+            profile={enrichedProfile}
+            onEditClick={() => setEditModalOpen(true)}
+          />
+        ) : null}
         <StatusCards profile={enrichedProfile} completion={completion} />
 
         <div className="grid gap-4 lg:grid-cols-5">

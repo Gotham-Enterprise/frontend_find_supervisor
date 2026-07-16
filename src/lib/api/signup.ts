@@ -69,25 +69,33 @@ export function buildSupervisorFormData(values: SupervisorFormValues): FormData 
   if (values.website) fd.append('website', values.website)
 
   // License & credentials
-  if (isPhysicianSupervisorType(values.supervisorType)) {
+  const physician = isPhysicianSupervisorType(values.supervisorType)
+  if (physician) {
     fd.append('degreeType', values.degreeType)
-  } else {
-    fd.append('licenseType', values.licenseType)
   }
   fd.append('supervisorType', values.supervisorType)
-  fd.append('licenseNumber', values.licenseNumber)
-  fd.append('licenseExpiration', values.licenseExpiration)
-  // Backend field is singular: yearOfExperience
+  // One entry per license, each with its own state, sent as a single JSON
+  // field (nested objects are unreliable via multipart bracket keys).
+  // Physicians carry no per-entry licenseType (degreeType is shared).
+  fd.append(
+    'licenses',
+    JSON.stringify(
+      values.licenses.map(({ licenseType, licenseNumber, state, licenseExpiration }) => ({
+        ...(physician ? {} : { licenseType }),
+        licenseNumber,
+        state,
+        licenseExpiration,
+      })),
+    ),
+  )
   fd.append('yearsOfExperience', values.yearsOfExperience)
   if (values.npiNumber) fd.append('npiNumber', values.npiNumber)
-  if (!isPhysicianSupervisorType(values.supervisorType)) {
+  if (!physician) {
     values.certifications.forEach((cert) => fd.append('certification', cert))
   }
 
   // Practice
   values.patientPopulation.forEach((p) => fd.append('patientPopulation', p))
-  // `field[]` so multer/append-field always yields an array (single append without [] is a string; BE uses .isArray())
-  values.stateOfLicensure.forEach((s) => fd.append('stateOfLicensure[]', s))
   fd.append('supervisionFormat', FORMAT_MAP[values.supervisionFormat])
   fd.append('availability', values.availability)
   // Backend field: acceptingSupervisees (not acceptingNewSupervisees)

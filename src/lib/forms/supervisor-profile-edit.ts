@@ -1,6 +1,11 @@
 import { z } from 'zod'
 
-import { professionalCredentialsSchema, yearsOfExperienceOptions } from '@/components/Signup/schema'
+import {
+  licenseEntrySchema,
+  type LicenseEntryValues,
+  professionalCredentialsSchema,
+  yearsOfExperienceOptions,
+} from '@/components/Signup/schema'
 import type { UpdateSupervisorProfilePayload } from '@/lib/api/supervisor-profile'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
 import { formatUSPhoneForDisplay, normalizeUSPhoneNumber } from '@/lib/utils/phone'
@@ -28,20 +33,6 @@ const SUPERVISION_FORMAT_VALUES = ['VIRTUAL', 'IN_PERSON', 'HYBRID'] as const
 function isEmptySelect(value: string | undefined): boolean {
   return !value?.trim() || value === '__none__'
 }
-
-const licenseExpirationRefine = z
-  .string()
-  .min(1, 'Expiration date is required')
-  .refine(
-    (val) => {
-      const date = new Date(val)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      date.setHours(0, 0, 0, 0)
-      return date >= today
-    },
-    { message: 'License expiration cannot be a past date' },
-  )
 
 /**
  * Field rules aligned with {@link supervisorSchema} / supervisor signup (excluding account
@@ -74,10 +65,8 @@ const editSupervisorProfileFieldsSchema = z.object({
     .min(1, 'Occupation is required')
     .refine((s) => !isEmptySelect(s), { message: 'Occupation is required' }),
   supervisorSpecialty: z.string().optional(),
-  licenseType: z.string(),
   degreeType: z.string(),
-  licenseNumber: z.string().min(1, 'License number is required').max(50),
-  licenseExpiration: licenseExpirationRefine,
+  licenses: z.array(licenseEntrySchema).min(1, 'Add at least one license'),
   yearsOfExperience: z
     .string()
     .min(1, 'Years of experience is required')
@@ -86,7 +75,6 @@ const editSupervisorProfileFieldsSchema = z.object({
     }),
   npiNumber: z.string().max(20).optional(),
   certification: z.array(z.string()),
-  stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
   patientPopulation: z.array(z.string()).min(1, 'Add at least one patient population'),
   supervisionFormat: z
     .string()
@@ -151,11 +139,15 @@ export function createEditSupervisorProfileSchema(profile: SupervisorProfileData
           message: 'Degree type must be MD or DO',
         })
       }
-    } else if (!data.licenseType?.trim() || isEmptySelect(data.licenseType)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['licenseType'],
-        message: 'License type is required',
+    } else {
+      data.licenses.forEach((license, index) => {
+        if (!license.licenseType?.trim() || isEmptySelect(license.licenseType)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['licenses', index, 'licenseType'],
+            message: 'License type is required',
+          })
+        }
       })
     }
 
@@ -189,6 +181,53 @@ export type SupervisorProfileFormInput = Omit<
   supervisionFeeAmount?: number
 }
 
+/**
+ * Prefilled license entries plus per-entry "please confirm" flags, aligned by
+ * index. Entries come from the profile's license rows; legacy records fall
+ * back to the flat mirror columns, and each licensed state without a license
+ * row pre-appends a mostly-blank entry so supervisors confirm or correct each
+ * state's details instead of silently losing states on save.
+ */
+export function getSupervisorLicenseEntryDefaults(profile: SupervisorProfileData): {
+  entries: LicenseEntryValues[]
+  entriesNeedingReview: boolean[]
+} {
+  const physician = isPhysicianSupervisorType(profile.supervisorType ?? '')
+  const toDateInput = (value: string | null | undefined) => (value ? value.slice(0, 10) : '')
+
+  const rows = profile.licenses ?? []
+  const entries: LicenseEntryValues[] = rows.map((row) => ({
+    licenseType: physician ? '' : (row.licenseType ?? ''),
+    licenseNumber: row.licenseNumber ?? '',
+    state: row.state ?? '',
+    licenseExpiration: toDateInput(row.licenseExpiration),
+  }))
+  const entriesNeedingReview = rows.map(
+    (row) => Boolean(row.needsReview) || !row.state?.trim() || !row.licenseNumber?.trim(),
+  )
+
+  // Unmigrated legacy record: synthesize one entry from the flat mirror columns.
+  if (entries.length === 0) {
+    entries.push({
+      licenseType: physician ? '' : (profile.licenseType ?? ''),
+      licenseNumber: profile.licenseNumber ?? '',
+      state: profile.stateLicense ?? '',
+      licenseExpiration: toDateInput(profile.licenseExpiration),
+    })
+    entriesNeedingReview.push(!profile.stateLicense?.trim() || !profile.licenseNumber?.trim())
+  }
+
+  const coveredStates = new Set(entries.map((entry) => entry.state).filter(Boolean))
+  for (const state of profile.user.stateOfLicensure ?? []) {
+    if (!state || coveredStates.has(state)) continue
+    coveredStates.add(state)
+    entries.push({ licenseType: '', licenseNumber: '', state, licenseExpiration: '' })
+    entriesNeedingReview.push(true)
+  }
+
+  return { entries, entriesNeedingReview }
+}
+
 export function getDefaultSupervisorProfileFormValues(
   profile: SupervisorProfileData,
 ): SupervisorProfileFormInput {
@@ -205,17 +244,14 @@ export function getDefaultSupervisorProfileFormValues(
     supervisorType: profile.supervisorType ?? '',
     supervisorOccupation: profile.supervisorOccupation ?? '',
     supervisorSpecialty: profile.supervisorSpecialty ?? '',
-    licenseType: physician ? '' : (profile.licenseType ?? ''),
     degreeType: physician ? (profile.degreeType ?? profile.licenseType ?? '') : '',
-    licenseNumber: profile.licenseNumber ?? '',
-    licenseExpiration: profile.licenseExpiration ? profile.licenseExpiration.slice(0, 10) : '',
+    licenses: getSupervisorLicenseEntryDefaults(profile).entries,
     yearsOfExperience: (() => {
       const raw = profile.yearsOfExperience?.trim() ?? ''
       return (yearsOfExperienceOptions as readonly string[]).includes(raw) ? raw : ''
     })(),
     npiNumber: profile.npiNumber ?? '',
     certification: physician ? [] : (profile.certification ?? []),
-    stateOfLicensure: profile.user.stateOfLicensure ?? [],
     patientPopulation: profile.patientPopulation ?? [],
     supervisionFormat: profile.supervisionFormat ?? '',
     availability: profile.availability ?? '',
@@ -252,13 +288,16 @@ export function supervisorProfileFormValuesToPayload(
     specialty: values.supervisorSpecialty || undefined,
     ...(isPhysicianSupervisorType(values.supervisorType)
       ? { degreeType: values.degreeType || undefined }
-      : { licenseType: values.licenseType || undefined }),
-    licenseNumber: values.licenseNumber || undefined,
-    licenseExpiration: values.licenseExpiration || undefined,
+      : {}),
+    licenses: values.licenses.map(({ licenseType, licenseNumber, state, licenseExpiration }) => ({
+      ...(isPhysicianSupervisorType(values.supervisorType) ? {} : { licenseType }),
+      licenseNumber,
+      state,
+      licenseExpiration,
+    })),
     yearsOfExperience: values.yearsOfExperience || undefined,
     npiNumber: values.npiNumber || undefined,
     certification: isPhysicianSupervisorType(values.supervisorType) ? [] : values.certification,
-    stateOfLicensure: values.stateOfLicensure,
     patientPopulation: values.patientPopulation,
     supervisionFormat: values.supervisionFormat || undefined,
     availability: values.availability || undefined,

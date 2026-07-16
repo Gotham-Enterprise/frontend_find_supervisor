@@ -96,9 +96,9 @@ export function getSupervisorDisplayCredential(profile: {
 function applySupervisorPhysicianRules(
   data: {
     supervisorType: string
-    licenseType: string
     degreeType: string
     certifications: string[]
+    licenses: { licenseType: string }[]
   },
   ctx: RefinementCtx,
 ) {
@@ -118,11 +118,15 @@ function applySupervisorPhysicianRules(
         message: 'Degree type must be MD or DO',
       })
     }
-  } else if (!data.licenseType?.trim()) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['licenseType'],
-      message: 'License type is required',
+  } else {
+    data.licenses.forEach((license, index) => {
+      if (!license.licenseType?.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['licenses', index, 'licenseType'],
+          message: 'License type is required',
+        })
+      }
     })
   }
 
