@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
 
 import { FormatSelector } from '@/components/Signup/FormatSelector'
@@ -14,6 +15,7 @@ import { Switch } from '@/components/ui/switch'
 import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
 import type { SelectOption } from '@/lib/api/options'
+import { isMonthlyOnlySupervisorType } from '@/lib/utils/supervisor-type'
 
 const supervisionFeeSelectOptions: SelectOption[] = supervisionFeeTypeOptions.map((o) => ({
   value: o.value,
@@ -35,9 +37,23 @@ export function SupervisorStepPracticeDetails({
   availabilityLoading,
   isSubmitting,
 }: SupervisorStepPracticeDetailsProps) {
-  const { control, clearErrors } = useFormContext<SupervisorFormValues>()
+  const { control, clearErrors, setValue } = useFormContext<SupervisorFormValues>()
   const professionalSummaryValue = useWatch({ control, name: 'professionalSummary' }) ?? ''
   const describeYourselfValue = useWatch({ control, name: 'describeYourself' }) ?? ''
+  const supervisorTypeValue = useWatch({ control, name: 'supervisorType' }) ?? ''
+  const supervisionFeeTypeValue = useWatch({ control, name: 'supervisionFeeType' })
+
+  const monthlyFeeOnly = isMonthlyOnlySupervisorType(supervisorTypeValue)
+  const feeTypeOptions = monthlyFeeOnly
+    ? supervisionFeeSelectOptions.filter((o) => o.value === 'MONTHLY')
+    : supervisionFeeSelectOptions
+
+  useEffect(() => {
+    if (monthlyFeeOnly && supervisionFeeTypeValue !== 'MONTHLY') {
+      setValue('supervisionFeeType', 'MONTHLY', { shouldValidate: false })
+      clearErrors('supervisionFeeType')
+    }
+  }, [monthlyFeeOnly, supervisionFeeTypeValue, setValue, clearErrors])
 
   return (
     <>
@@ -140,8 +156,8 @@ export function SupervisorStepPracticeDetails({
             name="supervisionFeeType"
             label="Fee Type"
             rules={supervisorFieldRules('supervisionFeeType')}
-            options={supervisionFeeSelectOptions}
-            placeholder="Hourly or Monthly"
+            options={feeTypeOptions}
+            placeholder={monthlyFeeOnly ? 'Monthly' : 'Hourly or Monthly'}
             isSubmitting={isSubmitting}
             required
           />

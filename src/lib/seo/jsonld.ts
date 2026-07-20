@@ -1,3 +1,5 @@
+import { isPhysicianSupervisorType } from '@/lib/utils/supervisor-type'
+
 import { canonicalUrl, SITE_NAME, SITE_URL } from './config'
 import { stateAbbreviationToSlug } from './routes'
 
@@ -77,8 +79,7 @@ interface SupervisorJsonLdInput {
 
 /** Resolves the jobTitle for JSON-LD based on supervisor type and license type. */
 function resolveJobTitle(supervisorType?: string | null, licenseType?: string | null): string {
-  if (supervisorType === 'Collaborating Physician') return 'Collaborating Physician'
-  if (supervisorType === 'Supervising Physician') return 'Supervising Physician'
+  if (supervisorType && isPhysicianSupervisorType(supervisorType)) return supervisorType
   return [licenseType, 'Supervisor'].filter(Boolean).join(' ') || 'Supervisor'
 }
 

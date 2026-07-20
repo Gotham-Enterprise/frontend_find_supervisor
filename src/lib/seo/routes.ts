@@ -214,6 +214,7 @@ export const SUPERVISOR_TYPE_QUERY_MAP: Record<string, string> = {
   'mental-health-counselor': 'Mental Health Counselors',
   'collaborating-physician': 'Collaborating Physician',
   'supervising-physician': 'Supervising Physician',
+  'medical-director': 'Medical Director',
 }
 
 /** Reverse map: supervisor type name → URL slug. */
@@ -229,6 +230,7 @@ export const SUPERVISOR_TYPE_PAGE_SLUGS = [
   'mental-health-counselor-supervisors',
   'collaborating-physicians',
   'supervising-physicians',
+  'medical-directors',
 ] as const
 
 export type SupervisorTypePageSlug = (typeof SUPERVISOR_TYPE_PAGE_SLUGS)[number]
@@ -238,6 +240,7 @@ export const SUPERVISOR_TYPE_PAGE_SLUG_MAP: Record<SupervisorTypePageSlug, strin
   'mental-health-counselor-supervisors': 'Mental Health Counselors',
   'collaborating-physicians': 'Collaborating Physician',
   'supervising-physicians': 'Supervising Physician',
+  'medical-directors': 'Medical Director',
 }
 
 /** Returns true if the slug is a known supervisor-type pSEO slug. */
@@ -272,5 +275,11 @@ export const SUPERVISOR_TYPE_SLUGS: Array<{
     label: 'Supervising Physicians',
     description: 'For Physician Assistants seeking Physician supervision.',
     href: '/supervisors?type=supervising-physician',
+  },
+  {
+    slug: 'medical-director',
+    label: 'Medical Directors',
+    description: 'For healthcare professionals seeking supervision from an MD or DO.',
+    href: '/supervisors?type=medical-director',
   },
 ]

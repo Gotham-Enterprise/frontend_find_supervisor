@@ -1,7 +1,10 @@
 import { z } from 'zod'
 
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
-import { applySupervisorPhysicianRules } from '@/lib/utils/supervisor-type'
+import {
+  applySupervisorMonthlyOnlyFeeRule,
+  applySupervisorPhysicianRules,
+} from '@/lib/utils/supervisor-type'
 
 // ─── Shared options ──────────────────────────────────────────────────────────
 
@@ -128,7 +131,9 @@ export const supervisorSchemaObject = accountSchemaBase.extend({
 })
 
 export const supervisorSchema = withPasswordConfirmation(
-  supervisorSchemaObject.superRefine(applySupervisorPhysicianRules),
+  supervisorSchemaObject
+    .superRefine(applySupervisorPhysicianRules)
+    .superRefine(applySupervisorMonthlyOnlyFeeRule),
 )
 
 // ─── Supervisee schema ─────────────────────────────────────────────────────────
@@ -210,18 +215,22 @@ export const supervisorStep2Schema = supervisorSchemaObject
   })
   .superRefine(applySupervisorPhysicianRules)
 
-export const supervisorStep3Schema = supervisorSchemaObject.pick({
-  patientPopulation: true,
-  supervisionFormat: true,
-  availability: true,
-  acceptingNewSupervisees: true,
-  supervisionFeeType: true,
-  supervisionFeeAmount: true,
-  professionalSummary: true,
-  describeYourself: true,
-  agreedToPost: true,
-  agreedToTerms: true,
-})
+export const supervisorStep3Schema = supervisorSchemaObject
+  .pick({
+    // Validated on step 2 — included here so the monthly-only fee rule can see it
+    supervisorType: true,
+    patientPopulation: true,
+    supervisionFormat: true,
+    availability: true,
+    acceptingNewSupervisees: true,
+    supervisionFeeType: true,
+    supervisionFeeAmount: true,
+    professionalSummary: true,
+    describeYourself: true,
+    agreedToPost: true,
+    agreedToTerms: true,
+  })
+  .superRefine(applySupervisorMonthlyOnlyFeeRule)
 
 export const SUPERVISOR_SIGNUP_STEP_SCHEMAS = [
   supervisorStep1Schema,
