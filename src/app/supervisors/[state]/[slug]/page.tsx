@@ -44,7 +44,11 @@ import {
   TOP_LICENSE_SLUGS_FOR_STATE,
   US_STATES,
 } from '@/lib/seo/routes'
-import { formatFeeAmount, formatFeeType } from '@/lib/utils/profile-formatters'
+import {
+  formatFeeAmount,
+  formatFeeType,
+  formatNameWithCredentials,
+} from '@/lib/utils/profile-formatters'
 
 const MIN_SUPERVISORS_TO_INDEX = 3
 
@@ -662,7 +666,9 @@ function SupervisorPublicProfile({
 
         {/* Name + meta */}
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold text-foreground">{supervisor.fullName}</h1>
+          <h1 className="text-2xl font-bold text-foreground">
+            {formatNameWithCredentials(supervisor.fullName, supervisor.professionalCredentials)}
+          </h1>
           {location && <p className="mt-0.5 text-sm text-muted-foreground">{location}</p>}
 
           <div className="mt-3 flex flex-wrap gap-1.5">

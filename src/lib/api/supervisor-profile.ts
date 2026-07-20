@@ -38,6 +38,8 @@ export interface UpdateSupervisorProfilePayload {
   supervisionFeeType?: string
   supervisionFeeAmount?: number
   professionalSummary?: string
+  /** Post-nominal letters after the name; empty string clears the stored value. */
+  professionalCredentials?: string
   uploadProfilePhoto?: File
   uploadLicense?: File
 }
@@ -56,6 +58,7 @@ export async function updateSupervisorProfile(
     patientPopulation,
     acceptingSupervisees,
     supervisionFeeAmount,
+    professionalCredentials,
     ...rest
   } = payload
 
@@ -63,6 +66,11 @@ export async function updateSupervisorProfile(
     if (value !== undefined && value !== null && value !== '') {
       fd.append(key, String(value))
     }
+  }
+
+  // Sent even when empty so the backend can clear the optional value.
+  if (professionalCredentials !== undefined) {
+    fd.append('professionalCredentials', professionalCredentials.trim())
   }
 
   if (acceptingSupervisees !== undefined) {

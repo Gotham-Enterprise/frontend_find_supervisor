@@ -4,7 +4,11 @@ import { useFormContext, useWatch } from 'react-hook-form'
 
 import { ProfilePhotoField } from '@/components/profile-photo/ProfilePhotoField'
 import { FormSection } from '@/components/Signup/FormSection'
-import { type SupervisorFormValues } from '@/components/Signup/schema'
+import {
+  PROFESSIONAL_CREDENTIALS_HELPER_TEXT,
+  PROFESSIONAL_CREDENTIALS_MAX_LENGTH,
+  type SupervisorFormValues,
+} from '@/components/Signup/schema'
 import { supervisorFieldRules } from '@/components/Signup/supervisorFieldRules'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { FormInputField } from '@/components/ui/form-input-field'
@@ -71,6 +75,22 @@ export function SupervisorStepAccount({
           autoCapitalizePersonName
           isSubmitting={isSubmitting}
           required
+        />
+        <FormInputField
+          control={control}
+          name="professionalCredentials"
+          label={
+            <>
+              Professional Credentials{' '}
+              <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+            </>
+          }
+          rules={supervisorFieldRules('professionalCredentials')}
+          placeholder="Ph.D., NCC, LPC-S (AL)"
+          description={PROFESSIONAL_CREDENTIALS_HELPER_TEXT}
+          maxLength={PROFESSIONAL_CREDENTIALS_MAX_LENGTH}
+          normalizeEmptyToString
+          isSubmitting={isSubmitting}
         />
       </div>
 

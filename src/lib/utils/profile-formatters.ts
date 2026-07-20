@@ -19,6 +19,22 @@ export function formatDisplayName(user: {
 }
 
 /**
+ * Appends post-nominal credentials to a display name, e.g.
+ * ("Jane Smith", "Ph.D., NCC") → "Jane Smith, Ph.D., NCC".
+ * No comma is added when either part is empty or whitespace-only.
+ */
+export function formatNameWithCredentials(
+  name: string | null | undefined,
+  credentials: string | null | undefined,
+): string {
+  const n = name?.trim() ?? ''
+  const c = credentials?.trim() ?? ''
+  if (!n) return c
+  if (!c) return n
+  return `${n}, ${c}`
+}
+
+/**
  * Mask a full name to first name + last initial, e.g. "Katie Cruz" → "Katie C".
  * Used to protect a person's identity until they're connected with the viewer.
  * The initial comes from the last token that begins with a letter, so trailing

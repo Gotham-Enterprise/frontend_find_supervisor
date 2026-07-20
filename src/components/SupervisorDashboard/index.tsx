@@ -42,7 +42,11 @@ import {
 } from '@/lib/hooks'
 import { mergeSupervisorProfileDisplayName } from '@/lib/profile/supervisor-profile-display'
 import { cn } from '@/lib/utils'
-import { formatSupervisorTypeLabel, resolveOptionLabels } from '@/lib/utils/profile-formatters'
+import {
+  formatNameWithCredentials,
+  formatSupervisorTypeLabel,
+  resolveOptionLabels,
+} from '@/lib/utils/profile-formatters'
 import type {
   Subscription,
   SupervisorProfileData,
@@ -653,7 +657,7 @@ function ProfilePreview({
       }
       avatar={{ fullName: name, photoUrl: profile.user.profilePhotoUrl, size: 'lg' }}
       identity={{
-        name,
+        name: formatNameWithCredentials(name, profile.professionalCredentials),
         subline:
           [
             profile.licenseType,

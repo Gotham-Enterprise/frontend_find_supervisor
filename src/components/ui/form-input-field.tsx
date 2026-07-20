@@ -6,7 +6,14 @@ import { useState } from 'react'
 import type { Control, FieldPath, FieldValues, RegisterOptions } from 'react-hook-form'
 import { useFormContext } from 'react-hook-form'
 
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { Input, type InputProps } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { capitalizePersonNameWords } from '@/lib/utils/person-name'
@@ -21,6 +28,8 @@ export type FormInputFieldProps<
   rules?: RegisterOptions<TFieldValues, TName>
   required?: boolean
   placeholder?: string
+  /** Helper text rendered below the input (FormDescription). */
+  description?: ReactNode
   /** Passed to `Input` (default `text`). Ignored when `passwordToggle` is true. */
   type?: React.HTMLInputTypeAttribute
   formItemClassName?: string
@@ -66,6 +75,7 @@ export function FormInputField<
   rules,
   required = false,
   placeholder,
+  description,
   type = 'text',
   formItemClassName,
   inputClassName,
@@ -182,6 +192,7 @@ export function FormInputField<
                 inputEl
               )}
             </FormControl>
+            {description ? <FormDescription>{description}</FormDescription> : null}
             <FormMessage />
           </FormItem>
         )

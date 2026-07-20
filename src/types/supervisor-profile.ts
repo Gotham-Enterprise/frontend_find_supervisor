@@ -164,6 +164,8 @@ export interface SupervisorProfileData {
   /** Fee in whole dollars, e.g. 100 = $100 */
   supervisionFeeAmount: number | null
   professionalSummary?: string | null
+  /** Post-nominal letters displayed after the full name, e.g. "Ph.D., NCC, LPC-S (AL)" */
+  professionalCredentials?: string | null
   website?: string | null
 
   licenseUrl?: string | null

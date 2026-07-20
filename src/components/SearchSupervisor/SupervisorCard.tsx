@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { formatNameWithCredentials } from '@/lib/utils/profile-formatters'
 
 import { FORMAT_BADGE_CLASSES, FORMAT_LABELS } from './helpers'
 import { SearchResultAvatar } from './SearchResultAvatar'
@@ -19,6 +20,7 @@ export function SupervisorCard({ supervisor }: SupervisorCardProps) {
   const {
     id,
     fullName,
+    credentials,
     licenseType,
     supervisorType,
     yearsOfExperience,
@@ -62,7 +64,9 @@ export function SupervisorCard({ supervisor }: SupervisorCardProps) {
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h3 className="truncate text-base font-semibold text-foreground">{fullName}</h3>
+            <h3 className="truncate text-base font-semibold text-foreground">
+              {formatNameWithCredentials(fullName, credentials)}
+            </h3>
             <p className="mt-0.5 text-sm text-muted-foreground">
               {licenseType ? (
                 <>

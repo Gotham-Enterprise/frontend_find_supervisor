@@ -8,6 +8,25 @@ import { applySupervisorPhysicianRules } from '@/lib/utils/supervisor-type'
 export const MAX_LICENSE_DOC_SIZE_BYTES = 5 * 1024 * 1024
 export const MAX_LICENSE_DOC_SIZE_LABEL = '5 MB'
 
+export const PROFESSIONAL_CREDENTIALS_MAX_LENGTH = 150
+/** Letters, numbers, spaces, commas, periods, parentheses, and hyphens — e.g. "Ph.D., NCC, LPC-S (AL)". */
+export const PROFESSIONAL_CREDENTIALS_PATTERN = /^[A-Za-z0-9 .,()-]*$/
+export const PROFESSIONAL_CREDENTIALS_HELPER_TEXT =
+  'Enter degrees, licenses, and certifications that appear after your name. Example: Ph.D., NCC, LPC-S (AL), LPC (MI)'
+
+/** Optional post-nominal letters shown after the supervisor's full name. */
+export const professionalCredentialsSchema = z
+  .string()
+  .max(
+    PROFESSIONAL_CREDENTIALS_MAX_LENGTH,
+    `Professional credentials must be ${PROFESSIONAL_CREDENTIALS_MAX_LENGTH} characters or less`,
+  )
+  .regex(
+    PROFESSIONAL_CREDENTIALS_PATTERN,
+    'Only letters, numbers, spaces, commas, periods, parentheses, and hyphens are allowed',
+  )
+  .optional()
+
 export const yearsOfExperienceOptions = [
   '0 – 2 years',
   '2 – 5 years',
@@ -50,6 +69,9 @@ export const supervisionFeeTypeOptions = [
 // ─── Supervisor schema ─────────────────────────────────────────────────────────
 
 export const supervisorSchemaObject = accountSchemaBase.extend({
+  // Step 1 — post-nominal letters displayed after the full name
+  professionalCredentials: professionalCredentialsSchema,
+
   // Step 2 — supervisor-type hierarchy cascade (stored as plain strings on SupervisorProfile)
   supervisorType: z.string().min(1, 'Supervisor type is required'),
   supervisorOccupationId: z.string().min(1, 'Occupation is required'),
@@ -182,6 +204,7 @@ export const supervisorStep1Schema = withPasswordConfirmation(
   supervisorSchemaObject.pick({
     uploadProfilePhoto: true,
     fullName: true,
+    professionalCredentials: true,
     email: true,
     password: true,
     confirmPassword: true,
@@ -234,6 +257,7 @@ export const SUPERVISOR_SIGNUP_STEP_FIELDS = [
   [
     'uploadProfilePhoto',
     'fullName',
+    'professionalCredentials',
     'email',
     'password',
     'confirmPassword',
