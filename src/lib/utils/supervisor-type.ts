@@ -4,14 +4,25 @@ import type { RefinementCtx } from 'zod'
 export const PHYSICIAN_SUPERVISOR_TYPES = [
   'Collaborating Physician',
   'Supervising Physician',
+  'Medical Director',
 ] as const
 
 export function isPhysicianSupervisorType(supervisorType: string): boolean {
   return (PHYSICIAN_SUPERVISOR_TYPES as readonly string[]).includes(supervisorType)
 }
 
+/** Supervisor types restricted to the MONTHLY supervision fee type. */
+export const MONTHLY_ONLY_SUPERVISOR_TYPES = ['Medical Director'] as const
+
+export function isMonthlyOnlySupervisorType(supervisorType: string): boolean {
+  return (MONTHLY_ONLY_SUPERVISOR_TYPES as readonly string[]).includes(supervisorType)
+}
+
+export const MONTHLY_ONLY_FEE_TYPE_MESSAGE =
+  'Only the Monthly fee type is available for this supervisor type.'
+
 export const PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE =
-  'Certifications are not required for Collaborating or Supervising Physicians.'
+  'Certifications are not required for Collaborating Physicians, Supervising Physicians, or Medical Directors.'
 
 export function getSupervisorCredentialTypeLabel(supervisorType: string): string {
   return isPhysicianSupervisorType(supervisorType) ? 'Degree Type' : 'License Type'
@@ -124,4 +135,25 @@ function applySupervisorPhysicianRules(
   }
 }
 
-export { applySupervisorPhysicianRules }
+function applySupervisorMonthlyOnlyFeeRule(
+  data: {
+    supervisorType?: string
+    supervisionFeeType?: string
+  },
+  ctx: RefinementCtx,
+) {
+  if (
+    data.supervisorType &&
+    isMonthlyOnlySupervisorType(data.supervisorType) &&
+    data.supervisionFeeType &&
+    data.supervisionFeeType !== 'MONTHLY'
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['supervisionFeeType'],
+      message: MONTHLY_ONLY_FEE_TYPE_MESSAGE,
+    })
+  }
+}
+
+export { applySupervisorMonthlyOnlyFeeRule, applySupervisorPhysicianRules }

@@ -147,7 +147,9 @@ export default async function StateSupervisorsPage({ params }: Props) {
                   ? 'Mental Health Counselor Supervisors'
                   : typeSlug === 'collaborating-physicians'
                     ? 'Collaborating Physicians'
-                    : 'Supervising Physicians'
+                    : typeSlug === 'supervising-physicians'
+                      ? 'Supervising Physicians'
+                      : 'Medical Directors'
               return (
                 <Link
                   key={typeSlug}

@@ -21,6 +21,7 @@ const footerColumns = [
       },
       { label: 'Collaborating Physicians', href: '/supervisors?type=collaborating-physician' },
       { label: 'Supervising Physicians', href: '/supervisors?type=supervising-physician' },
+      { label: 'Medical Directors', href: '/supervisors?type=medical-director' },
     ],
   },
   {

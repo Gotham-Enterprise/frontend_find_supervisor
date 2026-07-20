@@ -4,7 +4,12 @@ import { professionalCredentialsSchema, yearsOfExperienceOptions } from '@/compo
 import type { UpdateSupervisorProfilePayload } from '@/lib/api/supervisor-profile'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
 import { formatUSPhoneForDisplay, normalizeUSPhoneNumber } from '@/lib/utils/phone'
-import { isPhysicianSupervisorType, isValidPhysicianDegreeType } from '@/lib/utils/supervisor-type'
+import {
+  isMonthlyOnlySupervisorType,
+  isPhysicianSupervisorType,
+  isValidPhysicianDegreeType,
+  MONTHLY_ONLY_FEE_TYPE_MESSAGE,
+} from '@/lib/utils/supervisor-type'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 export const SUPERVISOR_PROFILE_FORMAT_OPTIONS = [
@@ -159,6 +164,14 @@ export function createEditSupervisorProfileSchema(profile: SupervisorProfileData
         code: z.ZodIssueCode.custom,
         path: ['certification'],
         message: 'Add at least one certification',
+      })
+    }
+
+    if (isMonthlyOnlySupervisorType(data.supervisorType) && data.supervisionFeeType !== 'MONTHLY') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['supervisionFeeType'],
+        message: MONTHLY_ONLY_FEE_TYPE_MESSAGE,
       })
     }
   })
