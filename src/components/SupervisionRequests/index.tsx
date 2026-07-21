@@ -8,6 +8,7 @@ import {
   ClipboardList,
   DollarSign,
   Info,
+  Lock,
   type LucideIcon,
   MapPin,
   Monitor,
@@ -264,9 +265,16 @@ interface SuperviseeDetailsDialogProps {
   hire: HireListItem
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Contact details (email, phone) are only shown to supervisors on a paid plan. */
+  showContactDetails: boolean
 }
 
-function SuperviseeDetailsDialog({ hire, open, onOpenChange }: SuperviseeDetailsDialogProps) {
+function SuperviseeDetailsDialog({
+  hire,
+  open,
+  onOpenChange,
+  showContactDetails,
+}: SuperviseeDetailsDialogProps) {
   const { supervisorTypes } = useSuperviseeFormOptions()
   const { data: stateOptions = [] } = useStatesOptions()
   const supervisorTypeOptions = supervisorTypes.data ?? []
@@ -289,11 +297,25 @@ function SuperviseeDetailsDialog({ hire, open, onOpenChange }: SuperviseeDetails
           <h3 className="mb-3 text-sm font-semibold text-foreground">Profile</h3>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
             <DetailItem label="Name" value={formatDisplayName(supervisee)} />
-            <DetailItem label="Email" value={supervisee.email} />
-            <DetailItem
-              label="Contact Number"
-              value={formatContactNumber(supervisee.contactNumber)}
-            />
+            {showContactDetails ? (
+              <>
+                <DetailItem label="Email" value={supervisee.email} />
+                <DetailItem
+                  label="Contact Number"
+                  value={formatContactNumber(supervisee.contactNumber)}
+                />
+              </>
+            ) : (
+              <DetailItem
+                label="Contact Details"
+                value={
+                  <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                    <Lock className="size-3.5 shrink-0" aria-hidden />
+                    Visible on upgraded plans
+                  </span>
+                }
+              />
+            )}
             <DetailItem label="Occupation" value={occupation} />
             <DetailItem label="Specialty" value={specialty} />
             <DetailItem label="Location" value={location} />
@@ -460,7 +482,12 @@ function RowActions({ hire, showHireDecisions }: RowActionsProps) {
         </DropdownMenuPortal>
       </DropdownMenuRoot>
 
-      <SuperviseeDetailsDialog hire={hire} open={detailsOpen} onOpenChange={setDetailsOpen} />
+      <SuperviseeDetailsDialog
+        hire={hire}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        showContactDetails={showHireDecisions}
+      />
 
       <ConfirmDialog
         open={pendingAction === 'accept'}
@@ -606,13 +633,14 @@ export function SupervisionRequestsPage() {
             pages). Use the menu on any card to view full details, accept, or reject when allowed.
           </p>
           {showUpgradeCallout && (
-            <div className="max-w-2xl rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <div className="flex min-w-0 items-start gap-2 sm:items-center">
                   <Info className="mt-0.5 size-5 shrink-0 text-amber-600 sm:mt-0" aria-hidden />
                   <p className="text-base font-medium text-amber-950">
-                    Accepting supervisees is only available for upgraded plans. You can still
-                    receive and view requests — they stay pending until you upgrade.
+                    Accepting supervisees and viewing their full names and contact details are only
+                    available for upgraded plans. You can still receive and view requests — they
+                    stay pending until you upgrade.
                   </p>
                 </div>
                 <Button

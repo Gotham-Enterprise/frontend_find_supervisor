@@ -43,7 +43,7 @@ import type { Review } from '@/types/review'
 import { HireRequestDetailsDialog } from './HireRequestDetailsDialog'
 import { HireStatusBadge } from './HireStatusBadge'
 
-const CANCELABLE_STATUSES: ReadonlyArray<HireStatus> = ['PENDING', 'ACCEPTED', 'ACTIVE']
+const CANCELABLE_STATUSES: ReadonlyArray<HireStatus> = ['PENDING', 'REVIEWED', 'ACCEPTED', 'ACTIVE']
 
 /** Normalizes API/formatter placeholders for empty values in supervisee-facing UI. */
 function formatHireDetailDisplay(value: string): string {

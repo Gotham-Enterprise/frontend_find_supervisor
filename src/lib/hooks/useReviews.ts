@@ -27,7 +27,8 @@ export function useSupervisorReviews(supervisorId: string, page = 1, limit = 10)
   })
 }
 
-/** Fetches all reviews submitted by the authenticated supervisee.
+/** Fetches all reviews for the authenticated user — written by them (supervisee)
+ *  or received about them (supervisor); the backend scopes by role.
  *  Pass limit=0 to retrieve all records (no pagination). */
 export function useMyReviews(limit = 0) {
   return useQuery({

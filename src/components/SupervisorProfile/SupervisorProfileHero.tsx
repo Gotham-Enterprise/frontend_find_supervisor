@@ -26,6 +26,7 @@ import {
   getHireBadgeClassName,
   getHireStatusLabel,
   isAcceptedConnectionStatus,
+  isApprovedHireStatus,
   isPendingConnectionStatus,
 } from '@/lib/utils/supervision-status'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
@@ -237,7 +238,7 @@ export function SupervisorProfileHero({ profile, supervisorId }: SupervisorProfi
               className="inline-flex h-9 items-center px-3 text-sm font-medium text-[#6B7280]"
               role="status"
             >
-              {profile.hiredInfo?.status === 'PENDING' ? 'Waiting for approval' : 'Hired'}
+              {isApprovedHireStatus(profile.hiredInfo?.status) ? 'Hired' : 'Waiting for approval'}
             </span>
           ) : (
             <Button size="sm" onClick={() => setHireModalOpen(true)}>
