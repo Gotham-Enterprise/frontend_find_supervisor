@@ -8,6 +8,7 @@ import {
   MapPin,
   Monitor,
   MoreVertical,
+  Star,
   Target,
   Users,
 } from 'lucide-react'
@@ -27,7 +28,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
-import { useHiresList } from '@/lib/hooks'
+import { useHiresList, useMyReviews } from '@/lib/hooks'
 import {
   formatAvailability,
   formatContactNumber,
@@ -38,6 +39,7 @@ import {
   formatSupervisionHours,
 } from '@/lib/utils/profile-formatters'
 import type { HireListItem, HireStatus } from '@/types/hire'
+import type { Review } from '@/types/review'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -240,10 +242,12 @@ function DetailBlock({ label, value }: { label: string; value: string | null | u
 
 function SuperviseeDetailsDialog({
   hire,
+  review,
   open,
   onOpenChange,
 }: {
   hire: HireListItem
+  review?: Review
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
@@ -312,6 +316,37 @@ function SuperviseeDetailsDialog({
             <DetailBlock label="Goals" value={hire.goals} />
           </dl>
         </section>
+
+        {review && (
+          <>
+            <div className="my-5 border-t" />
+            <section>
+              <h3 className="mb-3 text-sm font-semibold text-foreground">Supervisee Review</h3>
+              <div className="mb-3 flex items-center gap-2">
+                <div className="flex items-center gap-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`size-4 ${
+                        i < review.rating
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'fill-muted text-muted'
+                      }`}
+                      aria-hidden
+                    />
+                  ))}
+                </div>
+                <span className="text-sm font-medium text-foreground">{review.rating}/5</span>
+                <span className="text-xs text-muted-foreground">
+                  · {formatDate(review.createdAt)}
+                </span>
+              </div>
+              <dl>
+                <DetailBlock label="Comment" value={review.comment} />
+              </dl>
+            </section>
+          </>
+        )}
       </DialogContent>
     </DialogRoot>
   )
@@ -319,7 +354,7 @@ function SuperviseeDetailsDialog({
 
 // ─── Row actions ──────────────────────────────────────────────────────────────
 
-function RowActions({ hire }: { hire: HireListItem }) {
+function RowActions({ hire, review }: { hire: HireListItem; review?: Review }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
 
   return (
@@ -341,14 +376,19 @@ function RowActions({ hire }: { hire: HireListItem }) {
         </DropdownMenuPortal>
       </DropdownMenuRoot>
 
-      <SuperviseeDetailsDialog hire={hire} open={detailsOpen} onOpenChange={setDetailsOpen} />
+      <SuperviseeDetailsDialog
+        hire={hire}
+        review={review}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+      />
     </>
   )
 }
 
 // ─── Supervisee card ──────────────────────────────────────────────────────────
 
-function SuperviseeCard({ hire }: { hire: HireListItem }) {
+function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review }) {
   const superviseeName = formatDisplayName(hire.supervisee)
   const occupation = hire.supervisee.occupation?.name?.trim()
   const specialty = hire.supervisee.specialty?.name?.trim()
@@ -382,11 +422,17 @@ function SuperviseeCard({ hire }: { hire: HireListItem }) {
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
+              {review && (
+                <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                  <Star className="size-2.5 fill-amber-500 text-amber-500" aria-hidden />
+                  {review.rating}/5
+                </span>
+              )}
             </div>
           </div>
         </div>
         <div className="flex shrink-0 self-start">
-          <RowActions hire={hire} />
+          <RowActions hire={hire} review={review} />
         </div>
       </div>
 
@@ -413,6 +459,19 @@ export function SuperviseesPage() {
   const apiStatus = activeTab === 'ACCEPTED' ? ('ACCEPTED' satisfies HireStatus) : undefined
 
   const { data, isLoading, isError } = useHiresList(apiPage, apiLimit, apiStatus)
+  // Reviews received by the authenticated supervisor (role-scoped on the backend),
+  // joined to hires client-side — same pattern as the supervisee's /hired-supervisors page.
+  const { data: reviewsData } = useMyReviews(0)
+
+  const reviewsByHireId = useMemo(
+    () =>
+      new Map<string, Review>(
+        (reviewsData?.items ?? [])
+          .filter((r): r is Review & { hireId: string } => r.hireId !== null)
+          .map((r) => [r.hireId, r]),
+      ),
+    [reviewsData?.items],
+  )
 
   const rawItems = useMemo(() => data?.items ?? [], [data?.items])
 
@@ -479,7 +538,7 @@ export function SuperviseesPage() {
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {items.map((hire) => (
-              <SuperviseeCard key={hire.id} hire={hire} />
+              <SuperviseeCard key={hire.id} hire={hire} review={reviewsByHireId.get(hire.id)} />
             ))}
           </div>
 

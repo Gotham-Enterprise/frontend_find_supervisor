@@ -19,7 +19,8 @@ export type HireStatus =
 
 export interface HireUser {
   id: string
-  email: string
+  /** Null when masked — supervisors without a paid plan don't see supervisee contact details on pending requests. */
+  email: string | null
   userName?: string | null
   firstName?: string | null
   lastName?: string | null

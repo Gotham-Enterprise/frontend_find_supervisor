@@ -40,9 +40,10 @@ export function maskNameToFirstInitial(fullName: string | null | undefined): str
 
 /**
  * Hire statuses for which a supervisor is considered "connected" to a supervisee and may
- * see their full name. Anything else (NOT_HIRED, PENDING, REJECTED, CANCELED) stays masked.
+ * see their full name. Anything else (NOT_HIRED, PENDING, REVIEWED, REJECTED, CANCELED)
+ * stays masked. Mirrors ACCEPTED_HIRE_STATUSES in the backend's supervision_name_privacy.
  */
-const CONNECTED_HIRE_STATUSES = new Set(['ACCEPTED', 'ACTIVE', 'COMPLETED', 'REVIEWED'])
+const CONNECTED_HIRE_STATUSES = new Set(['ACCEPTED', 'ACTIVE', 'COMPLETED'])
 
 export function isConnectedHireStatus(hireStatus: string | null | undefined): boolean {
   return CONNECTED_HIRE_STATUSES.has((hireStatus ?? '').toUpperCase())
