@@ -14,6 +14,10 @@ import {
   useUserSnackbar,
 } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
+import {
+  INELIGIBLE_SUPERVISION_TYPE_MESSAGE,
+  isSupervisorTypeEligibleForSupervisee,
+} from '@/lib/utils/supervisee-eligibility'
 import { validateAddressForSignup } from '@/lib/utils/validate-address'
 
 import { applyZodIssuesToForm } from '../SupervisorSignupForm/applyZodIssuesToForm'
@@ -132,6 +136,26 @@ export function SuperviseeSignupForm() {
       return
     }
 
+    // Defense-in-depth: the Step 2 UI only offers eligible types, but re-check before
+    // submitting in case the selection was made before the credential/occupation changed.
+    const selectedType = supervisorTypesData.find((t) => t.name === values.typeOfSupervisor)
+    const occupationName =
+      occupationOptions.find((o) => o.value === values.occupationId)?.label ?? ''
+    if (
+      selectedType &&
+      !isSupervisorTypeEligibleForSupervisee(selectedType, {
+        occupationName,
+        credentialTitle: values.title,
+      })
+    ) {
+      form.setError('typeOfSupervisor', {
+        type: 'manual',
+        message: INELIGIBLE_SUPERVISION_TYPE_MESSAGE,
+      })
+      setStep(1)
+      return
+    }
+
     signup(values, {
       onSuccess: () => {
         showSuccess(
@@ -188,6 +212,8 @@ export function SuperviseeSignupForm() {
           <SuperviseeStepSupervisionNeeds
             supervisorTypesData={supervisorTypesData}
             supervisorTypesLoading={supervisorTypesLoading}
+            occupationOptions={occupationOptions}
+            occupationsLoading={occupationsLoading}
             stateOptions={stateOptions}
             howSoonOptions={howSoonOptions}
             availabilityOptions={availabilityOptions}
@@ -199,13 +225,7 @@ export function SuperviseeSignupForm() {
             isSubmitting={isSubmitting}
           />
         )}
-        {step === 2 && (
-          <SuperviseeStepProfileTerms
-            occupationOptions={occupationOptions}
-            occupationsLoading={occupationsLoading}
-            isSubmitting={isSubmitting}
-          />
-        )}
+        {step === 2 && <SuperviseeStepProfileTerms isSubmitting={isSubmitting} />}
 
         <SuperviseeStepNavigation
           step={step}

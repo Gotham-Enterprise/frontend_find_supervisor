@@ -130,7 +130,7 @@ export function buildSuperviseeFormData(values: SuperviseeFormValues): FormData 
   values.stateTheyAreLookingIn.forEach((s) => fd.append('stateTheyAreLookingIn[]', s))
   // Backend field: typeOfSupervisorNeeded — send as single-element array to keep multipart convention
   fd.append('typeOfSupervisorNeeded[]', values.typeOfSupervisor)
-  // Supervision-needs occupation/specialty stored as plain strings on SuperviseeProfile
+  // Desired supervisor occupation/specialty — stored as plain strings on SuperviseeProfile
   if (values.supervisorOccupationId)
     fd.append('superviseeOccupation', values.supervisorOccupationId)
   if (values.supervisorSpecialtyId) fd.append('superviseeSpecialty', values.supervisorSpecialtyId)

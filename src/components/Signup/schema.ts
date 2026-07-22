@@ -161,8 +161,11 @@ export const supervisorSchema = withPasswordConfirmation(
 // ─── Supervisee schema ─────────────────────────────────────────────────────────
 
 export const superviseeSchemaObject = accountSchemaBase.extend({
-  // Step 2 — supervisor-type cascade (UI only, not sent as category IDs to backend)
+  // Step 2 — supervision needs. Eligibility for `typeOfSupervisor` is derived from the
+  // profile fields below (title + occupationId); see lib/utils/supervisee-eligibility.ts.
   typeOfSupervisor: z.string().min(1, 'Please select a type of supervision needed'),
+  // Desired supervisor's occupation/specialty within the selected type (sent to the
+  // backend as plain strings: superviseeOccupation / superviseeSpecialty)
   supervisorOccupationId: z.string().min(1, 'Occupation is required'),
   supervisorSpecialtyId: z.string().optional(),
 
@@ -179,7 +182,8 @@ export const superviseeSchemaObject = accountSchemaBase.extend({
   budgetRange: z.string().min(1, 'Please select a budget range'),
   availability: z.string().min(1, 'Availability is required'),
 
-  // Step 3 — profile fields (sent to backend as numeric category IDs)
+  // Step 2 — profile fields (sent to backend as numeric category IDs); collected before
+  // `typeOfSupervisor` so the available supervision types can be filtered by eligibility
   title: z.string().min(1, 'Credential or license type is required').max(100),
   occupationId: z.string().min(1, 'Occupation is required'),
   specialtyId: z.string().optional(),
@@ -328,6 +332,9 @@ export const superviseeStep1Schema = withPasswordConfirmation(
 
 export const superviseeStep2Schema = superviseeSchemaObject
   .pick({
+    occupationId: true,
+    specialtyId: true,
+    title: true,
     typeOfSupervisor: true,
     supervisorOccupationId: true,
     supervisorSpecialtyId: true,
@@ -351,9 +358,6 @@ export const superviseeStep2Schema = superviseeSchemaObject
   })
 
 export const superviseeStep3Schema = superviseeSchemaObject.pick({
-  title: true,
-  occupationId: true,
-  specialtyId: true,
   description: true,
   agreedToPost: true,
   agreedToTerms: true,
@@ -378,23 +382,26 @@ export const SUPERVISEE_SIGNUP_STEP_FIELDS = [
     'zipcode',
   ],
   [
+    'occupationId',
+    'specialtyId',
+    'title',
     'typeOfSupervisor',
     'supervisorOccupationId',
     'supervisorSpecialtyId',
+    'preferredFormat',
     'stateOfLicensure',
     'stateTheyAreLookingIn',
     'howSoon',
     'howSoonDate',
-    'preferredFormat',
+    'availability',
     'feeType',
     'budgetRange',
-    'availability',
   ],
-  ['title', 'occupationId', 'specialtyId', 'description', 'agreedToPost', 'agreedToTerms'],
+  ['description', 'agreedToPost', 'agreedToTerms'],
 ] as const satisfies ReadonlyArray<ReadonlyArray<keyof SuperviseeFormValues>>
 
 export const SUPERVISEE_SIGNUP_STEP_META = [
   { title: 'Account', stepLabel: 'Step 1' },
   { title: 'Supervision Needs', stepLabel: 'Step 2' },
-  { title: 'Profile & Terms', stepLabel: 'Step 3' },
+  { title: 'Ideal Supervisor & Terms', stepLabel: 'Step 3' },
 ] as const

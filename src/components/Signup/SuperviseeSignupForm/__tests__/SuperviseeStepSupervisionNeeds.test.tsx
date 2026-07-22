@@ -1,0 +1,148 @@
+import { act, render, screen } from '@testing-library/react'
+import { useState } from 'react'
+import { useForm, type UseFormReturn } from 'react-hook-form'
+import { describe, expect, it, vi } from 'vitest'
+
+import { superviseeDefaultValues } from '@/components/Signup/helpers'
+import { type SuperviseeFormValues } from '@/components/Signup/schema'
+import { Form } from '@/components/ui/form'
+import type { SelectOption, SupervisorTypeData } from '@/lib/api/options'
+
+import { SuperviseeStepProfileTerms } from '../SuperviseeStepProfileTerms'
+import { SuperviseeStepSupervisionNeeds } from '../SuperviseeStepSupervisionNeeds'
+
+vi.mock('@/lib/hooks/useSignupOptions', () => ({
+  useSpecialtiesByOccupation: () => ({ data: [], isLoading: false }),
+}))
+
+const supervisorTypesData: SupervisorTypeData[] = [
+  { id: '1', code: 'COLLABORATING_PHYSICIAN', name: 'Collaborating Physician', occupations: [] },
+  { id: '2', code: 'SUPERVISING_PHYSICIAN', name: 'Supervising Physician', occupations: [] },
+  { id: '3', code: 'MENTAL_HEALTH_COUNSELORS', name: 'Mental Health Counselors', occupations: [] },
+  { id: '4', code: 'MEDICAL_DIRECTOR', name: 'Medical Director', occupations: [] },
+]
+
+const occupationOptions: SelectOption[] = [
+  { label: 'Nurse Practitioner', value: '1' },
+  { label: 'Physician Assistant', value: '2' },
+  { label: 'Social Worker', value: '3' },
+]
+
+function Harness({ onForm }: { onForm: (form: UseFormReturn<SuperviseeFormValues>) => void }) {
+  const [step, setStep] = useState<1 | 2>(1)
+  const form = useForm<SuperviseeFormValues>({
+    defaultValues: superviseeDefaultValues,
+    shouldUnregister: false,
+    mode: 'onTouched',
+    reValidateMode: 'onChange',
+  })
+  onForm(form)
+
+  return (
+    <Form {...form}>
+      {step === 1 ? (
+        <SuperviseeStepSupervisionNeeds
+          supervisorTypesData={supervisorTypesData}
+          supervisorTypesLoading={false}
+          occupationOptions={occupationOptions}
+          occupationsLoading={false}
+          stateOptions={[{ label: 'CA', value: 'CA' }]}
+          howSoonOptions={[{ label: 'As soon as possible', value: 'IMMEDIATELY' }]}
+          availabilityOptions={[{ label: 'Flexible', value: 'FLEXIBLE' }]}
+          salaryRangeOptions={[{ label: '$0 - $50', value: '$0 - $50' }]}
+          statesLoading={false}
+          howSoonLoading={false}
+          availabilityLoading={false}
+          salaryRangesLoading={false}
+          isSubmitting={false}
+        />
+      ) : (
+        <SuperviseeStepProfileTerms isSubmitting={false} />
+      )}
+      <button type="button" data-testid="toggle-step" onClick={() => setStep(step === 1 ? 2 : 1)}>
+        toggle-step
+      </button>
+    </Form>
+  )
+}
+
+function renderHarness() {
+  let form!: UseFormReturn<SuperviseeFormValues>
+  render(
+    <Harness
+      onForm={(f) => {
+        form = f
+      }}
+    />,
+  )
+  return () => form
+}
+
+describe('SuperviseeStepSupervisionNeeds', () => {
+  it('locks the supervision type selector until credential and occupation are filled', () => {
+    renderHarness()
+    expect(screen.getByText('Enter your credential and occupation first')).toBeInTheDocument()
+  })
+
+  it('clears an ineligible supervision type when the occupation changes', async () => {
+    const getForm = renderHarness()
+
+    await act(async () => {
+      // Eligibility comes from the occupation here; 'RN' alone is not an NP credential.
+      getForm().setValue('title', 'RN')
+      getForm().setValue('occupationId', '1') // Nurse Practitioner
+      getForm().setValue('typeOfSupervisor', 'Collaborating Physician')
+    })
+    expect(getForm().getValues('typeOfSupervisor')).toBe('Collaborating Physician')
+
+    await act(async () => {
+      getForm().setValue('occupationId', '3') // Social Worker — no longer NP-eligible
+    })
+    expect(getForm().getValues('typeOfSupervisor')).toBe('')
+  })
+
+  it('keeps Medical Director selected regardless of occupation changes', async () => {
+    const getForm = renderHarness()
+
+    await act(async () => {
+      getForm().setValue('title', 'None')
+      getForm().setValue('occupationId', '3')
+      getForm().setValue('typeOfSupervisor', 'Medical Director')
+    })
+    await act(async () => {
+      getForm().setValue('occupationId', '2')
+    })
+    expect(getForm().getValues('typeOfSupervisor')).toBe('Medical Director')
+  })
+
+  it('preserves entered values when navigating between step 2 and step 3', async () => {
+    const getForm = renderHarness()
+
+    await act(async () => {
+      getForm().setValue('title', 'PA-C')
+      getForm().setValue('occupationId', '2')
+      getForm().setValue('typeOfSupervisor', 'Supervising Physician')
+    })
+
+    // Step 2 → Step 3
+    await act(async () => {
+      screen.getByTestId('toggle-step').click()
+    })
+    expect(screen.getByPlaceholderText('Describe your ideal supervisor…')).toBeInTheDocument()
+    await act(async () => {
+      getForm().setValue('description', 'Someone with plenty of experience mentoring PAs.')
+    })
+
+    // Step 3 → Step 2: everything entered on both steps survives the round trip
+    await act(async () => {
+      screen.getByTestId('toggle-step').click()
+    })
+    expect(screen.getByDisplayValue('PA-C')).toBeInTheDocument()
+    expect(getForm().getValues()).toMatchObject({
+      title: 'PA-C',
+      occupationId: '2',
+      typeOfSupervisor: 'Supervising Physician',
+      description: 'Someone with plenty of experience mentoring PAs.',
+    })
+  })
+})
