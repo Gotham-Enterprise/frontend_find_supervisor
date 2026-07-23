@@ -12,14 +12,12 @@ const FORMAT_MAP: Record<'virtual' | 'in-person' | 'hybrid', string> = {
   hybrid: 'HYBRID',
 }
 
+/** The form stores backend enum values directly; this only guards against unexpected input. */
 const HOW_SOON_MAP: Record<string, string> = {
-  'As soon as possible': 'IMMEDIATELY',
   IMMEDIATELY: 'IMMEDIATELY',
-  'Within 1 month': 'WITHIN_1_MONTH',
+  WITHIN_2_WEEKS: 'WITHIN_2_WEEKS',
   WITHIN_1_MONTH: 'WITHIN_1_MONTH',
-  'Within 3 months': 'WITHIN_2_MONTHS',
   WITHIN_2_MONTHS: 'WITHIN_2_MONTHS',
-  'Just exploring': 'WITHIN_6_MONTHS',
   WITHIN_6_MONTHS: 'WITHIN_6_MONTHS',
   CUSTOM_DATE: 'CUSTOM_DATE',
 }

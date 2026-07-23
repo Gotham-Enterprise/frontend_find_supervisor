@@ -333,12 +333,14 @@ export function formatBudgetRange(
 
 // ─── How soon looking ─────────────────────────────────────────────────────────
 
+// Labels must match the backend options (`/supervision/options?param=howSoon`)
+// shown in the signup and profile-edit dropdowns.
 const HOW_SOON_LABELS: Record<string, string> = {
-  IMMEDIATELY: 'As soon as possible',
+  IMMEDIATELY: 'Immediately',
   WITHIN_2_WEEKS: 'Within 2 weeks',
   WITHIN_1_MONTH: 'Within 1 month',
-  WITHIN_2_MONTHS: 'Within 3 months',
-  WITHIN_6_MONTHS: 'Just exploring',
+  WITHIN_2_MONTHS: 'Within 2 months',
+  WITHIN_6_MONTHS: 'Within 6 months',
   CUSTOM_DATE: 'Custom date',
 }
 
@@ -346,8 +348,8 @@ const HOW_SOON_LABELS_COMPACT: Record<string, string> = {
   IMMEDIATELY: 'ASAP',
   WITHIN_2_WEEKS: 'Within 2 weeks',
   WITHIN_1_MONTH: 'Within 1 month',
-  WITHIN_2_MONTHS: 'Within 3 months',
-  WITHIN_6_MONTHS: 'Exploring',
+  WITHIN_2_MONTHS: 'Within 2 months',
+  WITHIN_6_MONTHS: 'Within 6 months',
   CUSTOM_DATE: 'Custom date',
 }
 

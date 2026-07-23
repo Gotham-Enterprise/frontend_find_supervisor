@@ -8,6 +8,7 @@ import { useStatesOptions, useSuperviseeFormOptions } from '@/lib/hooks'
 import { formatUSPhoneForDisplay } from '@/lib/utils/phone'
 import {
   formatDisplayName,
+  formatHowSoonLooking,
   formatLocation,
   formatLookingInStatesLabel,
   formatSupervisionFormat,
@@ -17,31 +18,6 @@ import {
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 // ─── Formatters specific to the supervisee domain ────────────────────────────
-
-const HOW_SOON_LABELS: Record<string, string> = {
-  IMMEDIATELY: 'As soon as possible',
-  WITHIN_2_WEEKS: 'Within 2 weeks',
-  WITHIN_1_MONTH: 'Within 1 month',
-  WITHIN_2_MONTHS: 'Within 3 months',
-  WITHIN_6_MONTHS: 'Just exploring',
-  CUSTOM_DATE: 'Custom date',
-}
-
-function formatHowSoon(
-  value: string | null | undefined,
-  lookingDate: string | null | undefined,
-): string {
-  if (!value) return 'N/A'
-  if (value === 'CUSTOM_DATE') {
-    if (!lookingDate) return 'Custom date'
-    return new Date(lookingDate).toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    })
-  }
-  return HOW_SOON_LABELS[value] ?? value
-}
 
 function formatBudget(
   type: string | null | undefined,
@@ -118,7 +94,7 @@ export function SuperviseeDashboardProfileDetails({
   )
   const lookingInLabel = formatLookingInStatesLabel(profile.stateTheyAreLookingIn, stateOptions)
   const formatLabel = formatSupervisionFormat(profile.preferredFormat)
-  const howSoonLabel = formatHowSoon(profile.howSoonLooking, profile.lookingDate)
+  const howSoonLabel = formatHowSoonLooking(profile.howSoonLooking, profile.lookingDate)
   const budgetLabel = formatBudget(
     profile.budgetRangeType,
     profile.budgetRangeStart,
