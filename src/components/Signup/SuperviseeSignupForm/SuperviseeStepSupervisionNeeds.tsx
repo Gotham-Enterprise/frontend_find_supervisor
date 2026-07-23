@@ -19,6 +19,7 @@ import {
 } from '@/lib/forms/supervisee-profile-edit'
 import { useSpecialtiesByOccupation } from '@/lib/hooks/useSignupOptions'
 import { cn } from '@/lib/utils'
+import { todayLocalISO } from '@/lib/utils/date'
 import {
   getEligibleSupervisorTypes,
   hasCompletedEligibilityFields,
@@ -71,7 +72,8 @@ export function SuperviseeStepSupervisionNeeds({
   const title = useWatch({ control, name: 'title' }) ?? ''
   const occupationId = useWatch({ control, name: 'occupationId' }) ?? ''
   const isCustomDate = howSoon === 'CUSTOM_DATE'
-  const today = new Date().toISOString().split('T')[0]
+  // Local date, not toISOString() — the UTC date blocks "today" in US timezones each evening
+  const today = todayLocalISO()
 
   const supervisorOccupationId = useWatch({ control, name: 'supervisorOccupationId' }) ?? ''
 

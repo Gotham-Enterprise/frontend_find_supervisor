@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useForm, useFormState, useWatch } from 'react-hook-form'
 
 import { superviseeDefaultValues } from '@/components/Signup/helpers'
-import { type SuperviseeFormValues, superviseeSchema } from '@/components/Signup/schema'
+import {
+  SUPERVISEE_SIGNUP_STEP_FIELDS,
+  type SuperviseeFormValues,
+  superviseeSchema,
+} from '@/components/Signup/schema'
 import { Form } from '@/components/ui/form'
 import {
   useCitiesOptions,
@@ -20,7 +24,10 @@ import {
 } from '@/lib/utils/supervisee-eligibility'
 import { validateAddressForSignup } from '@/lib/utils/validate-address'
 
-import { applyZodIssuesToForm } from '../SupervisorSignupForm/applyZodIssuesToForm'
+import {
+  applyZodIssuesToForm,
+  findFirstStepWithError,
+} from '../SupervisorSignupForm/applyZodIssuesToForm'
 import { SuperviseeStepAccount } from './SuperviseeStepAccount'
 import { SuperviseeStepIndicator } from './SuperviseeStepIndicator'
 import { SuperviseeStepNavigation } from './SuperviseeStepNavigation'
@@ -132,7 +139,14 @@ export function SuperviseeSignupForm() {
 
     const parsed = superviseeSchema.safeParse(values)
     if (!parsed.success) {
-      applyZodIssuesToForm(parsed.error, form.setError)
+      const erroredPaths = applyZodIssuesToForm(parsed.error, form.setError)
+      // Errors can land on fields from earlier steps (unmounted) — jump there so the
+      // submit never silently does nothing.
+      const errorStep = findFirstStepWithError(erroredPaths, SUPERVISEE_SIGNUP_STEP_FIELDS)
+      if (errorStep >= 0 && errorStep !== stepRef.current) {
+        setStep(errorStep as SuperviseeSignupStepIndex)
+      }
+      showError('Please review the highlighted fields.')
       return
     }
 
@@ -152,7 +166,9 @@ export function SuperviseeSignupForm() {
         type: 'manual',
         message: INELIGIBLE_SUPERVISION_TYPE_MESSAGE,
       })
-      setStep(1)
+      const errorStep = findFirstStepWithError(['typeOfSupervisor'], SUPERVISEE_SIGNUP_STEP_FIELDS)
+      if (errorStep >= 0) setStep(errorStep as SuperviseeSignupStepIndex)
+      showError(INELIGIBLE_SUPERVISION_TYPE_MESSAGE)
       return
     }
 

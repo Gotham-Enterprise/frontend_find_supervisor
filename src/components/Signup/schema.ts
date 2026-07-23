@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import { todayLocalISO } from '@/lib/utils/date'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
 import {
   applySupervisorMonthlyOnlyFeeRule,
@@ -87,16 +88,11 @@ export const supervisorSchemaObject = accountSchemaBase.extend({
   licenseExpiration: z
     .string()
     .min(1, 'Expiration date is required')
-    .refine(
-      (val) => {
-        const date = new Date(val)
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        date.setHours(0, 0, 0, 0)
-        return date >= today
-      },
-      { message: 'License expiration cannot be a past date' },
-    ),
+    // String comparison on YYYY-MM-DD — parsing with `new Date(val)` reads UTC midnight
+    // and rejected today's date in timezones behind UTC.
+    .refine((val) => val >= todayLocalISO(), {
+      message: 'License expiration cannot be a past date',
+    }),
   npiNumber: z.string().max(20).optional(),
   certifications: z.array(z.string()),
   yearsOfExperience: z.string().min(1, 'Years of experience is required'),

@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useForm, useFormState, useWatch } from 'react-hook-form'
 
 import { supervisorDefaultValues } from '@/components/Signup/helpers'
-import { type SupervisorFormValues, supervisorSchema } from '@/components/Signup/schema'
+import {
+  SUPERVISOR_SIGNUP_STEP_FIELDS,
+  type SupervisorFormValues,
+  supervisorSchema,
+} from '@/components/Signup/schema'
 import { Form } from '@/components/ui/form'
 import {
   useCitiesOptions,
@@ -17,7 +21,7 @@ import {
 import { parseApiError } from '@/lib/utils/error-parser'
 import { validateAddressForSignup } from '@/lib/utils/validate-address'
 
-import { applyZodIssuesToForm } from './applyZodIssuesToForm'
+import { applyZodIssuesToForm, findFirstStepWithError } from './applyZodIssuesToForm'
 import { SupervisorStepAccount } from './SupervisorStepAccount'
 import { SupervisorStepIndicator } from './SupervisorStepIndicator'
 import { SupervisorStepLicenseCredentials } from './SupervisorStepLicenseCredentials'
@@ -136,7 +140,14 @@ export function SupervisorSignupForm() {
 
     const parsed = supervisorSchema.safeParse(values)
     if (!parsed.success) {
-      applyZodIssuesToForm(parsed.error, form.setError)
+      const erroredPaths = applyZodIssuesToForm(parsed.error, form.setError)
+      // Errors can land on fields from earlier steps (unmounted) — jump there so the
+      // submit never silently does nothing.
+      const errorStep = findFirstStepWithError(erroredPaths, SUPERVISOR_SIGNUP_STEP_FIELDS)
+      if (errorStep >= 0 && errorStep !== stepRef.current) {
+        setStep(errorStep as SupervisorSignupStepIndex)
+      }
+      showError('Please review the highlighted fields.')
       return
     }
 
