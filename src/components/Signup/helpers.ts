@@ -7,6 +7,7 @@ export function parseSignupRoleFromType(type?: string | null): SignupRole {
 
 export const supervisorDefaultValues: Partial<SupervisorFormValues> = {
   fullName: '',
+  professionalCredentials: '',
   email: '',
   password: '',
   confirmPassword: '',

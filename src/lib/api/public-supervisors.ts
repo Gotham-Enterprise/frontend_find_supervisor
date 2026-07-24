@@ -27,6 +27,8 @@ export interface PublicSupervisorSummary {
   /** Merged bio — professionalSummary if present, otherwise describeYourself. */
   bio: string
   professionalSummary: string | null
+  /** Post-nominal letters displayed after the full name, e.g. "Ph.D., NCC, LPC-S (AL)". */
+  professionalCredentials: string | null
   describeYourself: string | null
   profilePhotoUrl: string | null
   yearsOfExperience: string
@@ -101,6 +103,9 @@ function parseRow(row: Record<string, unknown>): PublicSupervisorSummary {
     specialty: String(row.specialty ?? ''),
     bio,
     professionalSummary,
+    professionalCredentials: row.professionalCredentials
+      ? String(row.professionalCredentials).trim()
+      : null,
     describeYourself,
     profilePhotoUrl: (row.profilePhotoUrl as string | null) ?? null,
     yearsOfExperience: String(row.yearsOfExperience ?? ''),

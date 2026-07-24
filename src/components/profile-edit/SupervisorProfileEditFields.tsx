@@ -4,7 +4,11 @@ import { useEffect, useMemo, useRef } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import { useWatch } from 'react-hook-form'
 
-import { yearsOfExperienceOptions } from '@/components/Signup/schema'
+import {
+  PROFESSIONAL_CREDENTIALS_HELPER_TEXT,
+  PROFESSIONAL_CREDENTIALS_MAX_LENGTH,
+  yearsOfExperienceOptions,
+} from '@/components/Signup/schema'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { FormInputField } from '@/components/ui/form-input-field'
 import { FormSelectField } from '@/components/ui/form-select-field'
@@ -198,6 +202,16 @@ export function SupervisorProfileEditFields({
             )}
           />
         </div>
+        <FormInputField
+          control={form.control}
+          name="professionalCredentials"
+          label="Professional Credentials"
+          placeholder="Ph.D., NCC, LPC-S (AL)"
+          description={PROFESSIONAL_CREDENTIALS_HELPER_TEXT}
+          maxLength={PROFESSIONAL_CREDENTIALS_MAX_LENGTH}
+          normalizeEmptyToString
+          isSubmitting={isSubmitting}
+        />
         <div className="grid gap-4 sm:grid-cols-3">
           <FormSelectField
             control={form.control}

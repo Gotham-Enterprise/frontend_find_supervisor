@@ -17,6 +17,7 @@ import {
 import { useCheckConnectionAvailability } from '@/lib/hooks/useConnections'
 import {
   formatDisplayName,
+  formatNameWithCredentials,
   formatSupervisorTypeLabel,
   getInitials,
 } from '@/lib/utils/profile-formatters'
@@ -153,6 +154,10 @@ export function SupervisorProfileHero({ profile, supervisorId }: SupervisorProfi
   })()
 
   const displayName = formatDisplayName(profile.user)
+  const displayNameWithCredentials = formatNameWithCredentials(
+    displayName,
+    profile.professionalCredentials,
+  )
   const occupation =
     profile.supervisorOccupation?.trim() ||
     profile.user.occupation?.name ||
@@ -175,7 +180,7 @@ export function SupervisorProfileHero({ profile, supervisorId }: SupervisorProfi
         {/* Name / meta */}
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-bold text-[#181818]">{displayName}</h1>
+            <h1 className="text-xl font-bold text-[#181818]">{displayNameWithCredentials}</h1>
             <span className="rounded-full bg-[#E2F0E8] px-2.5 py-0.5 text-xs font-medium text-[#006D36]">
               {roleBadgeLabel}
             </span>

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { yearsOfExperienceOptions } from '@/components/Signup/schema'
+import { professionalCredentialsSchema, yearsOfExperienceOptions } from '@/components/Signup/schema'
 import type { UpdateSupervisorProfilePayload } from '@/lib/api/supervisor-profile'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
 import { formatUSPhoneForDisplay, normalizeUSPhoneNumber } from '@/lib/utils/phone'
@@ -44,6 +44,7 @@ const licenseExpirationRefine = z
  */
 const editSupervisorProfileFieldsSchema = z.object({
   fullName: z.string().min(1, 'Full name is required').max(100),
+  professionalCredentials: professionalCredentialsSchema,
   contactNumber: z.string().min(1, 'Contact number is required'),
   city: z.string().min(1, 'City is required').max(100),
   state: z.string().min(1, 'State is required'),
@@ -170,6 +171,7 @@ export function getDefaultSupervisorProfileFormValues(
 
   return {
     fullName: profile.user.fullName ?? '',
+    professionalCredentials: profile.professionalCredentials ?? '',
     contactNumber: formatUSPhoneForDisplay(profile.user.contactNumber ?? ''),
     city: profile.user.city ?? '',
     state: profile.user.state ?? '',
@@ -209,6 +211,8 @@ export function supervisorProfileFormValuesToPayload(
 ): UpdateSupervisorProfilePayload {
   return {
     fullName: values.fullName,
+    // Always sent (empty string clears the stored value on the backend).
+    professionalCredentials: values.professionalCredentials?.trim() ?? '',
     contactNumber: values.contactNumber
       ? (normalizeUSPhoneNumber(values.contactNumber) ?? values.contactNumber)
       : undefined,

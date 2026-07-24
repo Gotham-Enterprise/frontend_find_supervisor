@@ -38,6 +38,7 @@ export interface SupervisorSearchApiRow {
   acceptingSupervisees?: boolean
   specialty?: string
   professionalSummary?: string
+  professionalCredentials?: string
   describeYourself?: string
   profilePhotoUrl?: string
 }
@@ -193,7 +194,7 @@ export function mapApiRowToSupervisorSearchResult(
   return {
     id: String(row.id),
     fullName,
-    credentials: '',
+    credentials: (row.professionalCredentials ?? '').trim(),
     licenseType: getSupervisorDisplayCredential({
       supervisorType: row.supervisorType,
       licenseType: row.licenseType,

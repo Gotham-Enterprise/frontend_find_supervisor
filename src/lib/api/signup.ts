@@ -54,6 +54,8 @@ export function buildSupervisorFormData(values: SupervisorFormValues): FormData 
   // Account
   fd.append('role', 'SUPERVISOR')
   fd.append('fullName', values.fullName)
+  const professionalCredentials = values.professionalCredentials?.trim()
+  if (professionalCredentials) fd.append('professionalCredentials', professionalCredentials)
   fd.append('email', values.email)
   fd.append('password', values.password)
   fd.append('contactNumber', normalizeUSPhoneNumber(values.contactNumber) ?? values.contactNumber)
