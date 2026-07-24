@@ -178,6 +178,7 @@ export function SuperviseeProfileEditFields({
             control={form.control}
             name="city"
             label="City"
+            searchable
             required
             options={cityOptions}
             placeholder={
@@ -208,6 +209,7 @@ export function SuperviseeProfileEditFields({
             control={form.control}
             name="state"
             label="State"
+            searchable
             required
             options={stateOptions}
             placeholder="Select State"

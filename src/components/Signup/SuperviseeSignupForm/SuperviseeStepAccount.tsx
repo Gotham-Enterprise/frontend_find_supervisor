@@ -139,6 +139,7 @@ export function SuperviseeStepAccount({
           control={control}
           name="city"
           label="City"
+          searchable
           rules={superviseeFieldRules('city')}
           options={cityOptions}
           placeholder={
@@ -165,6 +166,7 @@ export function SuperviseeStepAccount({
           control={control}
           name="state"
           label="State"
+          searchable
           rules={superviseeFieldRules('state')}
           options={stateOptions}
           placeholder="Select state"

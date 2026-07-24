@@ -3,6 +3,13 @@
 import type { ReactNode } from 'react'
 import type { Control, FieldPath, FieldValues, RegisterOptions } from 'react-hook-form'
 
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxItem,
+  ComboboxTrigger,
+  ComboboxValue,
+} from '@/components/ui/combobox'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import {
   Select,
@@ -65,6 +72,13 @@ export type FormSelectFieldProps<
   emptyState?: { when: boolean; children: ReactNode }
   /** Called after the field value changes (e.g. to reset dependent fields). */
   onValueChange?: (value: string) => void
+  /**
+   * Renders a combobox with a search input in the popup instead of a plain select (for long lists
+   * like states/cities). `emptySentinel` and `itemToStringLabel` are not supported in this mode.
+   */
+  searchable?: boolean
+  /** Placeholder for the search input when `searchable` is set. */
+  searchPlaceholder?: string
 }
 
 function defaultItemToStringLabel(
@@ -102,6 +116,8 @@ export function FormSelectField<
   selectKey,
   emptyState,
   onValueChange,
+  searchable = false,
+  searchPlaceholder,
 }: FormSelectFieldProps<TFieldValues, TName>) {
   const resolvedPlaceholder = loading ? loadingPlaceholder : (placeholder ?? 'Select…')
   const mergedDisabled = Boolean(disabled || isSubmitting)
@@ -117,6 +133,53 @@ export function FormSelectField<
       rules={rules}
       render={({ field }) => {
         const sb = selectBlurHandlers(field)
+
+        if (searchable) {
+          const selected = displayOptions.find((o) => o.value === String(field.value ?? '')) ?? null
+
+          return (
+            <FormItem className={formItemClassName}>
+              <FormLabel>
+                {label}
+                {required ? (
+                  <>
+                    {' '}
+                    <span className="text-destructive">*</span>
+                  </>
+                ) : null}
+              </FormLabel>
+              <Combobox
+                key={selectKey}
+                items={displayOptions}
+                value={selected}
+                onValueChange={(item: SelectOption | null) => {
+                  field.onChange((item?.value ?? '') as (typeof field)['value'])
+                  onValueChange?.(item?.value ?? '')
+                }}
+                isItemEqualToValue={(a, b) => a?.value === b?.value}
+                onOpenChange={sb.onOpenChange}
+                disabled={mergedDisabled || loading}
+              >
+                <FormControl>
+                  <ComboboxTrigger ref={field.ref} onBlur={sb.onTriggerBlur}>
+                    <ComboboxValue placeholder={resolvedPlaceholder} />
+                  </ComboboxTrigger>
+                </FormControl>
+                <ComboboxContent
+                  searchPlaceholder={searchPlaceholder}
+                  emptyState={emptyState?.when ? emptyState.children : undefined}
+                >
+                  {(item: SelectOption) => (
+                    <ComboboxItem key={item.value} value={item}>
+                      {item.label}
+                    </ComboboxItem>
+                  )}
+                </ComboboxContent>
+              </Combobox>
+              <FormMessage />
+            </FormItem>
+          )
+        }
 
         const selectValue = emptySentinel
           ? field.value != null && field.value !== ''

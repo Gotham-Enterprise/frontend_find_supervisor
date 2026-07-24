@@ -217,6 +217,7 @@ export function SupervisorProfileEditFields({
             control={form.control}
             name="city"
             label="City"
+            searchable
             required
             options={cityOptions}
             placeholder={
@@ -247,6 +248,7 @@ export function SupervisorProfileEditFields({
             control={form.control}
             name="state"
             label="State"
+            searchable
             required
             options={stateOptions}
             placeholder="Select State"

@@ -48,15 +48,20 @@ export function PublicFooter() {
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-6">
           <div className="lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2 font-semibold text-foreground">
+            <a
+              href="https://www.gothamenterprisesltd.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 font-semibold text-foreground"
+            >
               <Image
                 src="/logo.png"
-                alt="Find A Supervisor"
+                alt="Gotham Enterprises LTD"
                 width={120}
                 height={32}
                 className="h-8 w-auto"
               />
-            </Link>
+            </a>
             <p className="mt-3 text-sm text-muted-foreground">
               The leading platform for connecting healthcare professionals with licensed
               supervisors, collaborating physicians, and supervising physicians.
