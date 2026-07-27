@@ -12,7 +12,7 @@ export function selectBlurHandlers(field: { onBlur: () => void }) {
     },
     onTriggerBlur: (e: React.FocusEvent<HTMLElement>) => {
       const rt = e.relatedTarget as HTMLElement | null
-      if (rt?.closest?.('[data-slot="select-content"]')) return
+      if (rt?.closest?.('[data-slot="select-content"], [data-slot="combobox-content"]')) return
       field.onBlur()
     },
   }

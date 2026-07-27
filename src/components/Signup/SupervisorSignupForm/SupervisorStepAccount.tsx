@@ -159,6 +159,7 @@ export function SupervisorStepAccount({
           control={control}
           name="city"
           label="City"
+          searchable
           rules={supervisorFieldRules('city')}
           options={cityOptions}
           placeholder={
@@ -186,6 +187,7 @@ export function SupervisorStepAccount({
           control={control}
           name="state"
           label="State"
+          searchable
           rules={supervisorFieldRules('state')}
           options={stateOptions}
           placeholder="Select state"

@@ -70,15 +70,20 @@ export function Sidebar() {
 
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col border-r border-border bg-white">
-      <Link href="/" className="flex h-[60px] shrink-0 items-center border-b border-border px-6">
+      <a
+        href="https://www.gothamenterprisesltd.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex h-[60px] shrink-0 items-center border-b border-border px-6"
+      >
         <Image
           src="/logo.png"
-          alt="Find A Supervisor"
+          alt="Gotham Enterprises LTD"
           width={120}
           height={32}
           className="h-8 w-auto"
         />
-      </Link>
+      </a>
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
         {visibleNavItems.map(({ label, href, icon: Icon }) => {

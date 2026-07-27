@@ -20,15 +20,20 @@ export function CheckoutShellLayout({ children }: CheckoutShellLayoutProps) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="flex shrink-0 items-center justify-between border-b border-border bg-card px-6 py-4">
-        <Link href="/" className="flex items-center gap-2">
+        <a
+          href="https://www.gothamenterprisesltd.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2"
+        >
           <Image
             src="/logo.png"
-            alt="Find A Supervisor"
+            alt="Gotham Enterprises LTD"
             width={120}
             height={32}
             className="h-8 w-auto"
           />
-        </Link>
+        </a>
         <Link
           href="/dashboard"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
