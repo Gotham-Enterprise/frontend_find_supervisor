@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element -- previewUrl is a local blob:// URL; next/image does not support blob URLs */
+/* eslint-disable @next/next/no-img-element -- previewUrl is a local blob:// URL and existingPhotoUrl is an arbitrary remote host; next/image supports neither */
 'use client'
 
 import { Camera } from 'lucide-react'
@@ -18,6 +18,8 @@ export type ProfilePhotoFieldProps = {
   onBlur?: () => void
   className?: string
   disabled?: boolean
+  /** Existing remote photo URL shown as the preview until a new file is picked. */
+  existingPhotoUrl?: string | null
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -33,7 +35,7 @@ export type ProfilePhotoFieldProps = {
  * the full edit modal experience is needed.
  */
 export const ProfilePhotoField = React.forwardRef<HTMLButtonElement, ProfilePhotoFieldProps>(
-  ({ value, onChange, onBlur, className, disabled = false }, ref) => {
+  ({ value, onChange, onBlur, className, disabled = false, existingPhotoUrl }, ref) => {
     const [dialogOpen, setDialogOpen] = useState(false)
 
     // ── Preview URL management ─────────────────────────────────────────────────
@@ -74,7 +76,10 @@ export const ProfilePhotoField = React.forwardRef<HTMLButtonElement, ProfilePhot
       onBlur?.()
     }
 
-    const hasPhoto = value instanceof File && previewUrl !== null
+    // A newly staged File wins over the previously saved remote photo.
+    const hasNewFile = value instanceof File && previewUrl !== null
+    const displayUrl = hasNewFile ? previewUrl : (existingPhotoUrl ?? null)
+    const hasPhoto = displayUrl !== null
 
     // ─────────────────────────────────────────────────────────────────────────
     return (
@@ -100,7 +105,7 @@ export const ProfilePhotoField = React.forwardRef<HTMLButtonElement, ProfilePhot
             {hasPhoto ? (
               <div className="relative size-[72px] shrink-0 overflow-hidden rounded-full border-2 border-primary/30">
                 <img
-                  src={previewUrl}
+                  src={displayUrl}
                   alt="Profile photo preview"
                   className="h-full w-full object-cover"
                 />
@@ -124,13 +129,25 @@ export const ProfilePhotoField = React.forwardRef<HTMLButtonElement, ProfilePhot
             {/* Text block */}
             <div className="flex flex-col gap-0.5">
               <span className="text-sm font-semibold text-foreground">
-                {hasPhoto ? 'Profile photo selected' : 'Upload a clear profile photo'}
+                {hasNewFile
+                  ? 'Profile photo selected'
+                  : hasPhoto
+                    ? 'Current profile photo'
+                    : 'Upload a clear profile photo'}
               </span>
               <span className="text-xs text-muted-foreground">
-                {hasPhoto ? 'Click to edit or replace your photo' : 'JPG, PNG, WEBP · Max 5 MB'}
+                {hasNewFile
+                  ? 'Click to edit or replace your photo'
+                  : hasPhoto
+                    ? 'Click to update your photo'
+                    : 'JPG, PNG, WEBP · Max 5 MB'}
               </span>
               <span className="mt-1 text-xs font-semibold text-primary">
-                {hasPhoto ? 'Edit photo →' : 'Click to upload photo →'}
+                {hasNewFile
+                  ? 'Edit photo →'
+                  : hasPhoto
+                    ? 'Update photo →'
+                    : 'Click to upload photo →'}
               </span>
             </div>
           </div>

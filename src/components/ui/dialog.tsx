@@ -40,7 +40,9 @@ function DialogContent({
 }) {
   return (
     <DialogPortal>
-      <DialogBackdrop />
+      {/* forceRender: Base UI skips nested-dialog backdrops by default, leaving the
+          parent dialog undimmed when dialogs stack (e.g. photo editor over profile edit) */}
+      <DialogBackdrop forceRender />
       <DialogPrimitive.Viewport
         className={cn(
           'fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 data-[closed]:animate-out data-[closed]:fade-out-0 data-[closed]:zoom-out-95 data-[open]:animate-in data-[open]:fade-in-0 data-[open]:zoom-in-95',
