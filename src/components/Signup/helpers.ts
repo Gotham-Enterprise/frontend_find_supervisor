@@ -32,7 +32,7 @@ export const supervisorDefaultValues: Partial<SupervisorFormValues> = {
   professionalSummary: '',
   describeYourself: '',
   supervisionFeeType: 'HOURLY',
-  supervisionFeeAmount: 0,
+  supervisionFeeAmount: undefined,
   website: '',
   agreedToPost: false,
   agreedToTerms: false,

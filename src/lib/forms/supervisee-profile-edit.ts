@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import type { UpdateSuperviseeProfilePayload } from '@/lib/api/supervisee-profile'
+import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
 import { formatUSPhoneForDisplay, normalizeUSPhoneNumber } from '@/lib/utils/phone'
 import { coerceStringList } from '@/lib/utils/profile-formatters'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
@@ -46,8 +47,8 @@ export const editSuperviseeProfileSchema = z
       .array(z.string())
       .min(1, 'Please select at least one state you are looking in'),
     budgetRangeType: z.string().min(1, 'Budget type is required'),
-    budgetRangeStart: z.number().min(0).optional(),
-    budgetRangeEnd: z.number().min(0).optional(),
+    budgetRangeStart: z.preprocess(normalizeNumberFieldInput, z.number().min(0).optional()),
+    budgetRangeEnd: z.preprocess(normalizeNumberFieldInput, z.number().min(0).optional()),
     uploadProfilePhoto: z.any().optional(),
   })
   .superRefine((data, ctx) => {

@@ -151,7 +151,7 @@ export function SupervisorStepPracticeDetails({
             label="Fee Amount"
             type="number"
             min={1}
-            placeholder="e.g. 100"
+            placeholder="Enter Fee Amount"
             startAdornment="$"
             numberValue
             clearErrorsOnChange

@@ -34,6 +34,7 @@ function parseBudgetRange(budgetRange: string): { start: number; end: number } {
     '$0 - $50': { start: 0, end: 50 },
     '$51 - $100': { start: 51, end: 100 },
     '$101 - $150': { start: 101, end: 150 },
+    '$151 - $300': { start: 151, end: 300 },
     '$50 – $100 / session': { start: 50, end: 100 },
     '$100 – $150 / session': { start: 100, end: 150 },
     '$150 – $200 / session': { start: 150, end: 200 },

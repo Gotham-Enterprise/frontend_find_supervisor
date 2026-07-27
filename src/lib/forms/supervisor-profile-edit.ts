@@ -163,9 +163,13 @@ export function createEditSupervisorProfileSchema(profile: SupervisorProfileData
   })
 }
 
-export function getDefaultSupervisorProfileFormValues(
-  profile: SupervisorProfileData,
-): EditSupervisorProfileFormValues {
+export function getDefaultSupervisorProfileFormValues(profile: SupervisorProfileData): Omit<
+  EditSupervisorProfileFormValues,
+  'supervisionFeeAmount'
+> & {
+  /** `undefined` when the profile has no fee yet — the field starts empty instead of an invalid 0. */
+  supervisionFeeAmount?: number
+} {
   const physician = isPhysicianSupervisorType(profile.supervisorType ?? '')
 
   return {
@@ -199,7 +203,7 @@ export function getDefaultSupervisorProfileFormValues(
     profile.supervisionFeeType === 'HOURLY'
       ? profile.supervisionFeeType
       : 'HOURLY') as 'HOURLY' | 'MONTHLY',
-    supervisionFeeAmount: profile.supervisionFeeAmount ?? 0,
+    supervisionFeeAmount: profile.supervisionFeeAmount ?? undefined,
     uploadProfilePhoto: undefined,
   }
 }

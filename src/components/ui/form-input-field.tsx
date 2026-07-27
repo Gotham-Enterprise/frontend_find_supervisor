@@ -45,7 +45,8 @@ export type FormInputFieldProps<
   passwordToggle?: boolean
   /**
    * For `type="number"`: `onChange` uses `e.target.valueAsNumber`, except empty input maps to
-   * `undefined` (avoid storing NaN).
+   * `null` (avoid storing NaN; `undefined` would make RHF restore the field's default value,
+   * so a cleared field would snap back to it).
    */
   numberValue?: boolean
   /** Call `clearErrors(name)` after each change. */
@@ -120,7 +121,7 @@ export function FormInputField<
             onChange={(e) => {
               const raw = e.target.value
               if (raw === '') {
-                field.onChange(undefined)
+                field.onChange(null)
               } else {
                 field.onChange(e.target.valueAsNumber)
               }
