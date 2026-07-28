@@ -27,6 +27,32 @@ export function readFileAsDataUrl(file: File): Promise<string> {
   })
 }
 
+/**
+ * Loads a saved remote photo as a base64 data-URL so the editor can re-edit
+ * it. Cross-origin URLs are fetched through the same-origin /api/image-proxy
+ * route — the S3 bucket sends no CORS headers, so a direct fetch would fail
+ * and a direct <img> load would taint the crop canvas.
+ */
+export async function readRemoteImageAsDataUrl(url: string): Promise<string> {
+  const parsed = new URL(url, window.location.origin)
+
+  const fetchUrl =
+    parsed.origin === window.location.origin
+      ? parsed.toString()
+      : `/api/image-proxy?url=${encodeURIComponent(parsed.toString())}`
+
+  const response = await fetch(fetchUrl)
+  if (!response.ok) throw new Error('Failed to fetch image')
+
+  const blob = await response.blob()
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.addEventListener('load', () => resolve(reader.result as string))
+    reader.addEventListener('error', () => reject(new Error('Failed to read image')))
+    reader.readAsDataURL(blob)
+  })
+}
+
 // ─── Canvas crop + rotate ──────────────────────────────────────────────────────
 
 const TO_RADIANS = Math.PI / 180

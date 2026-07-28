@@ -158,6 +158,7 @@ export const ProfilePhotoField = React.forwardRef<HTMLButtonElement, ProfilePhot
           onOpenChange={setDialogOpen}
           onSave={handleSave}
           currentFile={value instanceof File ? value : null}
+          currentImageUrl={existingPhotoUrl}
         />
       </>
     )

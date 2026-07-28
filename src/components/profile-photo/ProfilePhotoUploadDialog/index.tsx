@@ -9,7 +9,12 @@ import { DialogClose, DialogContent, DialogRoot, DialogTitle } from '@/component
 import { Slider } from '@/components/ui/slider'
 
 import { CameraCapture } from '../CameraCapture'
-import { getCroppedImg, readFileAsDataUrl, validateImageFile } from '../helpers'
+import {
+  getCroppedImg,
+  readFileAsDataUrl,
+  readRemoteImageAsDataUrl,
+  validateImageFile,
+} from '../helpers'
 import { PhotoGuidelines } from '../PhotoGuidelines'
 import { type CropArea, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../types'
 
@@ -25,6 +30,12 @@ export type ProfilePhotoUploadDialogProps = {
    * re-edit rather than re-upload from scratch.
    */
   currentFile?: File | null
+  /**
+   * Remote URL of the already-saved photo. Used to pre-populate the editor
+   * when no `currentFile` has been staged this session (e.g. reopening the
+   * edit form after a previous save).
+   */
+  currentImageUrl?: string | null
 }
 
 // ─── Empty state ───────────────────────────────────────────────────────────────
@@ -50,6 +61,7 @@ export function ProfilePhotoUploadDialog({
   onOpenChange,
   onSave,
   currentFile,
+  currentImageUrl,
 }: ProfilePhotoUploadDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -81,10 +93,12 @@ export function ProfilePhotoUploadDialog({
 
   // ── Populate editor when dialog opens ─────────────────────────────────────────
 
-  // currentFileRef lets the effect read the latest prop without re-running
-  // every time the File object reference changes.
+  // Refs let the effect read the latest props without re-running every time
+  // their references change while the dialog is open.
   const currentFileRef = useRef(currentFile)
   currentFileRef.current = currentFile
+  const currentImageUrlRef = useRef(currentImageUrl)
+  currentImageUrlRef.current = currentImageUrl
 
   useEffect(() => {
     if (!open) return
@@ -92,20 +106,31 @@ export function ProfilePhotoUploadDialog({
     setMode('edit')
     setValidationError(null)
     const file = currentFileRef.current
+    const savedUrl = currentImageUrlRef.current
 
-    if (file instanceof File) {
-      readFileAsDataUrl(file)
-        .then((dataUrl) => {
-          setImageSrc(dataUrl)
-          resetEdits()
-        })
-        .catch(() => {
-          setImageSrc(null)
-          resetEdits()
-        })
-    } else {
-      setImageSrc(null)
-      resetEdits()
+    // A file staged this session wins over the previously saved remote photo.
+    const load =
+      file instanceof File
+        ? readFileAsDataUrl(file)
+        : savedUrl
+          ? readRemoteImageAsDataUrl(savedUrl)
+          : Promise.resolve(null)
+
+    let cancelled = false
+    load
+      .then((dataUrl) => {
+        if (cancelled) return
+        setImageSrc(dataUrl)
+        resetEdits()
+      })
+      .catch(() => {
+        if (cancelled) return
+        setImageSrc(null)
+        resetEdits()
+      })
+
+    return () => {
+      cancelled = true
     }
   }, [open])
 
