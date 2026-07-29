@@ -58,8 +58,8 @@ export function PublicFooter() {
               />
             </Link>
             <p className="mt-3 text-sm text-muted-foreground">
-              The leading platform for connecting healthcare professionals with licensed
-              supervisors, collaborating physicians, and supervising physicians.
+              The leading platform for connecting healthcare professionals with Licensed
+              Supervisors, Collaborating Physicians, and Supervising Physicians.
             </p>
           </div>
 

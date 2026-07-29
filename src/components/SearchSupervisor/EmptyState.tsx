@@ -12,9 +12,9 @@ export function EmptyState({ onClearFilters }: EmptyStateProps) {
       <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
         <SearchXIcon className="size-6 text-muted-foreground" />
       </div>
-      <h3 className="mb-1 text-base font-semibold text-foreground">No supervisors found</h3>
+      <h3 className="mb-1 text-base font-semibold text-foreground">No Supervisors found</h3>
       <p className="mb-5 max-w-sm text-sm text-muted-foreground">
-        No supervisors match your current filters. Try broadening your search or adjusting your
+        No Supervisors match your current filters. Try broadening your search or adjusting your
         criteria.
       </p>
       <Button variant="outline" onClick={onClearFilters}>

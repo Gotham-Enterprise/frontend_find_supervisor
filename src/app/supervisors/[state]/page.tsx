@@ -74,7 +74,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return buildMetadata({
     title: `Supervisors in ${stateName}`,
-    description: `Find licensed healthcare supervisors, collaborating physicians, and supervising physicians in ${stateName}. Browse by specialty, occupation, and supervision format. Connect with verified ${stateName} supervisors on ${SITE_NAME}.`,
+    description: `Find licensed healthcare Supervisors, Collaborating Physicians, and Supervising Physicians in ${stateName}. Browse by specialty, occupation, and supervision format. Connect with verified ${stateName} Supervisors on ${SITE_NAME}.`,
     path: `/supervisors/${stateSlug}`,
   })
 }
@@ -126,19 +126,19 @@ export default async function StateSupervisorsPage({ params }: Props) {
             Supervisors in {stateName}
           </h1>
           <p className="mt-3 max-w-2xl text-lg text-muted-foreground">
-            Browse licensed supervisors, collaborating physicians, and supervising physicians in{' '}
+            Browse Licensed Supervisors, Collaborating Physicians, and Supervising Physicians in{' '}
             {stateName}. Filter by specialty, occupation, and supervision format to find the right
             match for your professional needs.
           </p>
           {meta.totalCount > 0 && (
             <p className="mt-2 text-sm text-muted-foreground">
-              {meta.totalCount} supervisor{meta.totalCount !== 1 ? 's' : ''} found in {stateName}
+              {meta.totalCount} Supervisor{meta.totalCount !== 1 ? 's' : ''} found in {stateName}
             </p>
           )}
         </header>
 
         {/* Supervisor type quick links */}
-        <nav aria-label="Browse by supervisor type" className="mb-5">
+        <nav aria-label="Browse by Supervisor type" className="mb-5">
           <p className="mb-2 text-sm font-medium text-foreground">Browse by Supervisor Type</p>
           <div className="flex flex-wrap gap-2">
             {SUPERVISOR_TYPE_PAGE_SLUGS.map((typeSlug) => {
@@ -188,7 +188,7 @@ export default async function StateSupervisorsPage({ params }: Props) {
                   href={`/login?redirect=/find-supervisors`}
                   className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                 >
-                  Sign in to see all {meta.totalCount} supervisors in {stateName}
+                  Sign in to see all {meta.totalCount} Supervisors in {stateName}
                 </Link>
               </div>
             )}
@@ -253,9 +253,9 @@ export default async function StateSupervisorsPage({ params }: Props) {
 function EmptyState({ stateName }: { stateName: string }) {
   return (
     <div className="rounded-xl border border-dashed py-16 text-center">
-      <p className="font-medium text-foreground">No supervisors found in {stateName} yet.</p>
+      <p className="font-medium text-foreground">No Supervisors found in {stateName} yet.</p>
       <p className="mt-2 text-sm text-muted-foreground">
-        New supervisors join regularly. Try broadening your search to a nearby state.
+        New Supervisors join regularly. Try broadening your search to a nearby state.
       </p>
       <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <Link
@@ -276,23 +276,23 @@ function EmptyState({ stateName }: { stateName: string }) {
 const SUPERVISOR_TIPS = [
   {
     title: 'Supervisor Type',
-    body: 'Identify whether you need a clinical supervisor, collaborating physician, or supervising physician based on your profession and state requirements.',
+    body: 'Identify whether you need a clinical Supervisor, Collaborating Physician, or Supervising Physician based on your profession and state requirements.',
   },
   {
     title: 'Specialty Match',
-    body: 'Look for supervisors or collaborating physicians with experience in your practice area — whether that is mental health, family medicine, psychiatry, or another specialty.',
+    body: 'Look for Supervisors or Collaborating Physicians with experience in your practice area — whether that is mental health, family medicine, psychiatry, or another specialty.',
   },
   {
     title: 'Supervision Format',
-    body: 'Decide whether you need in-person, virtual, or hybrid supervision or collaboration. Many supervisors in this state offer flexible scheduling.',
+    body: 'Decide whether you need in-person, virtual, or hybrid supervision or collaboration. Many Supervisors in this state offer flexible scheduling.',
   },
   {
     title: 'License & Credential Compatibility',
-    body: 'Confirm the supervisor or collaborating physician holds the credentials required by your state board and has experience working with your profession.',
+    body: 'Confirm the Supervisor or Collaborating Physician holds the credentials required by your state board and has experience working with your profession.',
   },
   {
     title: 'Documentation',
-    body: 'Ensure the supervisor or collaborating physician can provide signed documentation or collaboration agreements as required by your state licensing board.',
+    body: 'Ensure the Supervisor or Collaborating Physician can provide signed documentation or collaboration agreements as required by your state licensing board.',
   },
   {
     title: 'Fees and Availability',

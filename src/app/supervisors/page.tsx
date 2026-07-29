@@ -33,7 +33,7 @@ import {
 
 export const metadata: Metadata = buildMetadata({
   title: `Find Healthcare Supervisors, Collaborating Physicians & Supervising Physicians | ${SITE_NAME}`,
-  description: `Search licensed supervisors, collaborating physicians, and supervising physicians by state, city, specialty, occupation, and virtual, hybrid, or in-person format. Browse verified healthcare supervisors across all 50 states.`,
+  description: `Search Licensed Supervisors, Collaborating Physicians, and Supervising Physicians by state, city, specialty, occupation, and virtual, hybrid, or in-person format. Browse verified healthcare Supervisors across all 50 states.`,
   path: '/supervisors',
 })
 
@@ -129,7 +129,7 @@ export default async function SupervisorsIndexPage({ searchParams }: PageProps) 
               Find Licensed Supervisors
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-              Browse licensed supervisors, collaborating Physicians, and supervising Physicians by
+              Browse Licensed Supervisors, Collaborating Physicians, and Supervising Physicians by
               state, city, specialty, occupation, and supervision format.
             </p>
             <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
@@ -184,11 +184,11 @@ export default async function SupervisorsIndexPage({ searchParams }: PageProps) 
               {meta.totalCount > supervisors.length && (
                 <div className="mt-8 rounded-xl border bg-muted/30 p-6 text-center">
                   <p className="font-medium text-foreground">
-                    {meta.totalCount - supervisors.length} more supervisor
+                    {meta.totalCount - supervisors.length} more Supervisor
                     {meta.totalCount - supervisors.length !== 1 ? 's' : ''} available
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Sign in to browse all {meta.totalCount} matching supervisors, filter by
+                    Sign in to browse all {meta.totalCount} matching Supervisors, filter by
                     availability, patient population, fee range, and more.
                   </p>
                   <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
@@ -218,7 +218,7 @@ export default async function SupervisorsIndexPage({ searchParams }: PageProps) 
               Browse by Supervisor Type
             </h2>
             <p className="mb-4 text-muted-foreground">
-              Find the right type of supervisor or collaborating Physician for your profession and
+              Find the right type of Supervisor or Collaborating Physician for your profession and
               state requirements.
             </p>
             <div className="grid gap-4 sm:grid-cols-3">
@@ -335,12 +335,12 @@ function NoResultsState({ hasFilters }: { hasFilters: boolean }) {
   return (
     <div className="rounded-xl border border-dashed py-16 text-center">
       <p className="font-medium text-foreground">
-        {hasFilters ? 'No supervisors match your filters.' : 'No supervisors found.'}
+        {hasFilters ? 'No Supervisors match your filters.' : 'No Supervisors found.'}
       </p>
       <p className="mt-2 text-sm text-muted-foreground">
         {hasFilters
           ? 'Try broadening your search — remove a filter or change the state.'
-          : 'New supervisors join regularly. Check back soon or browse by state.'}
+          : 'New Supervisors join regularly. Check back soon or browse by state.'}
       </p>
       <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         {hasFilters ? (
@@ -355,7 +355,7 @@ function NoResultsState({ hasFilters }: { hasFilters: boolean }) {
             href="/supervisors"
             className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Browse all supervisors
+            Browse all Supervisors
           </Link>
         )}
       </div>
@@ -370,15 +370,15 @@ function NoResultsState({ hasFilters }: { hasFilters: boolean }) {
 const WHY_FEATURES = [
   {
     title: 'Verified Supervisors',
-    body: 'All supervisors, collaborating physicians, and supervising physicians go through a verification process so you can connect with confidence.',
+    body: 'All Supervisors, Collaborating Physicians, and Supervising Physicians go through a verification process so you can connect with confidence.',
   },
   {
     title: 'Multiple Supervisor Types',
-    body: 'Find mental health counselor supervisors, collaborating physicians for NPs, and supervising physicians for PAs — all in one place.',
+    body: 'Find Mental Health Counselor Supervisors, Collaborating Physicians for NPs, and Supervising Physicians for PAs — all in one place.',
   },
   {
     title: 'Browse by State',
-    body: 'Find supervisors and collaborating physicians licensed in your state, including those who offer virtual or hybrid supervision.',
+    body: 'Find Supervisors and Collaborating Physicians licensed in your state, including those who offer virtual or hybrid supervision.',
   },
   {
     title: 'Filter by Specialty & Format',
@@ -386,10 +386,10 @@ const WHY_FEATURES = [
   },
   {
     title: 'Direct Messaging',
-    body: 'Message supervisors directly after connecting to discuss your goals, specialty, and collaboration needs.',
+    body: 'Message Supervisors directly after connecting to discuss your goals, specialty, and collaboration needs.',
   },
   {
     title: 'Transparent Fees',
-    body: 'Supervisors and collaborating physicians list their rates so you can find a match that fits your budget.',
+    body: 'Supervisors and Collaborating Physicians list their rates so you can find a match that fits your budget.',
   },
 ]

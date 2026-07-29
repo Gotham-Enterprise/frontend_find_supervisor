@@ -76,7 +76,7 @@ const steps = [
   {
     title: 'Connect & Start Supervision',
     description:
-      'Message supervisors, set up consultations, and track your hours right from your dashboard.',
+      'Message Supervisors, set up consultations, and track your hours right from your dashboard.',
     visualLabel: 'Connect & Start',
   },
 ]

@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 const cards = [
   {
     icon: FileCheck,
-    title: 'Verified, licensed supervisors',
+    title: 'Verified, Licensed Supervisors',
     description: 'Work with fully vetted, qualified professionals.',
     iconColor: 'text-primary',
     iconBg: 'bg-primary/10',
@@ -13,7 +13,7 @@ const cards = [
   {
     icon: UserCheck,
     title: 'Specialty-aligned matching',
-    description: 'Get paired with supervisors who match your field.',
+    description: 'Get paired with Supervisors who match your field.',
     iconColor: 'text-primary',
     iconBg: 'bg-primary/10',
   },
@@ -42,8 +42,8 @@ export function WhySupervisionMatters() {
             Why Supervision Matters
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-            Whether you&apos;re completing supervised hours, seeking a collaborating physician, or
-            advancing your healthcare career, the right supervisor keeps you supported, compliant,
+            Whether you&apos;re completing supervised hours, seeking a Collaborating Physician, or
+            advancing your healthcare career, the right Supervisor keeps you supported, compliant,
             and empowered.
           </p>
         </div>

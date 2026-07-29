@@ -74,12 +74,12 @@ function buildSupervisorTypePageTitle(typeSlug: string, stateName: string): stri
 /** Builds a meta description for a supervisor-type pSEO page. */
 function buildSupervisorTypePageDescription(typeSlug: string, stateName: string): string {
   if (typeSlug === 'collaborating-physicians') {
-    return `Find collaborating physicians in ${stateName}. Browse verified collaborating physicians by specialty, availability, and format. Ideal for nurse practitioners seeking physician collaboration agreements.`
+    return `Find Collaborating Physicians in ${stateName}. Browse verified Collaborating Physicians by specialty, availability, and format. Ideal for nurse practitioners seeking physician collaboration agreements.`
   }
   if (typeSlug === 'supervising-physicians') {
-    return `Find supervising physicians in ${stateName}. Browse verified supervising physicians by specialty, availability, and format. Ideal for physician assistants seeking physician supervision.`
+    return `Find Supervising Physicians in ${stateName}. Browse verified Supervising Physicians by specialty, availability, and format. Ideal for physician assistants seeking physician supervision.`
   }
-  return `Find mental health counselor supervisors in ${stateName}. Browse licensed supervisors for LCSWs, LMFTs, LPCs, LMHCs, and other mental health professionals by specialty and supervision format.`
+  return `Find Mental Health Counselor Supervisors in ${stateName}. Browse Licensed Supervisors for LCSWs, LMFTs, LPCs, LMHCs, and other mental health professionals by specialty and supervision format.`
 }
 
 interface Props {
@@ -126,7 +126,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         title: `${supervisor.fullName} — ${typeLabel} in ${stateName} | ${SITE_NAME}`,
         description: isPhysicianType
           ? `View ${supervisor.fullName}'s ${typeLabel} profile, specialties, location, availability, format, and professional background.`
-          : `View ${supervisor.fullName}'s supervision profile — license type, specialties, experience, and availability in ${stateName}. Connect with verified supervisors on ${SITE_NAME}.`,
+          : `View ${supervisor.fullName}'s supervision profile — license type, specialties, experience, and availability in ${stateName}. Connect with verified Supervisors on ${SITE_NAME}.`,
         path: `/supervisors/${stateSlug}/${slug}`,
         ogImage: supervisor.profilePhotoUrl ?? undefined,
       })
@@ -134,7 +134,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     return buildMetadata({
       title: `Supervisor Profile | ${stateName} | ${SITE_NAME}`,
-      description: `View this supervisor's credentials, specialties, and availability in ${stateName} on ${SITE_NAME}.`,
+      description: `View this Supervisor's credentials, specialties, and availability in ${stateName} on ${SITE_NAME}.`,
       path: `/supervisors/${stateSlug}/${slug}`,
     })
   }
@@ -179,7 +179,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     return buildMetadata({
       title: `${licenseLabel} Supervisors in ${stateName}`,
-      description: `Find ${licenseLabel} supervisors in ${stateName}. Browse verified ${licenseLabel} supervisors by specialty and supervision format. Connect with the right supervisor for your licensure on ${SITE_NAME}.`,
+      description: `Find ${licenseLabel} Supervisors in ${stateName}. Browse verified ${licenseLabel} Supervisors by specialty and supervision format. Connect with the right Supervisor for your licensure on ${SITE_NAME}.`,
       path: `/supervisors/${stateSlug}/${slug}`,
     })
   }
@@ -255,12 +255,12 @@ async function LicenseTypeView({
             {licenseLabel} Supervisors in {stateName}
           </h1>
           <p className="mt-3 max-w-2xl text-lg text-muted-foreground">
-            Browse licensed {licenseLabel} supervisors in {stateName}. Find experienced supervisors
+            Browse licensed {licenseLabel} Supervisors in {stateName}. Find experienced Supervisors
             who can support your path to {licenseLabel} licensure.
           </p>
           {meta.totalCount > 0 && (
             <p className="mt-2 text-sm text-muted-foreground">
-              {meta.totalCount} {licenseLabel} supervisor{meta.totalCount !== 1 ? 's' : ''} found in{' '}
+              {meta.totalCount} {licenseLabel} Supervisor{meta.totalCount !== 1 ? 's' : ''} found in{' '}
               {stateName}
             </p>
           )}
@@ -313,7 +313,7 @@ async function LicenseTypeView({
                   href="/login?redirect=/find-supervisors"
                   className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                 >
-                  Sign in to see all {meta.totalCount} supervisors
+                  Sign in to see all {meta.totalCount} Supervisors
                 </Link>
               </div>
             )}
@@ -329,9 +329,9 @@ async function LicenseTypeView({
             {Object.entries(LICENSE_TYPE_SLUGS).find(([, v]) => v === licenseLabel)?.[0] ??
               licenseSlug}
             ) is a clinical license that requires supervised practice hours under an approved
-            supervisor. Requirements in {stateName} are set by the state licensing board and include
-            the total number of hours, supervisor qualifications, and documentation standards. Using{' '}
-            {SITE_NAME}, you can filter by license type and state to find {licenseLabel} supervisors
+            Supervisor. Requirements in {stateName} are set by the state licensing board and include
+            the total number of hours, Supervisor qualifications, and documentation standards. Using{' '}
+            {SITE_NAME}, you can filter by license type and state to find {licenseLabel} Supervisors
             who are currently accepting supervisees in {stateName}.
           </p>
         </section>
@@ -360,7 +360,7 @@ async function LicenseTypeView({
             href={`/supervisors/${stateSlug}`}
             className="text-sm font-medium text-primary transition-colors hover:underline"
           >
-            ← All supervisors in {stateName}
+            ← All Supervisors in {stateName}
           </Link>
         </div>
       </div>
@@ -405,12 +405,12 @@ async function SupervisorTypeView({
 
   const aboutText = (() => {
     if (typeSlug === 'collaborating-physicians') {
-      return `Collaborating physicians partner with nurse practitioners and other advanced practice providers to fulfill state-mandated collaboration requirements. ${stateName} state regulations define the scope and structure of collaboration agreements. Use ${SITE_NAME} to find collaborating physicians currently accepting new collaborative partners in ${stateName}.`
+      return `Collaborating Physicians partner with nurse practitioners and other advanced practice providers to fulfill state-mandated collaboration requirements. ${stateName} state regulations define the scope and structure of collaboration agreements. Use ${SITE_NAME} to find Collaborating Physicians currently accepting new collaborative partners in ${stateName}.`
     }
     if (typeSlug === 'supervising-physicians') {
-      return `Supervising physicians work with physician assistants to meet state-mandated supervision requirements. The ${stateName} licensing board sets the standards for supervisory relationships between PAs and physicians. Use ${SITE_NAME} to find supervising physicians currently accepting new supervisees in ${stateName}.`
+      return `Supervising Physicians work with physician assistants to meet state-mandated supervision requirements. The ${stateName} licensing board sets the standards for supervisory relationships between PAs and physicians. Use ${SITE_NAME} to find Supervising Physicians currently accepting new supervisees in ${stateName}.`
     }
-    return `Mental health counselor supervisors provide the clinical oversight required for LCSWs, LMFTs, LPCs, LMHCs, and other mental health professionals to advance toward full licensure. ${stateName}'s state licensing board defines the required supervision hours, supervisor qualifications, and documentation standards.`
+    return `Mental Health Counselor Supervisors provide the clinical oversight required for LCSWs, LMFTs, LPCs, LMHCs, and other mental health professionals to advance toward full licensure. ${stateName}'s state licensing board defines the required supervision hours, Supervisor qualifications, and documentation standards.`
   })()
 
   return (
@@ -434,7 +434,7 @@ async function SupervisorTypeView({
           )}
         </header>
 
-        <nav aria-label="Browse other supervisor types" className="mb-8">
+        <nav aria-label="Browse other Supervisor types" className="mb-8">
           <p className="mb-2 text-sm font-medium text-foreground">Other Supervisor Types</p>
           <div className="flex flex-wrap gap-2">
             {Object.entries(SUPERVISOR_TYPE_PAGE_SLUG_MAP)
@@ -455,7 +455,7 @@ async function SupervisorTypeView({
           <div className="rounded-xl border border-dashed py-16 text-center">
             <p className="font-medium text-foreground">No results found in {stateName} yet.</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              New supervisors and physicians join regularly. Try browsing all supervisor types in
+              New Supervisors and physicians join regularly. Try browsing all Supervisor types in
               this state.
             </p>
             <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
@@ -463,7 +463,7 @@ async function SupervisorTypeView({
                 href={`/supervisors/${stateSlug}`}
                 className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                All supervisors in {stateName}
+                All Supervisors in {stateName}
               </Link>
               <Link
                 href="/supervisors"
@@ -534,7 +534,7 @@ async function SupervisorTypeView({
             href={`/supervisors/${stateSlug}`}
             className="text-sm font-medium text-primary transition-colors hover:underline"
           >
-            ← All supervisors in {stateName}
+            ← All Supervisors in {stateName}
           </Link>
         </div>
       </div>
@@ -874,15 +874,15 @@ function ProfileNotFound({
     <div className="rounded-2xl border border-dashed p-12 text-center">
       <h1 className="text-2xl font-bold text-foreground">Supervisor Not Found</h1>
       <p className="mt-3 text-muted-foreground">
-        This supervisor profile could not be found or may have been removed. Browse other
-        supervisors in {stateName} to find the right match.
+        This Supervisor profile could not be found or may have been removed. Browse other
+        Supervisors in {stateName} to find the right match.
       </p>
       <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <Link
           href={`/supervisors/${stateSlug}`}
           className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          Browse supervisors in {stateName}
+          Browse Supervisors in {stateName}
         </Link>
         <Link
           href="/supervisors"
@@ -911,17 +911,17 @@ function LicenseEmptyState({
   return (
     <div className="rounded-xl border border-dashed py-16 text-center">
       <p className="font-medium text-foreground">
-        No {licenseLabel} supervisors found in {stateName} yet.
+        No {licenseLabel} Supervisors found in {stateName} yet.
       </p>
       <p className="mt-2 text-sm text-muted-foreground">
-        New supervisors join regularly. Try browsing all supervisors in this state.
+        New Supervisors join regularly. Try browsing all Supervisors in this state.
       </p>
       <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <Link
           href={`/supervisors/${stateSlug}`}
           className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          All supervisors in {stateName}
+          All Supervisors in {stateName}
         </Link>
         <Link
           href="/supervisors"

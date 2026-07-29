@@ -9,47 +9,47 @@ const faqs = [
   {
     question: 'How does Find A Supervisor work?',
     answer:
-      'Supervisors create a profile that is verified by our admin team before appearing in search. Supervisees then browse and filter verified supervisors and send a supervision request or message to the ones that fit. To accept a request and start the relationship, the supervisor needs an active Platform Access subscription — on the Free Plan, requests stay pending until they upgrade. Once connected, both sides manage messaging, requests, and reviews from their dashboard.',
+      'Supervisors create a profile that is verified by our admin team before appearing in search. Supervisees then browse and filter verified Supervisors and send a supervision request or message to the ones that fit. To accept a request and start the relationship, the Supervisor needs an active Platform Access subscription — on the Free Plan, requests stay pending until they upgrade. Once connected, both sides manage messaging, requests, and reviews from their dashboard.',
   },
   {
-    question: 'What types of supervisors can I find on this platform?',
+    question: 'What types of Supervisors can I find on this platform?',
     answer:
-      'Find A Supervisor supports mental health counselor supervisors, collaborating physicians for nurse practitioners, and supervising physicians for physician assistants. You can filter by supervisor type, specialty, state, and supervision format to find the right match for your profession.',
+      'Find A Supervisor supports Mental Health Counselor Supervisors, Collaborating Physicians for nurse practitioners, and Supervising Physicians for physician assistants. You can filter by Supervisor type, specialty, state, and supervision format to find the right match for your profession.',
   },
   {
     question: 'What is the matching feature?',
     answer:
-      'Our matching feature helps you discover vetted supervisors and collaborating physicians based on your specialty, location, schedule, and supervision requirements. You can browse profiles, compare options, and connect directly with qualified professionals.',
+      'Our matching feature helps you discover vetted Supervisors and Collaborating Physicians based on your specialty, location, schedule, and supervision requirements. You can browse profiles, compare options, and connect directly with qualified professionals.',
   },
   {
-    question: 'Can I customize my messages to supervisors?',
+    question: 'Can I customize my messages to Supervisors?',
     answer:
-      'Yes. You can personalize your introduction and messages when reaching out to supervisors or collaborating physicians. We recommend including your background, goals, and what you hope to achieve to improve your response rate.',
+      'Yes. You can personalize your introduction and messages when reaching out to Supervisors or Collaborating Physicians. We recommend including your background, goals, and what you hope to achieve to improve your response rate.',
   },
   {
     question: 'How does scheduling work?',
     answer:
-      'Once you connect with a supervisor or collaborating physician, you coordinate session timing directly with them through the built-in messaging. Your upcoming supervision sessions are shown on your dashboard so you always know what is next.',
+      'Once you connect with a Supervisor or Collaborating Physician, you coordinate session timing directly with them through the built-in messaging. Your upcoming supervision sessions are shown on your dashboard so you always know what is next.',
   },
   {
-    question: 'Is there a limit to how many supervisors I can connect with?',
+    question: 'Is there a limit to how many Supervisors I can connect with?',
     answer:
-      'You can browse and connect with multiple supervisors or collaborating physicians. We recommend focusing on a few strong matches to ensure quality professional relationships and efficient progress toward your goals.',
+      'You can browse and connect with multiple Supervisors or Collaborating Physicians. We recommend focusing on a few strong matches to ensure quality professional relationships and efficient progress toward your goals.',
   },
   {
-    question: 'Is it free for supervisors to join?',
+    question: 'Is it free for Supervisors to join?',
     answer:
-      'Yes. Every supervisor starts on the Find a Supervisor Free Plan, which includes a basic profile listing in search, visibility into interested supervisees, the ability to receive and view supervision requests, and platform notifications for new activity. There is no time limit — you can stay on the Free Plan for as long as you like.',
+      'Yes. Every Supervisor starts on the Find a Supervisor Free Plan, which includes a basic profile listing in search, visibility into interested supervisees, the ability to receive and view supervision requests, and platform notifications for new activity. There is no time limit — you can stay on the Free Plan for as long as you like.',
   },
   {
     question: 'What is the difference between the Free Plan and Platform Access?',
     answer:
-      'Every supervisor starts on the Find a Supervisor Free Plan. It lets you receive and view supervisee requests, see which supervisees are interested in you, appear in search results with a basic profile listing, and get platform notifications for new activity. Upgrading to Find a Supervisor Platform Access unlocks accepting supervisee requests, full messaging with supervisees, viewing supervisee contact details where applicable, improved discoverability and profile exposure, and the full set of supervisor platform tools.',
+      'Every Supervisor starts on the Find a Supervisor Free Plan. It lets you receive and view supervisee requests, see which supervisees are interested in you, appear in search results with a basic profile listing, and get platform notifications for new activity. Upgrading to Find a Supervisor Platform Access unlocks accepting supervisee requests, full messaging with supervisees, viewing supervisee contact details where applicable, improved discoverability and profile exposure, and the full set of Supervisor platform tools.',
   },
   {
     question: 'How is this different from traditional supervision matching?',
     answer:
-      'Traditional matching requires you to manage each connection separately. With our platform, you can browse vetted healthcare supervisors, collaborating physicians, and supervising physicians — then communicate through personalized introductions, all in one place.',
+      'Traditional matching requires you to manage each connection separately. With our platform, you can browse vetted healthcare Supervisors, Collaborating Physicians, and Supervising Physicians — then communicate through personalized introductions, all in one place.',
   },
 ]
 
