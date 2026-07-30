@@ -66,7 +66,6 @@ function SupervisorMyProfileEditor({
   profile: SupervisorProfileData
   userId: string
 }) {
-  const { refreshUser } = useUser()
   const { showSuccess, showError } = useUserSnackbar()
   const mutation = useUpdateSupervisorProfile(userId)
   const [cancelLocationNonce, setCancelLocationNonce] = useState(0)
@@ -102,7 +101,6 @@ function SupervisorMyProfileEditor({
   async function onSubmit(values: EditSupervisorProfileFormValues) {
     try {
       await mutation.mutateAsync(supervisorProfileFormValuesToPayload(values))
-      await refreshUser()
       showSuccess('Profile saved')
     } catch (err: unknown) {
       showError(parseApiError(err))

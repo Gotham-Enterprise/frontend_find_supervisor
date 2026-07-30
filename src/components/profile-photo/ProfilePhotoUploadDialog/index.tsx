@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, RotateCcw, RotateCw, Upload, X } from 'lucide-react'
+import { AlertCircle, Camera, RotateCcw, RotateCw, Upload, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Cropper, { type Area } from 'react-easy-crop'
 
@@ -8,7 +8,13 @@ import { Button } from '@/components/ui/button'
 import { DialogClose, DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import { Slider } from '@/components/ui/slider'
 
-import { getCroppedImg, readFileAsDataUrl, validateImageFile } from '../helpers'
+import { CameraCapture } from '../CameraCapture'
+import {
+  getCroppedImg,
+  readFileAsDataUrl,
+  readRemoteImageAsDataUrl,
+  validateImageFile,
+} from '../helpers'
 import { PhotoGuidelines } from '../PhotoGuidelines'
 import { type CropArea, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../types'
 
@@ -24,6 +30,12 @@ export type ProfilePhotoUploadDialogProps = {
    * re-edit rather than re-upload from scratch.
    */
   currentFile?: File | null
+  /**
+   * Remote URL of the already-saved photo. Used to pre-populate the editor
+   * when no `currentFile` has been staged this session (e.g. reopening the
+   * edit form after a previous save).
+   */
+  currentImageUrl?: string | null
 }
 
 // ─── Empty state ───────────────────────────────────────────────────────────────
@@ -35,7 +47,9 @@ function CropEmptyState() {
         <Upload className="size-6 text-muted-foreground" aria-hidden />
       </div>
       <p className="text-sm font-semibold text-foreground">No photo selected</p>
-      <p className="text-xs text-muted-foreground">Please upload an image to get started</p>
+      <p className="text-xs text-muted-foreground">
+        Upload an image or take a photo to get started
+      </p>
     </div>
   )
 }
@@ -47,10 +61,14 @@ export function ProfilePhotoUploadDialog({
   onOpenChange,
   onSave,
   currentFile,
+  currentImageUrl,
 }: ProfilePhotoUploadDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // ── Editor state ─────────────────────────────────────────────────────────────
+  // 'edit' shows the crop editor (or empty state); 'camera' shows the live
+  // webcam view so the user can capture a photo instead of uploading one.
+  const [mode, setMode] = useState<'edit' | 'camera'>('edit')
   const [imageSrc, setImageSrc] = useState<string | null>(null)
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(ZOOM_MIN)
@@ -62,6 +80,7 @@ export function ProfilePhotoUploadDialog({
   const [isSaving, setIsSaving] = useState(false)
 
   const hasImage = imageSrc !== null
+  const editingDisabled = !hasImage || mode === 'camera'
 
   // ── Reset helpers ─────────────────────────────────────────────────────────────
 
@@ -74,30 +93,44 @@ export function ProfilePhotoUploadDialog({
 
   // ── Populate editor when dialog opens ─────────────────────────────────────────
 
-  // currentFileRef lets the effect read the latest prop without re-running
-  // every time the File object reference changes.
+  // Refs let the effect read the latest props without re-running every time
+  // their references change while the dialog is open.
   const currentFileRef = useRef(currentFile)
   currentFileRef.current = currentFile
+  const currentImageUrlRef = useRef(currentImageUrl)
+  currentImageUrlRef.current = currentImageUrl
 
   useEffect(() => {
     if (!open) return
 
+    setMode('edit')
     setValidationError(null)
     const file = currentFileRef.current
+    const savedUrl = currentImageUrlRef.current
 
-    if (file instanceof File) {
-      readFileAsDataUrl(file)
-        .then((dataUrl) => {
-          setImageSrc(dataUrl)
-          resetEdits()
-        })
-        .catch(() => {
-          setImageSrc(null)
-          resetEdits()
-        })
-    } else {
-      setImageSrc(null)
-      resetEdits()
+    // A file staged this session wins over the previously saved remote photo.
+    const load =
+      file instanceof File
+        ? readFileAsDataUrl(file)
+        : savedUrl
+          ? readRemoteImageAsDataUrl(savedUrl)
+          : Promise.resolve(null)
+
+    let cancelled = false
+    load
+      .then((dataUrl) => {
+        if (cancelled) return
+        setImageSrc(dataUrl)
+        resetEdits()
+      })
+      .catch(() => {
+        if (cancelled) return
+        setImageSrc(null)
+        resetEdits()
+      })
+
+    return () => {
+      cancelled = true
     }
   }, [open])
 
@@ -118,6 +151,7 @@ export function ProfilePhotoUploadDialog({
       const dataUrl = await readFileAsDataUrl(file)
       setImageSrc(dataUrl)
       resetEdits()
+      setMode('edit')
     } catch {
       setValidationError('Could not read the image. Please try a different file.')
     }
@@ -127,6 +161,13 @@ export function ProfilePhotoUploadDialog({
     const file = e.target.files?.[0]
     if (file) void loadFile(file)
     e.target.value = ''
+  }
+
+  // ── Camera capture ────────────────────────────────────────────────────────────
+
+  function toggleCameraMode() {
+    setValidationError(null)
+    setMode((m) => (m === 'camera' ? 'edit' : 'camera'))
   }
 
   // ── Crop callbacks ────────────────────────────────────────────────────────────
@@ -204,7 +245,9 @@ export function ProfilePhotoUploadDialog({
 
         {/* ── Crop / Preview area ────────────────────────────────── */}
         <div className="relative h-72 w-full overflow-hidden rounded-xl border border-input bg-muted/40">
-          {hasImage ? (
+          {mode === 'camera' ? (
+            <CameraCapture onCapture={(file) => void loadFile(file)} />
+          ) : hasImage ? (
             <Cropper
               image={imageSrc}
               crop={crop}
@@ -233,7 +276,7 @@ export function ProfilePhotoUploadDialog({
             <div className="flex gap-2">
               <button
                 type="button"
-                disabled={!hasImage}
+                disabled={editingDisabled}
                 onClick={rotateLeft}
                 aria-label="Rotate left 90°"
                 className="flex size-10 items-center justify-center rounded-lg border border-input bg-card text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
@@ -242,7 +285,7 @@ export function ProfilePhotoUploadDialog({
               </button>
               <button
                 type="button"
-                disabled={!hasImage}
+                disabled={editingDisabled}
                 onClick={rotateRight}
                 aria-label="Rotate right 90°"
                 className="flex size-10 items-center justify-center rounded-lg border border-input bg-card text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
@@ -268,7 +311,7 @@ export function ProfilePhotoUploadDialog({
               max={ZOOM_MAX}
               step={ZOOM_STEP}
               onChange={setZoom}
-              disabled={!hasImage}
+              disabled={editingDisabled}
               aria-label="Zoom level"
             />
           </div>
@@ -288,6 +331,10 @@ export function ProfilePhotoUploadDialog({
             <Upload className="size-3.5" />
             Upload New Photo
           </Button>
+          <Button type="button" variant="outline" size="sm" onClick={toggleCameraMode}>
+            <Camera className="size-3.5" />
+            {mode === 'camera' ? 'Back to Editor' : 'Take Photo'}
+          </Button>
 
           <div className="ml-auto flex gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
@@ -296,7 +343,7 @@ export function ProfilePhotoUploadDialog({
             <Button
               type="button"
               size="sm"
-              disabled={!hasImage || isSaving}
+              disabled={editingDisabled || isSaving}
               onClick={() => void handleSave()}
             >
               {isSaving ? 'Saving…' : 'Save'}

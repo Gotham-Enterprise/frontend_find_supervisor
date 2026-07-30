@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import { useWatch } from 'react-hook-form'
 
+import { ProfilePhotoField } from '@/components/profile-photo/ProfilePhotoField'
 import {
   PROFESSIONAL_CREDENTIALS_HELPER_TEXT,
   PROFESSIONAL_CREDENTIALS_MAX_LENGTH,
@@ -13,7 +14,6 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { FormInputField } from '@/components/ui/form-input-field'
 import { FormSelectField } from '@/components/ui/form-select-field'
 import { PhoneInput } from '@/components/ui/PhoneInput'
-import { ProfilePhotoUpload } from '@/components/ui/profile-photo-upload'
 import { Switch } from '@/components/ui/switch'
 import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
@@ -147,16 +147,15 @@ export function SupervisorProfileEditFields({
           control={form.control}
           name="uploadProfilePhoto"
           render={({ field }) => (
-            <FormItem className="flex flex-col items-center gap-1">
+            <FormItem className="flex w-full flex-col items-center gap-1">
               <FormLabel>
                 Profile Photo <span className="text-destructive">*</span>
               </FormLabel>
               <FormControl>
-                <ProfilePhotoUpload
+                <ProfilePhotoField
                   value={field.value}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
-                  size="lg"
                   existingPhotoUrl={profile.user.profilePhotoUrl}
                 />
               </FormControl>

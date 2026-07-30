@@ -4,11 +4,11 @@ import { useEffect, useMemo, useRef } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import { useWatch } from 'react-hook-form'
 
+import { ProfilePhotoField } from '@/components/profile-photo/ProfilePhotoField'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { FormInputField } from '@/components/ui/form-input-field'
 import { FormSelectField } from '@/components/ui/form-select-field'
 import { PhoneInput } from '@/components/ui/PhoneInput'
-import { ProfilePhotoUpload } from '@/components/ui/profile-photo-upload'
 import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
 import type { SelectOption } from '@/lib/api/options'
@@ -120,14 +120,13 @@ export function SuperviseeProfileEditFields({
           control={form.control}
           name="uploadProfilePhoto"
           render={({ field }) => (
-            <FormItem className="flex flex-col items-center gap-1">
+            <FormItem className="flex w-full flex-col items-center gap-1">
               <FormLabel>Profile Photo</FormLabel>
               <FormControl>
-                <ProfilePhotoUpload
+                <ProfilePhotoField
                   value={field.value}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
-                  size="lg"
                   existingPhotoUrl={profile.user.profilePhotoUrl}
                 />
               </FormControl>
