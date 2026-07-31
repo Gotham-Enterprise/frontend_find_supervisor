@@ -22,7 +22,7 @@ export function generateWebSiteJsonLd(): JsonLdObject {
     name: SITE_NAME,
     url: SITE_URL,
     description:
-      'Find licensed healthcare supervisors, collaborating physicians, and supervising physicians by state, specialty, occupation, and supervision format.',
+      'Find licensed healthcare Supervisors, Collaborating Physicians, and Supervising Physicians by state, specialty, occupation, and supervision format.',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
@@ -42,7 +42,7 @@ export function generateOrganizationJsonLd(): JsonLdObject {
     url: SITE_URL,
     logo: `${SITE_URL}/logo.png`,
     description:
-      'The leading platform for connecting healthcare professionals with licensed supervisors, collaborating physicians, and supervising physicians.',
+      'The leading platform for connecting healthcare professionals with Licensed Supervisors, Collaborating Physicians, and Supervising Physicians.',
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer support',

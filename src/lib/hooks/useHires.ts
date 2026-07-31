@@ -42,7 +42,9 @@ export function useHireSupervisor() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (payload: HireSupervisorRequestInput) => hireSupervisor(payload),
-    onSuccess: async (_data, variables) => {
+    // onSettled (not onSuccess) so a failed mutation (e.g. a 409 conflict from
+    // a concurrent status change) also refetches the now-stale hire data.
+    onSettled: async (_data, _error, variables) => {
       await invalidateHireRelatedQueries(queryClient)
       await queryClient.invalidateQueries({
         queryKey: supervisorDetailKeys.detail(variables.supervisorId),
@@ -81,7 +83,7 @@ export function useViewHire() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (hireId: string) => viewHire(hireId),
-    onSuccess: async () => {
+    onSettled: async () => {
       await invalidateHireRelatedQueries(queryClient)
     },
   })
@@ -91,7 +93,7 @@ export function useAcceptHire() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (hireId: string) => acceptHire(hireId),
-    onSuccess: async () => {
+    onSettled: async () => {
       await invalidateHireRelatedQueries(queryClient)
     },
   })
@@ -102,7 +104,7 @@ export function useRejectHire() {
   return useMutation({
     mutationFn: ({ hireId, reason }: { hireId: string; reason: string }) =>
       rejectHire(hireId, reason),
-    onSuccess: async () => {
+    onSettled: async () => {
       await invalidateHireRelatedQueries(queryClient)
     },
   })
@@ -112,7 +114,7 @@ export function useCancelHire() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (hireId: string) => cancelHire(hireId),
-    onSuccess: async () => {
+    onSettled: async () => {
       await invalidateHireRelatedQueries(queryClient)
     },
   })
@@ -122,7 +124,7 @@ export function useMarkHireAsCompleted() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (hireId: string) => markHireAsCompleted(hireId),
-    onSuccess: async () => {
+    onSettled: async () => {
       await invalidateHireRelatedQueries(queryClient)
     },
   })

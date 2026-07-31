@@ -26,7 +26,10 @@ function paletteForId(id: string) {
 
 function PastClientCard({ row }: { row: PastClientHire }) {
   const { supervisee } = row
-  const displayName = supervisee.fullName?.trim() || supervisee.email
+  const displayName = supervisee.fullName?.trim() || 'Past supervisee'
+  const credentialLine = [supervisee.occupation?.name, supervisee.specialty?.name]
+    .filter(Boolean)
+    .join(' · ')
   const initials = getInitials(supervisee.fullName)
   const palette = paletteForId(supervisee.id)
   const [photoFailed, setPhotoFailed] = useState(false)
@@ -53,7 +56,7 @@ function PastClientCard({ row }: { row: PastClientHire }) {
       )}
       <div>
         <p className="text-sm font-medium text-[#374151]">{displayName}</p>
-        <p className="text-xs text-[#6B7280]">{supervisee.email}</p>
+        {credentialLine && <p className="text-xs text-[#6B7280]">{credentialLine}</p>}
       </div>
     </div>
   )

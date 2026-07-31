@@ -28,7 +28,7 @@ const supervisorFaqs: FaqCategory[] = [
       {
         question: 'Why is my profile not showing up in supervisee searches?',
         answer:
-          'Your profile is hidden from search results until our admin team completes their review and approves your account. This is to ensure the quality and credibility of all supervisors on the platform. Once approved, your profile becomes publicly visible immediately. Review typically takes 2–3 business days.',
+          'Your profile is hidden from search results until our admin team completes their review and approves your account. This is to ensure the quality and credibility of all Supervisors on the platform. Once approved, your profile becomes publicly visible immediately. Review typically takes 2–3 business days.',
       },
       {
         question: 'How long does the verification process take?',
@@ -58,7 +58,7 @@ const supervisorFaqs: FaqCategory[] = [
       {
         question: 'What is the difference between the Free Plan and Platform Access?',
         answer:
-          'Every supervisor starts on the Find a Supervisor Free Plan. It lets you receive and view supervisee requests, see which supervisees are interested in you, appear in search results with a basic profile listing, and get platform notifications for new activity. Upgrading to Find a Supervisor Platform Access unlocks accepting supervisee requests, full messaging with supervisees, viewing supervisee contact details where applicable, improved discoverability and profile exposure, and the full set of supervisor platform tools.',
+          'Every Supervisor starts on the Find a Supervisor Free Plan. It lets you receive and view supervisee requests, see which supervisees are interested in you, appear in search results with a basic profile listing, and get platform notifications for new activity. Upgrading to Find a Supervisor Platform Access unlocks accepting supervisee requests, full messaging with supervisees, viewing supervisee contact details where applicable, improved discoverability and profile exposure, and the full set of Supervisor platform tools.',
       },
       {
         question: 'What happens to supervision requests while I am on the Free Plan?',
@@ -78,7 +78,7 @@ const supervisorFaqs: FaqCategory[] = [
       {
         question: 'Can I stay on the Free Plan indefinitely?',
         answer:
-          'Yes. The Free Plan does not expire — your profile stays listed in search and you keep receiving requests and notifications. Many supervisors start on the Free Plan to gauge supervisee interest, then upgrade when they are ready to accept supervisees and start messaging.',
+          'Yes. The Free Plan does not expire — your profile stays listed in search and you keep receiving requests and notifications. Many Supervisors start on the Free Plan to gauge supervisee interest, then upgrade when they are ready to accept supervisees and start messaging.',
       },
     ],
   },
@@ -88,7 +88,7 @@ const supervisorFaqs: FaqCategory[] = [
       {
         question: 'Do I need a paid subscription to get verified?',
         answer:
-          'No. Every supervisor account starts on the Free Plan automatically, and your profile enters the admin review queue once your email is verified and your full profile details are complete. A paid subscription is not required for verification — upgrading to Platform Access unlocks accepting requests, messaging, and improved discoverability.',
+          'No. Every Supervisor account starts on the Free Plan automatically, and your profile enters the admin review queue once your email is verified and your full profile details are complete. A paid subscription is not required for verification — upgrading to Platform Access unlocks accepting requests, messaging, and improved discoverability.',
       },
       {
         question: 'How do I cancel my subscription?',
@@ -159,24 +159,24 @@ const superviseeFaqs: FaqCategory[] = [
     title: 'Finding a Supervisor',
     items: [
       {
-        question: 'How do I find the right supervisor for me?',
+        question: 'How do I find the right Supervisor for me?',
         answer:
-          "Use the Find Supervisors page to search and filter by specialty, license type, location, supervision format (in-person/virtual/hybrid), availability, and fee range. Each profile shows the supervisor's credentials, bio, and reviews. You can also use the recommended supervisors shown on your dashboard.",
+          "Use the Find Supervisors page to search and filter by specialty, license type, location, supervision format (in-person/virtual/hybrid), availability, and fee range. Each profile shows the Supervisor's credentials, bio, and reviews. You can also use the recommended Supervisors shown on your dashboard.",
       },
       {
-        question: 'What does it mean when a supervisor is "Verified"?',
+        question: 'What does it mean when a Supervisor is "Verified"?',
         answer:
-          'A verified supervisor has been reviewed and approved by our admin team. Their license document, credentials, and profile have been confirmed. All supervisors visible in search results are verified.',
+          'A verified Supervisor has been reviewed and approved by our admin team. Their license document, credentials, and profile have been confirmed. All Supervisors visible in search results are verified.',
       },
       {
-        question: 'Can I message a supervisor before sending a hire request?',
+        question: 'Can I message a Supervisor before sending a hire request?',
         answer:
-          'Yes. You can open a direct message conversation with any supervisor through their profile page. This is a great way to ask questions and gauge fit before committing to a supervision request.',
+          'Yes. You can open a direct message conversation with any Supervisor through their profile page. This is a great way to ask questions and gauge fit before committing to a supervision request.',
       },
       {
-        question: 'How many supervisors can I connect with at once?',
+        question: 'How many Supervisors can I connect with at once?',
         answer:
-          'There is no hard limit on the number of supervisors you can message or request. However, we recommend focusing on a few strong matches to build quality supervision relationships.',
+          'There is no hard limit on the number of Supervisors you can message or request. However, we recommend focusing on a few strong matches to build quality supervision relationships.',
       },
     ],
   },
@@ -186,12 +186,12 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'What happens after I send a hire request?',
         answer:
-          'The supervisor receives a notification and can review your request. While pending, the status shows as "Pending" on your Hired Supervisors page. The supervisor will accept or decline, and you will be notified of their decision.',
+          'The Supervisor receives a notification and can review your request. While pending, the status shows as "Pending" on your Hired Supervisors page. The Supervisor will accept or decline, and you will be notified of their decision.',
       },
       {
         question: 'What do the different hire request statuses mean?',
         answer:
-          "Pending — your request has been sent and is awaiting the supervisor's response. Approved — the supervisor accepted your request and the supervision relationship is active. Declined — the supervisor is unable to take you on at this time. You can send a new request to a different supervisor.",
+          "Pending — your request has been sent and is awaiting the Supervisor's response. Approved — the Supervisor accepted your request and the supervision relationship is active. Declined — the Supervisor is unable to take you on at this time. You can send a new request to a different Supervisor.",
       },
       {
         question: 'Can I cancel a pending hire request?',
@@ -201,7 +201,7 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'How do I end a supervision relationship?',
         answer:
-          'Go to Hired Supervisors and open the request details for your active supervisor. From there you can end the relationship. We recommend messaging the supervisor first to discuss the transition.',
+          'Go to Hired Supervisors and open the request details for your active Supervisor. From there you can end the relationship. We recommend messaging the Supervisor first to discuss the transition.',
       },
     ],
   },
@@ -211,7 +211,7 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'How does messaging work?',
         answer:
-          "Go to Messages in the sidebar to see all your conversations. You can start a new conversation from any supervisor's profile. Messages are real-time — you will see when the other person is online and when they have read your message.",
+          "Go to Messages in the sidebar to see all your conversations. You can start a new conversation from any Supervisor's profile. Messages are real-time — you will see when the other person is online and when they have read your message.",
       },
       {
         question: 'Will I be notified of new messages?',
@@ -224,9 +224,9 @@ const superviseeFaqs: FaqCategory[] = [
     title: 'Reviews',
     items: [
       {
-        question: 'How do I leave a review for my supervisor?',
+        question: 'How do I leave a review for my Supervisor?',
         answer:
-          "After completing a supervision period, you will have the option to leave a review from your Hired Supervisors page or the supervisor's profile. Reviews include a star rating and written feedback.",
+          "After completing a supervision period, you will have the option to leave a review from your Hired Supervisors page or the Supervisor's profile. Reviews include a star rating and written feedback.",
       },
       {
         question: 'Can I edit or delete a review I left?',
@@ -313,7 +313,7 @@ function PageHeader({ role }: { role: 'supervisor' | 'supervisee' | 'general' })
     role === 'supervisor'
       ? 'Answers to common questions about verification, plans and billing, profiles, and managing your supervisees.'
       : role === 'supervisee'
-        ? 'Answers to common questions about finding supervisors, hire requests, messaging, and reviews.'
+        ? 'Answers to common questions about finding Supervisors, hire requests, messaging, and reviews.'
         : 'Answers to common questions about the platform.'
 
   return (

@@ -519,11 +519,12 @@ export function SupervisorProfileEditFields({
           <FormInputField
             control={form.control}
             name="supervisionFeeAmount"
-            label="Fee Amount ($)"
+            label="Fee Amount"
             required
             type="number"
             numberValue
-            min={0}
+            min={1}
+            startAdornment="$"
             placeholder="Enter Fee Amount"
             isSubmitting={isSubmitting}
           />

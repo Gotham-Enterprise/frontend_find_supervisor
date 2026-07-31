@@ -297,7 +297,7 @@ export function SearchSupervisorFilters({
               supervisorSpecialties: v.length === 0 ? [] : filters.supervisorSpecialties,
             })
           }
-          placeholder={hierarchyLoading ? 'Loading…' : 'Select supervisor types…'}
+          placeholder={hierarchyLoading ? 'Loading…' : 'Select Supervisor types…'}
           disabled={hierarchyLoading}
         />
       </div>

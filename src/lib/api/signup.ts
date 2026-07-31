@@ -12,14 +12,12 @@ const FORMAT_MAP: Record<'virtual' | 'in-person' | 'hybrid', string> = {
   hybrid: 'HYBRID',
 }
 
+/** The form stores backend enum values directly; this only guards against unexpected input. */
 const HOW_SOON_MAP: Record<string, string> = {
-  'As soon as possible': 'IMMEDIATELY',
   IMMEDIATELY: 'IMMEDIATELY',
-  'Within 1 month': 'WITHIN_1_MONTH',
+  WITHIN_2_WEEKS: 'WITHIN_2_WEEKS',
   WITHIN_1_MONTH: 'WITHIN_1_MONTH',
-  'Within 3 months': 'WITHIN_2_MONTHS',
   WITHIN_2_MONTHS: 'WITHIN_2_MONTHS',
-  'Just exploring': 'WITHIN_6_MONTHS',
   WITHIN_6_MONTHS: 'WITHIN_6_MONTHS',
   CUSTOM_DATE: 'CUSTOM_DATE',
 }
@@ -36,6 +34,7 @@ function parseBudgetRange(budgetRange: string): { start: number; end: number } {
     '$0 - $50': { start: 0, end: 50 },
     '$51 - $100': { start: 51, end: 100 },
     '$101 - $150': { start: 101, end: 150 },
+    '$151 - $300': { start: 151, end: 300 },
     '$50 – $100 / session': { start: 50, end: 100 },
     '$100 – $150 / session': { start: 100, end: 150 },
     '$150 – $200 / session': { start: 150, end: 200 },

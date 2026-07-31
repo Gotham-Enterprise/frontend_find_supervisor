@@ -11,7 +11,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import type { UpdateSupervisionSettingsPayload } from '@/lib/api/supervision-settings'
-import { useSupervisionSettings, useUpdateSupervisionSettings, useUserSnackbar } from '@/lib/hooks'
+import { isSupervisorRole } from '@/lib/auth/roles'
+import { useUser } from '@/lib/contexts/UserContext'
+import {
+  useSupervisionSettings,
+  useSupervisorProfile,
+  useUpdateSupervisionSettings,
+  useUserSnackbar,
+} from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 
 import { ChangePasswordCard } from './ChangePasswordCard'
@@ -120,6 +127,17 @@ export function SettingsPanel() {
   const { mutateAsync, isPending } = useUpdateSupervisionSettings()
   const { showError } = useUserSnackbar()
 
+  // Profile visibility is admin-gated for supervisors: until the profile is
+  // verified (APPROVED), the Hide Profile toggle is forced off and locked.
+  const { user } = useUser()
+  const isSupervisor = isSupervisorRole(user?.role)
+  const { data: supervisorProfile } = useSupervisorProfile(isSupervisor)
+  const verificationLoaded = !isSupervisor || supervisorProfile !== undefined
+  const hideProfileLocked =
+    isSupervisor &&
+    supervisorProfile !== undefined &&
+    supervisorProfile.verificationStatus !== 'APPROVED'
+
   const [optimistic, setOptimistic] = useState<Partial<Record<SettingsField, boolean>>>({})
 
   // State for the "disable messaging" confirmation modal
@@ -227,9 +245,14 @@ export function SettingsPanel() {
             icon={<Eye className="h-4 w-4" />}
             label="Hide Profile"
             description="When enabled, your profile will not appear in search results."
-            checked={getValue('hideProfile')}
+            checked={hideProfileLocked ? false : getValue('hideProfile')}
             onCheckedChange={() => handleToggle('hideProfile')}
-            disabled={isPending}
+            disabled={isPending || !verificationLoaded || hideProfileLocked}
+            helperText={
+              hideProfileLocked
+                ? 'Available once your profile has been verified by an admin.'
+                : null
+            }
           />
         </CardContent>
       </Card>

@@ -17,8 +17,8 @@ export function HeroSection() {
               Professional Journey
             </h1>
             <p className="max-w-lg text-lg text-muted-foreground">
-              Connect with licensed healthcare supervisors, collaborating physicians, and
-              supervising physicians who support your professional growth, compliance, and long-term
+              Connect with Licensed Health Counselor Supervisors, Collaborating Physicians, and
+              Supervising Physicians who support your professional growth, compliance, and long-term
               success.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -38,7 +38,7 @@ export function HeroSection() {
             <div className="relative h-96 w-full max-w-xl overflow-hidden lg:h-[28rem] lg:max-w-2xl">
               <Image
                 src="/hero/landing-page.png"
-                alt="Professional connecting with a supervisor via video call"
+                alt="Professional connecting with a Supervisor via video call"
                 fill
                 className="object-contain object-center"
                 priority

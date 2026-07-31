@@ -4,7 +4,6 @@ import type { HireStatus, PreferredAvailability, PreferredFormat } from '@/types
 export interface PastClientSupervisee {
   id: string
   fullName: string | null
-  email: string
   profilePhotoUrl: string | null
   city: string | null
   state: string | null
@@ -12,7 +11,7 @@ export interface PastClientSupervisee {
   specialty: { id: number; name: string } | null
 }
 
-/** One hire row returned by GET /supervision/supervisors/past-clients (completed / reviewed). */
+/** One hire row returned by GET /supervision/supervisors/past-clients (completed hires only). */
 export interface PastClientHire {
   id: string
   supervisorId: string

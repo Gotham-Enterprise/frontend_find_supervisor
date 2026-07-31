@@ -2,13 +2,13 @@ const features = [
   {
     number: '1',
     title: 'Verified Supervisor Directory',
-    description: 'All supervisors are credential-checked and reviewed by our team.',
+    description: 'All Supervisors are credential-checked and reviewed by our team.',
   },
   {
     number: '2',
     title: 'AI-Powered Matching',
     description:
-      'We match you with supervisors who fit your career path, goals, and required competencies.',
+      'We match you with Supervisors who fit your career path, goals, and required competencies.',
   },
   {
     number: '3',
@@ -24,7 +24,7 @@ const features = [
     number: '5',
     title: 'Communication Tools Built In',
     description:
-      'Real-time chat and notifications keep you and your supervisor connected in one place.',
+      'Real-time chat and notifications keep you and your Supervisor connected in one place.',
   },
 ]
 

@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useMemo } from 'react'
-import { useForm } from 'react-hook-form'
+import { type Resolver, useForm } from 'react-hook-form'
 
 import { SuperviseeProfileEditFields } from '@/components/profile-edit/SuperviseeProfileEditFields'
 import { Button } from '@/components/ui/button'
@@ -48,7 +48,7 @@ export function EditSuperviseeProfileModal({
   )
 
   const form = useForm<EditSuperviseeProfileFormValues>({
-    resolver: zodResolver(editSuperviseeProfileSchema),
+    resolver: zodResolver(editSuperviseeProfileSchema) as Resolver<EditSuperviseeProfileFormValues>,
     defaultValues: getDefaultSuperviseeProfileFormValues(profile),
   })
 
