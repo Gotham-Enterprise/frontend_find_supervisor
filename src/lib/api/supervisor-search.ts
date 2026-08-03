@@ -130,8 +130,8 @@ export function buildSupervisorSearchParams(
   const supervisionFormat = resolveSupervisionFormat(filters)
   appendIfNonEmpty(params, 'supervisionFormat', supervisionFormat)
 
-  // Hierarchy-based filters (plain strings on SupervisorProfile)
-  appendCommaSeparated(params, 'supervisorType', filters.supervisorTypes)
+  // Hierarchy-based filters (plain strings on SupervisorProfile). No supervisorType
+  // param — the backend scopes results to the supervisee's stored supervision needs.
   appendCommaSeparated(params, 'supervisorOccupation', filters.supervisorOccupations)
   appendCommaSeparated(params, 'supervisorSpecialty', filters.supervisorSpecialties)
 

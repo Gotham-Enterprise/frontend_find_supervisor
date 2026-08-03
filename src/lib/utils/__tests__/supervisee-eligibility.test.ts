@@ -156,7 +156,7 @@ describe('Medical Director availability', () => {
     }
   })
 
-  it('is always present in the filtered option list', () => {
+  it('is excluded from the dropdown option list — offered via a separate checkbox instead', () => {
     for (const ctx of [
       nursePractitioner,
       physicianAssistant,
@@ -164,7 +164,7 @@ describe('Medical Director availability', () => {
       unlicensedHirer,
     ]) {
       const eligible = getEligibleSupervisorTypes(ALL_TYPES, ctx).map((t) => t.name)
-      expect(eligible).toContain('Medical Director')
+      expect(eligible).not.toContain('Medical Director')
     }
   })
 })
@@ -173,19 +173,15 @@ describe('getEligibleSupervisorTypes', () => {
   it('filters to the expected set per persona', () => {
     expect(getEligibleSupervisorTypes(ALL_TYPES, nursePractitioner).map((t) => t.name)).toEqual([
       'Collaborating Physician',
-      'Medical Director',
     ])
     expect(getEligibleSupervisorTypes(ALL_TYPES, physicianAssistant).map((t) => t.name)).toEqual([
       'Supervising Physician',
-      'Medical Director',
     ])
     expect(getEligibleSupervisorTypes(ALL_TYPES, associateTherapist).map((t) => t.name)).toEqual([
       'Mental Health Counselors',
-      'Medical Director',
     ])
-    expect(getEligibleSupervisorTypes(ALL_TYPES, unlicensedHirer).map((t) => t.name)).toEqual([
-      'Medical Director',
-    ])
+    // No dropdown options — such supervisees sign up via the Medical Director checkbox alone
+    expect(getEligibleSupervisorTypes(ALL_TYPES, unlicensedHirer)).toEqual([])
   })
 
   it('defaults unknown/future types to available', () => {
@@ -211,9 +207,6 @@ describe('reconcileSelectedSupervisorType', () => {
     expect(
       reconcileSelectedSupervisorType('Collaborating Physician', ALL_TYPES, nursePractitioner),
     ).toBe('Collaborating Physician')
-    expect(reconcileSelectedSupervisorType('Medical Director', ALL_TYPES, unlicensedHirer)).toBe(
-      'Medical Director',
-    )
   })
 
   it('leaves empty and unknown selections alone', () => {

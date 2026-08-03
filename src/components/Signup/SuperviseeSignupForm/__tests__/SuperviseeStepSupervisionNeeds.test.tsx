@@ -101,18 +101,35 @@ describe('SuperviseeStepSupervisionNeeds', () => {
     expect(getForm().getValues('typeOfSupervisor')).toBe('')
   })
 
-  it('keeps Medical Director selected regardless of occupation changes', async () => {
+  it('offers Medical Director as a checkbox that toggles needsMedicalDirector', async () => {
+    const getForm = renderHarness()
+
+    expect(screen.getByText('I need a Medical Director')).toBeInTheDocument()
+    expect(getForm().getValues('needsMedicalDirector')).toBe(false)
+
+    await act(async () => {
+      screen.getByRole('checkbox').click()
+    })
+    expect(getForm().getValues('needsMedicalDirector')).toBe(true)
+
+    await act(async () => {
+      screen.getByRole('checkbox').click()
+    })
+    expect(getForm().getValues('needsMedicalDirector')).toBe(false)
+  })
+
+  it('keeps the Medical Director checkbox on regardless of occupation changes', async () => {
     const getForm = renderHarness()
 
     await act(async () => {
       getForm().setValue('title', 'None')
       getForm().setValue('occupationId', '3')
-      getForm().setValue('typeOfSupervisor', 'Medical Director')
+      getForm().setValue('needsMedicalDirector', true)
     })
     await act(async () => {
       getForm().setValue('occupationId', '2')
     })
-    expect(getForm().getValues('typeOfSupervisor')).toBe('Medical Director')
+    expect(getForm().getValues('needsMedicalDirector')).toBe(true)
   })
 
   it('preserves entered values when navigating between step 2 and step 3', async () => {

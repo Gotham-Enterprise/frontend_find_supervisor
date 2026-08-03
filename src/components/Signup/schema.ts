@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { todayLocalISO } from '@/lib/utils/date'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
+import { SUPERVISION_TYPE_REQUIRED_MESSAGE } from '@/lib/utils/supervisee-eligibility'
 import {
   applySupervisorMonthlyOnlyFeeRule,
   applySupervisorPhysicianRules,
@@ -159,10 +160,16 @@ export const supervisorSchema = withPasswordConfirmation(
 export const superviseeSchemaObject = accountSchemaBase.extend({
   // Step 2 — supervision needs. Eligibility for `typeOfSupervisor` is derived from the
   // profile fields below (title + occupationId); see lib/utils/supervisee-eligibility.ts.
-  typeOfSupervisor: z.string().min(1, 'Please select a type of supervision needed'),
+  // Required unless `needsMedicalDirector` is checked — enforced by
+  // `applySuperviseeSupervisionNeedRules`, not here.
+  typeOfSupervisor: z.string(),
+  // Medical Director is requested via a checkbox rather than the dropdown, since it can
+  // be combined with any supervision type or requested on its own.
+  needsMedicalDirector: z.boolean().default(false),
   // Desired supervisor's occupation/specialty within the selected type (sent to the
-  // backend as plain strings: superviseeOccupation / superviseeSpecialty)
-  supervisorOccupationId: z.string().min(1, 'Occupation is required'),
+  // backend as plain strings: superviseeOccupation / superviseeSpecialty).
+  // Occupation is required only when a supervision type is selected (see the refine below).
+  supervisorOccupationId: z.string(),
   supervisorSpecialtyId: z.string().optional(),
 
   stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
@@ -198,7 +205,34 @@ export const superviseeSchemaObject = accountSchemaBase.extend({
     .refine((val) => val === true, 'You must agree to the terms and conditions'),
 })
 
-export const superviseeSchema = withPasswordConfirmation(superviseeSchemaObject)
+/**
+ * A supervision type is required unless the supervisee only needs a Medical Director;
+ * the desired supervisor's occupation cascades from the type, so it is required only
+ * when a type is selected.
+ */
+function applySuperviseeSupervisionNeedRules(
+  data: { typeOfSupervisor: string; needsMedicalDirector: boolean; supervisorOccupationId: string },
+  ctx: z.RefinementCtx,
+) {
+  if (!data.typeOfSupervisor && !data.needsMedicalDirector) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['typeOfSupervisor'],
+      message: SUPERVISION_TYPE_REQUIRED_MESSAGE,
+    })
+  }
+  if (data.typeOfSupervisor && !data.supervisorOccupationId) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['supervisorOccupationId'],
+      message: 'Occupation is required',
+    })
+  }
+}
+
+export const superviseeSchema = withPasswordConfirmation(
+  superviseeSchemaObject.superRefine(applySuperviseeSupervisionNeedRules),
+)
 
 export type SupervisorFormValues = z.infer<typeof supervisorSchemaObject>
 export type SuperviseeFormValues = z.infer<typeof superviseeSchemaObject>
@@ -332,6 +366,7 @@ export const superviseeStep2Schema = superviseeSchemaObject
     specialtyId: true,
     title: true,
     typeOfSupervisor: true,
+    needsMedicalDirector: true,
     supervisorOccupationId: true,
     supervisorSpecialtyId: true,
     stateOfLicensure: true,
@@ -352,6 +387,7 @@ export const superviseeStep2Schema = superviseeSchemaObject
       })
     }
   })
+  .superRefine(applySuperviseeSupervisionNeedRules)
 
 export const superviseeStep3Schema = superviseeSchemaObject.pick({
   description: true,
@@ -382,6 +418,7 @@ export const SUPERVISEE_SIGNUP_STEP_FIELDS = [
     'specialtyId',
     'title',
     'typeOfSupervisor',
+    'needsMedicalDirector',
     'supervisorOccupationId',
     'supervisorSpecialtyId',
     'preferredFormat',

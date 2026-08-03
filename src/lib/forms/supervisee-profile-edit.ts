@@ -4,6 +4,11 @@ import type { UpdateSuperviseeProfilePayload } from '@/lib/api/supervisee-profil
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
 import { formatUSPhoneForDisplay, normalizeUSPhoneNumber } from '@/lib/utils/phone'
 import { coerceStringList } from '@/lib/utils/profile-formatters'
+import {
+  isMedicalDirectorType,
+  MEDICAL_DIRECTOR_TYPE_NAME,
+  SUPERVISION_TYPE_REQUIRED_MESSAGE,
+} from '@/lib/utils/supervisee-eligibility'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 export const SUPERVISEE_PROFILE_FORMAT_OPTIONS = [
@@ -35,8 +40,13 @@ export const editSuperviseeProfileSchema = z
     specialtyId: z.string().optional(),
     title: z.string().min(1, 'Credential or license type is required').max(100),
     stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
-    typeOfSupervisorNeeded: z.string().min(1, 'Please select a type of supervision needed'),
-    superviseeOccupation: z.string().min(1, 'Occupation is required'),
+    // Required unless `needsMedicalDirector` is checked — enforced in the superRefine below.
+    typeOfSupervisorNeeded: z.string(),
+    // Medical Director is requested via a checkbox rather than the dropdown, since it can
+    // be combined with any supervision type or requested on its own (matches signup).
+    needsMedicalDirector: z.boolean().default(false),
+    // Required only when a supervision type is selected (it cascades from the type).
+    superviseeOccupation: z.string(),
     superviseeSpecialty: z.string().optional(),
     howSoonLooking: z.string().min(1, 'Please select how soon you need a supervisor'),
     lookingDate: z.string().optional(),
@@ -59,6 +69,20 @@ export const editSuperviseeProfileSchema = z
         message: 'Please select a date',
       })
     }
+    if (!data.typeOfSupervisorNeeded && !data.needsMedicalDirector) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['typeOfSupervisorNeeded'],
+        message: SUPERVISION_TYPE_REQUIRED_MESSAGE,
+      })
+    }
+    if (data.typeOfSupervisorNeeded && !data.superviseeOccupation) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['superviseeOccupation'],
+        message: 'Occupation is required',
+      })
+    }
   })
 
 export type EditSuperviseeProfileFormValues = z.infer<typeof editSuperviseeProfileSchema>
@@ -73,6 +97,10 @@ export function getDefaultSuperviseeProfileFormValues(
     profile.specialtyId ?? profile.specialty?.id ?? profile.user.specialty?.id ?? '',
   )
 
+  // The stored array holds at most one supervision type plus, optionally, Medical
+  // Director — split back into the dropdown value and the checkbox.
+  const storedSupervisionTypes = coerceStringList(profile.typeOfSupervisorNeeded)
+
   return {
     fullName: profile.user.fullName ?? '',
     contactNumber: formatUSPhoneForDisplay(profile.user.contactNumber ?? ''),
@@ -83,7 +111,9 @@ export function getDefaultSuperviseeProfileFormValues(
     specialtyId: defaultSpecialtyId,
     title: profile.title ?? '',
     stateOfLicensure: profile.user.stateOfLicensure ?? [],
-    typeOfSupervisorNeeded: coerceStringList(profile.typeOfSupervisorNeeded)[0] ?? '',
+    typeOfSupervisorNeeded:
+      storedSupervisionTypes.find((name) => !isMedicalDirectorType({ name })) ?? '',
+    needsMedicalDirector: storedSupervisionTypes.some((name) => isMedicalDirectorType({ name })),
     superviseeOccupation: profile.superviseeOccupation ?? '',
     superviseeSpecialty: profile.superviseeSpecialty ?? '',
     howSoonLooking: profile.howSoonLooking ?? '',
@@ -102,6 +132,17 @@ export function getDefaultSuperviseeProfileFormValues(
 export function superviseeProfileFormValuesToPayload(
   values: EditSuperviseeProfileFormValues,
 ): UpdateSuperviseeProfilePayload {
+  // The selected supervision type plus Medical Director when its checkbox is ticked
+  // (the checkbox can also stand alone) — mirrors buildSuperviseeFormData in signup.
+  const supervisionTypes = [
+    ...new Set(
+      [
+        values.typeOfSupervisorNeeded,
+        values.needsMedicalDirector ? MEDICAL_DIRECTOR_TYPE_NAME : '',
+      ].filter(Boolean),
+    ),
+  ]
+
   return {
     fullName: values.fullName,
     contactNumber: values.contactNumber
@@ -114,11 +155,11 @@ export function superviseeProfileFormValuesToPayload(
     specialty: values.specialtyId || undefined,
     title: values.title.trim() || undefined,
     stateOfLicensure: values.stateOfLicensure,
-    typeOfSupervisorNeeded: values.typeOfSupervisorNeeded
-      ? [values.typeOfSupervisorNeeded]
-      : undefined,
-    superviseeOccupation: values.superviseeOccupation || undefined,
-    superviseeSpecialty: values.superviseeSpecialty || undefined,
+    typeOfSupervisorNeeded: supervisionTypes.length > 0 ? supervisionTypes : undefined,
+    // '' (not undefined) when cleared, so the backend nulls the stored value — e.g. a
+    // Medical Director-only request must not keep the previous type's occupation/specialty
+    superviseeOccupation: values.superviseeOccupation,
+    superviseeSpecialty: values.superviseeSpecialty ?? '',
     howSoonLooking: values.howSoonLooking || undefined,
     lookingDate:
       values.howSoonLooking === 'CUSTOM_DATE' ? values.lookingDate || undefined : undefined,

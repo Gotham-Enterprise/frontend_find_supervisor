@@ -9,7 +9,6 @@ export const RADIUS_STEP = 5
 export const RADIUS_DEFAULT = 25
 
 export const DEFAULT_FILTERS: SupervisorSearchFilters = {
-  supervisorTypes: [],
   supervisorOccupations: [],
   supervisorSpecialties: [],
   licenseTypes: [],
@@ -87,10 +86,6 @@ export function getActiveChips(
 ): ActiveChip[] {
   const chips: ActiveChip[] = []
 
-  filters.supervisorTypes.forEach((val) => {
-    chips.push({ key: `svt_${encodeURIComponent(val)}`, label: val })
-  })
-
   filters.supervisorOccupations.forEach((val) => {
     chips.push({ key: `svo_${encodeURIComponent(val)}`, label: val })
   })
@@ -146,7 +141,6 @@ export function removeChip(
 ): SupervisorSearchFilters {
   const next: SupervisorSearchFilters = {
     ...filters,
-    supervisorTypes: [...filters.supervisorTypes],
     supervisorOccupations: [...filters.supervisorOccupations],
     supervisorSpecialties: [...filters.supervisorSpecialties],
     licenseTypes: [...filters.licenseTypes],
@@ -159,13 +153,7 @@ export function removeChip(
     availability: [...filters.availability],
   }
 
-  if (chipKey.startsWith('svt_')) {
-    const val = decodeURIComponent(chipKey.slice(4))
-    next.supervisorTypes = next.supervisorTypes.filter((x) => x !== val)
-    // Clear downstream cascades
-    next.supervisorOccupations = []
-    next.supervisorSpecialties = []
-  } else if (chipKey.startsWith('svo_')) {
+  if (chipKey.startsWith('svo_')) {
     const val = decodeURIComponent(chipKey.slice(4))
     next.supervisorOccupations = next.supervisorOccupations.filter((x) => x !== val)
     // Clear specialty if no occupations remain

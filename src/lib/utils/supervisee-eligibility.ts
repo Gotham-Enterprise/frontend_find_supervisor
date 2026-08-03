@@ -22,6 +22,9 @@ const SUPERVISOR_TYPE_NAME_TO_CODE: Record<string, string> = {
   'medical director': SUPERVISOR_TYPE_CODES.MEDICAL_DIRECTOR,
 }
 
+/** Display name of the Medical Director type as seeded in the backend. */
+export const MEDICAL_DIRECTOR_TYPE_NAME = 'Medical Director'
+
 export type SuperviseeEligibilityContext = {
   /** Display name of the supervisee's occupation (from the occupations list). */
   occupationName: string
@@ -123,6 +126,10 @@ export function resolveSupervisorTypeCode(type: { code?: string; name?: string }
   return SUPERVISOR_TYPE_NAME_TO_CODE[normalize(type.name ?? '')] ?? ''
 }
 
+export function isMedicalDirectorType(type: { code?: string; name?: string }): boolean {
+  return resolveSupervisorTypeCode(type) === SUPERVISOR_TYPE_CODES.MEDICAL_DIRECTOR
+}
+
 /**
  * Whether the supervisee may select the given supervision type.
  * Medical Director is always available; unknown/future types default to available.
@@ -150,11 +157,18 @@ export function hasCompletedEligibilityFields(ctx: SuperviseeEligibilityContext)
   return ctx.credentialTitle.trim().length > 0 && ctx.occupationName.trim().length > 0
 }
 
+/**
+ * Supervision types offered in the "Type of Supervision Needed" dropdown.
+ * Medical Director is excluded — it is requested via a separate checkbox instead,
+ * since it can be combined with any supervision type (or stand alone).
+ */
 export function getEligibleSupervisorTypes(
   typesData: SupervisorTypeData[],
   ctx: SuperviseeEligibilityContext,
 ): SupervisorTypeData[] {
-  return typesData.filter((type) => isSupervisorTypeEligibleForSupervisee(type, ctx))
+  return typesData.filter(
+    (type) => !isMedicalDirectorType(type) && isSupervisorTypeEligibleForSupervisee(type, ctx),
+  )
 }
 
 /**
@@ -177,3 +191,9 @@ export const SUPERVISION_TYPE_LOCKED_PLACEHOLDER = 'Enter your credential and oc
 
 export const INELIGIBLE_SUPERVISION_TYPE_MESSAGE =
   'This supervision type is not available for your occupation and credentials.'
+
+export const SUPERVISION_TYPE_REQUIRED_MESSAGE =
+  'Please select a type of supervision or check "I need a Medical Director".'
+
+export const NO_ELIGIBLE_SUPERVISION_TYPES_PLACEHOLDER =
+  'No supervision types match your credentials'

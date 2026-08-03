@@ -1,5 +1,6 @@
 import type { SuperviseeFormValues, SupervisorFormValues } from '@/components/Signup/schema'
 import { normalizeUSPhoneNumber } from '@/lib/utils/phone'
+import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 import { isPhysicianSupervisorType } from '@/lib/utils/supervisor-type'
 
 import { apiClient } from './client'
@@ -128,8 +129,14 @@ export function buildSuperviseeFormData(values: SuperviseeFormValues): FormData 
   // Supervision needs — `stateOfLicensure[]` so a single state is still parsed as an array (multer + express-validator .isArray())
   values.stateOfLicensure.forEach((s) => fd.append('stateOfLicensure[]', s))
   values.stateTheyAreLookingIn.forEach((s) => fd.append('stateTheyAreLookingIn[]', s))
-  // Backend field: typeOfSupervisorNeeded — send as single-element array to keep multipart convention
-  fd.append('typeOfSupervisorNeeded[]', values.typeOfSupervisor)
+  // Backend field: typeOfSupervisorNeeded[] — the selected supervision type plus
+  // Medical Director when its checkbox is ticked (the checkbox can also stand alone)
+  const supervisionTypes = new Set(
+    [values.typeOfSupervisor, values.needsMedicalDirector ? MEDICAL_DIRECTOR_TYPE_NAME : ''].filter(
+      Boolean,
+    ),
+  )
+  supervisionTypes.forEach((t) => fd.append('typeOfSupervisorNeeded[]', t))
   // Desired supervisor occupation/specialty — stored as plain strings on SuperviseeProfile
   if (values.supervisorOccupationId)
     fd.append('superviseeOccupation', values.supervisorOccupationId)

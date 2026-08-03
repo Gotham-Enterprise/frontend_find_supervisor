@@ -177,13 +177,21 @@ export function createEditSupervisorProfileSchema(profile: SupervisorProfileData
   })
 }
 
-export function getDefaultSupervisorProfileFormValues(profile: SupervisorProfileData): Omit<
+/**
+ * Form values as they exist in the edit form (before schema validation) —
+ * `supervisionFeeAmount` is `undefined` when the profile has no fee yet, so the
+ * field starts empty instead of an invalid 0.
+ */
+export type SupervisorProfileFormInput = Omit<
   EditSupervisorProfileFormValues,
   'supervisionFeeAmount'
 > & {
-  /** `undefined` when the profile has no fee yet — the field starts empty instead of an invalid 0. */
   supervisionFeeAmount?: number
-} {
+}
+
+export function getDefaultSupervisorProfileFormValues(
+  profile: SupervisorProfileData,
+): SupervisorProfileFormInput {
   const physician = isPhysicianSupervisorType(profile.supervisorType ?? '')
 
   return {
@@ -223,8 +231,10 @@ export function getDefaultSupervisorProfileFormValues(profile: SupervisorProfile
   }
 }
 
+// Accepts the pre-validation form shape — an absent fee is simply omitted from the
+// payload, so defaults can round-trip through here (e.g. in tests) without a cast.
 export function supervisorProfileFormValuesToPayload(
-  values: EditSupervisorProfileFormValues,
+  values: SupervisorProfileFormInput,
 ): UpdateSupervisorProfilePayload {
   return {
     fullName: values.fullName,

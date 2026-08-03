@@ -53,6 +53,8 @@ export async function updateSuperviseeProfile(
     stateTheyAreLookingIn,
     budgetRangeStart,
     budgetRangeEnd,
+    superviseeOccupation,
+    superviseeSpecialty,
     ...rest
   } = payload
 
@@ -60,6 +62,16 @@ export async function updateSuperviseeProfile(
     if (value !== undefined && value !== null && value !== '') {
       fd.append(key, String(value))
     }
+  }
+
+  // Sent even when empty — the backend nulls the stored value for a present-but-empty
+  // field, which is how a Medical Director-only request clears the previous type's
+  // occupation/specialty. Omitting them (undefined) leaves the stored values untouched.
+  if (superviseeOccupation !== undefined) {
+    fd.append('superviseeOccupation', superviseeOccupation)
+  }
+  if (superviseeSpecialty !== undefined) {
+    fd.append('superviseeSpecialty', superviseeSpecialty)
   }
 
   if (budgetRangeStart !== undefined) {

@@ -2,7 +2,7 @@
 
 import { AlertCircle, ArrowLeftIcon } from 'lucide-react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { type ReadonlyURLSearchParams, useSearchParams } from 'next/navigation'
 
 import { buttonVariants } from '@/components/ui/button'
 import {
@@ -38,10 +38,19 @@ const BACK_LINK_CONFIG: Record<string, { href: string; label: string }> = {
 
 const DEFAULT_BACK = { href: '/find-supervisors', label: 'Back to Find Supervisors' }
 
+function buildFindSupervisorsBackLink(searchParams: URLSearchParams | ReadonlyURLSearchParams) {
+  const params = new URLSearchParams(searchParams.toString())
+  params.delete('from')
+  const query = params.toString()
+  return query ? { ...DEFAULT_BACK, href: `${DEFAULT_BACK.href}?${query}` } : DEFAULT_BACK
+}
+
 export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePageProps) {
   const searchParams = useSearchParams()
   const from = searchParams.get('from') ?? ''
-  const backLink = BACK_LINK_CONFIG[from] ?? DEFAULT_BACK
+  // The find-supervisors search state (filters/keyword/page) is carried on this
+  // page's URL by SupervisorCard — pass it back so the search page restores it.
+  const backLink = BACK_LINK_CONFIG[from] ?? buildFindSupervisorsBackLink(searchParams)
 
   const { data: profile, isLoading, isError } = useSupervisor(supervisorId)
   const { data: certificationOptions = [] } = useCertificateOptions()

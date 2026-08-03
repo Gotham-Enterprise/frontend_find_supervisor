@@ -49,6 +49,42 @@ describe('supervisee step 2 schema (moved profile fields)', () => {
   })
 })
 
+describe('Medical Director checkbox (needsMedicalDirector)', () => {
+  it('defaults to unchecked', () => {
+    const parsed = superviseeStep2Schema.safeParse(validStep2Values)
+    expect(parsed.success && parsed.data.needsMedicalDirector).toBe(false)
+  })
+
+  it('allows a Medical Director-only request — no supervision type or occupation', () => {
+    expect(
+      superviseeStep2Schema.safeParse({
+        ...validStep2Values,
+        typeOfSupervisor: '',
+        supervisorOccupationId: '',
+        needsMedicalDirector: true,
+      }).success,
+    ).toBe(true)
+  })
+
+  it('can be combined with a supervision type', () => {
+    expect(
+      superviseeStep2Schema.safeParse({ ...validStep2Values, needsMedicalDirector: true }).success,
+    ).toBe(true)
+  })
+
+  it('still requires the occupation cascade when a type is selected alongside it', () => {
+    const result = superviseeStep2Schema.safeParse({
+      ...validStep2Values,
+      supervisorOccupationId: '',
+      needsMedicalDirector: true,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.map((i) => i.path[0])).toContain('supervisorOccupationId')
+    }
+  })
+})
+
 describe('supervisee step 3 schema (profile fields removed)', () => {
   it('no longer validates the moved fields', () => {
     const shape = Object.keys(superviseeStep3Schema.shape)
