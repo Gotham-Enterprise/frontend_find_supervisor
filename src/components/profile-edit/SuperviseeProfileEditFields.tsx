@@ -298,10 +298,15 @@ export function SuperviseeProfileEditFields({
             control={form.control}
             name="occupationId"
             label="Occupation"
+            searchable
             options={occupationOptions ?? []}
             placeholder="Select Occupation"
             isSubmitting={isSubmitting}
             required
+            onValueChange={() => {
+              form.setValue('specialtyId', '')
+              form.clearErrors('specialtyId')
+            }}
           />
           <FormSelectField
             control={form.control}
@@ -311,6 +316,7 @@ export function SuperviseeProfileEditFields({
             placeholder="Select Specialty"
             isSubmitting={isSubmitting}
             disabled={!selectedOccupationId}
+            selectKey={selectedOccupationId}
             emptySentinel={{ value: '__none__', label: 'None' }}
           />
         </div>
