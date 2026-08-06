@@ -14,6 +14,8 @@ import {
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import { AgreementDialog } from '@/components/HiredSupervisors/AgreementDialog'
+import { AgreementStageBadge } from '@/components/HiredSupervisors/AgreementStageBadge'
 import { HireStatusBadge } from '@/components/HiredSupervisors/HireStatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -38,8 +40,11 @@ import {
   formatSupervisionFormat,
   formatSupervisionHours,
 } from '@/lib/utils/profile-formatters'
+import { getAgreementStage, getAgreementStageLabel } from '@/lib/utils/supervision-status'
 import type { HireListItem, HireStatus } from '@/types/hire'
 import type { Review } from '@/types/review'
+
+import { SendAgreementModal } from './SendAgreementModal'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -304,6 +309,12 @@ function SuperviseeDetailsDialog({
               label="Status"
               value={<HireStatusBadge status={hire.status} completedAt={hire.completedAt} />}
             />
+            {hire.agreement && (
+              <DetailItem
+                label="Agreement"
+                value={getAgreementStageLabel(getAgreementStage(hire))}
+              />
+            )}
           </dl>
         </section>
 
@@ -356,6 +367,13 @@ function SuperviseeDetailsDialog({
 
 function RowActions({ hire, review }: { hire: HireListItem; review?: Review }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [sendAgreementOpen, setSendAgreementOpen] = useState(false)
+  const [viewAgreementOpen, setViewAgreementOpen] = useState(false)
+
+  const agreementStage = getAgreementStage(hire)
+  const canSendAgreement = hire.status === 'ACCEPTED' && agreementStage === 'NOT_SENT'
+  const canEditAgreement = hire.status === 'ACCEPTED' && agreementStage === 'AWAITING_SIGNATURE'
+  const hasAgreement = hire.agreement != null
 
   return (
     <>
@@ -371,6 +389,21 @@ function RowActions({ hire, review }: { hire: HireListItem; review?: Review }) {
           <DropdownMenuPositioner>
             <DropdownMenuPopup>
               <DropdownMenuItem onClick={() => setDetailsOpen(true)}>View Details</DropdownMenuItem>
+              {canSendAgreement && (
+                <DropdownMenuItem onClick={() => setSendAgreementOpen(true)}>
+                  Send Agreement
+                </DropdownMenuItem>
+              )}
+              {canEditAgreement && (
+                <DropdownMenuItem onClick={() => setSendAgreementOpen(true)}>
+                  Edit Agreement
+                </DropdownMenuItem>
+              )}
+              {hasAgreement && (
+                <DropdownMenuItem onClick={() => setViewAgreementOpen(true)}>
+                  View Agreement
+                </DropdownMenuItem>
+              )}
             </DropdownMenuPopup>
           </DropdownMenuPositioner>
         </DropdownMenuPortal>
@@ -382,6 +415,18 @@ function RowActions({ hire, review }: { hire: HireListItem; review?: Review }) {
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
       />
+
+      {(canSendAgreement || canEditAgreement) && (
+        <SendAgreementModal
+          open={sendAgreementOpen}
+          onOpenChange={setSendAgreementOpen}
+          hire={hire}
+        />
+      )}
+
+      {hasAgreement && (
+        <AgreementDialog hire={hire} open={viewAgreementOpen} onOpenChange={setViewAgreementOpen} />
+      )}
     </>
   )
 }
@@ -422,6 +467,7 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
+              <AgreementStageBadge hire={hire} />
               {review && (
                 <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
                   <Star className="size-2.5 fill-amber-500 text-amber-500" aria-hidden />

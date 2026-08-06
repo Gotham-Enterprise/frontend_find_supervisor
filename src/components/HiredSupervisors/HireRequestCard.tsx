@@ -37,9 +37,12 @@ import {
   formatLocation,
   formatSupervisionFormat,
 } from '@/lib/utils/profile-formatters'
+import { canMarkHireCompleted, getAgreementStage } from '@/lib/utils/supervision-status'
 import type { HireListItem, HireStatus } from '@/types/hire'
 import type { Review } from '@/types/review'
 
+import { AgreementDialog } from './AgreementDialog'
+import { AgreementStageBadge } from './AgreementStageBadge'
 import { HireRequestDetailsDialog } from './HireRequestDetailsDialog'
 import { HireStatusBadge } from './HireStatusBadge'
 
@@ -80,6 +83,7 @@ interface HireRequestCardProps {
 
 export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [agreementOpen, setAgreementOpen] = useState(false)
   const [reasonOpen, setReasonOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [completeOpen, setCompleteOpen] = useState(false)
@@ -108,8 +112,15 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
   const canCancel = CANCELABLE_STATUSES.includes(hire.status)
   const profileHref = `/find-supervisors/${hire.supervisorId}?from=hired-supervisors`
 
-  // Mark as Completed: only when ACCEPTED or ACTIVE (supervisee has no end-date restriction)
-  const canComplete = hire.status === 'ACCEPTED' || hire.status === 'ACTIVE'
+  // Agreement: sign while the supervisor's proposal awaits the supervisee's signature
+  const agreementStage = getAgreementStage(hire)
+  const canSignAgreement =
+    (hire.status === 'ACCEPTED' || hire.status === 'ACTIVE') &&
+    agreementStage === 'AWAITING_SIGNATURE'
+  const hasAgreement = hire.agreement != null
+
+  // Mark as Completed: only when ACCEPTED or ACTIVE, and the agreement is fully signed
+  const canComplete = canMarkHireCompleted(hire)
 
   // Review eligibility:
   // - "Leave Review": hire is COMPLETED and no review submitted yet
@@ -184,6 +195,7 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
               </Link>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
+                <AgreementStageBadge hire={hire} />
                 {hire.hasReviewed && (
                   <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
                     <Star className="size-2.5 fill-amber-500 text-amber-500" aria-hidden />
@@ -214,6 +226,14 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
                     <DropdownMenuItem onClick={() => setDetailsOpen(true)}>
                       Request Details
                     </DropdownMenuItem>
+                    {hasAgreement && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setAgreementOpen(true)}>
+                          {canSignAgreement ? 'Review & Sign Agreement' : 'View Agreement'}
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     {hasRejectionReason && (
                       <>
                         <DropdownMenuSeparator />
@@ -281,6 +301,15 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
       </Card>
 
       <HireRequestDetailsDialog hire={hire} open={detailsOpen} onOpenChange={setDetailsOpen} />
+
+      {hasAgreement && (
+        <AgreementDialog
+          hire={hire}
+          open={agreementOpen}
+          onOpenChange={setAgreementOpen}
+          canSign={canSignAgreement}
+        />
+      )}
 
       {hasRejectionReason && (
         <DialogRoot open={reasonOpen} onOpenChange={setReasonOpen}>

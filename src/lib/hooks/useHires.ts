@@ -5,14 +5,23 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   acceptHire,
   cancelHire,
+  getAgreement,
   getSuperviseeUpcomingSessions,
   hireSupervisor,
   listHires,
   markHireAsCompleted,
+  proposeAgreement,
   rejectHire,
+  signAgreement,
+  updateAgreement,
   viewHire,
 } from '@/lib/api/supervision'
-import type { HireStatus, HireSupervisorRequestInput } from '@/types/hire'
+import type {
+  HireStatus,
+  HireSupervisorRequestInput,
+  ProposeAgreementInput,
+  SignAgreementPayload,
+} from '@/types/hire'
 
 import { supervisorDetailKeys } from './useSupervisor'
 
@@ -124,6 +133,55 @@ export function useMarkHireAsCompleted() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (hireId: string) => markHireAsCompleted(hireId),
+    onSettled: async () => {
+      await invalidateHireRelatedQueries(queryClient)
+    },
+  })
+}
+
+// ─── Supervision agreement ────────────────────────────────────────────────────
+// Keys extend hireKeys.all, so invalidateHireRelatedQueries covers them too.
+
+export const agreementKeys = {
+  detail: (hireId: string) => [...hireKeys.all, 'agreement', hireId] as const,
+}
+
+export function useAgreement(hireId: string, enabled = true) {
+  return useQuery({
+    queryKey: agreementKeys.detail(hireId),
+    queryFn: () => getAgreement(hireId),
+    enabled,
+    staleTime: 2 * 60 * 1000,
+  })
+}
+
+export function useProposeAgreement() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ hireId, input }: { hireId: string; input: ProposeAgreementInput }) =>
+      proposeAgreement(hireId, input),
+    onSettled: async () => {
+      await invalidateHireRelatedQueries(queryClient)
+    },
+  })
+}
+
+export function useUpdateAgreement() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ hireId, input }: { hireId: string; input: ProposeAgreementInput }) =>
+      updateAgreement(hireId, input),
+    onSettled: async () => {
+      await invalidateHireRelatedQueries(queryClient)
+    },
+  })
+}
+
+export function useSignAgreement() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ hireId, payload }: { hireId: string; payload: SignAgreementPayload }) =>
+      signAgreement(hireId, payload),
     onSettled: async () => {
       await invalidateHireRelatedQueries(queryClient)
     },

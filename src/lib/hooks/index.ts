@@ -23,16 +23,21 @@ export {
 } from './useConnections'
 export { useCooldownTimer } from './useCooldownTimer'
 export {
+  agreementKeys,
   hireKeys,
   upcomingSessionsKeys,
   useAcceptHire,
+  useAgreement,
   useCancelHire,
   useHiresList,
   useHireSupervisor,
   useMarkHireAsCompleted,
   usePendingRequestsCount,
+  useProposeAgreement,
   useRejectHire,
+  useSignAgreement,
   useSuperviseeUpcomingSessions,
+  useUpdateAgreement,
   useViewHire,
 } from './useHires'
 export { useCitiesOptions, useMultiStateCityOptions, useStatesOptions } from './useLocationOptions'

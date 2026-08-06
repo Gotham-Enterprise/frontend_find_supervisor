@@ -59,6 +59,9 @@ describe('professionalCredentials — edit supervisor profile form', () => {
     const defaults = getDefaultSupervisorProfileFormValues(makeProfile())
     const payload = supervisorProfileFormValuesToPayload({
       ...defaults,
+      // Defaults type the fee as optional (profiles may have none yet); the payload
+      // function takes validated form values, so pin the fee the profile provides.
+      supervisionFeeAmount: defaults.supervisionFeeAmount ?? 0,
       professionalCredentials: '  Psy.D., ABPP  ',
     })
     expect(payload.professionalCredentials).toBe('Psy.D., ABPP')
@@ -70,6 +73,7 @@ describe('professionalCredentials — edit supervisor profile form', () => {
     )
     const payload = supervisorProfileFormValuesToPayload({
       ...defaults,
+      supervisionFeeAmount: defaults.supervisionFeeAmount ?? 0,
       professionalCredentials: '',
     })
     expect(payload.professionalCredentials).toBe('')

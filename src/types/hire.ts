@@ -80,6 +80,66 @@ export interface HireRecord {
   introMessage: string | null
   supervisionHours: number | null
 }
+// ─── Supervision agreement ────────────────────────────────────────────────────
+
+export type AgreementSource = 'DEFAULT_TEMPLATE' | 'UPLOADED'
+
+/** Derived client-side from agreement/signature fields — not a backend enum. See getAgreementStage(). */
+export type AgreementStage = 'NOT_SENT' | 'AWAITING_SIGNATURE' | 'SIGNED'
+
+/**
+ * Agreement attached to a hire. Proposed (and signed) by the supervisor, then
+ * countersigned by the supervisee; `hire.agreedAt` is set when both have signed.
+ * The supervisor may edit/re-upload (version bump) only until the supervisee signs.
+ */
+export interface AgreementRecord {
+  id: string
+  hireId: string
+  source: AgreementSource
+  /** Uploaded file URL, or the generated document URL for DEFAULT_TEMPLATE. */
+  fileUrl: string | null
+  /** Incremented on each supervisor edit before the supervisee signs. */
+  version: number
+  startDate: string
+  supervisionDays: number
+  /** Decimal string, matching `monthlyAmount` on HireListItem. */
+  monthlyAmount: string
+  transactionFeePct: string | null
+  supervisorSignatureName: string
+  supervisorSignedAt: string
+  superviseeSignatureName: string | null
+  superviseeSignedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+/** Client input for POST/PATCH /supervision/hires/:hireId/agreement — sent as multipart form data. */
+export interface ProposeAgreementInput {
+  source: AgreementSource
+  /** Required when source is UPLOADED; ignored for DEFAULT_TEMPLATE. */
+  file: File | null
+  startDate: string // ISO date string
+  supervisionDays: number
+  monthlyAmount: number
+  /** Typed full legal name — the supervisor's e-signature. */
+  signatureName: string
+}
+
+/** POST /supervision/hires/:hireId/agreement/preview — render the default template PDF without saving. */
+export interface PreviewAgreementInput {
+  startDate: string // ISO date string
+  supervisionDays: number
+  monthlyAmount: number
+  /** Optional at preview time — the signature block shows "pending" when absent. */
+  signatureName?: string
+}
+
+/** POST /supervision/hires/:hireId/agreement/sign — supervisee countersignature. */
+export interface SignAgreementPayload {
+  /** Typed full legal name — the supervisee's e-signature. */
+  signatureName: string
+}
+
 // ─── GET /api/supervision/hires ───────────────────────────────────────────────
 
 /**
@@ -117,7 +177,7 @@ export interface HireListItem {
   // Hire lifecycle
   startDate: string | null
   endDate: string | null
-  supervisionMonths: number | null
+  supervisionDays: number | null
   monthlyAmount: string | null
   transactionFeePct: string | null
   status: HireStatus
@@ -135,6 +195,9 @@ export interface HireListItem {
 
   // Review
   hasReviewed: boolean
+
+  // Agreement (absent/null until the supervisor proposes one)
+  agreement?: AgreementRecord | null
 
   // Nested relations
   supervisor: HireUser

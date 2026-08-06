@@ -174,11 +174,33 @@ export function HireRequestDetailsDialog({
     { label: 'Last updated', value: formatDateTime(hire.updatedAt) },
     { label: 'Accepted at', value: formatDateTime(hire.acceptedAt) },
     { label: 'Agreed at', value: formatDateTime(hire.agreedAt) },
+    ...(hire.agreement
+      ? [
+          {
+            label: 'Agreement document',
+            value:
+              hire.agreement.source === 'UPLOADED'
+                ? 'Uploaded by supervisor'
+                : 'Platform default template',
+          },
+          { label: 'Agreement version', value: String(hire.agreement.version) },
+          {
+            label: 'Supervisor signed',
+            value: `${hire.agreement.supervisorSignatureName} · ${formatDateTime(hire.agreement.supervisorSignedAt)}`,
+          },
+          {
+            label: 'Supervisee signed',
+            value: hire.agreement.superviseeSignedAt
+              ? `${hire.agreement.superviseeSignatureName ?? 'Signed'} · ${formatDateTime(hire.agreement.superviseeSignedAt)}`
+              : 'Awaiting signature',
+          },
+        ]
+      : []),
     { label: 'Supervision start', value: displayText(hire.startDate, formatDate(hire.startDate)) },
     { label: 'Supervision end', value: displayText(hire.endDate, formatDate(hire.endDate)) },
     {
-      label: 'Planned duration (months)',
-      value: hire.supervisionMonths != null ? String(hire.supervisionMonths) : UNSPECIFIED,
+      label: 'Planned duration (days)',
+      value: hire.supervisionDays != null ? String(hire.supervisionDays) : UNSPECIFIED,
     },
     {
       label: 'Monthly amount',
