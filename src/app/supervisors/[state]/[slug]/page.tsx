@@ -49,6 +49,7 @@ import {
   formatFeeType,
   formatNameWithCredentials,
 } from '@/lib/utils/profile-formatters'
+import { isPhysicianSupervisorType } from '@/lib/utils/supervisor-type'
 
 const MIN_SUPERVISORS_TO_INDEX = 3
 
@@ -61,8 +62,7 @@ function buildSupervisorTypeLabel(
   supervisorType?: string | null,
   licenseType?: string | null,
 ): string {
-  if (supervisorType === 'Collaborating Physician') return 'Collaborating Physician'
-  if (supervisorType === 'Supervising Physician') return 'Supervising Physician'
+  if (supervisorType && isPhysicianSupervisorType(supervisorType)) return supervisorType
   return [licenseType, 'Supervisor'].filter(Boolean).join(' ') || 'Supervisor'
 }
 
@@ -72,6 +72,8 @@ function buildSupervisorTypePageTitle(typeSlug: string, stateName: string): stri
     return `Collaborating Physicians in ${stateName} | Find A Supervisor`
   if (typeSlug === 'supervising-physicians')
     return `Supervising Physicians in ${stateName} | Find A Supervisor`
+  if (typeSlug === 'medical-directors')
+    return `Medical Directors in ${stateName} | Find A Supervisor`
   return `Mental Health Counselor Supervisors in ${stateName} | Find A Supervisor`
 }
 
@@ -82,6 +84,9 @@ function buildSupervisorTypePageDescription(typeSlug: string, stateName: string)
   }
   if (typeSlug === 'supervising-physicians') {
     return `Find Supervising Physicians in ${stateName}. Browse verified Supervising Physicians by specialty, availability, and format. Ideal for physician assistants seeking physician supervision.`
+  }
+  if (typeSlug === 'medical-directors') {
+    return `Find Medical Directors in ${stateName}. Browse verified MDs and DOs by specialty, availability, and format. Ideal for healthcare professionals seeking physician supervision.`
   }
   return `Find Mental Health Counselor Supervisors in ${stateName}. Browse Licensed Supervisors for LCSWs, LMFTs, LPCs, LMHCs, and other mental health professionals by specialty and supervision format.`
 }
@@ -123,9 +128,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     if (supervisor) {
       const typeLabel = buildSupervisorTypeLabel(supervisor.supervisorType, supervisor.licenseType)
-      const isPhysicianType =
-        supervisor.supervisorType === 'Collaborating Physician' ||
-        supervisor.supervisorType === 'Supervising Physician'
+      const isPhysicianType = isPhysicianSupervisorType(supervisor.supervisorType ?? '')
       return buildMetadata({
         title: `${supervisor.fullName} — ${typeLabel} in ${stateName} | ${SITE_NAME}`,
         description: isPhysicianType
@@ -413,6 +416,9 @@ async function SupervisorTypeView({
     }
     if (typeSlug === 'supervising-physicians') {
       return `Supervising Physicians work with physician assistants to meet state-mandated supervision requirements. The ${stateName} licensing board sets the standards for supervisory relationships between PAs and physicians. Use ${SITE_NAME} to find Supervising Physicians currently accepting new supervisees in ${stateName}.`
+    }
+    if (typeSlug === 'medical-directors') {
+      return `Medical Directors (MDs and DOs) provide physician supervision and oversight for healthcare professionals who need it to practice in their state. ${stateName} state regulations define the scope of these supervisory arrangements. Use ${SITE_NAME} to find Medical Directors currently accepting new supervisees in ${stateName}.`
     }
     return `Mental Health Counselor Supervisors provide the clinical oversight required for LCSWs, LMFTs, LPCs, LMHCs, and other mental health professionals to advance toward full licensure. ${stateName}'s state licensing board defines the required supervision hours, Supervisor qualifications, and documentation standards.`
   })()

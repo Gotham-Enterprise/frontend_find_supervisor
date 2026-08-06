@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useForm, useFormState, useWatch } from 'react-hook-form'
 
 import { superviseeDefaultValues } from '@/components/Signup/helpers'
-import { type SuperviseeFormValues, superviseeSchema } from '@/components/Signup/schema'
+import {
+  SUPERVISEE_SIGNUP_STEP_FIELDS,
+  type SuperviseeFormValues,
+  superviseeSchema,
+} from '@/components/Signup/schema'
 import { Form } from '@/components/ui/form'
 import {
   useCitiesOptions,
@@ -14,9 +18,16 @@ import {
   useUserSnackbar,
 } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
+import {
+  INELIGIBLE_SUPERVISION_TYPE_MESSAGE,
+  isSupervisorTypeEligibleForSupervisee,
+} from '@/lib/utils/supervisee-eligibility'
 import { validateAddressForSignup } from '@/lib/utils/validate-address'
 
-import { applyZodIssuesToForm } from '../SupervisorSignupForm/applyZodIssuesToForm'
+import {
+  applyZodIssuesToForm,
+  findFirstStepWithError,
+} from '../SupervisorSignupForm/applyZodIssuesToForm'
 import { SuperviseeStepAccount } from './SuperviseeStepAccount'
 import { SuperviseeStepIndicator } from './SuperviseeStepIndicator'
 import { SuperviseeStepNavigation } from './SuperviseeStepNavigation'
@@ -128,7 +139,36 @@ export function SuperviseeSignupForm() {
 
     const parsed = superviseeSchema.safeParse(values)
     if (!parsed.success) {
-      applyZodIssuesToForm(parsed.error, form.setError)
+      const erroredPaths = applyZodIssuesToForm(parsed.error, form.setError)
+      // Errors can land on fields from earlier steps (unmounted) — jump there so the
+      // submit never silently does nothing.
+      const errorStep = findFirstStepWithError(erroredPaths, SUPERVISEE_SIGNUP_STEP_FIELDS)
+      if (errorStep >= 0 && errorStep !== stepRef.current) {
+        setStep(errorStep as SuperviseeSignupStepIndex)
+      }
+      showError('Please review the highlighted fields.')
+      return
+    }
+
+    // Defense-in-depth: the Step 2 UI only offers eligible types, but re-check before
+    // submitting in case the selection was made before the credential/occupation changed.
+    const selectedType = supervisorTypesData.find((t) => t.name === values.typeOfSupervisor)
+    const occupationName =
+      occupationOptions.find((o) => o.value === values.occupationId)?.label ?? ''
+    if (
+      selectedType &&
+      !isSupervisorTypeEligibleForSupervisee(selectedType, {
+        occupationName,
+        credentialTitle: values.title,
+      })
+    ) {
+      form.setError('typeOfSupervisor', {
+        type: 'manual',
+        message: INELIGIBLE_SUPERVISION_TYPE_MESSAGE,
+      })
+      const errorStep = findFirstStepWithError(['typeOfSupervisor'], SUPERVISEE_SIGNUP_STEP_FIELDS)
+      if (errorStep >= 0) setStep(errorStep as SuperviseeSignupStepIndex)
+      showError(INELIGIBLE_SUPERVISION_TYPE_MESSAGE)
       return
     }
 
@@ -188,6 +228,8 @@ export function SuperviseeSignupForm() {
           <SuperviseeStepSupervisionNeeds
             supervisorTypesData={supervisorTypesData}
             supervisorTypesLoading={supervisorTypesLoading}
+            occupationOptions={occupationOptions}
+            occupationsLoading={occupationsLoading}
             stateOptions={stateOptions}
             howSoonOptions={howSoonOptions}
             availabilityOptions={availabilityOptions}
@@ -199,13 +241,7 @@ export function SuperviseeSignupForm() {
             isSubmitting={isSubmitting}
           />
         )}
-        {step === 2 && (
-          <SuperviseeStepProfileTerms
-            occupationOptions={occupationOptions}
-            occupationsLoading={occupationsLoading}
-            isSubmitting={isSubmitting}
-          />
-        )}
+        {step === 2 && <SuperviseeStepProfileTerms isSubmitting={isSubmitting} />}
 
         <SuperviseeStepNavigation
           step={step}

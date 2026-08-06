@@ -1,3 +1,5 @@
+import { Suspense } from 'react'
+
 import { SuperviseeRouteGuard } from '@/components/Layout/SuperviseeRouteGuard'
 import { SearchSupervisorPage } from '@/components/SearchSupervisor'
 
@@ -9,7 +11,10 @@ export const metadata = {
 export default function FindSupervisorsRoutePage() {
   return (
     <SuperviseeRouteGuard>
-      <SearchSupervisorPage />
+      {/* useSearchParams (filter state in the URL) requires a Suspense boundary */}
+      <Suspense>
+        <SearchSupervisorPage />
+      </Suspense>
     </SuperviseeRouteGuard>
   )
 }

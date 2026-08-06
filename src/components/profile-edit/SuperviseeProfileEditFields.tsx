@@ -5,6 +5,7 @@ import type { UseFormReturn } from 'react-hook-form'
 import { useWatch } from 'react-hook-form'
 
 import { ProfilePhotoField } from '@/components/profile-photo/ProfilePhotoField'
+import { Checkbox } from '@/components/ui/checkbox'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { FormInputField } from '@/components/ui/form-input-field'
 import { FormSelectField } from '@/components/ui/form-select-field'
@@ -26,6 +27,14 @@ import {
   useSuperviseeFormOptions,
   useSupervisorTypesData,
 } from '@/lib/hooks'
+import {
+  getEligibleSupervisorTypes,
+  hasCompletedEligibilityFields,
+  NO_ELIGIBLE_SUPERVISION_TYPES_PLACEHOLDER,
+  reconcileSelectedSupervisorType,
+  type SuperviseeEligibilityContext,
+  SUPERVISION_TYPE_LOCKED_PLACEHOLDER,
+} from '@/lib/utils/supervisee-eligibility'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 export interface SuperviseeProfileEditFieldsProps {
@@ -80,23 +89,64 @@ export function SuperviseeProfileEditFields({
   const { availability, howSoon, occupations } = useSuperviseeFormOptions()
   const availabilityOptions = availability.data ?? []
   const howSoonOptions = howSoon.data ?? []
-  const occupationOptions = occupations.data ?? []
+  // Memoized — a dependency of the occupationName/eligibility memos below
+  const occupationOptions = useMemo(() => occupations.data ?? [], [occupations.data])
 
   const { data: supervisorTypesData = [], isLoading: supervisorTypesLoading } =
     useSupervisorTypesData()
 
   const selectedOccupationId = useWatch({ control: form.control, name: 'occupationId' }) ?? ''
+  const title = useWatch({ control: form.control, name: 'title' }) ?? ''
   const typeOfSupervisorNeeded =
     useWatch({ control: form.control, name: 'typeOfSupervisorNeeded' }) ?? ''
+  const needsMedicalDirector =
+    useWatch({ control: form.control, name: 'needsMedicalDirector' }) ?? false
   const superviseeOccupation =
     useWatch({ control: form.control, name: 'superviseeOccupation' }) ?? ''
   const howSoonLooking = useWatch({ control: form.control, name: 'howSoonLooking' })
   const { data: specialtyOptions = [] } = useSpecialtiesByOccupation(selectedOccupationId)
 
-  const supervisorTypeOptions = useMemo<SelectOption[]>(
-    () => supervisorTypesData.map((t) => ({ label: t.name, value: t.name })),
-    [supervisorTypesData],
+  // Same eligibility filtering as signup — the dropdown offers only the supervision
+  // types this supervisee qualifies for; Medical Director is a checkbox instead.
+  const occupationName = useMemo(
+    () => occupationOptions.find((o) => o.value === selectedOccupationId)?.label ?? '',
+    [occupationOptions, selectedOccupationId],
   )
+  const eligibilityCtx: SuperviseeEligibilityContext = useMemo(
+    () => ({ occupationName, credentialTitle: title }),
+    [occupationName, title],
+  )
+  const eligibilityComplete = hasCompletedEligibilityFields(eligibilityCtx)
+
+  const supervisorTypeOptions = useMemo<SelectOption[]>(
+    () =>
+      getEligibleSupervisorTypes(supervisorTypesData, eligibilityCtx).map((t) => ({
+        label: t.name,
+        value: t.name,
+      })),
+    [supervisorTypesData, eligibilityCtx],
+  )
+
+  // Clear a selected supervision type that became ineligible after the credential or
+  // occupation changed. Skipped until the occupation options resolve — the stored
+  // selection must not be wiped just because the occupation name isn't known yet.
+  useEffect(() => {
+    if (!eligibilityComplete) return
+    const reconciled = reconcileSelectedSupervisorType(
+      typeOfSupervisorNeeded,
+      supervisorTypesData,
+      eligibilityCtx,
+    )
+    if (reconciled !== typeOfSupervisorNeeded) {
+      form.setValue('typeOfSupervisorNeeded', reconciled)
+      form.setValue('superviseeOccupation', '')
+      form.setValue('superviseeSpecialty', '')
+      form.clearErrors(['typeOfSupervisorNeeded', 'superviseeOccupation', 'superviseeSpecialty'])
+    }
+  }, [typeOfSupervisorNeeded, supervisorTypesData, eligibilityCtx, eligibilityComplete, form])
+
+  const noEligibleTypes =
+    !supervisorTypesLoading && eligibilityComplete && supervisorTypeOptions.length === 0
 
   const supervisionOccupationOptions = useMemo<SelectOption[]>(() => {
     if (!typeOfSupervisorNeeded) return []
@@ -248,10 +298,15 @@ export function SuperviseeProfileEditFields({
             control={form.control}
             name="occupationId"
             label="Occupation"
+            searchable
             options={occupationOptions ?? []}
             placeholder="Select Occupation"
             isSubmitting={isSubmitting}
             required
+            onValueChange={() => {
+              form.setValue('specialtyId', '')
+              form.clearErrors('specialtyId')
+            }}
           />
           <FormSelectField
             control={form.control}
@@ -261,6 +316,7 @@ export function SuperviseeProfileEditFields({
             placeholder="Select Specialty"
             isSubmitting={isSubmitting}
             disabled={!selectedOccupationId}
+            selectKey={selectedOccupationId}
             emptySentinel={{ value: '__none__', label: 'None' }}
           />
         </div>
@@ -305,15 +361,55 @@ export function SuperviseeProfileEditFields({
           name="typeOfSupervisorNeeded"
           label="Type of Supervision Needed"
           options={supervisorTypeOptions}
-          placeholder={supervisorTypesLoading ? 'Loading…' : 'Select type of supervision'}
+          placeholder={
+            supervisorTypesLoading
+              ? 'Loading…'
+              : !eligibilityComplete
+                ? SUPERVISION_TYPE_LOCKED_PLACEHOLDER
+                : noEligibleTypes
+                  ? NO_ELIGIBLE_SUPERVISION_TYPES_PLACEHOLDER
+                  : 'Select type of supervision'
+          }
           loading={supervisorTypesLoading}
+          disabled={supervisorTypesLoading || !eligibilityComplete || noEligibleTypes}
           isSubmitting={isSubmitting}
-          required
+          selectKey={selectedOccupationId}
+          required={!needsMedicalDirector}
           onValueChange={() => {
             form.setValue('superviseeOccupation', '')
             form.setValue('superviseeSpecialty', '')
             form.clearErrors(['superviseeOccupation', 'superviseeSpecialty'])
           }}
+        />
+
+        {/* ── Medical Director — combinable with any supervision type, or standalone ── */}
+        <FormField
+          control={form.control}
+          name="needsMedicalDirector"
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-start gap-3">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value ?? false}
+                    disabled={isSubmitting}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked === true)
+                      if (checked === true) form.clearErrors('typeOfSupervisorNeeded')
+                    }}
+                    className="mt-0.5 shrink-0"
+                  />
+                </FormControl>
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium text-foreground">I need a Medical Director</p>
+                  <p className="text-sm text-muted-foreground">
+                    Can be combined with a supervision type above, or selected on its own.
+                  </p>
+                </div>
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
         />
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -332,7 +428,7 @@ export function SuperviseeProfileEditFields({
             loading={supervisorTypesLoading}
             isSubmitting={isSubmitting || !typeOfSupervisorNeeded}
             selectKey={typeOfSupervisorNeeded}
-            required
+            required={Boolean(typeOfSupervisorNeeded)}
             onValueChange={() => {
               form.setValue('superviseeSpecialty', '')
               form.clearErrors('superviseeSpecialty')

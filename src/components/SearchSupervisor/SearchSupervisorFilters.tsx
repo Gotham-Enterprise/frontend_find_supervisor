@@ -45,12 +45,6 @@ interface SearchSupervisorFiltersProps {
   onApply: () => void
   /** Clears draft + applied filter state (does not clear header keyword). */
   onClearFilters: () => void
-  /** Whether filters are currently pre-filled from the supervisee's supervision needs. */
-  prefillFromProfile: boolean
-  /** Disable pre-fill until profile + hierarchy options have loaded. */
-  prefillDisabled?: boolean
-  /** Called when the user toggles the pre-fill switch. */
-  onPrefillToggle: (enabled: boolean) => void
 }
 
 function FilterLabel({ children }: { children: React.ReactNode }) {
@@ -70,9 +64,6 @@ export function SearchSupervisorFilters({
   onChange,
   onApply,
   onClearFilters,
-  prefillFromProfile,
-  prefillDisabled = false,
-  onPrefillToggle,
 }: SearchSupervisorFiltersProps) {
   const {
     patientPopulations: {
@@ -85,22 +76,13 @@ export function SearchSupervisorFilters({
   // Hierarchy data from /api/supervision/supervisor-type
   const { data: supervisorTypesData = [], isLoading: hierarchyLoading } = useSupervisorTypesData()
 
-  // Supervisor Type options — all top-level types
-  const supervisorTypeOptions = useMemo<SelectOption[]>(
-    () => supervisorTypesData.map((t) => ({ label: t.name, value: t.name })),
-    [supervisorTypesData],
-  )
-
-  // Occupation options — union of occupations across selected supervisor types
-  // (if none selected, show all occupations)
+  // Occupation options — union of occupations across all supervisor types.
+  // (There is no supervisor-type filter: the backend already scopes results
+  // to the supervisee's stored supervision needs.)
   const occupationOptions = useMemo<SelectOption[]>(() => {
-    const types =
-      filters.supervisorTypes.length > 0
-        ? supervisorTypesData.filter((t) => filters.supervisorTypes.includes(t.name))
-        : supervisorTypesData
     const seen = new Set<string>()
     const opts: SelectOption[] = []
-    for (const t of types) {
+    for (const t of supervisorTypesData) {
       for (const o of t.occupations) {
         if (!seen.has(o.name)) {
           seen.add(o.name)
@@ -109,7 +91,7 @@ export function SearchSupervisorFilters({
       }
     }
     return opts
-  }, [filters.supervisorTypes, supervisorTypesData])
+  }, [supervisorTypesData])
 
   // Specialty options — union of specialties across selected occupations
   const specialtyOptions = useMemo<SelectOption[]>(() => {
@@ -185,22 +167,6 @@ export function SearchSupervisorFilters({
     onChange({ ...f, supervisorSpecialties: next })
   }, [occupationsKey, specialtiesKey, specialtyValuesKey, specialtyOptions, onChange])
 
-  // Prune occupation + specialty selections when supervisor type changes
-  const supervisorTypesKey = filters.supervisorTypes.join(',')
-  const occupationValuesKey = occupationOptions
-    .map((o) => o.value)
-    .sort()
-    .join(',')
-
-  useEffect(() => {
-    const f = filtersRef.current
-    if (f.supervisorOccupations.length === 0) return
-    const valid = new Set(occupationOptions.map((o) => o.value))
-    const nextOcc = f.supervisorOccupations.filter((v) => valid.has(v))
-    if (JSON.stringify(nextOcc) === JSON.stringify(f.supervisorOccupations)) return
-    onChange({ ...f, supervisorOccupations: nextOcc, supervisorSpecialties: [] })
-  }, [supervisorTypesKey, occupationValuesKey, occupationOptions, onChange])
-
   const { data: availabilityOptions = [], isLoading: availabilityLoading } =
     useAvailabilityOptions()
 
@@ -250,8 +216,9 @@ export function SearchSupervisorFilters({
   }
 
   return (
-    <aside className="w-full space-y-5 lg:w-full lg:shrink-0">
-      <div className="flex items-center justify-between">
+    <aside className="flex h-full min-h-0 w-full flex-col lg:shrink-0">
+      {/* Pinned header — title + Clear all stay visible while the fields scroll */}
+      <div className="flex shrink-0 items-center justify-between pb-3">
         <h2 className="text-sm font-semibold text-foreground">Filters</h2>
         {anyActive && (
           <button
@@ -264,245 +231,218 @@ export function SearchSupervisorFilters({
         )}
       </div>
 
-      <label
-        className={`flex items-start gap-2.5 rounded-md border border-border bg-muted/40 px-3 py-2.5 ${
-          prefillDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
-        }`}
-      >
-        <Switch
-          checked={prefillFromProfile}
-          onCheckedChange={onPrefillToggle}
-          disabled={prefillDisabled}
-          className="mt-0.5 shrink-0"
-        />
-        <span className="flex flex-col gap-0.5">
-          <span className="text-sm font-medium text-foreground">Pre-fill from my profile</span>
-        </span>
-      </label>
-
-      {chips.length > 0 && (
-        <ActiveFilterChips chips={chips} onRemove={(key) => onChange(removeChip(filters, key))} />
-      )}
-
-      <div>
-        <FilterLabel>Supervisor Type</FilterLabel>
-        <TagInput
-          options={supervisorTypeOptions}
-          value={filters.supervisorTypes}
-          onChange={(v) =>
-            onChange({
-              ...filters,
-              supervisorTypes: v,
-              supervisorOccupations: v.length === 0 ? [] : filters.supervisorOccupations,
-              supervisorSpecialties: v.length === 0 ? [] : filters.supervisorSpecialties,
-            })
-          }
-          placeholder={hierarchyLoading ? 'Loading…' : 'Select Supervisor types…'}
-          disabled={hierarchyLoading}
-        />
-      </div>
-
-      <div>
-        <FilterLabel>Occupation</FilterLabel>
-        <TagInput
-          options={occupationOptions}
-          value={filters.supervisorOccupations}
-          onChange={(v) =>
-            onChange({
-              ...filters,
-              supervisorOccupations: v,
-              supervisorSpecialties: v.length === 0 ? [] : filters.supervisorSpecialties,
-            })
-          }
-          placeholder={hierarchyLoading ? 'Loading…' : 'Select occupations…'}
-          disabled={hierarchyLoading}
-        />
-      </div>
-
-      <div>
-        <FilterLabel>Specialty</FilterLabel>
-        <TagInput
-          options={specialtyOptions}
-          value={filters.supervisorSpecialties}
-          onChange={(v) => set('supervisorSpecialties', v)}
-          placeholder={
-            filters.supervisorOccupations.length === 0
-              ? 'Select occupation first'
-              : 'Select specialties…'
-          }
-          disabled={filters.supervisorOccupations.length === 0 || hierarchyLoading}
-        />
-      </div>
-
-      <div>
-        <FilterLabel>License Type</FilterLabel>
-        <TagInput
-          options={licenseTypeOptions}
-          value={filters.licenseTypes}
-          onChange={(v) => set('licenseTypes', v)}
-          placeholder={hierarchyLoading ? 'Loading…' : 'Select license types…'}
-          disabled={hierarchyLoading}
-        />
-      </div>
-
-      <div>
-        <FilterLabel>State License</FilterLabel>
-        <TagInput
-          options={stateOptions}
-          value={filters.stateLicenses}
-          onChange={(v) => set('stateLicenses', v)}
-          placeholder={getStatePlaceholder(statesLoading, statesError)}
-          disabled={statesLoading || statesError}
-        />
-        {statesError && <FilterError message="Unable to load states right now." />}
-      </div>
-
-      <div>
-        <FilterLabel>State</FilterLabel>
-        <Select
-          value={stateForCities ? filters.state.trim() : LOCATION_FILTER_NONE}
-          onValueChange={(v) => {
-            const nextState = v === LOCATION_FILTER_NONE ? '' : (v ?? '').trim()
-            onChange({ ...filters, state: nextState, city: '' })
-          }}
-          disabled={statesLoading || statesError}
-        >
-          <SelectTrigger className="w-full" aria-label="Search by state">
-            <SelectValue>
-              {stateForCities
-                ? (stateOptions.find((o) => o.value === stateForCities)?.label ?? stateForCities)
-                : 'Any state'}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={LOCATION_FILTER_NONE}>Any state</SelectItem>
-            {stateOptions.map((o) => (
-              <SelectItem key={o.value} value={o.value}>
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {statesError && <FilterError message="Unable to load states right now." />}
-      </div>
-
-      <div>
-        <FilterLabel>City</FilterLabel>
-        <Select
-          key={stateForCities || 'no-state'}
-          value={filters.city.trim() ? filters.city.trim() : LOCATION_FILTER_NONE}
-          onValueChange={(v) => {
-            const nextCity = v === LOCATION_FILTER_NONE ? '' : (v ?? '').trim()
-            onChange({ ...filters, city: nextCity })
-          }}
-          disabled={!hasSearchState || citiesLoading || citiesError}
-        >
-          <SelectTrigger className="w-full" aria-label="Search by city">
-            <SelectValue>
-              {!hasSearchState
-                ? 'Select a state first…'
-                : citiesLoading
-                  ? 'Loading cities…'
-                  : citiesError
-                    ? 'Unable to load cities'
-                    : filters.city.trim()
-                      ? (cityOptions.find((o) => o.value === filters.city.trim())?.label ??
-                        filters.city.trim())
-                      : 'Any city'}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={LOCATION_FILTER_NONE}>Any city</SelectItem>
-            {cityOptions.map((o) => (
-              <SelectItem key={o.value} value={o.value}>
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {hasSearchState && citiesError && (
-          <FilterError message="Unable to load cities for the selected state." />
+      {/* Scrollable filter fields — scrollbar-visible keeps the scrollbar and its
+          track always shown (not the auto-hiding overlay) so the area reads as scrollable */}
+      <div className="scrollbar-visible min-h-0 flex-1 space-y-5 overflow-y-auto pb-3 pr-1">
+        {chips.length > 0 && (
+          <ActiveFilterChips chips={chips} onRemove={(key) => onChange(removeChip(filters, key))} />
         )}
-      </div>
 
-      <div>
-        <FilterLabel>Radius</FilterLabel>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-foreground">Within {filters.radiusMiles} miles</span>
-          </div>
-          <Slider
-            value={filters.radiusMiles}
-            min={RADIUS_MIN}
-            max={RADIUS_MAX}
-            step={RADIUS_STEP}
-            onChange={(v) => set('radiusMiles', v)}
-            aria-label="Search radius in miles"
+        <div>
+          <FilterLabel>Occupation</FilterLabel>
+          <TagInput
+            options={occupationOptions}
+            value={filters.supervisorOccupations}
+            onChange={(v) =>
+              onChange({
+                ...filters,
+                supervisorOccupations: v,
+                supervisorSpecialties: v.length === 0 ? [] : filters.supervisorSpecialties,
+              })
+            }
+            placeholder={hierarchyLoading ? 'Loading…' : 'Select occupations…'}
+            disabled={hierarchyLoading}
           />
+        </div>
+
+        <div>
+          <FilterLabel>Specialty</FilterLabel>
+          <TagInput
+            options={specialtyOptions}
+            value={filters.supervisorSpecialties}
+            onChange={(v) => set('supervisorSpecialties', v)}
+            placeholder={
+              filters.supervisorOccupations.length === 0
+                ? 'Select occupation first'
+                : 'Select specialties…'
+            }
+            disabled={filters.supervisorOccupations.length === 0 || hierarchyLoading}
+          />
+        </div>
+
+        <div>
+          <FilterLabel>License Type</FilterLabel>
+          <TagInput
+            options={licenseTypeOptions}
+            value={filters.licenseTypes}
+            onChange={(v) => set('licenseTypes', v)}
+            placeholder={hierarchyLoading ? 'Loading…' : 'Select license types…'}
+            disabled={hierarchyLoading}
+          />
+        </div>
+
+        <div>
+          <FilterLabel>State License</FilterLabel>
+          <TagInput
+            options={stateOptions}
+            value={filters.stateLicenses}
+            onChange={(v) => set('stateLicenses', v)}
+            placeholder={getStatePlaceholder(statesLoading, statesError)}
+            disabled={statesLoading || statesError}
+          />
+          {statesError && <FilterError message="Unable to load states right now." />}
+        </div>
+
+        <div>
+          <FilterLabel>State</FilterLabel>
+          <Select
+            value={stateForCities ? filters.state.trim() : LOCATION_FILTER_NONE}
+            onValueChange={(v) => {
+              const nextState = v === LOCATION_FILTER_NONE ? '' : (v ?? '').trim()
+              onChange({ ...filters, state: nextState, city: '' })
+            }}
+            disabled={statesLoading || statesError}
+          >
+            <SelectTrigger className="w-full" aria-label="Search by state">
+              <SelectValue>
+                {stateForCities
+                  ? (stateOptions.find((o) => o.value === stateForCities)?.label ?? stateForCities)
+                  : 'Any state'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={LOCATION_FILTER_NONE}>Any state</SelectItem>
+              {stateOptions.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {statesError && <FilterError message="Unable to load states right now." />}
+        </div>
+
+        <div>
+          <FilterLabel>City</FilterLabel>
+          <Select
+            key={stateForCities || 'no-state'}
+            value={filters.city.trim() ? filters.city.trim() : LOCATION_FILTER_NONE}
+            onValueChange={(v) => {
+              const nextCity = v === LOCATION_FILTER_NONE ? '' : (v ?? '').trim()
+              onChange({ ...filters, city: nextCity })
+            }}
+            disabled={!hasSearchState || citiesLoading || citiesError}
+          >
+            <SelectTrigger className="w-full" aria-label="Search by city">
+              <SelectValue>
+                {!hasSearchState
+                  ? 'Select a state first…'
+                  : citiesLoading
+                    ? 'Loading cities…'
+                    : citiesError
+                      ? 'Unable to load cities'
+                      : filters.city.trim()
+                        ? (cityOptions.find((o) => o.value === filters.city.trim())?.label ??
+                          filters.city.trim())
+                        : 'Any city'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={LOCATION_FILTER_NONE}>Any city</SelectItem>
+              {cityOptions.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {hasSearchState && citiesError && (
+            <FilterError message="Unable to load cities for the selected state." />
+          )}
+        </div>
+
+        <div>
+          <FilterLabel>Radius</FilterLabel>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-foreground">Within {filters.radiusMiles} miles</span>
+            </div>
+            <Slider
+              value={filters.radiusMiles}
+              min={RADIUS_MIN}
+              max={RADIUS_MAX}
+              step={RADIUS_STEP}
+              onChange={(v) => set('radiusMiles', v)}
+              aria-label="Search radius in miles"
+            />
+          </div>
+        </div>
+
+        <div>
+          <FilterLabel>Format</FilterLabel>
+          <TagInput
+            options={SUPERVISION_FORMAT_TAG_OPTIONS}
+            value={filters.supervisionFormats}
+            onChange={(v) => set('supervisionFormats', v)}
+            placeholder="Select formats…"
+          />
+        </div>
+
+        <div>
+          <FilterLabel>Years of Experience</FilterLabel>
+          <TagInput
+            options={YEARS_OF_EXPERIENCE_OPTIONS}
+            value={filters.yearsExperience}
+            onChange={(v) => set('yearsExperience', v)}
+            placeholder="Select experience ranges…"
+          />
+        </div>
+
+        <div>
+          <FilterLabel>Patient Population</FilterLabel>
+          {populationsLoading ? (
+            <div className="flex flex-wrap gap-1.5">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-7 w-16 animate-pulse rounded-md bg-muted" />
+              ))}
+            </div>
+          ) : populationsError ? (
+            <FilterError message="Unable to load population options." />
+          ) : (
+            <TagInput
+              options={patientPopulationOptions}
+              value={filters.patientPopulation}
+              onChange={(v) => set('patientPopulation', v)}
+              placeholder="Select populations…"
+            />
+          )}
+        </div>
+
+        <div>
+          <FilterLabel>Availability</FilterLabel>
+          <TagInput
+            options={availabilityOptions}
+            value={filters.availability}
+            onChange={(v) => set('availability', v)}
+            placeholder={availabilityLoading ? 'Loading…' : 'Select availability…'}
+            disabled={availabilityLoading}
+          />
+          <label className="mt-3 flex cursor-pointer items-center gap-2.5">
+            <Switch
+              checked={filters.acceptingOnly}
+              onCheckedChange={(checked) => set('acceptingOnly', checked)}
+            />
+            <span className="text-sm text-foreground">Accepting supervisees only</span>
+          </label>
         </div>
       </div>
 
-      <div>
-        <FilterLabel>Format</FilterLabel>
-        <TagInput
-          options={SUPERVISION_FORMAT_TAG_OPTIONS}
-          value={filters.supervisionFormats}
-          onChange={(v) => set('supervisionFormats', v)}
-          placeholder="Select formats…"
-        />
+      {/* Pinned footer — Apply is always reachable without scrolling */}
+      <div className="shrink-0 border-t border-border bg-background pt-3">
+        <Button type="button" className="w-full" onClick={onApply}>
+          Apply Filters
+        </Button>
       </div>
-
-      <div>
-        <FilterLabel>Years of Experience</FilterLabel>
-        <TagInput
-          options={YEARS_OF_EXPERIENCE_OPTIONS}
-          value={filters.yearsExperience}
-          onChange={(v) => set('yearsExperience', v)}
-          placeholder="Select experience ranges…"
-        />
-      </div>
-
-      <div>
-        <FilterLabel>Patient Population</FilterLabel>
-        {populationsLoading ? (
-          <div className="flex flex-wrap gap-1.5">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-7 w-16 animate-pulse rounded-md bg-muted" />
-            ))}
-          </div>
-        ) : populationsError ? (
-          <FilterError message="Unable to load population options." />
-        ) : (
-          <TagInput
-            options={patientPopulationOptions}
-            value={filters.patientPopulation}
-            onChange={(v) => set('patientPopulation', v)}
-            placeholder="Select populations…"
-          />
-        )}
-      </div>
-
-      <div>
-        <FilterLabel>Availability</FilterLabel>
-        <TagInput
-          options={availabilityOptions}
-          value={filters.availability}
-          onChange={(v) => set('availability', v)}
-          placeholder={availabilityLoading ? 'Loading…' : 'Select availability…'}
-          disabled={availabilityLoading}
-        />
-        <label className="mt-3 flex cursor-pointer items-center gap-2.5">
-          <Switch
-            checked={filters.acceptingOnly}
-            onCheckedChange={(checked) => set('acceptingOnly', checked)}
-          />
-          <span className="text-sm text-foreground">Accepting supervisees only</span>
-        </label>
-      </div>
-
-      <Button type="button" className="w-full" onClick={onApply}>
-        Apply Filters
-      </Button>
     </aside>
   )
 }

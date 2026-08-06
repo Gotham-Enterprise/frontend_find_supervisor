@@ -1,7 +1,12 @@
 import { z } from 'zod'
 
+import { todayLocalISO } from '@/lib/utils/date'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
-import { applySupervisorPhysicianRules } from '@/lib/utils/supervisor-type'
+import { SUPERVISION_TYPE_REQUIRED_MESSAGE } from '@/lib/utils/supervisee-eligibility'
+import {
+  applySupervisorMonthlyOnlyFeeRule,
+  applySupervisorPhysicianRules,
+} from '@/lib/utils/supervisor-type'
 
 // ─── Shared options ──────────────────────────────────────────────────────────
 
@@ -84,16 +89,11 @@ export const supervisorSchemaObject = accountSchemaBase.extend({
   licenseExpiration: z
     .string()
     .min(1, 'Expiration date is required')
-    .refine(
-      (val) => {
-        const date = new Date(val)
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        date.setHours(0, 0, 0, 0)
-        return date >= today
-      },
-      { message: 'License expiration cannot be a past date' },
-    ),
+    // String comparison on YYYY-MM-DD — parsing with `new Date(val)` reads UTC midnight
+    // and rejected today's date in timezones behind UTC.
+    .refine((val) => val >= todayLocalISO(), {
+      message: 'License expiration cannot be a past date',
+    }),
   npiNumber: z.string().max(20).optional(),
   certifications: z.array(z.string()),
   yearsOfExperience: z.string().min(1, 'Years of experience is required'),
@@ -150,15 +150,26 @@ export const supervisorSchemaObject = accountSchemaBase.extend({
 })
 
 export const supervisorSchema = withPasswordConfirmation(
-  supervisorSchemaObject.superRefine(applySupervisorPhysicianRules),
+  supervisorSchemaObject
+    .superRefine(applySupervisorPhysicianRules)
+    .superRefine(applySupervisorMonthlyOnlyFeeRule),
 )
 
 // ─── Supervisee schema ─────────────────────────────────────────────────────────
 
 export const superviseeSchemaObject = accountSchemaBase.extend({
-  // Step 2 — supervisor-type cascade (UI only, not sent as category IDs to backend)
-  typeOfSupervisor: z.string().min(1, 'Please select a type of supervision needed'),
-  supervisorOccupationId: z.string().min(1, 'Occupation is required'),
+  // Step 2 — supervision needs. Eligibility for `typeOfSupervisor` is derived from the
+  // profile fields below (title + occupationId); see lib/utils/supervisee-eligibility.ts.
+  // Required unless `needsMedicalDirector` is checked — enforced by
+  // `applySuperviseeSupervisionNeedRules`, not here.
+  typeOfSupervisor: z.string(),
+  // Medical Director is requested via a checkbox rather than the dropdown, since it can
+  // be combined with any supervision type or requested on its own.
+  needsMedicalDirector: z.boolean().default(false),
+  // Desired supervisor's occupation/specialty within the selected type (sent to the
+  // backend as plain strings: superviseeOccupation / superviseeSpecialty).
+  // Occupation is required only when a supervision type is selected (see the refine below).
+  supervisorOccupationId: z.string(),
   supervisorSpecialtyId: z.string().optional(),
 
   stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
@@ -174,7 +185,8 @@ export const superviseeSchemaObject = accountSchemaBase.extend({
   budgetRange: z.string().min(1, 'Please select a budget range'),
   availability: z.string().min(1, 'Availability is required'),
 
-  // Step 3 — profile fields (sent to backend as numeric category IDs)
+  // Step 2 — profile fields (sent to backend as numeric category IDs); collected before
+  // `typeOfSupervisor` so the available supervision types can be filtered by eligibility
   title: z.string().min(1, 'Credential or license type is required').max(100),
   occupationId: z.string().min(1, 'Occupation is required'),
   specialtyId: z.string().optional(),
@@ -193,7 +205,34 @@ export const superviseeSchemaObject = accountSchemaBase.extend({
     .refine((val) => val === true, 'You must agree to the terms and conditions'),
 })
 
-export const superviseeSchema = withPasswordConfirmation(superviseeSchemaObject)
+/**
+ * A supervision type is required unless the supervisee only needs a Medical Director;
+ * the desired supervisor's occupation cascades from the type, so it is required only
+ * when a type is selected.
+ */
+function applySuperviseeSupervisionNeedRules(
+  data: { typeOfSupervisor: string; needsMedicalDirector: boolean; supervisorOccupationId: string },
+  ctx: z.RefinementCtx,
+) {
+  if (!data.typeOfSupervisor && !data.needsMedicalDirector) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['typeOfSupervisor'],
+      message: SUPERVISION_TYPE_REQUIRED_MESSAGE,
+    })
+  }
+  if (data.typeOfSupervisor && !data.supervisorOccupationId) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['supervisorOccupationId'],
+      message: 'Occupation is required',
+    })
+  }
+}
+
+export const superviseeSchema = withPasswordConfirmation(
+  superviseeSchemaObject.superRefine(applySuperviseeSupervisionNeedRules),
+)
 
 export type SupervisorFormValues = z.infer<typeof supervisorSchemaObject>
 export type SuperviseeFormValues = z.infer<typeof superviseeSchemaObject>
@@ -233,18 +272,22 @@ export const supervisorStep2Schema = supervisorSchemaObject
   })
   .superRefine(applySupervisorPhysicianRules)
 
-export const supervisorStep3Schema = supervisorSchemaObject.pick({
-  patientPopulation: true,
-  supervisionFormat: true,
-  availability: true,
-  acceptingNewSupervisees: true,
-  supervisionFeeType: true,
-  supervisionFeeAmount: true,
-  professionalSummary: true,
-  describeYourself: true,
-  agreedToPost: true,
-  agreedToTerms: true,
-})
+export const supervisorStep3Schema = supervisorSchemaObject
+  .pick({
+    // Validated on step 2 — included here so the monthly-only fee rule can see it
+    supervisorType: true,
+    patientPopulation: true,
+    supervisionFormat: true,
+    availability: true,
+    acceptingNewSupervisees: true,
+    supervisionFeeType: true,
+    supervisionFeeAmount: true,
+    professionalSummary: true,
+    describeYourself: true,
+    agreedToPost: true,
+    agreedToTerms: true,
+  })
+  .superRefine(applySupervisorMonthlyOnlyFeeRule)
 
 export const SUPERVISOR_SIGNUP_STEP_SCHEMAS = [
   supervisorStep1Schema,
@@ -319,7 +362,11 @@ export const superviseeStep1Schema = withPasswordConfirmation(
 
 export const superviseeStep2Schema = superviseeSchemaObject
   .pick({
+    occupationId: true,
+    specialtyId: true,
+    title: true,
     typeOfSupervisor: true,
+    needsMedicalDirector: true,
     supervisorOccupationId: true,
     supervisorSpecialtyId: true,
     stateOfLicensure: true,
@@ -340,11 +387,9 @@ export const superviseeStep2Schema = superviseeSchemaObject
       })
     }
   })
+  .superRefine(applySuperviseeSupervisionNeedRules)
 
 export const superviseeStep3Schema = superviseeSchemaObject.pick({
-  title: true,
-  occupationId: true,
-  specialtyId: true,
   description: true,
   agreedToPost: true,
   agreedToTerms: true,
@@ -369,23 +414,27 @@ export const SUPERVISEE_SIGNUP_STEP_FIELDS = [
     'zipcode',
   ],
   [
+    'occupationId',
+    'specialtyId',
+    'title',
     'typeOfSupervisor',
+    'needsMedicalDirector',
     'supervisorOccupationId',
     'supervisorSpecialtyId',
+    'preferredFormat',
     'stateOfLicensure',
     'stateTheyAreLookingIn',
     'howSoon',
     'howSoonDate',
-    'preferredFormat',
+    'availability',
     'feeType',
     'budgetRange',
-    'availability',
   ],
-  ['title', 'occupationId', 'specialtyId', 'description', 'agreedToPost', 'agreedToTerms'],
+  ['description', 'agreedToPost', 'agreedToTerms'],
 ] as const satisfies ReadonlyArray<ReadonlyArray<keyof SuperviseeFormValues>>
 
 export const SUPERVISEE_SIGNUP_STEP_META = [
   { title: 'Account', stepLabel: 'Step 1' },
   { title: 'Supervision Needs', stepLabel: 'Step 2' },
-  { title: 'Profile & Terms', stepLabel: 'Step 3' },
+  { title: 'Ideal Supervisor & Terms', stepLabel: 'Step 3' },
 ] as const

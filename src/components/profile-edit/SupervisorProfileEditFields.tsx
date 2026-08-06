@@ -34,6 +34,7 @@ import {
 import {
   getSupervisorCredentialSelectOptions,
   getSupervisorCredentialTypeLabel,
+  isMonthlyOnlySupervisorType,
   isPhysicianSupervisorType,
   PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE,
 } from '@/lib/utils/supervisor-type'
@@ -139,6 +140,18 @@ export function SupervisorProfileEditFields({
     : physicianSupervisorType
       ? 'Select degree type'
       : 'Select license type'
+
+  const monthlyFeeOnly = isMonthlyOnlySupervisorType(supervisorTypeWatch)
+  const feeTypeOptions = monthlyFeeOnly
+    ? SUPERVISOR_PROFILE_FEE_TYPE_OPTIONS.filter((o) => o.value === 'MONTHLY')
+    : SUPERVISOR_PROFILE_FEE_TYPE_OPTIONS
+  const supervisionFeeTypeWatch = useWatch({ control: form.control, name: 'supervisionFeeType' })
+  useEffect(() => {
+    if (monthlyFeeOnly && supervisionFeeTypeWatch !== 'MONTHLY') {
+      form.setValue('supervisionFeeType', 'MONTHLY', { shouldValidate: false })
+      form.clearErrors('supervisionFeeType')
+    }
+  }, [monthlyFeeOnly, supervisionFeeTypeWatch, form])
 
   return (
     <div className="space-y-6">
@@ -511,7 +524,7 @@ export function SupervisorProfileEditFields({
             name="supervisionFeeType"
             label="Fee Type"
             required
-            options={SUPERVISOR_PROFILE_FEE_TYPE_OPTIONS}
+            options={feeTypeOptions}
             placeholder="Select Fee Type"
             isSubmitting={isSubmitting}
             emptySentinel={{ value: '__none__', label: 'None' }}

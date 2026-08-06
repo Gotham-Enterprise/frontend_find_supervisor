@@ -164,3 +164,26 @@ body {
     background-color: color-mix(in oklab, var(--muted-foreground) 40%, transparent);
   }
 }
+
+/* Always-visible scrollbar with a tinted track, for areas whose scrollability
+   should be obvious. Unlike `scrollbar-thin`, the standard scrollbar-width/color
+   properties are scoped to browsers without ::-webkit-scrollbar (Firefox) —
+   in Chrome 121+ their mere presence disables the ::-webkit-scrollbar styling
+   and falls back to the macOS auto-hiding overlay scrollbar. */
+@utility scrollbar-visible {
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    border-radius: 9999px;
+    background: color-mix(in oklab, var(--muted-foreground) 12%, transparent);
+  }
+  &::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background-color: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+  }
+  @supports not selector(::-webkit-scrollbar) {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--muted-foreground) 45%, transparent) transparent;
+  }
+}

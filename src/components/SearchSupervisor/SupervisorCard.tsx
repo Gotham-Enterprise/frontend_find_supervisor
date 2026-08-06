@@ -2,6 +2,7 @@
 
 import { ClockIcon, MapPinIcon } from 'lucide-react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
@@ -17,6 +18,11 @@ interface SupervisorCardProps {
 }
 
 export function SupervisorCard({ supervisor }: SupervisorCardProps) {
+  // Carry the current search state to the profile URL so its "Back to Find
+  // Supervisors" link can restore the filters/keyword/page the user left behind.
+  const searchParams = useSearchParams()
+  const searchQuery = searchParams.toString()
+
   const {
     id,
     fullName,
@@ -79,7 +85,7 @@ export function SupervisorCard({ supervisor }: SupervisorCardProps) {
           </div>
 
           <Link
-            href={`/find-supervisors/${id}`}
+            href={`/find-supervisors/${id}${searchQuery ? `?${searchQuery}` : ''}`}
             className={cn(buttonVariants({ size: 'sm' }), 'shrink-0')}
           >
             View Profile <span aria-hidden>→</span>

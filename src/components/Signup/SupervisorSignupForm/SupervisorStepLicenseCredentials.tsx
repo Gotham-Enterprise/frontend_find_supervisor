@@ -145,6 +145,7 @@ export function SupervisorStepLicenseCredentials({
           name="supervisorSpecialtyId"
           label="Specialty"
           options={specialtyOptions}
+          sortOptions
           placeholder="Select specialty (optional)"
           loading={supervisorTypesLoading}
           disabled={specialtyDisabled}

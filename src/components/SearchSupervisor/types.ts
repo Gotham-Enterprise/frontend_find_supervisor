@@ -1,7 +1,7 @@
 export interface SupervisorSearchFilters {
-  /** Supervisor type names from GET /api/supervision/supervisor-type */
-  supervisorTypes: string[]
-  /** Occupation names — cascades from selected supervisorTypes */
+  // No supervisor-type filter here: the backend scopes search results to the
+  // supervisee's stored supervision needs (typeOfSupervisorNeeded) automatically.
+  /** Occupation names from the supervisor-type hierarchy */
   supervisorOccupations: string[]
   /** Specialty names — cascades from selected supervisorOccupations */
   supervisorSpecialties: string[]
