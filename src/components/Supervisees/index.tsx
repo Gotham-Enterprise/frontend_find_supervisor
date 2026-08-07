@@ -5,6 +5,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  FileText,
   MapPin,
   Monitor,
   MoreVertical,
@@ -17,7 +18,7 @@ import { useMemo, useState } from 'react'
 import { AgreementDialog } from '@/components/HiredSupervisors/AgreementDialog'
 import { AgreementStageBadge } from '@/components/HiredSupervisors/AgreementStageBadge'
 import { HireStatusBadge } from '@/components/HiredSupervisors/HireStatusBadge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import {
@@ -30,7 +31,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
-import { useHiresList, useMyReviews } from '@/lib/hooks'
+import { useHiresList, useMyReviews, useRemindAgreement, useUserSnackbar } from '@/lib/hooks'
+import { parseApiError } from '@/lib/utils/error-parser'
 import {
   formatAvailability,
   formatContactNumber,
@@ -365,15 +367,34 @@ function SuperviseeDetailsDialog({
 
 // ─── Row actions ──────────────────────────────────────────────────────────────
 
-function RowActions({ hire, review }: { hire: HireListItem; review?: Review }) {
+function RowActions({
+  hire,
+  review,
+  onViewAgreement,
+}: {
+  hire: HireListItem
+  review?: Review
+  onViewAgreement: () => void
+}) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [sendAgreementOpen, setSendAgreementOpen] = useState(false)
-  const [viewAgreementOpen, setViewAgreementOpen] = useState(false)
+  const { showSuccess, showError } = useUserSnackbar()
+  const remindMutation = useRemindAgreement()
 
   const agreementStage = getAgreementStage(hire)
   const canSendAgreement = hire.status === 'ACCEPTED' && agreementStage === 'NOT_SENT'
   const canEditAgreement = hire.status === 'ACCEPTED' && agreementStage === 'AWAITING_SIGNATURE'
   const hasAgreement = hire.agreement != null
+
+  function handleRemind() {
+    remindMutation.mutate(hire.id, {
+      onSuccess: () =>
+        showSuccess('Reminder sent!', {
+          description: `${formatDisplayName(hire.supervisee)} will be notified to sign the agreement.`,
+        }),
+      onError: (err) => showError(parseApiError(err)),
+    })
+  }
 
   return (
     <>
@@ -399,10 +420,11 @@ function RowActions({ hire, review }: { hire: HireListItem; review?: Review }) {
                   Edit Agreement
                 </DropdownMenuItem>
               )}
+              {canEditAgreement && (
+                <DropdownMenuItem onClick={handleRemind}>Send Sign Reminder</DropdownMenuItem>
+              )}
               {hasAgreement && (
-                <DropdownMenuItem onClick={() => setViewAgreementOpen(true)}>
-                  View Agreement
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onViewAgreement}>View Agreement</DropdownMenuItem>
               )}
             </DropdownMenuPopup>
           </DropdownMenuPositioner>
@@ -423,10 +445,6 @@ function RowActions({ hire, review }: { hire: HireListItem; review?: Review }) {
           hire={hire}
         />
       )}
-
-      {hasAgreement && (
-        <AgreementDialog hire={hire} open={viewAgreementOpen} onOpenChange={setViewAgreementOpen} />
-      )}
     </>
   )
 }
@@ -434,7 +452,18 @@ function RowActions({ hire, review }: { hire: HireListItem; review?: Review }) {
 // ─── Supervisee card ──────────────────────────────────────────────────────────
 
 function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review }) {
+  // Deep link: agreement notifications/emails point to /supervisees?hire=<id>,
+  // which auto-opens this card's agreement dialog. Lazy init only (no effect); the
+  // dialog renders in a portal, so SSR/hydration output is unaffected.
+  const [viewAgreementOpen, setViewAgreementOpen] = useState(
+    () =>
+      hire.agreement != null &&
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('hire') === hire.id,
+  )
   const superviseeName = formatDisplayName(hire.supervisee)
+  const hasAgreement = hire.agreement != null
+  const isAgreementSigned = hasAgreement && getAgreementStage(hire) === 'SIGNED'
   const occupation = hire.supervisee.occupation?.name?.trim()
   const specialty = hire.supervisee.specialty?.name?.trim()
   const occupationDisplay =
@@ -448,47 +477,78 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
   const goalsRaw = hire.goals?.trim() || 'Not specified'
 
   return (
-    <Card className="gap-0 overflow-hidden rounded-xl py-0 shadow-sm">
-      <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
-        <div className="flex min-w-0 flex-1 gap-3">
-          <UserAvatar
-            src={hire.supervisee.profilePhotoUrl}
-            name={superviseeName}
-            alt={`Profile photo of ${superviseeName}`}
-            size="lg"
-            className="mt-0.5 shrink-0"
-          />
-          <div className="min-w-0 flex-1">
-            <h3 className="truncate text-sm font-semibold leading-tight tracking-tight text-foreground">
-              {superviseeName}
-            </h3>
-            <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-              {occupationDisplay}
-            </p>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
-              <AgreementStageBadge hire={hire} />
-              {review && (
-                <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-                  <Star className="size-2.5 fill-amber-500 text-amber-500" aria-hidden />
-                  {review.rating}/5
-                </span>
-              )}
+    <>
+      <Card className="gap-0 overflow-hidden rounded-xl py-0 shadow-sm">
+        <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
+          <div className="flex min-w-0 flex-1 gap-3">
+            <UserAvatar
+              src={hire.supervisee.profilePhotoUrl}
+              name={superviseeName}
+              alt={`Profile photo of ${superviseeName}`}
+              size="lg"
+              className="mt-0.5 shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate text-sm font-semibold leading-tight tracking-tight text-foreground">
+                {superviseeName}
+              </h3>
+              <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                {occupationDisplay}
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
+                <AgreementStageBadge hire={hire} />
+                {review && (
+                  <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                    <Star className="size-2.5 fill-amber-500 text-amber-500" aria-hidden />
+                    {review.rating}/5
+                  </span>
+                )}
+              </div>
             </div>
           </div>
+          <div className="flex shrink-0 self-start">
+            <RowActions
+              hire={hire}
+              review={review}
+              onViewAgreement={() => setViewAgreementOpen(true)}
+            />
+          </div>
         </div>
-        <div className="flex shrink-0 self-start">
-          <RowActions hire={hire} review={review} />
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/50 px-5 py-4">
-        <DetailCell label="Format" value={formatRaw} icon={Monitor} />
-        <DetailCell label="Start Date" value={startDateRaw} icon={CalendarDays} />
-        <DetailCell label="Location" value={locationRaw} icon={MapPin} />
-        <DetailCell label="Goals" value={goalsRaw} icon={Target} />
-      </div>
-    </Card>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/50 px-5 py-4">
+          <DetailCell label="Format" value={formatRaw} icon={Monitor} />
+          <DetailCell label="Start Date" value={startDateRaw} icon={CalendarDays} />
+          <DetailCell label="Location" value={locationRaw} icon={MapPin} />
+          <DetailCell label="Goals" value={goalsRaw} icon={Target} />
+        </div>
+
+        {isAgreementSigned && (
+          <div className="flex justify-end border-t border-border/50 px-5 py-3">
+            {hire.agreement?.fileUrl ? (
+              <a
+                href={hire.agreement.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+              >
+                <FileText className="size-3.5" aria-hidden />
+                View Signed Agreement
+              </a>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => setViewAgreementOpen(true)}>
+                <FileText className="size-3.5" aria-hidden />
+                View Signed Agreement
+              </Button>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {hasAgreement && (
+        <AgreementDialog hire={hire} open={viewAgreementOpen} onOpenChange={setViewAgreementOpen} />
+      )}
+    </>
   )
 }
 

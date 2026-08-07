@@ -35,6 +35,7 @@ export {
   usePendingRequestsCount,
   useProposeAgreement,
   useRejectHire,
+  useRemindAgreement,
   useSignAgreement,
   useSuperviseeUpcomingSessions,
   useUpdateAgreement,

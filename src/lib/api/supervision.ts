@@ -198,7 +198,7 @@ function buildAgreementFormData(input: ProposeAgreementInput): FormData {
   const formData = new FormData()
   formData.append('source', input.source)
   formData.append('startDate', input.startDate)
-  formData.append('supervisionDays', String(input.supervisionDays))
+  formData.append('supervisionMonths', String(input.supervisionMonths))
   formData.append('monthlyAmount', String(input.monthlyAmount))
   formData.append('signatureName', input.signatureName.trim())
   if (input.source === 'UPLOADED' && input.file) {
@@ -235,6 +235,17 @@ export async function updateAgreement(
     `/supervision/hires/${hireId}/agreement`,
     buildAgreementFormData(input),
     { headers: { 'Content-Type': undefined } },
+  )
+  return data.data
+}
+
+/**
+ * POST /supervision/hires/:hireId/agreement/remind — nudge the supervisee to
+ * sign the pending agreement. The backend throttles this to once per 24 hours.
+ */
+export async function remindAgreement(hireId: string): Promise<AgreementRecord> {
+  const { data } = await apiClient.post<ApiResponse<AgreementRecord>>(
+    `/supervision/hires/${hireId}/agreement/remind`,
   )
   return data.data
 }

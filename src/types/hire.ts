@@ -101,7 +101,7 @@ export interface AgreementRecord {
   /** Incremented on each supervisor edit before the supervisee signs. */
   version: number
   startDate: string
-  supervisionDays: number
+  supervisionMonths: number
   /** Decimal string, matching `monthlyAmount` on HireListItem. */
   monthlyAmount: string
   transactionFeePct: string | null
@@ -109,6 +109,8 @@ export interface AgreementRecord {
   supervisorSignedAt: string
   superviseeSignatureName: string | null
   superviseeSignedAt: string | null
+  /** Last sign-reminder timestamp — the backend throttles reminders to one per 24h. */
+  remindedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -119,7 +121,7 @@ export interface ProposeAgreementInput {
   /** Required when source is UPLOADED; ignored for DEFAULT_TEMPLATE. */
   file: File | null
   startDate: string // ISO date string
-  supervisionDays: number
+  supervisionMonths: number
   monthlyAmount: number
   /** Typed full legal name — the supervisor's e-signature. */
   signatureName: string
@@ -128,7 +130,7 @@ export interface ProposeAgreementInput {
 /** POST /supervision/hires/:hireId/agreement/preview — render the default template PDF without saving. */
 export interface PreviewAgreementInput {
   startDate: string // ISO date string
-  supervisionDays: number
+  supervisionMonths: number
   monthlyAmount: number
   /** Optional at preview time — the signature block shows "pending" when absent. */
   signatureName?: string
@@ -177,7 +179,7 @@ export interface HireListItem {
   // Hire lifecycle
   startDate: string | null
   endDate: string | null
-  supervisionDays: number | null
+  supervisionMonths: number | null
   monthlyAmount: string | null
   transactionFeePct: string | null
   status: HireStatus

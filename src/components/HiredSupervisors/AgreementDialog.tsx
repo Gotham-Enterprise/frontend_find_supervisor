@@ -189,7 +189,7 @@ export function AgreementDialog({
             <TermItem label="Start Date" value={formatDate(agreement.startDate)} />
             <TermItem
               label="Duration"
-              value={`${agreement.supervisionDays} day${agreement.supervisionDays === 1 ? '' : 's'}`}
+              value={`${agreement.supervisionMonths} month${agreement.supervisionMonths === 1 ? '' : 's'}`}
             />
             <TermItem label="Monthly Amount" value={formatMoney(agreement.monthlyAmount)} />
             {agreement.transactionFeePct != null && (

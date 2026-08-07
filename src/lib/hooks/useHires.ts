@@ -12,6 +12,7 @@ import {
   markHireAsCompleted,
   proposeAgreement,
   rejectHire,
+  remindAgreement,
   signAgreement,
   updateAgreement,
   viewHire,
@@ -171,6 +172,16 @@ export function useUpdateAgreement() {
   return useMutation({
     mutationFn: ({ hireId, input }: { hireId: string; input: ProposeAgreementInput }) =>
       updateAgreement(hireId, input),
+    onSettled: async () => {
+      await invalidateHireRelatedQueries(queryClient)
+    },
+  })
+}
+
+export function useRemindAgreement() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (hireId: string) => remindAgreement(hireId),
     onSettled: async () => {
       await invalidateHireRelatedQueries(queryClient)
     },

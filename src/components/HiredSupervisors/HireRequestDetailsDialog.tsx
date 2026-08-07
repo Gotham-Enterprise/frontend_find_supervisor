@@ -199,8 +199,8 @@ export function HireRequestDetailsDialog({
     { label: 'Supervision start', value: displayText(hire.startDate, formatDate(hire.startDate)) },
     { label: 'Supervision end', value: displayText(hire.endDate, formatDate(hire.endDate)) },
     {
-      label: 'Planned duration (days)',
-      value: hire.supervisionDays != null ? String(hire.supervisionDays) : UNSPECIFIED,
+      label: 'Planned duration (months)',
+      value: hire.supervisionMonths != null ? String(hire.supervisionMonths) : UNSPECIFIED,
     },
     {
       label: 'Monthly amount',

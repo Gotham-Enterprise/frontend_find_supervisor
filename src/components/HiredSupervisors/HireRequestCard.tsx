@@ -3,6 +3,7 @@
 import {
   CalendarDays,
   DollarSign,
+  FileText,
   type LucideIcon,
   MapPin,
   Monitor,
@@ -13,7 +14,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 
 import { LeaveReviewModal } from '@/components/reviews/LeaveReviewModal'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
@@ -83,7 +84,15 @@ interface HireRequestCardProps {
 
 export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false)
-  const [agreementOpen, setAgreementOpen] = useState(false)
+  // Deep link: agreement notifications/emails point to /hired-supervisors?hire=<id>,
+  // which auto-opens this card's agreement dialog. Lazy init only (no effect); the
+  // dialog renders in a portal, so SSR/hydration output is unaffected.
+  const [agreementOpen, setAgreementOpen] = useState(
+    () =>
+      hire.agreement != null &&
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('hire') === hire.id,
+  )
   const [reasonOpen, setReasonOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [completeOpen, setCompleteOpen] = useState(false)
@@ -118,6 +127,7 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
     (hire.status === 'ACCEPTED' || hire.status === 'ACTIVE') &&
     agreementStage === 'AWAITING_SIGNATURE'
   const hasAgreement = hire.agreement != null
+  const isAgreementSigned = hasAgreement && agreementStage === 'SIGNED'
 
   // Mark as Completed: only when ACCEPTED or ACTIVE, and the agreement is fully signed
   const canComplete = canMarkHireCompleted(hire)
@@ -298,6 +308,27 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
           <DetailCell label="Fee" value={feeRaw} icon={DollarSign} />
           <DetailCell label="Requested" value={requestedRaw} icon={CalendarDays} />
         </div>
+
+        {isAgreementSigned && (
+          <div className="flex justify-end border-t border-border/50 px-5 py-3">
+            {hire.agreement?.fileUrl ? (
+              <a
+                href={hire.agreement.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+              >
+                <FileText className="size-3.5" aria-hidden />
+                View Signed Agreement
+              </a>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => setAgreementOpen(true)}>
+                <FileText className="size-3.5" aria-hidden />
+                View Signed Agreement
+              </Button>
+            )}
+          </div>
+        )}
       </Card>
 
       <HireRequestDetailsDialog hire={hire} open={detailsOpen} onOpenChange={setDetailsOpen} />

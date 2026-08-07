@@ -36,11 +36,11 @@ function buildSendAgreementSchema(hasExistingUploadedFile: boolean) {
       source: z.enum(['DEFAULT_TEMPLATE', 'UPLOADED']),
       file: z.any().optional(),
       startDate: z.string().min(1, 'Start date is required'),
-      supervisionDays: z
+      supervisionMonths: z
         .number({ error: 'Must be a number' })
-        .int('Must be a whole number of days')
-        .min(1, 'Must be at least 1 day')
-        .max(1825, 'Must be 1825 days or less'),
+        .int('Must be a whole number of months')
+        .min(1, 'Must be at least 1 month')
+        .max(60, 'Must be 60 months or less'),
       monthlyAmount: z.number({ error: 'Must be a number' }).min(0, 'Must be 0 or greater'),
       signatureName: z.string().min(1, 'Please type your full legal name'),
       consent: z.boolean(),
@@ -85,7 +85,7 @@ function buildDefaultValues(hire: HireListItem): SendAgreementFormValues {
     source: agreement?.source ?? 'DEFAULT_TEMPLATE',
     file: undefined,
     startDate: toDateInputValue(agreement?.startDate ?? hire.startDate ?? hire.preferredStartDate),
-    supervisionDays: agreement?.supervisionDays ?? hire.supervisionDays ?? 180,
+    supervisionMonths: agreement?.supervisionMonths ?? hire.supervisionMonths ?? 6,
     monthlyAmount: agreement
       ? Number(agreement.monthlyAmount)
       : hire.monthlyAmount != null
@@ -189,14 +189,14 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
     }
 
     // Default template: the backend renders the exact PDF it would send.
-    const termsValid = await form.trigger(['startDate', 'supervisionDays', 'monthlyAmount'])
+    const termsValid = await form.trigger(['startDate', 'supervisionMonths', 'monthlyAmount'])
     if (!termsValid) return
     const values = form.getValues()
     setPreviewLoading(true)
     try {
       const blob = await previewAgreement(hire.id, {
         startDate: values.startDate,
-        supervisionDays: values.supervisionDays,
+        supervisionMonths: values.supervisionMonths,
         monthlyAmount: values.monthlyAmount,
         signatureName: values.signatureName.trim() || undefined,
       })
@@ -214,7 +214,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
       source: values.source,
       file: values.source === 'UPLOADED' && values.file instanceof File ? values.file : null,
       startDate: values.startDate,
-      supervisionDays: values.supervisionDays,
+      supervisionMonths: values.supervisionMonths,
       monthlyAmount: values.monthlyAmount,
       signatureName: values.signatureName,
     }
@@ -353,17 +353,17 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                 <div className="grid grid-cols-2 gap-4">
                   <FormInputField
                     control={form.control}
-                    name="supervisionDays"
-                    label="Duration (days)"
+                    name="supervisionMonths"
+                    label="Number of Months Needed"
                     required
                     type="number"
                     numberValue
                     min={1}
-                    max={1825}
+                    max={60}
                     step={1}
                     isSubmitting={isSubmitting}
-                    placeholder="e.g. 180"
-                    rules={{ required: 'Duration is required' }}
+                    placeholder="e.g. 6"
+                    rules={{ required: 'Number of months is required' }}
                   />
                   <FormInputField
                     control={form.control}
@@ -462,8 +462,10 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
             This is exactly what {superviseeName} will receive.
           </p>
           {previewUrl && (
+            /* Fragment fits the whole page on open (Chrome: view=Fit, Firefox: zoom=page-fit)
+               so older users see the full document without fiddling with zoom. */
             <iframe
-              src={previewUrl}
+              src={`${previewUrl}#view=Fit&zoom=page-fit`}
               title="Agreement preview"
               className="mt-3 min-h-0 w-full flex-1 rounded-md border bg-muted/30"
             />
