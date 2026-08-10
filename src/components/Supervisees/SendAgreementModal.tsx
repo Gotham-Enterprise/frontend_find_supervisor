@@ -41,7 +41,7 @@ function buildSendAgreementSchema(hasExistingUploadedFile: boolean) {
         .int('Must be a whole number of months')
         .min(1, 'Must be at least 1 month')
         .max(60, 'Must be 60 months or less'),
-      monthlyAmount: z.number({ error: 'Must be a number' }).min(0, 'Must be 0 or greater'),
+      monthlyAmount: z.number({ error: 'Must be a number' }).min(1, 'Must be at least $1'),
       signatureName: z.string().min(1, 'Please type your full legal name'),
       consent: z.boolean(),
     })
@@ -372,7 +372,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                     required
                     type="number"
                     numberValue
-                    min={0}
+                    min={1}
                     step={1}
                     isSubmitting={isSubmitting}
                     placeholder="e.g. 400"
