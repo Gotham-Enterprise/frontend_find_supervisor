@@ -4,11 +4,15 @@ import { parseApiError } from '@/lib/utils/error-parser'
 import { requiresSupervisionHours } from '@/lib/utils/profile-formatters'
 import type { ApiResponse } from '@/types/api'
 import type {
+  AgreementRecord,
   HireListResponse,
   HireRecord,
   HireStatus,
   HireSupervisorPayload,
   HireSupervisorRequestInput,
+  PreviewAgreementInput,
+  ProposeAgreementInput,
+  SignAgreementPayload,
   UpcomingSessionItem,
 } from '@/types/hire'
 import type { PastClientHire } from '@/types/past-clients'
@@ -186,6 +190,100 @@ export async function cancelHire(hireId: string): Promise<void> {
 /** PATCH /supervision/hires/:hireId/complete — mark a hire as completed (supervisor or supervisee). */
 export async function markHireAsCompleted(hireId: string): Promise<void> {
   await apiClient.patch(`/supervision/hires/${hireId}/complete`)
+}
+
+// ─── Supervision agreement ────────────────────────────────────────────────────
+
+function buildAgreementFormData(input: ProposeAgreementInput): FormData {
+  const formData = new FormData()
+  formData.append('source', input.source)
+  formData.append('startDate', input.startDate)
+  formData.append('supervisionMonths', String(input.supervisionMonths))
+  formData.append('monthlyAmount', String(input.monthlyAmount))
+  formData.append('signatureName', input.signatureName.trim())
+  if (input.source === 'UPLOADED' && input.file) {
+    formData.append('file', input.file)
+  }
+  return formData
+}
+
+/** POST /supervision/hires/:hireId/agreement — supervisor proposes + signs an agreement (multipart). */
+export async function proposeAgreement(
+  hireId: string,
+  input: ProposeAgreementInput,
+): Promise<AgreementRecord> {
+  // Content-Type: undefined clears the client's application/json default — otherwise
+  // axios converts the FormData to JSON and the file is dropped ({}).
+  const { data } = await apiClient.post<ApiResponse<AgreementRecord>>(
+    `/supervision/hires/${hireId}/agreement`,
+    buildAgreementFormData(input),
+    { headers: { 'Content-Type': undefined } },
+  )
+  return data.data
+}
+
+/**
+ * PATCH /supervision/hires/:hireId/agreement — supervisor edits an agreement the
+ * supervisee has not signed yet. Bumps `version`, invalidating the pending
+ * signature request. Rejected by the backend once both parties have signed.
+ */
+export async function updateAgreement(
+  hireId: string,
+  input: ProposeAgreementInput,
+): Promise<AgreementRecord> {
+  const { data } = await apiClient.patch<ApiResponse<AgreementRecord>>(
+    `/supervision/hires/${hireId}/agreement`,
+    buildAgreementFormData(input),
+    { headers: { 'Content-Type': undefined } },
+  )
+  return data.data
+}
+
+/**
+ * POST /supervision/hires/:hireId/agreement/remind — nudge the supervisee to
+ * sign the pending agreement. The backend throttles this to once per 24 hours.
+ */
+export async function remindAgreement(hireId: string): Promise<AgreementRecord> {
+  const { data } = await apiClient.post<ApiResponse<AgreementRecord>>(
+    `/supervision/hires/${hireId}/agreement/remind`,
+  )
+  return data.data
+}
+
+/**
+ * POST /supervision/hires/:hireId/agreement/preview — renders the default
+ * template PDF with the given terms and returns it as a Blob. Nothing is saved.
+ */
+export async function previewAgreement(
+  hireId: string,
+  input: PreviewAgreementInput,
+): Promise<Blob> {
+  const { data } = await apiClient.post<Blob>(
+    `/supervision/hires/${hireId}/agreement/preview`,
+    input,
+    { responseType: 'blob' },
+  )
+  return data
+}
+
+/** POST /supervision/hires/:hireId/agreement/sign — supervisee countersigns; backend sets hire agreedAt. */
+export async function signAgreement(
+  hireId: string,
+  payload: SignAgreementPayload,
+): Promise<AgreementRecord> {
+  const { data } = await apiClient.post<ApiResponse<AgreementRecord>>(
+    `/supervision/hires/${hireId}/agreement/sign`,
+    { signatureName: payload.signatureName.trim() },
+  )
+  return data.data
+}
+
+/** GET /supervision/hires/:hireId/agreement — agreement for a hire; `data` may be null. */
+export async function getAgreement(hireId: string): Promise<AgreementRecord | null> {
+  const { data } = await apiClient.get<ApiResponse<AgreementRecord | null>>(
+    `/supervision/hires/${hireId}/agreement`,
+  )
+  return data.data ?? null
 }
 
 export type ResendEmailResult =

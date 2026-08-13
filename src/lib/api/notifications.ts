@@ -64,6 +64,9 @@ const VALID_NOTIFICATION_TYPES = new Set<NotificationType>([
   'supervision_new_message',
   'session_reminder',
   'profile_viewed',
+  'agreement_sent',
+  'agreement_signed',
+  'agreement_reminder',
 ])
 
 function normalizeNotificationType(raw: string | undefined): NotificationType {

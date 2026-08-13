@@ -1,9 +1,12 @@
 'use client'
 
 import {
+  BellRing,
   Calendar,
   CheckCircle2,
   Eye,
+  FileCheck2,
+  FileSignature,
   MessageCircle,
   MinusCircle,
   UserCheck,
@@ -63,6 +66,21 @@ const TYPE_CONFIG: Record<NotificationType, TypeConfig> = {
     icon: Eye,
     iconColor: 'text-violet-500',
     iconBg: 'bg-violet-50',
+  },
+  agreement_sent: {
+    icon: FileSignature,
+    iconColor: 'text-amber-600',
+    iconBg: 'bg-amber-50',
+  },
+  agreement_signed: {
+    icon: FileCheck2,
+    iconColor: 'text-emerald-600',
+    iconBg: 'bg-emerald-50',
+  },
+  agreement_reminder: {
+    icon: BellRing,
+    iconColor: 'text-amber-600',
+    iconBg: 'bg-amber-50',
   },
 }
 

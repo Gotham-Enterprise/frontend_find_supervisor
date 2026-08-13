@@ -7,6 +7,9 @@ export type NotificationType =
   | 'supervision_new_message'
   | 'session_reminder'
   | 'profile_viewed'
+  | 'agreement_sent'
+  | 'agreement_signed'
+  | 'agreement_reminder'
 
 export type NotificationFilter = 'unread' | 'read'
 

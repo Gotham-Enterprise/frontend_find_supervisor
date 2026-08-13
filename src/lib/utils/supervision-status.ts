@@ -1,5 +1,5 @@
 import type { CheckAvailabilityReason } from '@/types/connections'
-import type { HireStatus } from '@/types/hire'
+import type { AgreementStage, HireStatus } from '@/types/hire'
 
 // ─── Connection status ─────────────────────────────────────────────────────────
 // Driven by the CheckAvailabilityResult returned by GET /connections/check.
@@ -86,6 +86,52 @@ export function getHireBadgeClassName(status: HireStatus | string | undefined | 
     default:
       return 'bg-gray-100 text-gray-400 border-gray-200 hover:bg-gray-100'
   }
+}
+
+// ─── Agreement stage ───────────────────────────────────────────────────────────
+// Derived from hire fields — there is no AGREEMENT_* HireStatus. The agreement
+// sits between ACCEPTED and ACTIVE: the supervisor proposes + signs, the
+// supervisee countersigns, and agreedAt records when the last signature landed.
+
+export function getAgreementStage(hire: {
+  agreedAt: string | null
+  agreement?: { superviseeSignedAt: string | null } | null
+}): AgreementStage {
+  if (hire.agreedAt || hire.agreement?.superviseeSignedAt) return 'SIGNED'
+  if (hire.agreement) return 'AWAITING_SIGNATURE'
+  return 'NOT_SENT'
+}
+
+export function getAgreementStageLabel(stage: AgreementStage): string {
+  switch (stage) {
+    case 'SIGNED':
+      return 'Agreement Signed'
+    case 'AWAITING_SIGNATURE':
+      return 'Awaiting Signature'
+    default:
+      return 'No Agreement'
+  }
+}
+
+/** Tailwind classes to apply on a `<Badge>` for the current agreement stage. */
+export function getAgreementBadgeClassName(stage: AgreementStage): string {
+  switch (stage) {
+    case 'SIGNED':
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+    case 'AWAITING_SIGNATURE':
+      return 'bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100'
+    default:
+      return 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-100'
+  }
+}
+
+/** Completion requires an accepted/active hire whose agreement is fully signed. */
+export function canMarkHireCompleted(hire: {
+  status: HireStatus | string
+  agreedAt: string | null
+  agreement?: { superviseeSignedAt: string | null } | null
+}): boolean {
+  return isApprovedHireStatus(hire.status) && getAgreementStage(hire) === 'SIGNED'
 }
 
 // ─── Combined messaging access ─────────────────────────────────────────────────
