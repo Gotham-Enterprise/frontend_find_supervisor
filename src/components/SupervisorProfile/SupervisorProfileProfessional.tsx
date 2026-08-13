@@ -61,10 +61,19 @@ export function SupervisorProfileProfessional({
 }: SupervisorProfileProfessionalProps) {
   const certLabels = resolveOptionLabels(profile.certification ?? [], certificationOptions)
   const popLabels = resolveOptionLabels(profile.patientPopulation ?? [], patientPopulationOptions)
-  const statesOfLicensure = profile.user.stateOfLicensure ?? []
+  // License rows carry their own states; user.stateOfLicensure stays the
+  // superset for legacy records whose extra states have no license row yet.
+  const licenses = (profile.licenses ?? []).filter((license) => license.state?.trim())
+  const licenseStates = [...new Set(licenses.map((license) => license.state as string))]
+  const statesOfLicensure =
+    licenseStates.length > 0
+      ? [...new Set([...licenseStates, ...(profile.user.stateOfLicensure ?? [])])]
+      : (profile.user.stateOfLicensure ?? [])
   const licensureLabels = resolveOptionLabels(statesOfLicensure, stateOptions)
   const credentialLabel = getSupervisorCredentialTypeLabel(profile.supervisorType ?? '')
   const credentialValue = getSupervisorDisplayCredential(profile)
+  const stateLabel = (state: string) =>
+    stateOptions.find((option) => option.value === state)?.label ?? state
 
   return (
     <section className="border-b border-[#E5E7EB] py-8">
@@ -83,8 +92,29 @@ export function SupervisorProfileProfessional({
             />
           </Row>
         )}
-        {profile.licenseExpiration && (
-          <Row label="License Expiration">{formatDate(profile.licenseExpiration)}</Row>
+        {licenses.length > 0 ? (
+          <Row label={licenses.length === 1 ? 'License' : 'Licenses'}>
+            <span className="flex flex-col items-end gap-1">
+              {licenses.map((license, index) => (
+                <span key={license.id ?? index}>
+                  {[
+                    license.licenseType ?? getSupervisorDisplayCredential(profile),
+                    stateLabel(license.state as string),
+                    license.licenseNumber ? `#${license.licenseNumber}` : null,
+                    license.licenseExpiration
+                      ? `expires ${formatDate(license.licenseExpiration)}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+              ))}
+            </span>
+          </Row>
+        ) : (
+          profile.licenseExpiration && (
+            <Row label="License Expiration">{formatDate(profile.licenseExpiration)}</Row>
+          )
         )}
         {profile.yearsOfExperience && (
           <Row label="Years of Experience">{profile.yearsOfExperience}</Row>

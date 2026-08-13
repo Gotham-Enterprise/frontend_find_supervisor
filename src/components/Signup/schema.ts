@@ -71,6 +71,29 @@ export const supervisionFeeTypeOptions = [
   { value: 'MONTHLY', label: 'Monthly' },
 ] as const
 
+// ─── License entries ──────────────────────────────────────────────────────────
+
+/**
+ * One license per entry, each tied to its own state. `licenseType` is
+ * required for non-physicians only (enforced by `applySupervisorPhysicianRules`);
+ * physicians use the shared top-level `degreeType` instead.
+ */
+export const licenseEntrySchema = z.object({
+  licenseType: z.string(),
+  licenseNumber: z.string().min(1, 'License number is required').max(50),
+  state: z.string().min(1, 'State is required'),
+  licenseExpiration: z
+    .string()
+    .min(1, 'Expiration date is required')
+    // String comparison on YYYY-MM-DD — parsing with `new Date(val)` reads UTC midnight
+    // and rejected today's date in timezones behind UTC.
+    .refine((val) => val >= todayLocalISO(), {
+      message: 'License expiration cannot be a past date',
+    }),
+})
+
+export type LicenseEntryValues = z.infer<typeof licenseEntrySchema>
+
 // ─── Supervisor schema ─────────────────────────────────────────────────────────
 
 export const supervisorSchemaObject = accountSchemaBase.extend({
@@ -82,18 +105,9 @@ export const supervisorSchemaObject = accountSchemaBase.extend({
   supervisorOccupationId: z.string().min(1, 'Occupation is required'),
   supervisorSpecialtyId: z.string().optional(),
 
-  // License & credentials
-  licenseType: z.string(),
+  // License & credentials — one entry per license, each with its own state
   degreeType: z.string(),
-  licenseNumber: z.string().min(1, 'License number is required').max(50),
-  licenseExpiration: z
-    .string()
-    .min(1, 'Expiration date is required')
-    // String comparison on YYYY-MM-DD — parsing with `new Date(val)` reads UTC midnight
-    // and rejected today's date in timezones behind UTC.
-    .refine((val) => val >= todayLocalISO(), {
-      message: 'License expiration cannot be a past date',
-    }),
+  licenses: z.array(licenseEntrySchema).min(1, 'Add at least one license'),
   npiNumber: z.string().max(20).optional(),
   certifications: z.array(z.string()),
   yearsOfExperience: z.string().min(1, 'Years of experience is required'),
@@ -104,7 +118,6 @@ export const supervisorSchemaObject = accountSchemaBase.extend({
       (val) => !(val instanceof File) || val.size <= MAX_LICENSE_DOC_SIZE_BYTES,
       `File is too large. Please upload a file under ${MAX_LICENSE_DOC_SIZE_LABEL}.`,
     ),
-  stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
 
   // Practice details
   patientPopulation: z.array(z.string()).min(1, 'Add at least one patient population'),
@@ -260,15 +273,12 @@ export const supervisorStep2Schema = supervisorSchemaObject
     supervisorType: true,
     supervisorOccupationId: true,
     supervisorSpecialtyId: true,
-    licenseType: true,
     degreeType: true,
-    licenseNumber: true,
-    licenseExpiration: true,
+    licenses: true,
     npiNumber: true,
     certifications: true,
     yearsOfExperience: true,
     licenseDoc: true,
-    stateOfLicensure: true,
   })
   .superRefine(applySupervisorPhysicianRules)
 
@@ -314,15 +324,12 @@ export const SUPERVISOR_SIGNUP_STEP_FIELDS = [
     'supervisorType',
     'supervisorOccupationId',
     'supervisorSpecialtyId',
-    'licenseType',
     'degreeType',
-    'licenseNumber',
-    'licenseExpiration',
+    'licenses',
     'npiNumber',
     'certifications',
     'yearsOfExperience',
     'licenseDoc',
-    'stateOfLicensure',
   ],
   [
     'patientPopulation',

@@ -137,19 +137,42 @@ export interface SupervisorProfileUser {
   supervisorSettings?: SupervisorUserSettings | null
 }
 
+/** One license row, each tied to its own state. `licenseNumber` is redacted (null) for non-owner viewers. */
+export interface SupervisorLicenseEntry {
+  id?: string
+  licenseType: string | null
+  licenseNumber: string | null
+  state: string | null
+  licenseExpiration: string | null
+  /** Owner-only: migrated legacy row whose state association awaits the supervisor's confirmation. */
+  needsReview?: boolean
+  sortOrder?: number
+}
+
 export interface SupervisorProfileData {
   id: string
   userId: string
 
+  /** @deprecated Legacy mirror of the primary license — prefer `licenses`. */
   licenseType: string | null
   degreeType?: string | null
   /** API value from GET /supervision/options?param=supervisorType */
   supervisorType?: string | null
   profession: string | null
   professionOther?: string | null
+  /** @deprecated Legacy mirror of the primary license — prefer `licenses`. */
   licenseNumber: string | null
+  /** @deprecated Legacy mirror of the primary license — prefer `licenses`. */
   stateLicense: string | null
+  /** @deprecated Legacy mirror of the primary license — prefer `licenses`. */
   licenseExpiration?: string | null
+
+  /** All licenses, ordered by sortOrder (first = primary). Empty for unmigrated legacy records. */
+  licenses?: SupervisorLicenseEntry[]
+  /** Owner-only: any license needs confirmation or a licensed state has no license details yet. */
+  licenseReviewNeeded?: boolean
+  /** Owner-only: licensed states with no license row (details awaited from the supervisor). */
+  statesNeedingDetails?: string[]
 
   yearsOfExperience: string | null
   npiNumber?: string | null

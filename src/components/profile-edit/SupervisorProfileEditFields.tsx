@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import { useWatch } from 'react-hook-form'
 
+import { LicenseEntriesField } from '@/components/forms/LicenseEntriesField'
 import { ProfilePhotoField } from '@/components/profile-photo/ProfilePhotoField'
 import {
   PROFESSIONAL_CREDENTIALS_HELPER_TEXT,
@@ -20,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea'
 import type { SelectOption } from '@/lib/api/options'
 import {
   type EditSupervisorProfileFormValues,
+  getSupervisorLicenseEntryDefaults,
   SUPERVISOR_PROFILE_FEE_TYPE_OPTIONS,
   SUPERVISOR_PROFILE_FORMAT_OPTIONS,
 } from '@/lib/forms/supervisor-profile-edit'
@@ -33,7 +35,6 @@ import {
 } from '@/lib/hooks'
 import {
   getSupervisorCredentialSelectOptions,
-  getSupervisorCredentialTypeLabel,
   isMonthlyOnlySupervisorType,
   isPhysicianSupervisorType,
   PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE,
@@ -123,23 +124,27 @@ export function SupervisorProfileEditFields({
   }, [supervisorTypeWatch, supervisorOccupationWatch, supervisorTypesData])
 
   const physicianSupervisorType = isPhysicianSupervisorType(supervisorTypeWatch)
-  const credentialTypeLabel = getSupervisorCredentialTypeLabel(supervisorTypeWatch)
-  const credentialFieldName = physicianSupervisorType ? 'degreeType' : 'licenseType'
   const credentialOptions = useMemo<SelectOption[]>(() => {
     const selected = supervisorTypesData.find((t) => t.name === supervisorTypeWatch)
     const occ = selected?.occupations.find((o) => o.name === supervisorOccupationWatch)
     return getSupervisorCredentialSelectOptions(selected, occ)
   }, [supervisorTypeWatch, supervisorOccupationWatch, supervisorTypesData])
-  const credentialFieldDisabled = physicianSupervisorType
-    ? supervisorTypesLoading
-    : supervisorTypesLoading || !supervisorOccupationWatch
-  const credentialPlaceholder = credentialFieldDisabled
-    ? physicianSupervisorType
-      ? 'Select degree type'
-      : 'Select an occupation first'
-    : physicianSupervisorType
-      ? 'Select degree type'
-      : 'Select license type'
+  const licenseTypeDisabled = supervisorTypesLoading || !supervisorOccupationWatch
+
+  /** "Please confirm" flags for the prefilled entries (legacy-migrated licenses). */
+  const licenseEntriesNeedingReview = useMemo(
+    () => getSupervisorLicenseEntryDefaults(profile).entriesNeedingReview,
+    [profile],
+  )
+
+  /** Options change with supervisor type/occupation, so per-entry license types reset. */
+  const resetLicenseEntryTypes = () => {
+    const licenses = form.getValues('licenses') ?? []
+    form.setValue(
+      'licenses',
+      licenses.map((license) => ({ ...license, licenseType: '' })),
+    )
+  }
 
   const monthlyFeeOnly = isMonthlyOnlySupervisorType(supervisorTypeWatch)
   const feeTypeOptions = monthlyFeeOnly
@@ -316,15 +321,15 @@ export function SupervisorProfileEditFields({
           onValueChange={() => {
             form.setValue('supervisorOccupation', '')
             form.setValue('supervisorSpecialty', '')
-            form.setValue('licenseType', '')
             form.setValue('degreeType', '')
             form.setValue('certification', [])
+            resetLicenseEntryTypes()
             form.clearErrors([
               'supervisorOccupation',
               'supervisorSpecialty',
-              'licenseType',
               'degreeType',
               'certification',
+              'licenses',
             ])
           }}
         />
@@ -344,9 +349,9 @@ export function SupervisorProfileEditFields({
             isSubmitting={isSubmitting}
             onValueChange={() => {
               form.setValue('supervisorSpecialty', '')
-              form.setValue('licenseType', '')
               form.setValue('degreeType', '')
-              form.clearErrors(['supervisorSpecialty', 'licenseType', 'degreeType'])
+              resetLicenseEntryTypes()
+              form.clearErrors(['supervisorSpecialty', 'degreeType', 'licenses'])
             }}
           />
           <FormSelectField
@@ -362,38 +367,36 @@ export function SupervisorProfileEditFields({
             emptySentinel={{ value: '__none__', label: 'None' }}
           />
         </div>
+        {physicianSupervisorType ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormSelectField
+              control={form.control}
+              name="degreeType"
+              label="Degree Type"
+              required
+              options={credentialOptions}
+              placeholder="Select degree type"
+              loading={supervisorTypesLoading}
+              disabled={supervisorTypesLoading}
+              selectKey={supervisorOccupationWatch}
+              isSubmitting={isSubmitting}
+              emptySentinel={{ value: '__none__', label: 'None' }}
+            />
+          </div>
+        ) : null}
+        <LicenseEntriesField
+          licenseTypeOptions={credentialOptions}
+          stateOptions={stateOptions}
+          licenseTypesLoading={supervisorTypesLoading}
+          licenseTypeDisabled={licenseTypeDisabled}
+          licenseTypePlaceholder={
+            licenseTypeDisabled ? 'Select an occupation first' : 'Select license type'
+          }
+          licenseTypeSelectKey={supervisorOccupationWatch}
+          isSubmitting={isSubmitting}
+          entriesNeedingReview={licenseEntriesNeedingReview}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormSelectField
-            control={form.control}
-            name={credentialFieldName}
-            label={credentialTypeLabel}
-            required
-            options={credentialOptions}
-            placeholder={credentialPlaceholder}
-            loading={supervisorTypesLoading}
-            disabled={credentialFieldDisabled}
-            selectKey={supervisorOccupationWatch}
-            isSubmitting={isSubmitting}
-            emptySentinel={{ value: '__none__', label: 'None' }}
-          />
-          <FormInputField
-            control={form.control}
-            name="licenseNumber"
-            label="License Number"
-            required
-            placeholder="Enter License Number"
-            isSubmitting={isSubmitting}
-          />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormInputField
-            control={form.control}
-            name="licenseExpiration"
-            label="License Expiration"
-            required
-            type="date"
-            isSubmitting={isSubmitting}
-          />
           <FormSelectField
             control={form.control}
             name="yearsOfExperience"
@@ -403,35 +406,14 @@ export function SupervisorProfileEditFields({
             placeholder="Select Years of Experience"
             isSubmitting={isSubmitting}
           />
+          <FormInputField
+            control={form.control}
+            name="npiNumber"
+            label="NPI Number"
+            placeholder="Enter your NPI Number"
+            isSubmitting={isSubmitting}
+          />
         </div>
-        <FormInputField
-          control={form.control}
-          name="npiNumber"
-          label="NPI Number"
-          placeholder="Enter your NPI Number"
-          isSubmitting={isSubmitting}
-        />
-        <FormField
-          control={form.control}
-          name="stateOfLicensure"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                States of Licensure <span className="text-destructive">*</span>
-              </FormLabel>
-              <FormControl>
-                <TagInput
-                  options={stateOptions}
-                  value={field.value ?? []}
-                  onChange={field.onChange}
-                  placeholder="Select States..."
-                  disabled={isSubmitting}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         <FormField
           control={form.control}
           name="certification"

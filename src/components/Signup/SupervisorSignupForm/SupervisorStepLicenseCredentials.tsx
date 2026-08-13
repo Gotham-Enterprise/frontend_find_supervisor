@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
 
+import { LicenseEntriesField } from '@/components/forms/LicenseEntriesField'
 import { FormSection } from '@/components/Signup/FormSection'
 import { type SupervisorFormValues, yearsOfExperienceOptions } from '@/components/Signup/schema'
 import { supervisorFieldRules } from '@/components/Signup/supervisorFieldRules'
@@ -14,7 +15,6 @@ import { UploadFile } from '@/components/ui/upload-file'
 import type { SelectOption, SupervisorTypeData } from '@/lib/api/options'
 import {
   getSupervisorCredentialSelectOptions,
-  getSupervisorCredentialTypeLabel,
   isPhysicianSupervisorType,
   PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE,
 } from '@/lib/utils/supervisor-type'
@@ -46,13 +46,21 @@ export function SupervisorStepLicenseCredentials({
   certificatesLoading,
   isSubmitting,
 }: SupervisorStepLicenseCredentialsProps) {
-  const { control, clearErrors, setValue, trigger } = useFormContext<SupervisorFormValues>()
+  const { control, clearErrors, setValue, getValues, trigger } =
+    useFormContext<SupervisorFormValues>()
   const supervisorType = useWatch({ control, name: 'supervisorType' }) ?? ''
   const supervisorOccupationId = useWatch({ control, name: 'supervisorOccupationId' }) ?? ''
   const physicianSupervisorType = isPhysicianSupervisorType(supervisorType)
-  const credentialTypeLabel = getSupervisorCredentialTypeLabel(supervisorType)
-  const credentialFieldName = physicianSupervisorType ? 'degreeType' : 'licenseType'
   const certificationsDisabled = physicianSupervisorType || certificatesLoading || isSubmitting
+
+  /** Options change with supervisor type/occupation, so per-entry license types reset. */
+  const resetLicenseEntryTypes = () => {
+    const licenses = getValues('licenses') ?? []
+    setValue(
+      'licenses',
+      licenses.map((license) => ({ ...license, licenseType: '' })),
+    )
+  }
 
   // Derive occupation options directly from the hierarchy for the selected supervisor type.
   const occupationOptions = useMemo<SelectOption[]>(() => {
@@ -80,17 +88,8 @@ export function SupervisorStepLicenseCredentials({
   }, [supervisorType, supervisorOccupationId, supervisorTypesData])
 
   const occupationDisabled = supervisorTypesLoading || !supervisorType
-  const credentialFieldDisabled = physicianSupervisorType
-    ? supervisorTypesLoading
-    : supervisorTypesLoading || !supervisorOccupationId
+  const licenseTypeDisabled = supervisorTypesLoading || !supervisorOccupationId
   const specialtyDisabled = supervisorTypesLoading || supervisorOccupationId.length === 0
-  const credentialPlaceholder = credentialFieldDisabled
-    ? physicianSupervisorType
-      ? 'Select degree type'
-      : 'Select an occupation first'
-    : physicianSupervisorType
-      ? 'Select degree type'
-      : 'Select license type'
 
   return (
     <FormSection title="License & Credentials">
@@ -107,15 +106,15 @@ export function SupervisorStepLicenseCredentials({
         onValueChange={() => {
           setValue('supervisorOccupationId', '')
           setValue('supervisorSpecialtyId', '')
-          setValue('licenseType', '')
           setValue('degreeType', '')
           setValue('certifications', [])
+          resetLicenseEntryTypes()
           clearErrors([
             'supervisorOccupationId',
             'supervisorSpecialtyId',
-            'licenseType',
             'degreeType',
             'certifications',
+            'licenses',
           ])
         }}
       />
@@ -135,9 +134,9 @@ export function SupervisorStepLicenseCredentials({
           required
           onValueChange={() => {
             setValue('supervisorSpecialtyId', '')
-            setValue('licenseType', '')
             setValue('degreeType', '')
-            clearErrors(['supervisorSpecialtyId', 'licenseType', 'degreeType'])
+            resetLicenseEntryTypes()
+            clearErrors(['supervisorSpecialtyId', 'degreeType', 'licenses'])
           }}
         />
         <FormSelectField
@@ -155,42 +154,37 @@ export function SupervisorStepLicenseCredentials({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormSelectField
-          control={control}
-          name={credentialFieldName}
-          label={credentialTypeLabel}
-          rules={supervisorFieldRules(credentialFieldName)}
-          options={credentialOptions}
-          placeholder={credentialPlaceholder}
-          loading={supervisorTypesLoading}
-          disabled={credentialFieldDisabled}
-          selectKey={supervisorOccupationId}
-          isSubmitting={isSubmitting}
-          required
-        />
-        <FormInputField
-          control={control}
-          name="licenseNumber"
-          label="License Number"
-          rules={supervisorFieldRules('licenseNumber')}
-          placeholder="Enter License Number"
-          isSubmitting={isSubmitting}
-          required
-        />
-      </div>
+      {physicianSupervisorType ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormSelectField
+            control={control}
+            name="degreeType"
+            label="Degree Type"
+            rules={supervisorFieldRules('degreeType')}
+            options={credentialOptions}
+            placeholder="Select degree type"
+            loading={supervisorTypesLoading}
+            disabled={supervisorTypesLoading}
+            selectKey={supervisorOccupationId}
+            isSubmitting={isSubmitting}
+            required
+          />
+        </div>
+      ) : null}
+
+      <LicenseEntriesField
+        licenseTypeOptions={credentialOptions}
+        stateOptions={stateOptions}
+        licenseTypesLoading={supervisorTypesLoading}
+        licenseTypeDisabled={licenseTypeDisabled}
+        licenseTypePlaceholder={
+          licenseTypeDisabled ? 'Select an occupation first' : 'Select license type'
+        }
+        licenseTypeSelectKey={supervisorOccupationId}
+        isSubmitting={isSubmitting}
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <FormInputField
-          control={control}
-          name="licenseExpiration"
-          label="License Expiration"
-          rules={supervisorFieldRules('licenseExpiration')}
-          type="date"
-          normalizeEmptyToString
-          isSubmitting={isSubmitting}
-          required
-        />
         <FormInputField
           control={control}
           name="npiNumber"
@@ -200,18 +194,17 @@ export function SupervisorStepLicenseCredentials({
           maxLength={20}
           isSubmitting={isSubmitting}
         />
+        <FormSelectField
+          control={control}
+          name="yearsOfExperience"
+          label="Years of Experience"
+          rules={supervisorFieldRules('yearsOfExperience')}
+          options={yearsOfExperienceSelectOptions}
+          placeholder="Select years of experience"
+          isSubmitting={isSubmitting}
+          required
+        />
       </div>
-
-      <FormSelectField
-        control={control}
-        name="yearsOfExperience"
-        label="Years of Experience"
-        rules={supervisorFieldRules('yearsOfExperience')}
-        options={yearsOfExperienceSelectOptions}
-        placeholder="Select years of experience"
-        isSubmitting={isSubmitting}
-        required
-      />
 
       <FormField
         control={control}
@@ -252,32 +245,6 @@ export function SupervisorStepLicenseCredentials({
                 {PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE}
               </p>
             ) : null}
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={control}
-        name="stateOfLicensure"
-        rules={supervisorFieldRules('stateOfLicensure')}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>
-              State(s) of Licensure <span className="text-destructive">*</span>
-            </FormLabel>
-            <FormControl>
-              <TagInput
-                options={stateOptions}
-                value={field.value ?? []}
-                onChange={(v) => {
-                  field.onChange(v)
-                  clearErrors(field.name)
-                }}
-                placeholder="Add a state (e.g. CA)"
-                disabled={isSubmitting}
-              />
-            </FormControl>
             <FormMessage />
           </FormItem>
         )}

@@ -12,6 +12,14 @@ export async function getSupervisorProfileById(id: string): Promise<SupervisorPr
   return data.data
 }
 
+/** One license per entry; `licenseType` is omitted for physicians (degreeType is shared). */
+export interface LicenseEntryPayload {
+  licenseType?: string
+  licenseNumber: string
+  state: string
+  licenseExpiration: string
+}
+
 export interface UpdateSupervisorProfilePayload {
   fullName?: string
   contactNumber?: string
@@ -21,15 +29,13 @@ export interface UpdateSupervisorProfilePayload {
   occupation?: string
   specialty?: string
   website?: string
-  licenseType?: string
   degreeType?: string
   supervisorType?: string
-  licenseNumber?: string
-  licenseExpiration?: string
+  /** Full replace: every license the supervisor holds, each with its state. */
+  licenses?: LicenseEntryPayload[]
   yearsOfExperience?: string
   npiNumber?: string
   certification?: string[]
-  stateOfLicensure?: string[]
   patientPopulation?: string[]
   supervisionFormat?: string
   availability?: string
@@ -54,7 +60,7 @@ export async function updateSupervisorProfile(
     uploadProfilePhoto,
     uploadLicense,
     certification,
-    stateOfLicensure,
+    licenses,
     patientPopulation,
     acceptingSupervisees,
     supervisionFeeAmount,
@@ -85,8 +91,10 @@ export async function updateSupervisorProfile(
     certification.forEach((c) => fd.append('certification', c))
   }
 
-  if (stateOfLicensure) {
-    stateOfLicensure.forEach((s) => fd.append('stateOfLicensure', s))
+  // Single JSON field (nested objects are unreliable via multipart bracket keys);
+  // the backend replaces all license rows and re-derives stateOfLicensure from them.
+  if (licenses) {
+    fd.append('licenses', JSON.stringify(licenses))
   }
 
   if (patientPopulation) {
