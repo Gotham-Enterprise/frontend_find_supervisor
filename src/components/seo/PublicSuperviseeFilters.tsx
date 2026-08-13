@@ -4,7 +4,7 @@ import { Search, SlidersHorizontal, X } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useRef, useState } from 'react'
 
-import { SUPERVISOR_TYPE_QUERY_MAP, US_STATES } from '@/lib/seo/routes'
+import { US_STATES } from '@/lib/seo/routes'
 
 // ---------------------------------------------------------------------------
 // Static filter options
@@ -18,11 +18,6 @@ const STATE_OPTIONS = Object.entries(US_STATES).map(([slug, abbr]) => ({
   value: abbr,
 }))
 
-const SUPERVISOR_TYPE_OPTIONS = Object.entries(SUPERVISOR_TYPE_QUERY_MAP).map(([slug, name]) => ({
-  label: name,
-  value: slug,
-}))
-
 const FORMAT_OPTIONS = [
   { label: 'Virtual', value: 'virtual' },
   { label: 'In-Person', value: 'in-person' },
@@ -33,15 +28,14 @@ const FORMAT_OPTIONS = [
 // Types
 // ---------------------------------------------------------------------------
 
-export interface PublicFilterValues {
+export interface PublicSuperviseeFilterValues {
   q: string
   state: string
-  type: string
   format: string
 }
 
-interface PublicSearchFiltersProps {
-  initialValues: PublicFilterValues
+interface PublicSuperviseeFiltersProps {
+  initialValues: PublicSuperviseeFilterValues
 }
 
 // ---------------------------------------------------------------------------
@@ -49,18 +43,17 @@ interface PublicSearchFiltersProps {
 // ---------------------------------------------------------------------------
 
 /**
- * Horizontal sticky filter bar for the public /supervisors page.
+ * Horizontal sticky filter bar for the public /browse-supervisees page.
  * Syncs filter state to URL query params via router.push so results
  * are always server-rendered and shareable.
  */
-export function PublicSearchFilters({ initialValues }: PublicSearchFiltersProps) {
+export function PublicSuperviseeFilters({ initialValues }: PublicSuperviseeFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Derive state/type/format directly from the URL — they push immediately so
+  // Derive state/format directly from the URL — they push immediately so
   // there is never a desync, and no useEffect is needed to keep them in sync.
   const state = searchParams.get('state') ?? ''
-  const type = searchParams.get('type') ?? ''
   const format = searchParams.get('format') ?? ''
 
   // q needs local state for the debounced text input only.
@@ -71,17 +64,16 @@ export function PublicSearchFilters({ initialValues }: PublicSearchFiltersProps)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const pushUrl = useCallback(
-    (overrides: Partial<PublicFilterValues>) => {
-      const next = { q, state, type, format, ...overrides }
+    (overrides: Partial<PublicSuperviseeFilterValues>) => {
+      const next = { q, state, format, ...overrides }
       const params = new URLSearchParams()
       if (next.q.trim()) params.set('q', next.q.trim())
       if (next.state) params.set('state', next.state)
-      if (next.type) params.set('type', next.type)
       if (next.format) params.set('format', next.format)
       const qs = params.toString()
-      router.push(`/supervisors${qs ? `?${qs}` : ''}`, { scroll: false })
+      router.push(`/browse-supervisees${qs ? `?${qs}` : ''}`, { scroll: false })
     },
-    [q, state, type, format, router],
+    [q, state, format, router],
   )
 
   function handleQChange(value: string) {
@@ -94,19 +86,15 @@ export function PublicSearchFilters({ initialValues }: PublicSearchFiltersProps)
     pushUrl({ state: value })
   }
 
-  function handleTypeChange(value: string) {
-    pushUrl({ type: value })
-  }
-
   function handleFormatChange(value: string) {
     pushUrl({ format: value })
   }
 
-  const hasActiveFilters = q || state || type || format
+  const hasActiveFilters = q || state || format
 
   function clearAll() {
     setQ('')
-    router.push('/supervisors', { scroll: false })
+    router.push('/browse-supervisees', { scroll: false })
   }
 
   return (
@@ -134,8 +122,8 @@ export function PublicSearchFilters({ initialValues }: PublicSearchFiltersProps)
                 type="search"
                 value={q}
                 onChange={(e) => handleQChange(e.target.value)}
-                placeholder="Search by name, specialty…"
-                aria-label="Search supervisors by name or specialty"
+                placeholder="Search by occupation, specialty…"
+                aria-label="Search supervisees by occupation or specialty"
                 className="h-10 w-full rounded-md border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
@@ -164,21 +152,6 @@ export function PublicSearchFilters({ initialValues }: PublicSearchFiltersProps)
             >
               <option value="">All States</option>
               {STATE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-
-            {/* Supervisor type select */}
-            <select
-              value={type}
-              onChange={(e) => handleTypeChange(e.target.value)}
-              aria-label="Filter by supervisor type"
-              className="h-10 rounded-md border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 sm:w-52"
-            >
-              <option value="">All Supervisor Types</option>
-              {SUPERVISOR_TYPE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
@@ -231,12 +204,6 @@ export function PublicSearchFilters({ initialValues }: PublicSearchFiltersProps)
               <ActiveTag
                 label={STATE_OPTIONS.find((o) => o.value === state)?.label ?? state}
                 onRemove={() => handleStateChange('')}
-              />
-            )}
-            {type && (
-              <ActiveTag
-                label={SUPERVISOR_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type}
-                onRemove={() => handleTypeChange('')}
               />
             )}
             {format && (

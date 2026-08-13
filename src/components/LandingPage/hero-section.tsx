@@ -26,6 +26,13 @@ export function HeroSection() {
                 Find My Supervisor
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
+              <Link
+                href="/browse-supervisees"
+                className={buttonVariants({ size: 'lg', variant: 'outline' })}
+              >
+                Find My Supervisee
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
               <a
                 href="#how-it-works"
                 className={buttonVariants({ size: 'lg', variant: 'outline' })}

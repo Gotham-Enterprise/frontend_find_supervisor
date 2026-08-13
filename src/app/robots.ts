@@ -10,7 +10,14 @@ export default function robots(): MetadataRoute.Robots {
         // NOTE: /faq is intentionally excluded — the FAQ page lives under the (shell)
         // authenticated layout which applies noIndexMetadata. Until /faq is moved to
         // a public route, it should remain disallowed rather than allowed + noindexed.
-        allow: ['/', '/supervisors', '/supervisors/', '/contact', '/contact-us'],
+        allow: [
+          '/',
+          '/supervisors',
+          '/supervisors/',
+          '/browse-supervisees',
+          '/contact',
+          '/contact-us',
+        ],
         disallow: [
           // Authenticated shell routes
           '/dashboard',

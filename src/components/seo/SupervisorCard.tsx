@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import type { PublicSupervisorSummary } from '@/lib/api/public-supervisors'
 import { stateAbbreviationToSlug } from '@/lib/seo/routes'
-import { maskNameToFirstInitial } from '@/lib/utils/profile-formatters'
+import { formatSupervisionFormat, maskNameToFirstInitial } from '@/lib/utils/profile-formatters'
 
 interface SupervisorCardProps {
   supervisor: PublicSupervisorSummary
@@ -25,7 +25,11 @@ export function SupervisorCard({ supervisor, stateSlug }: SupervisorCardProps) {
       ? `/supervisors/profile/${supervisor.id}`
       : `/supervisors/${resolvedStateSlug}/${supervisor.id}`
   const location = [supervisor.city, supervisor.state].filter(Boolean).join(', ')
-  const tags = [supervisor.licenseType, supervisor.specialty].filter(Boolean)
+  const credentialLine = [supervisor.licenseType, supervisor.specialty].filter(Boolean).join(' · ')
+  const licensedIn = supervisor.stateOfLicensure.filter(Boolean).join(', ')
+  const format = supervisor.supervisionFormat
+    ? formatSupervisionFormat(supervisor.supervisionFormat)
+    : ''
   // Guests only see a supervisor's first name + last initial ("Jim S") in listings.
   const displayName = maskNameToFirstInitial(supervisor.fullName)
 
@@ -38,12 +42,12 @@ export function SupervisorCard({ supervisor, stateSlug }: SupervisorCardProps) {
           <img
             src={supervisor.profilePhotoUrl}
             alt={`${displayName} profile photo`}
-            className="size-12 shrink-0 rounded-full object-cover"
+            className="size-14 shrink-0 rounded-full object-cover"
             loading="lazy"
           />
         ) : (
           <div
-            className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#E2F0E8] text-base font-semibold text-[#006D36]"
+            className="flex size-14 shrink-0 items-center justify-center rounded-full bg-[#E2F0E8] text-lg font-semibold text-[#006D36]"
             aria-hidden="true"
           >
             {initials(displayName)}
@@ -51,27 +55,28 @@ export function SupervisorCard({ supervisor, stateSlug }: SupervisorCardProps) {
         )}
         <div className="min-w-0">
           <h3 className="truncate font-semibold text-foreground">{displayName}</h3>
+          {credentialLine && <p className="text-sm text-muted-foreground">{credentialLine}</p>}
           {location && <p className="text-sm text-muted-foreground">{location}</p>}
         </div>
       </div>
 
-      {/* Tags */}
-      {tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full border px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
-            >
-              {tag}
-            </span>
-          ))}
-          {supervisor.supervisionFormat && (
-            <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-              {supervisor.supervisionFormat}
-            </span>
+      {/* States of licensure — a supervisor can serve any state they're licensed
+          in (often not the state they live in), which is what state pages filter on */}
+      {(licensedIn || format) && (
+        <dl className="space-y-1 text-sm">
+          {licensedIn && (
+            <div className="flex gap-1.5">
+              <dt className="shrink-0 font-medium text-foreground">Licensed in:</dt>
+              <dd className="text-muted-foreground">{licensedIn}</dd>
+            </div>
           )}
-        </div>
+          {format && (
+            <div className="flex gap-1.5">
+              <dt className="shrink-0 font-medium text-foreground">Supervision Type:</dt>
+              <dd className="text-muted-foreground">{format}</dd>
+            </div>
+          )}
+        </dl>
       )}
 
       {/* Bio */}

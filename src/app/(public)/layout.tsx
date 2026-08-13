@@ -1,26 +1,20 @@
-'use client'
-
-import { usePathname } from 'next/navigation'
-
-import { GuestOnlyRouteGuard } from '@/components/Layout/GuestOnlyRouteGuard'
+import { GuestOnlyPathGuard } from '@/components/Layout/GuestOnlyPathGuard'
 import { PublicFooter } from '@/components/Layout/public-footer'
 import { PublicHeader } from '@/components/Layout/public-header'
-import { isGuestOnlyPath } from '@/lib/auth/guest-only-routes'
 
+/**
+ * Server layout for the public route group. The guest-only guard is a client
+ * component, but the shell is passed through as children so the header/footer
+ * remain server components (the footer fetches top-states data server-side).
+ */
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
-
-  const shell = (
-    <div className="flex min-h-screen flex-col">
-      <PublicHeader />
-      <main className="flex-1">{children}</main>
-      <PublicFooter />
-    </div>
+  return (
+    <GuestOnlyPathGuard>
+      <div className="flex min-h-screen flex-col">
+        <PublicHeader />
+        <main className="flex-1">{children}</main>
+        <PublicFooter />
+      </div>
+    </GuestOnlyPathGuard>
   )
-
-  if (isGuestOnlyPath(pathname)) {
-    return <GuestOnlyRouteGuard>{shell}</GuestOnlyRouteGuard>
-  }
-
-  return shell
 }
