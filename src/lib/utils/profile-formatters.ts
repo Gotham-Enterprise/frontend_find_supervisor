@@ -35,6 +35,22 @@ export function formatNameWithCredentials(
 }
 
 /**
+ * Pairs a credential with its state of licensure, e.g. ("AMFT", "TX") → "AMFT (TX)" —
+ * the US convention used across the app (same style as supervisor "LPC-S (AL)").
+ * Falls back to whichever part is present.
+ */
+export function formatCredentialWithState(
+  credential: string | null | undefined,
+  licensureState: string | null | undefined,
+): string {
+  const c = credential?.trim() ?? ''
+  const s = licensureState?.trim() ?? ''
+  if (!c) return s
+  if (!s) return c
+  return `${c} (${s})`
+}
+
+/**
  * Mask a full name to first name + last initial, e.g. "Katie Cruz" → "Katie C".
  * Used to protect a person's identity until they're connected with the viewer.
  * The initial comes from the last token that begins with a letter, so trailing
@@ -115,7 +131,6 @@ export function formatDate(iso: string | null | undefined): string {
 const FEE_TYPE_SUFFIX: Record<string, string> = {
   HOURLY: '/hr',
   MONTHLY: '/month',
-  PER_SESSION: '/session',
 }
 
 /** Formats a dollar-denominated fee amount with its type suffix. */
@@ -130,7 +145,7 @@ export function formatFeeAmount(
 
 export function formatFeeType(feeType: string | null | undefined): string {
   if (!feeType) return 'N/A'
-  return { HOURLY: 'Hourly', MONTHLY: 'Monthly', PER_SESSION: 'Per Session' }[feeType] ?? feeType
+  return { HOURLY: 'Hourly', MONTHLY: 'Monthly' }[feeType] ?? feeType
 }
 
 // ─── Enum label resolution ────────────────────────────────────────────────────
@@ -318,20 +333,10 @@ export function formatSupervisionHours(value: number | null | undefined): string
   return `${value} hour${value === 1 ? '' : 's'}`
 }
 
-/** Human-readable state list for “looking in” using US state option labels when available. */
-export function formatLookingInStatesLabel(
-  value: string | string[] | null | undefined,
-  stateOptions: SelectOption[],
-): string {
-  const keys = coerceStringList(value)
-  if (keys.length === 0) return '—'
-  return keys.map((k) => resolveOptionLabel(k, stateOptions)).join(', ')
-}
-
 // ─── Budget range ─────────────────────────────────────────────────────────────
 
 const BUDGET_TYPE_SUFFIX: Record<string, string> = {
-  PER_SESSION: '/session',
+  HOURLY: '/hr',
   MONTHLY: '/month',
 }
 
@@ -342,6 +347,8 @@ export function formatBudgetRange(
 ): string {
   if (start == null && end == null) return 'N/A'
   const suffix = type ? (BUDGET_TYPE_SUFFIX[type] ?? '') : ''
+  // Monthly budgets are a single amount (stored in `end`; `start` is 0)
+  if (type === 'MONTHLY' && end != null) return `$${end}${suffix}`
   if (start != null && end != null) return `$${start}–$${end}${suffix}`
   if (start != null) return `From $${start}${suffix}`
   return `Up to $${end}${suffix}`

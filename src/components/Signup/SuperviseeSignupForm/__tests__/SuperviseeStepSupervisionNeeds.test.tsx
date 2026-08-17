@@ -15,6 +15,13 @@ vi.mock('@/lib/hooks/useSignupOptions', () => ({
   useSpecialtiesByOccupation: () => ({ data: [], isLoading: false }),
 }))
 
+vi.mock('@/lib/hooks', () => ({
+  useStateNameOptions: () => ({
+    data: [{ label: 'Texas', value: 'TX' }],
+    isLoading: false,
+  }),
+}))
+
 const supervisorTypesData: SupervisorTypeData[] = [
   { id: '1', code: 'COLLABORATING_PHYSICIAN', name: 'Collaborating Physician', occupations: [] },
   { id: '2', code: 'SUPERVISING_PHYSICIAN', name: 'Supervising Physician', occupations: [] },
@@ -25,7 +32,7 @@ const supervisorTypesData: SupervisorTypeData[] = [
 const occupationOptions: SelectOption[] = [
   { label: 'Nurse Practitioner', value: '1' },
   { label: 'Physician Assistant', value: '2' },
-  { label: 'Social Worker', value: '3' },
+  { label: 'Associate Clinical Social Worker', value: '3' },
 ]
 
 function Harness({ onForm }: { onForm: (form: UseFormReturn<SuperviseeFormValues>) => void }) {
@@ -50,7 +57,6 @@ function Harness({ onForm }: { onForm: (form: UseFormReturn<SuperviseeFormValues
           howSoonOptions={[{ label: 'As soon as possible', value: 'IMMEDIATELY' }]}
           availabilityOptions={[{ label: 'Flexible', value: 'FLEXIBLE' }]}
           salaryRangeOptions={[{ label: '$0 - $50', value: '$0 - $50' }]}
-          statesLoading={false}
           howSoonLoading={false}
           availabilityLoading={false}
           salaryRangesLoading={false}
@@ -79,24 +85,22 @@ function renderHarness() {
 }
 
 describe('SuperviseeStepSupervisionNeeds', () => {
-  it('locks the supervision type selector until credential and occupation are filled', () => {
+  it('locks the supervision type selector until the occupation is filled', () => {
     renderHarness()
-    expect(screen.getByText('Enter your credential and occupation first')).toBeInTheDocument()
+    expect(screen.getByText('Select your occupation first')).toBeInTheDocument()
   })
 
   it('clears an ineligible supervision type when the occupation changes', async () => {
     const getForm = renderHarness()
 
     await act(async () => {
-      // Eligibility comes from the occupation here; 'RN' alone is not an NP credential.
-      getForm().setValue('title', 'RN')
       getForm().setValue('occupationId', '1') // Nurse Practitioner
       getForm().setValue('typeOfSupervisor', 'Collaborating Physician')
     })
     expect(getForm().getValues('typeOfSupervisor')).toBe('Collaborating Physician')
 
     await act(async () => {
-      getForm().setValue('occupationId', '3') // Social Worker — no longer NP-eligible
+      getForm().setValue('occupationId', '3') // Associate Clinical Social Worker — not NP-eligible
     })
     expect(getForm().getValues('typeOfSupervisor')).toBe('')
   })
@@ -122,7 +126,6 @@ describe('SuperviseeStepSupervisionNeeds', () => {
     const getForm = renderHarness()
 
     await act(async () => {
-      getForm().setValue('title', 'None')
       getForm().setValue('occupationId', '3')
       getForm().setValue('needsMedicalDirector', true)
     })

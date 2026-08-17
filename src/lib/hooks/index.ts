@@ -41,7 +41,12 @@ export {
   useUpdateAgreement,
   useViewHire,
 } from './useHires'
-export { useCitiesOptions, useMultiStateCityOptions, useStatesOptions } from './useLocationOptions'
+export {
+  useCitiesOptions,
+  useMultiStateCityOptions,
+  useStateNameOptions,
+  useStatesOptions,
+} from './useLocationOptions'
 export {
   matchingKeys,
   useCreateMatchingRequest,

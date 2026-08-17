@@ -74,11 +74,17 @@ interface CitiesApiResponse {
   data: { state: string; cities: CityApi[]; count: number }
 }
 
+/** State option carrying the full state name alongside the "Name (AB)" label. */
+export interface StateSelectOption extends SelectOption {
+  name: string
+}
+
 /**
  * Fetch US states from backend. Reuses /api/categories/us_states from backend_job_finder.
- * Returns options normalized for Select components (value = abbreviation, label = "Name (AB)").
+ * Returns options normalized for Select components (value = abbreviation, label = "Name (AB)",
+ * name = full state name for full-word dropdowns).
  */
-export async function fetchStatesApi(): Promise<SelectOption[]> {
+export async function fetchStatesApi(): Promise<StateSelectOption[]> {
   try {
     const { data } = await apiClient.get<StatesApiResponse>('/categories/us_states')
     if (!data?.success || !Array.isArray(data.data?.states)) {
@@ -87,6 +93,7 @@ export async function fetchStatesApi(): Promise<SelectOption[]> {
     return data.data.states.map((s) => ({
       label: `${s.name} (${s.abbreviation})`,
       value: s.abbreviation,
+      name: s.name,
     }))
   } catch (err) {
     throw new Error(err instanceof Error ? err.message : 'Unable to load states right now.')

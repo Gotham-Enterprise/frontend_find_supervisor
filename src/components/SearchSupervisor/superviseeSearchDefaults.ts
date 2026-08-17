@@ -21,7 +21,7 @@ function buildHierarchyNameSets(supervisorTypesData: SupervisorTypeData[]) {
 
 /**
  * Builds the default search filters for /find-supervisors from the supervisee's
- * Supervision Needs (desired occupation/specialty, states they are looking in,
+ * Supervision Needs (desired occupation/specialty, their states of licensure,
  * preferred format, availability). Values that don't match the loaded options are
  * skipped. Supervisor type is NOT a filter — the backend scopes results to the
  * supervisee's stored typeOfSupervisorNeeded on every search.
@@ -58,13 +58,13 @@ export function mergeSuperviseeProfileIntoSearchFilters(
     next.supervisorSpecialties = [specialty]
   }
 
-  // Supervisors licensed in the state(s) the supervisee is looking in
+  // Supervisors licensed in the state(s) the supervisee is licensed in
   const stateVals = new Set(stateOptions.map((o) => o.value))
-  const lookingIn = (profile.stateTheyAreLookingIn ?? [])
+  const superviseeStates = (profile.user?.stateOfLicensure ?? [])
     .map((s) => String(s).trim())
     .filter((s) => s && stateVals.has(s))
-  if (lookingIn.length > 0) {
-    next.stateLicenses = [...new Set(lookingIn)]
+  if (superviseeStates.length > 0) {
+    next.stateLicenses = [...new Set(superviseeStates)]
   }
 
   const preferredFormat = profile.preferredFormat?.trim().toUpperCase()

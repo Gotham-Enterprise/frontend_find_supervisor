@@ -33,7 +33,7 @@ function makeProfile(overrides: Partial<SuperviseeProfileData> = {}): Supervisee
   return {
     superviseeOccupation: 'Licensed Mental Health Counselor Supervisors',
     superviseeSpecialty: 'Eating Disorders',
-    stateTheyAreLookingIn: ['CA', 'NY'],
+    user: { stateOfLicensure: ['CA', 'NY'] },
     preferredFormat: 'VIRTUAL',
     availability: 'WEEKDAYS',
     ...overrides,
@@ -61,7 +61,7 @@ describe('mergeSuperviseeProfileIntoSearchFilters', () => {
       makeProfile({
         superviseeOccupation: 'Unknown Occupation',
         superviseeSpecialty: 'Unknown Specialty',
-        stateTheyAreLookingIn: ['ZZ'],
+        user: { stateOfLicensure: ['ZZ'] } as SuperviseeProfileData['user'],
         availability: 'SOMETIMES',
       }),
       DEFAULT_FILTERS,

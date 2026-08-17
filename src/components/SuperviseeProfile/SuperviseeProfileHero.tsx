@@ -13,6 +13,7 @@ import { useConversations, useSupervisorProfile, useUser } from '@/lib/hooks'
 import { useCheckConnectionAvailability } from '@/lib/hooks/useConnections'
 import { getMakeConnectionAccess } from '@/lib/utils/make-connection-access'
 import {
+  formatCredentialWithState,
   formatDisplayName,
   getInitials,
   isConnectedHireStatus,
@@ -129,7 +130,8 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
   const occupation = user.occupation?.name ?? profile.superviseeOccupation
   const specialty = user.specialty?.name ?? profile.superviseeSpecialty
   const subline = [occupation, specialty].filter(Boolean).join(' · ')
-  const roleBadgeLabel = profile.title?.trim() || 'Supervisee'
+  const roleBadgeLabel =
+    formatCredentialWithState(profile.title, profile.licensureState) || 'Supervisee'
 
   const existingConversation = conversations?.find((c) => c.superviseeId === user.id)
   const isInMyHireList = profile.isInMyHireList ?? false

@@ -11,7 +11,7 @@ export function SuperviseeStepIndicator({ currentStep }: SuperviseeStepIndicator
   return (
     <div className="mb-8">
       <p className="mb-0.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-        {SUPERVISEE_SIGNUP_STEP_META[currentStep].stepLabel} of 3
+        {SUPERVISEE_SIGNUP_STEP_META[currentStep].stepLabel} of {SUPERVISEE_SIGNUP_STEP_META.length}
       </p>
       <h2 className="text-lg font-semibold text-foreground">
         {SUPERVISEE_SIGNUP_STEP_META[currentStep].title}
