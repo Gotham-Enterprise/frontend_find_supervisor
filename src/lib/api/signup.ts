@@ -23,11 +23,9 @@ const HOW_SOON_MAP: Record<string, string> = {
   CUSTOM_DATE: 'CUSTOM_DATE',
 }
 
-/** Matches `validateSuperviseeRegister` — only `PER_SESSION` and `MONTHLY` are allowed. */
-function feeTypeToBudgetRangeType(
-  feeType: SuperviseeFormValues['feeType'],
-): 'PER_SESSION' | 'MONTHLY' {
-  return feeType === 'monthly' ? 'MONTHLY' : 'PER_SESSION'
+/** Matches `validateSuperviseeRegister` — only `HOURLY` and `MONTHLY` are allowed. */
+function feeTypeToBudgetRangeType(feeType: SuperviseeFormValues['feeType']): 'HOURLY' | 'MONTHLY' {
+  return feeType === 'monthly' ? 'MONTHLY' : 'HOURLY'
 }
 
 function parseBudgetRange(budgetRange: string): { start: number; end: number } {
@@ -36,10 +34,6 @@ function parseBudgetRange(budgetRange: string): { start: number; end: number } {
     '$51 - $100': { start: 51, end: 100 },
     '$101 - $150': { start: 101, end: 150 },
     '$151 - $300': { start: 151, end: 300 },
-    '$50 – $100 / session': { start: 50, end: 100 },
-    '$100 – $150 / session': { start: 100, end: 150 },
-    '$150 – $200 / session': { start: 150, end: 200 },
-    '$200+ / session': { start: 200, end: 500 },
     'Open to discussion': { start: 0, end: 0 },
   }
   return map[budgetRange] ?? { start: 0, end: 0 }
@@ -132,11 +126,12 @@ export function buildSuperviseeFormData(values: SuperviseeFormValues): FormData 
 
   fd.append('occupation', values.occupationId)
   fd.append('title', values.title)
+  // State tied to the credential/title (US state abbreviation, e.g. "TX")
+  fd.append('licensureState', values.licensureState)
   if (values.specialtyId) fd.append('specialty', values.specialtyId)
 
   // Supervision needs — `stateOfLicensure[]` so a single state is still parsed as an array (multer + express-validator .isArray())
   values.stateOfLicensure.forEach((s) => fd.append('stateOfLicensure[]', s))
-  values.stateTheyAreLookingIn.forEach((s) => fd.append('stateTheyAreLookingIn[]', s))
   // Backend field: typeOfSupervisorNeeded[] — the selected supervision type plus
   // Medical Director when its checkbox is ticked (the checkbox can also stand alone)
   const supervisionTypes = new Set(
@@ -159,8 +154,12 @@ export function buildSuperviseeFormData(values: SuperviseeFormValues): FormData 
   // Backend field: idealSupervisor
   fd.append('idealSupervisor', values.description)
 
-  // Budget — backend `budgetRangeType` must be PER_SESSION | MONTHLY (see supervision_validator)
-  const budget = parseBudgetRange(values.budgetRange)
+  // Budget — backend `budgetRangeType` must be HOURLY | MONTHLY (see supervision_validator).
+  // Monthly is a single amount stored in `budgetRangeEnd` (start is 0); Hourly picks a range.
+  const budget =
+    values.feeType === 'monthly'
+      ? { start: 0, end: values.monthlyBudget ?? 0 }
+      : parseBudgetRange(values.budgetRange)
   fd.append('budgetRangeType', feeTypeToBudgetRangeType(values.feeType))
   fd.append('budgetRangeStart', String(budget.start))
   fd.append('budgetRangeEnd', String(budget.end))

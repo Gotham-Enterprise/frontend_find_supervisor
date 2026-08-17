@@ -4,13 +4,13 @@ import { ProfileDetailRow, ProfilePreviewCard, TagList } from '@/components/Dash
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useStatesOptions, useSuperviseeFormOptions } from '@/lib/hooks'
+import { useSuperviseeFormOptions } from '@/lib/hooks'
 import { formatUSPhoneForDisplay } from '@/lib/utils/phone'
 import {
+  formatCredentialWithState,
   formatDisplayName,
   formatHowSoonLooking,
   formatLocation,
-  formatLookingInStatesLabel,
   formatSupervisionFormat,
   resolveOptionLabel,
   resolveSupervisorTypeLabel,
@@ -25,7 +25,9 @@ function formatBudget(
   end: number | null | undefined,
 ): string {
   if (type == null && start == null) return 'N/A'
-  const suffix = type === 'MONTHLY' ? '/month' : '/session'
+  const suffix = type === 'MONTHLY' ? '/month' : '/hr'
+  // Monthly budgets are a single amount (stored in `end`; `start` is 0)
+  if (type === 'MONTHLY') return end != null && end > 0 ? `$${end} ${suffix}` : 'N/A'
   if (start === 0 && end === 0) return `Open to discussion (${suffix.slice(1)})`
   if (start != null && end != null && (start > 0 || end > 0)) return `$${start} – $${end} ${suffix}`
   return 'N/A'
@@ -75,7 +77,6 @@ export function SuperviseeDashboardProfileDetails({
   onEditClick,
 }: SuperviseeDashboardProfileDetailsProps) {
   const { availability, supervisorTypes } = useSuperviseeFormOptions()
-  const { data: stateOptions = [] } = useStatesOptions()
   const availabilityOptions = availability.data ?? []
   const supervisorTypeOptions = supervisorTypes.data ?? []
 
@@ -83,7 +84,7 @@ export function SuperviseeDashboardProfileDetails({
   const location = formatLocation(profile.user.city, profile.user.state, profile.user.zipcode)
   const occupation = profile.occupation?.name ?? profile.user.occupation?.name
   const specialty = profile.specialty?.name ?? profile.user.specialty?.name
-  const credentialTitle = profile.title?.trim()
+  const credentialTitle = formatCredentialWithState(profile.title, profile.licensureState)
   const subline = [credentialTitle, occupation, specialty].filter(Boolean).join(' · ')
   const statesOfLicensure = profile.user.stateOfLicensure ?? []
 
@@ -92,7 +93,6 @@ export function SuperviseeDashboardProfileDetails({
     profile.typeOfSupervisorNeeded,
     supervisorTypeOptions,
   )
-  const lookingInLabel = formatLookingInStatesLabel(profile.stateTheyAreLookingIn, stateOptions)
   const formatLabel = formatSupervisionFormat(profile.preferredFormat)
   const howSoonLabel = formatHowSoonLooking(profile.howSoonLooking, profile.lookingDate)
   const budgetLabel = formatBudget(
@@ -136,7 +136,6 @@ export function SuperviseeDashboardProfileDetails({
       }}
       stats={[
         { value: profile.completedCount, label: 'Completed' },
-        { value: lookingInLabel !== '—' ? lookingInLabel : '—', label: 'Looking In' },
         { value: formatLabel !== 'N/A' ? formatLabel : '—', label: 'Format' },
       ]}
     >

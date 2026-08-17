@@ -2,10 +2,13 @@
 
 import Link from 'next/link'
 
+import { SUPERVISEE_SIGNUP_STEP_META } from '@/components/Signup/schema'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 import type { SuperviseeSignupStepIndex } from './validateSuperviseeStep'
+
+const LAST_STEP = SUPERVISEE_SIGNUP_STEP_META.length - 1
 
 type SuperviseeStepNavigationProps = {
   step: SuperviseeSignupStepIndex
@@ -32,7 +35,12 @@ export function SuperviseeStepNavigation({
   const busy = isAdvancing || isSubmitting
 
   return (
-    <div className={cn('flex flex-col gap-4', step === 2 ? 'mt-4' : 'border-t border-border pt-6')}>
+    <div
+      className={cn(
+        'flex flex-col gap-4',
+        step === LAST_STEP ? 'mt-4' : 'border-t border-border pt-6',
+      )}
+    >
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Button
           type="button"
@@ -47,7 +55,7 @@ export function SuperviseeStepNavigation({
         >
           Back
         </Button>
-        {step < 2 ? (
+        {step < LAST_STEP ? (
           <Button
             type="button"
             onClick={(e) => {

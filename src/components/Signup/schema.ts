@@ -186,21 +186,29 @@ export const superviseeSchemaObject = accountSchemaBase.extend({
   supervisorSpecialtyId: z.string().optional(),
 
   stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
-  stateTheyAreLookingIn: z
-    .array(z.string())
-    .min(1, 'Please select at least one state you are looking in'),
   howSoon: z.string().min(1, 'Please select how soon you need a supervisor'),
   howSoonDate: z.string().optional(),
   preferredFormat: z.enum(['virtual', 'in-person', 'hybrid'], {
     message: 'Please select a preferred format',
   }),
-  feeType: z.enum(['per-session', 'monthly'], { message: 'Please select a fee type' }),
-  budgetRange: z.string().min(1, 'Please select a budget range'),
+  feeType: z.enum(['hourly', 'monthly'], { message: 'Please select a fee type' }),
+  // Hourly uses the range dropdown; Monthly is a single typed amount — each is
+  // required only for its fee type (see applySuperviseeBudgetRules).
+  budgetRange: z.string(),
+  monthlyBudget: z.preprocess(
+    normalizeNumberFieldInput,
+    z
+      .number('Please enter your monthly budget')
+      .min(1, 'Monthly budget must be at least $1')
+      .optional(),
+  ),
   availability: z.string().min(1, 'Availability is required'),
 
   // Step 2 — profile fields (sent to backend as numeric category IDs); collected before
   // `typeOfSupervisor` so the available supervision types can be filtered by eligibility
   title: z.string().min(1, 'Credential or license type is required').max(100),
+  // State tied to the credential (stored as the US state abbreviation, e.g. "TX")
+  licensureState: z.string().min(1, 'State of licensure is required'),
   occupationId: z.string().min(1, 'Occupation is required'),
   specialtyId: z.string().optional(),
 
@@ -243,8 +251,31 @@ function applySuperviseeSupervisionNeedRules(
   }
 }
 
+/** Hourly budgets pick a range; Monthly budgets type a single amount. */
+function applySuperviseeBudgetRules(
+  data: { feeType: string; budgetRange: string; monthlyBudget?: number },
+  ctx: z.RefinementCtx,
+) {
+  if (data.feeType === 'hourly' && !data.budgetRange) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['budgetRange'],
+      message: 'Please select a budget range',
+    })
+  }
+  if (data.feeType === 'monthly' && data.monthlyBudget == null) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['monthlyBudget'],
+      message: 'Please enter your monthly budget',
+    })
+  }
+}
+
 export const superviseeSchema = withPasswordConfirmation(
-  superviseeSchemaObject.superRefine(applySuperviseeSupervisionNeedRules),
+  superviseeSchemaObject
+    .superRefine(applySuperviseeSupervisionNeedRules)
+    .superRefine(applySuperviseeBudgetRules),
 )
 
 export type SupervisorFormValues = z.infer<typeof supervisorSchemaObject>
@@ -372,18 +403,23 @@ export const superviseeStep2Schema = superviseeSchemaObject
     occupationId: true,
     specialtyId: true,
     title: true,
+    licensureState: true,
     typeOfSupervisor: true,
     needsMedicalDirector: true,
     supervisorOccupationId: true,
     supervisorSpecialtyId: true,
     stateOfLicensure: true,
-    stateTheyAreLookingIn: true,
     howSoon: true,
     howSoonDate: true,
     preferredFormat: true,
     feeType: true,
     budgetRange: true,
+    monthlyBudget: true,
     availability: true,
+    // Ideal Supervisor & Terms — merged into step 2 (the form has only two steps)
+    description: true,
+    agreedToPost: true,
+    agreedToTerms: true,
   })
   .superRefine((data, ctx) => {
     if (data.howSoon === 'CUSTOM_DATE' && !data.howSoonDate) {
@@ -395,17 +431,11 @@ export const superviseeStep2Schema = superviseeSchemaObject
     }
   })
   .superRefine(applySuperviseeSupervisionNeedRules)
-
-export const superviseeStep3Schema = superviseeSchemaObject.pick({
-  description: true,
-  agreedToPost: true,
-  agreedToTerms: true,
-})
+  .superRefine(applySuperviseeBudgetRules)
 
 export const SUPERVISEE_SIGNUP_STEP_SCHEMAS = [
   superviseeStep1Schema,
   superviseeStep2Schema,
-  superviseeStep3Schema,
 ] as const
 
 export const SUPERVISEE_SIGNUP_STEP_FIELDS = [
@@ -424,24 +454,26 @@ export const SUPERVISEE_SIGNUP_STEP_FIELDS = [
     'occupationId',
     'specialtyId',
     'title',
+    'licensureState',
     'typeOfSupervisor',
     'needsMedicalDirector',
     'supervisorOccupationId',
     'supervisorSpecialtyId',
     'preferredFormat',
     'stateOfLicensure',
-    'stateTheyAreLookingIn',
     'howSoon',
     'howSoonDate',
     'availability',
     'feeType',
     'budgetRange',
+    'monthlyBudget',
+    'description',
+    'agreedToPost',
+    'agreedToTerms',
   ],
-  ['description', 'agreedToPost', 'agreedToTerms'],
 ] as const satisfies ReadonlyArray<ReadonlyArray<keyof SuperviseeFormValues>>
 
 export const SUPERVISEE_SIGNUP_STEP_META = [
   { title: 'Account', stepLabel: 'Step 1' },
-  { title: 'Supervision Needs', stepLabel: 'Step 2' },
-  { title: 'Ideal Supervisor & Terms', stepLabel: 'Step 3' },
+  { title: 'Supervision Needs & Terms', stepLabel: 'Step 2' },
 ] as const

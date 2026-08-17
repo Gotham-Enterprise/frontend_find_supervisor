@@ -23,16 +23,17 @@ import {
 import {
   useCitiesOptions,
   useSpecialtiesByOccupation,
+  useStateNameOptions,
   useStatesOptions,
   useSuperviseeFormOptions,
   useSupervisorTypesData,
 } from '@/lib/hooks'
 import {
+  filterSuperviseeOccupationOptions,
   getEligibleSupervisorTypes,
   hasCompletedEligibilityFields,
   NO_ELIGIBLE_SUPERVISION_TYPES_PLACEHOLDER,
   reconcileSelectedSupervisorType,
-  type SuperviseeEligibilityContext,
   SUPERVISION_TYPE_LOCKED_PLACEHOLDER,
 } from '@/lib/utils/supervisee-eligibility'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
@@ -96,7 +97,6 @@ export function SuperviseeProfileEditFields({
     useSupervisorTypesData()
 
   const selectedOccupationId = useWatch({ control: form.control, name: 'occupationId' }) ?? ''
-  const title = useWatch({ control: form.control, name: 'title' }) ?? ''
   const typeOfSupervisorNeeded =
     useWatch({ control: form.control, name: 'typeOfSupervisorNeeded' }) ?? ''
   const needsMedicalDirector =
@@ -104,7 +104,10 @@ export function SuperviseeProfileEditFields({
   const superviseeOccupation =
     useWatch({ control: form.control, name: 'superviseeOccupation' }) ?? ''
   const howSoonLooking = useWatch({ control: form.control, name: 'howSoonLooking' })
+  const budgetRangeType = useWatch({ control: form.control, name: 'budgetRangeType' })
   const { data: specialtyOptions = [] } = useSpecialtiesByOccupation(selectedOccupationId)
+  // Full state names ("Alabama") for the credential's state; value stays the abbreviation
+  const { data: licensureStateOptions = [] } = useStateNameOptions()
 
   // Same eligibility filtering as signup — the dropdown offers only the supervision
   // types this supervisee qualifies for; Medical Director is a checkbox instead.
@@ -112,30 +115,35 @@ export function SuperviseeProfileEditFields({
     () => occupationOptions.find((o) => o.value === selectedOccupationId)?.label ?? '',
     [occupationOptions, selectedOccupationId],
   )
-  const eligibilityCtx: SuperviseeEligibilityContext = useMemo(
-    () => ({ occupationName, credentialTitle: title }),
-    [occupationName, title],
+
+  // Only supervisee-eligible occupations can be picked; a legacy occupation saved
+  // before this rule is kept in the list so the stored value still renders.
+  // (`occupationName` above intentionally reads the full list for eligibility.)
+  const superviseeOccupationOptions = useMemo(
+    () =>
+      filterSuperviseeOccupationOptions(occupationOptions, (o) => o.value === selectedOccupationId),
+    [occupationOptions, selectedOccupationId],
   )
-  const eligibilityComplete = hasCompletedEligibilityFields(eligibilityCtx)
+  const eligibilityComplete = hasCompletedEligibilityFields(occupationName)
 
   const supervisorTypeOptions = useMemo<SelectOption[]>(
     () =>
-      getEligibleSupervisorTypes(supervisorTypesData, eligibilityCtx).map((t) => ({
+      getEligibleSupervisorTypes(supervisorTypesData, occupationName).map((t) => ({
         label: t.name,
         value: t.name,
       })),
-    [supervisorTypesData, eligibilityCtx],
+    [supervisorTypesData, occupationName],
   )
 
-  // Clear a selected supervision type that became ineligible after the credential or
-  // occupation changed. Skipped until the occupation options resolve — the stored
-  // selection must not be wiped just because the occupation name isn't known yet.
+  // Clear a selected supervision type that became ineligible after the occupation
+  // changed. Skipped until the occupation options resolve — the stored selection
+  // must not be wiped just because the occupation name isn't known yet.
   useEffect(() => {
     if (!eligibilityComplete) return
     const reconciled = reconcileSelectedSupervisorType(
       typeOfSupervisorNeeded,
       supervisorTypesData,
-      eligibilityCtx,
+      occupationName,
     )
     if (reconciled !== typeOfSupervisorNeeded) {
       form.setValue('typeOfSupervisorNeeded', reconciled)
@@ -143,7 +151,7 @@ export function SuperviseeProfileEditFields({
       form.setValue('superviseeSpecialty', '')
       form.clearErrors(['typeOfSupervisorNeeded', 'superviseeOccupation', 'superviseeSpecialty'])
     }
-  }, [typeOfSupervisorNeeded, supervisorTypesData, eligibilityCtx, eligibilityComplete, form])
+  }, [typeOfSupervisorNeeded, supervisorTypesData, occupationName, eligibilityComplete, form])
 
   const noEligibleTypes =
     !supervisorTypesLoading && eligibilityComplete && supervisorTypeOptions.length === 0
@@ -299,7 +307,7 @@ export function SuperviseeProfileEditFields({
             name="occupationId"
             label="Occupation"
             searchable
-            options={occupationOptions ?? []}
+            options={superviseeOccupationOptions}
             placeholder="Select Occupation"
             isSubmitting={isSubmitting}
             required
@@ -320,35 +328,27 @@ export function SuperviseeProfileEditFields({
             emptySentinel={{ value: '__none__', label: 'None' }}
           />
         </div>
-        <FormInputField
-          control={form.control}
-          name="title"
-          label={SUPERVISEE_CREDENTIAL_TITLE_LABEL}
-          placeholder={SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER}
-          isSubmitting={isSubmitting}
-          required
-        />
-        <FormField
-          control={form.control}
-          name="stateOfLicensure"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                States of Licensure <span className="text-destructive">*</span>
-              </FormLabel>
-              <FormControl>
-                <TagInput
-                  options={stateOptions}
-                  value={field.value ?? []}
-                  onChange={field.onChange}
-                  placeholder="Select States..."
-                  disabled={isSubmitting}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormInputField
+            control={form.control}
+            name="title"
+            label={SUPERVISEE_CREDENTIAL_TITLE_LABEL}
+            placeholder={SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER}
+            isSubmitting={isSubmitting}
+            required
+          />
+          {/* State tied to the credential (e.g. "AMFT (TX)") — matches signup */}
+          <FormSelectField
+            control={form.control}
+            name="licensureState"
+            label="State of Licensure"
+            searchable
+            options={licensureStateOptions}
+            placeholder="Select state"
+            isSubmitting={isSubmitting}
+            required
+          />
+        </div>
       </fieldset>
 
       <fieldset className="space-y-4">
@@ -453,32 +453,28 @@ export function SuperviseeProfileEditFields({
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-1">
-          <FormField
-            control={form.control}
-            name="stateTheyAreLookingIn"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  State(s) You Are Looking In <span className="text-destructive">*</span>
-                </FormLabel>
-                <FormControl>
-                  <TagInput
-                    options={stateOptions}
-                    value={field.value ?? []}
-                    onChange={(v) => {
-                      field.onChange(v)
-                      form.clearErrors(field.name)
-                    }}
-                    placeholder={statesLoading ? 'Loading…' : 'Add a state (e.g. CA)'}
-                    disabled={isSubmitting || statesLoading}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormField
+          control={form.control}
+          name="stateOfLicensure"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                States of Licensure <span className="text-destructive">*</span>
+              </FormLabel>
+              <FormControl>
+                <TagInput
+                  options={stateOptions}
+                  value={field.value ?? []}
+                  onChange={field.onChange}
+                  placeholder="Select States..."
+                  disabled={isSubmitting}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <div className="grid gap-4 sm:grid-cols-2">
           <FormSelectField
             control={form.control}
@@ -535,28 +531,42 @@ export function SuperviseeProfileEditFields({
           isSubmitting={isSubmitting}
           required
         />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormInputField
-            control={form.control}
-            name="budgetRangeStart"
-            label="Budget Min ($)"
-            type="number"
-            numberValue
-            min={0}
-            placeholder="0"
-            isSubmitting={isSubmitting}
-          />
+        {budgetRangeType === 'MONTHLY' ? (
+          /* Monthly budgets are a single amount stored in budgetRangeEnd (start is 0) */
           <FormInputField
             control={form.control}
             name="budgetRangeEnd"
-            label="Budget Max ($)"
+            label="Monthly Budget ($)"
             type="number"
             numberValue
             min={0}
-            placeholder="200"
+            placeholder="1500"
             isSubmitting={isSubmitting}
           />
-        </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormInputField
+              control={form.control}
+              name="budgetRangeStart"
+              label="Budget Min ($)"
+              type="number"
+              numberValue
+              min={0}
+              placeholder="0"
+              isSubmitting={isSubmitting}
+            />
+            <FormInputField
+              control={form.control}
+              name="budgetRangeEnd"
+              label="Budget Max ($)"
+              type="number"
+              numberValue
+              min={0}
+              placeholder="200"
+              isSubmitting={isSubmitting}
+            />
+          </div>
+        )}
       </fieldset>
 
       <fieldset className="space-y-4">

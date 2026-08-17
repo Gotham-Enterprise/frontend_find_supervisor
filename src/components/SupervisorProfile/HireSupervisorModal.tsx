@@ -19,14 +19,12 @@ import {
 import { FormInputField } from '@/components/ui/form-input-field'
 import { FormSelectField } from '@/components/ui/form-select-field'
 import { Input } from '@/components/ui/input'
-import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
 import {
   useAvailabilityOptions,
   useBudgetTypeOptions,
   useFormatOptions,
   useHireSupervisor,
-  useStatesOptions,
   useSupervisorTypesData,
   useUserSnackbar,
 } from '@/lib/hooks'
@@ -54,11 +52,8 @@ const hireSupervisorSchema = z
       { error: 'Preferred availability is required' },
     ),
     typeOfSupervisorNeeded: z.string().min(1, 'Please select a type of supervision needed'),
-    stateTheyAreLookingIn: z
-      .array(z.string())
-      .min(1, 'Please select at least one state you are looking in'),
     preferredStartDate: z.string().min(1, 'Preferred start date is required'),
-    budgetRangeType: z.enum(['PER_SESSION', 'MONTHLY'], {
+    budgetRangeType: z.enum(['HOURLY', 'MONTHLY'], {
       error: 'Budget type is required',
     }),
     budgetRangeStart: z.number({ error: 'Must be a number' }).min(0, 'Must be 0 or greater'),
@@ -103,9 +98,6 @@ function buildHireSupervisorDefaultValues(
       (superviseeProfile?.availability as HireSupervisorFormValues['preferredAvailability']) ??
       undefined,
     typeOfSupervisorNeeded: matchedTypes[0] ?? '',
-    stateTheyAreLookingIn: superviseeProfile
-      ? coerceStringList(superviseeProfile.stateTheyAreLookingIn)
-      : [],
     preferredStartDate: '',
     budgetRangeType: superviseeProfile?.budgetRangeType ?? undefined,
     budgetRangeStart: superviseeProfile?.budgetRangeStart ?? 0,
@@ -151,15 +143,10 @@ export function HireSupervisorModal({
     () => new Set(supervisorTypesData.map((t) => t.name)),
     [supervisorTypesData],
   )
-  const { data: stateOptions = [], isLoading: statesLoading } = useStatesOptions()
   const { data: budgetTypeOptions = [], isLoading: budgetTypesLoading } = useBudgetTypeOptions()
 
   const optionsLoading =
-    formatsLoading ||
-    availabilityLoading ||
-    supervisorTypesLoading ||
-    statesLoading ||
-    budgetTypesLoading
+    formatsLoading || availabilityLoading || supervisorTypesLoading || budgetTypesLoading
 
   const form = useForm<HireSupervisorFormValues>({
     resolver: zodResolver(hireSupervisorSchema),
@@ -301,30 +288,6 @@ export function HireSupervisorModal({
                     )}
                   />
                 )}
-                <FormField
-                  control={form.control}
-                  name="stateTheyAreLookingIn"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        State(s) You Are Looking In <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <TagInput
-                          options={stateOptions}
-                          value={field.value ?? []}
-                          onChange={(v) => {
-                            field.onChange(v)
-                            form.clearErrors(field.name)
-                          }}
-                          placeholder={statesLoading ? 'Loading…' : 'Add a state (e.g. CA)'}
-                          disabled={isSubmitting || statesLoading}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
 
               <FormInputField

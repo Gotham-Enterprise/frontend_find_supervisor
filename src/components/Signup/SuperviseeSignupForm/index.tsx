@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useForm, useFormState, useWatch } from 'react-hook-form'
 
 import { superviseeDefaultValues } from '@/components/Signup/helpers'
@@ -19,6 +19,7 @@ import {
 } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
+  filterSuperviseeOccupationOptions,
   INELIGIBLE_SUPERVISION_TYPE_MESSAGE,
   isSupervisorTypeEligibleForSupervisee,
 } from '@/lib/utils/supervisee-eligibility'
@@ -35,7 +36,7 @@ import { SuperviseeStepProfileTerms } from './SuperviseeStepProfileTerms'
 import { SuperviseeStepSupervisionNeeds } from './SuperviseeStepSupervisionNeeds'
 import { type SuperviseeSignupStepIndex, validateSuperviseeStep } from './validateSuperviseeStep'
 
-const LAST_STEP: SuperviseeSignupStepIndex = 2
+const LAST_STEP: SuperviseeSignupStepIndex = 1
 
 export function SuperviseeSignupForm() {
   const [step, setStep] = useState<SuperviseeSignupStepIndex>(0)
@@ -56,6 +57,13 @@ export function SuperviseeSignupForm() {
     occupations: { data: occupationOptions = [], isLoading: occupationsLoading },
     isError: optionsError,
   } = useSuperviseeFormOptions()
+
+  // Only supervisee-eligible occupations are offered (associate-level mental
+  // health counselors, NPs, and PAs) — the generic occupations list is for job seekers.
+  const superviseeOccupationOptions = useMemo(
+    () => filterSuperviseeOccupationOptions(occupationOptions),
+    [occupationOptions],
+  )
 
   const form = useForm<SuperviseeFormValues>({
     defaultValues: superviseeDefaultValues,
@@ -151,17 +159,11 @@ export function SuperviseeSignupForm() {
     }
 
     // Defense-in-depth: the Step 2 UI only offers eligible types, but re-check before
-    // submitting in case the selection was made before the credential/occupation changed.
+    // submitting in case the selection was made before the occupation changed.
     const selectedType = supervisorTypesData.find((t) => t.name === values.typeOfSupervisor)
     const occupationName =
-      occupationOptions.find((o) => o.value === values.occupationId)?.label ?? ''
-    if (
-      selectedType &&
-      !isSupervisorTypeEligibleForSupervisee(selectedType, {
-        occupationName,
-        credentialTitle: values.title,
-      })
-    ) {
+      superviseeOccupationOptions.find((o) => o.value === values.occupationId)?.label ?? ''
+    if (selectedType && !isSupervisorTypeEligibleForSupervisee(selectedType, occupationName)) {
       form.setError('typeOfSupervisor', {
         type: 'manual',
         message: INELIGIBLE_SUPERVISION_TYPE_MESSAGE,
@@ -225,23 +227,24 @@ export function SuperviseeSignupForm() {
           />
         )}
         {step === 1 && (
-          <SuperviseeStepSupervisionNeeds
-            supervisorTypesData={supervisorTypesData}
-            supervisorTypesLoading={supervisorTypesLoading}
-            occupationOptions={occupationOptions}
-            occupationsLoading={occupationsLoading}
-            stateOptions={stateOptions}
-            howSoonOptions={howSoonOptions}
-            availabilityOptions={availabilityOptions}
-            salaryRangeOptions={salaryRangeOptions}
-            statesLoading={statesLoading}
-            howSoonLoading={howSoonLoading}
-            availabilityLoading={availabilityLoading}
-            salaryRangesLoading={salaryRangesLoading}
-            isSubmitting={isSubmitting}
-          />
+          <>
+            <SuperviseeStepSupervisionNeeds
+              supervisorTypesData={supervisorTypesData}
+              supervisorTypesLoading={supervisorTypesLoading}
+              occupationOptions={superviseeOccupationOptions}
+              occupationsLoading={occupationsLoading}
+              stateOptions={stateOptions}
+              howSoonOptions={howSoonOptions}
+              availabilityOptions={availabilityOptions}
+              salaryRangeOptions={salaryRangeOptions}
+              howSoonLoading={howSoonLoading}
+              availabilityLoading={availabilityLoading}
+              salaryRangesLoading={salaryRangesLoading}
+              isSubmitting={isSubmitting}
+            />
+            <SuperviseeStepProfileTerms isSubmitting={isSubmitting} />
+          </>
         )}
-        {step === 2 && <SuperviseeStepProfileTerms isSubmitting={isSubmitting} />}
 
         <SuperviseeStepNavigation
           step={step}
