@@ -12,7 +12,7 @@ export type LookingTimeline =
   | 'WITHIN_6_MONTHS'
   | 'CUSTOM_DATE'
 
-export type BudgetRangeType = 'PER_SESSION' | 'MONTHLY'
+export type BudgetRangeType = 'HOURLY' | 'MONTHLY'
 
 export interface SuperviseeProfileUser {
   id: string
@@ -51,11 +51,11 @@ export interface SuperviseeProfileData {
   preferredFormat: SupervisionFormat | null
   /** Credential or license type (e.g. AMFT, LPC-Associate, ACSW, PA) */
   title: string | null
+  /** State tied to the credential/title (US state abbreviation, e.g. "TX") */
+  licensureState: string | null
   availability: string | null
   /** Free-text description of their ideal supervisor / about them */
   idealSupervisor: string | null
-  /** States the supervisee is seeking supervision in */
-  stateTheyAreLookingIn: string[] | null
 
   budgetRangeType: BudgetRangeType | null
   /** Budget lower bound in whole dollars */

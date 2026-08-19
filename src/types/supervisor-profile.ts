@@ -149,6 +149,35 @@ export interface SupervisorLicenseEntry {
   sortOrder?: number
 }
 
+/** Medical Director secondary offering (Supervising/Collaborating Physician) with its own credentials. */
+export interface SupervisorOfferingEntry {
+  id?: string
+  supervisorType: string
+  occupation?: string | null
+  specialty?: string | null
+  degreeType?: string | null
+  sortOrder?: number
+  /** License numbers are redacted (null) for non-owner viewers. */
+  licenses?: {
+    id?: string
+    licenseNumber?: string | null
+    state?: string | null
+    licenseExpiration?: string | null
+    sortOrder?: number
+  }[]
+}
+
+/** Medical Director board certification. `certificationNumber` is redacted (null) for non-owner viewers. */
+export interface SupervisorBoardCertificationEntry {
+  id?: string
+  certifyingBoard: string
+  specialty?: string | null
+  subspecialty?: string | null
+  certificationNumber?: string | null
+  expirationDate?: string | null
+  sortOrder?: number
+}
+
 export interface SupervisorProfileData {
   id: string
   userId: string
@@ -169,6 +198,10 @@ export interface SupervisorProfileData {
 
   /** All licenses, ordered by sortOrder (first = primary). Empty for unmigrated legacy records. */
   licenses?: SupervisorLicenseEntry[]
+  /** Medical Director only: secondary service offerings. */
+  offerings?: SupervisorOfferingEntry[]
+  /** Medical Director only: board certifications. */
+  boardCertifications?: SupervisorBoardCertificationEntry[]
   /** Owner-only: any license needs confirmation or a licensed state has no license details yet. */
   licenseReviewNeeded?: boolean
   /** Owner-only: licensed states with no license row (details awaited from the supervisor). */

@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest'
 
 import {
   SUPERVISEE_SIGNUP_STEP_FIELDS,
+  SUPERVISEE_SIGNUP_STEP_META,
+  SUPERVISEE_SIGNUP_STEP_SCHEMAS,
   superviseeStep2Schema,
-  superviseeStep3Schema,
 } from '@/components/Signup/schema'
 
 const validStep2Values = {
   title: 'AMFT',
+  licensureState: 'TX',
   occupationId: '12',
   specialtyId: '',
   typeOfSupervisor: 'Mental Health Counselors',
@@ -15,12 +17,14 @@ const validStep2Values = {
   supervisorSpecialtyId: '',
   preferredFormat: 'virtual',
   stateOfLicensure: ['CA'],
-  stateTheyAreLookingIn: ['CA'],
   howSoon: 'IMMEDIATELY',
   howSoonDate: '',
   availability: 'FLEXIBLE',
-  feeType: 'per-session',
+  feeType: 'hourly',
   budgetRange: '$0 - $50',
+  description: 'Looking for a supportive supervisor with CBT experience.',
+  agreedToPost: true,
+  agreedToTerms: true,
 }
 
 describe('supervisee step 2 schema (moved profile fields)', () => {
@@ -28,16 +32,19 @@ describe('supervisee step 2 schema (moved profile fields)', () => {
     expect(superviseeStep2Schema.safeParse(validStep2Values).success).toBe(true)
   })
 
-  it.each(['title', 'occupationId', 'typeOfSupervisor', 'supervisorOccupationId'] as const)(
-    'requires %s on step 2',
-    (field) => {
-      const result = superviseeStep2Schema.safeParse({ ...validStep2Values, [field]: '' })
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues.map((i) => i.path[0])).toContain(field)
-      }
-    },
-  )
+  it.each([
+    'title',
+    'licensureState',
+    'occupationId',
+    'typeOfSupervisor',
+    'supervisorOccupationId',
+  ] as const)('requires %s on step 2', (field) => {
+    const result = superviseeStep2Schema.safeParse({ ...validStep2Values, [field]: '' })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.map((i) => i.path[0])).toContain(field)
+    }
+  })
 
   it('requires a date when howSoon is CUSTOM_DATE', () => {
     const result = superviseeStep2Schema.safeParse({
@@ -46,6 +53,34 @@ describe('supervisee step 2 schema (moved profile fields)', () => {
       howSoonDate: '',
     })
     expect(result.success).toBe(false)
+  })
+})
+
+describe('fee type and budget rules', () => {
+  it('hourly requires a budget range from the dropdown', () => {
+    const result = superviseeStep2Schema.safeParse({ ...validStep2Values, budgetRange: '' })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.map((i) => i.path[0])).toContain('budgetRange')
+    }
+  })
+
+  it('monthly requires a typed monthly budget instead of the range', () => {
+    const monthlyValues = { ...validStep2Values, feeType: 'monthly', budgetRange: '' }
+    const missing = superviseeStep2Schema.safeParse(monthlyValues)
+    expect(missing.success).toBe(false)
+    if (!missing.success) {
+      expect(missing.error.issues.map((i) => i.path[0])).toContain('monthlyBudget')
+    }
+    expect(superviseeStep2Schema.safeParse({ ...monthlyValues, monthlyBudget: 1500 }).success).toBe(
+      true,
+    )
+  })
+
+  it('rejects the removed per-session fee type', () => {
+    expect(
+      superviseeStep2Schema.safeParse({ ...validStep2Values, feeType: 'per-session' }).success,
+    ).toBe(false)
   })
 })
 
@@ -85,34 +120,44 @@ describe('Medical Director checkbox (needsMedicalDirector)', () => {
   })
 })
 
-describe('supervisee step 3 schema (profile fields removed)', () => {
-  it('no longer validates the moved fields', () => {
-    const shape = Object.keys(superviseeStep3Schema.shape)
-    expect(shape).not.toContain('title')
-    expect(shape).not.toContain('occupationId')
-    expect(shape).not.toContain('specialtyId')
-    expect(shape).toEqual(expect.arrayContaining(['description', 'agreedToPost', 'agreedToTerms']))
+describe('two-step structure (Ideal Supervisor & Terms merged into step 2)', () => {
+  it('has exactly two steps across schemas, fields, and meta', () => {
+    expect(SUPERVISEE_SIGNUP_STEP_SCHEMAS).toHaveLength(2)
+    expect(SUPERVISEE_SIGNUP_STEP_FIELDS).toHaveLength(2)
+    expect(SUPERVISEE_SIGNUP_STEP_META).toHaveLength(2)
   })
 
-  it('passes without the moved fields', () => {
-    expect(
-      superviseeStep3Schema.safeParse({
-        description: 'Looking for a supportive supervisor with CBT experience.',
-        agreedToPost: true,
-        agreedToTerms: true,
-      }).success,
-    ).toBe(true)
+  it('validates the merged terms fields on step 2', () => {
+    const missingTerms = superviseeStep2Schema.safeParse({
+      ...validStep2Values,
+      description: '',
+      agreedToPost: false,
+      agreedToTerms: false,
+    })
+    expect(missingTerms.success).toBe(false)
+    if (!missingTerms.success) {
+      const paths = missingTerms.error.issues.map((i) => i.path[0])
+      expect(paths).toContain('description')
+      expect(paths).toContain('agreedToPost')
+      expect(paths).toContain('agreedToTerms')
+    }
   })
 })
 
 describe('step field lists', () => {
-  it('lists the moved fields under step 2, not step 3', () => {
-    const [, step2Fields, step3Fields] = SUPERVISEE_SIGNUP_STEP_FIELDS
+  it('lists profile and terms fields under step 2', () => {
+    const [, step2Fields] = SUPERVISEE_SIGNUP_STEP_FIELDS
     expect(step2Fields).toEqual(
-      expect.arrayContaining(['title', 'occupationId', 'specialtyId', 'typeOfSupervisor']),
+      expect.arrayContaining([
+        'title',
+        'occupationId',
+        'specialtyId',
+        'typeOfSupervisor',
+        'description',
+        'agreedToPost',
+        'agreedToTerms',
+      ]),
     )
-    expect(step3Fields).not.toEqual(expect.arrayContaining(['title']))
-    expect(step3Fields).not.toEqual(expect.arrayContaining(['occupationId']))
   })
 
   it('places eligibility fields before Type of Supervision Needed', () => {

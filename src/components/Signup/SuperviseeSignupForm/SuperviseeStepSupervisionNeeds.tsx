@@ -18,6 +18,7 @@ import {
   SUPERVISEE_CREDENTIAL_TITLE_LABEL,
   SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER,
 } from '@/lib/forms/supervisee-profile-edit'
+import { useStateNameOptions } from '@/lib/hooks'
 import { useSpecialtiesByOccupation } from '@/lib/hooks/useSignupOptions'
 import { cn } from '@/lib/utils'
 import { todayLocalISO } from '@/lib/utils/date'
@@ -25,20 +26,26 @@ import {
   getEligibleSupervisorTypes,
   hasCompletedEligibilityFields,
   INELIGIBLE_SUPERVISION_TYPE_MESSAGE,
+  isMedicalDirectorType,
   isSupervisorTypeEligibleForSupervisee,
   NO_ELIGIBLE_SUPERVISION_TYPES_PLACEHOLDER,
   reconcileSelectedSupervisorType,
-  type SuperviseeEligibilityContext,
   SUPERVISION_TYPE_LOCKED_PLACEHOLDER,
   SUPERVISION_TYPE_REQUIRED_MESSAGE,
 } from '@/lib/utils/supervisee-eligibility'
 
+import type { SuperviseeSignupVariant } from './index'
+
 const superviseeFeeTypeOptions: SelectOption[] = [
-  { value: 'per-session', label: 'Per Session' },
+  { value: 'hourly', label: 'Hourly' },
   { value: 'monthly', label: 'Monthly' },
 ]
 
 type SuperviseeStepSupervisionNeedsProps = {
+  /** 'need-medical-director' hides the supervision-type select/checkbox and
+   *  turns the desired-supervisor selects into optional Medical Director
+   *  preferences. */
+  variant?: SuperviseeSignupVariant
   supervisorTypesData: SupervisorTypeData[]
   supervisorTypesLoading: boolean
   occupationOptions: SelectOption[]
@@ -47,7 +54,6 @@ type SuperviseeStepSupervisionNeedsProps = {
   howSoonOptions: SelectOption[]
   availabilityOptions: SelectOption[]
   salaryRangeOptions: SelectOption[]
-  statesLoading: boolean
   howSoonLoading: boolean
   availabilityLoading: boolean
   salaryRangesLoading: boolean
@@ -55,6 +61,7 @@ type SuperviseeStepSupervisionNeedsProps = {
 }
 
 export function SuperviseeStepSupervisionNeeds({
+  variant = 'supervisee',
   supervisorTypesData,
   supervisorTypesLoading,
   occupationOptions,
@@ -63,18 +70,18 @@ export function SuperviseeStepSupervisionNeeds({
   howSoonOptions,
   availabilityOptions,
   salaryRangeOptions,
-  statesLoading,
   howSoonLoading,
   availabilityLoading,
   salaryRangesLoading,
   isSubmitting,
 }: SuperviseeStepSupervisionNeedsProps) {
+  const isNeedMedicalDirector = variant === 'need-medical-director'
   const { control, clearErrors, setValue } = useFormContext<SuperviseeFormValues>()
   const howSoon = useWatch({ control, name: 'howSoon' })
   const typeOfSupervisor = useWatch({ control, name: 'typeOfSupervisor' }) ?? ''
   const needsMedicalDirector = useWatch({ control, name: 'needsMedicalDirector' }) ?? false
-  const title = useWatch({ control, name: 'title' }) ?? ''
   const occupationId = useWatch({ control, name: 'occupationId' }) ?? ''
+  const feeType = useWatch({ control, name: 'feeType' })
   const isCustomDate = howSoon === 'CUSTOM_DATE'
   // Local date, not toISOString() — the UTC date blocks "today" in US timezones each evening
   const today = todayLocalISO()
@@ -84,50 +91,56 @@ export function SuperviseeStepSupervisionNeeds({
   const { data: specialtyOptions = [], isLoading: specialtiesLoading } =
     useSpecialtiesByOccupation(occupationId)
 
-  // Desired supervisor's occupation/specialty, cascading from the selected supervision type.
-  const supervisionOccupationOptions = useMemo<SelectOption[]>(() => {
-    if (!typeOfSupervisor) return []
-    const selectedType = supervisorTypesData.find((t) => t.name === typeOfSupervisor)
-    return selectedType?.occupations.map((o) => ({ label: o.name, value: o.name })) ?? []
-  }, [typeOfSupervisor, supervisorTypesData])
+  // Full state names ("Alabama") for the credential's state; value stays the abbreviation
+  const { data: licensureStateOptions = [], isLoading: licensureStatesLoading } =
+    useStateNameOptions()
+
+  // The type whose occupations feed the desired-supervisor selects: the
+  // Medical Director type in the dedicated flow (optional preferences),
+  // otherwise the selected supervision type.
+  const selectedSupervisionType = useMemo(() => {
+    if (isNeedMedicalDirector) return supervisorTypesData.find((t) => isMedicalDirectorType(t))
+    if (!typeOfSupervisor) return undefined
+    return supervisorTypesData.find((t) => t.name === typeOfSupervisor)
+  }, [isNeedMedicalDirector, typeOfSupervisor, supervisorTypesData])
+
+  const supervisionOccupationOptions = useMemo<SelectOption[]>(
+    () => selectedSupervisionType?.occupations.map((o) => ({ label: o.name, value: o.name })) ?? [],
+    [selectedSupervisionType],
+  )
 
   const supervisionSpecialtyOptions = useMemo<SelectOption[]>(() => {
-    if (!typeOfSupervisor || !supervisorOccupationId) return []
-    const selectedType = supervisorTypesData.find((t) => t.name === typeOfSupervisor)
-    const selectedOccupation = selectedType?.occupations.find(
+    if (!supervisorOccupationId) return []
+    const selectedOccupation = selectedSupervisionType?.occupations.find(
       (o) => o.name === supervisorOccupationId,
     )
     return selectedOccupation?.specialties.map((s) => ({ label: s.name, value: s.name })) ?? []
-  }, [typeOfSupervisor, supervisorOccupationId, supervisorTypesData])
+  }, [selectedSupervisionType, supervisorOccupationId])
 
   const occupationName = useMemo(
     () => occupationOptions.find((o) => o.value === occupationId)?.label ?? '',
     [occupationOptions, occupationId],
   )
-  const eligibilityCtx: SuperviseeEligibilityContext = useMemo(
-    () => ({ occupationName, credentialTitle: title }),
-    [occupationName, title],
-  )
-  const eligibilityComplete = hasCompletedEligibilityFields(eligibilityCtx)
+  const eligibilityComplete = hasCompletedEligibilityFields(occupationName)
 
   // Only eligible supervision types are offered; Medical Director is excluded — it is
   // requested via the checkbox below the dropdown instead.
   const supervisorTypeOptions = useMemo<SelectOption[]>(
     () =>
-      getEligibleSupervisorTypes(supervisorTypesData, eligibilityCtx).map((t) => ({
+      getEligibleSupervisorTypes(supervisorTypesData, occupationName).map((t) => ({
         label: t.name,
         value: t.name,
       })),
-    [supervisorTypesData, eligibilityCtx],
+    [supervisorTypesData, occupationName],
   )
 
   // Clear a previously selected supervision type that became ineligible after the
-  // credential/occupation changed.
+  // occupation changed.
   useEffect(() => {
     const reconciled = reconcileSelectedSupervisorType(
       typeOfSupervisor,
       supervisorTypesData,
-      eligibilityCtx,
+      occupationName,
     )
     if (reconciled !== typeOfSupervisor) {
       setValue('typeOfSupervisor', reconciled)
@@ -135,24 +148,25 @@ export function SuperviseeStepSupervisionNeeds({
       setValue('supervisorSpecialtyId', '')
       clearErrors(['typeOfSupervisor', 'supervisorOccupationId', 'supervisorSpecialtyId'])
     }
-  }, [typeOfSupervisor, supervisorTypesData, eligibilityCtx, setValue, clearErrors])
+  }, [typeOfSupervisor, supervisorTypesData, occupationName, setValue, clearErrors])
 
   // Possible now that Medical Director is not a dropdown option: a supervisee whose
-  // credentials match no supervision type signs up via the Medical Director checkbox alone.
+  // occupation matches no supervision type signs up via the Medical Director checkbox alone.
   const noEligibleTypes =
     !supervisorTypesLoading && eligibilityComplete && supervisorTypeOptions.length === 0
   const supervisionTypeDisabled = supervisorTypesLoading || !eligibilityComplete || noEligibleTypes
 
   return (
     <>
-      {/* ── Supervisee profile fields — collected here (before Step 3) because they
-          determine supervision-type eligibility ── */}
+      {/* ── Supervisee profile fields — collected here (before Step 3) because the
+          occupation determines supervision-type eligibility ── */}
       <FormSection title="Professional Background">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormSelectField
             control={control}
             name="occupationId"
             label="Occupation"
+            searchable
             rules={superviseeFieldRules('occupationId')}
             options={occupationOptions}
             placeholder="Select occupation"
@@ -184,92 +198,124 @@ export function SuperviseeStepSupervisionNeeds({
           />
         </div>
 
-        <FormInputField
-          control={control}
-          name="title"
-          label={SUPERVISEE_CREDENTIAL_TITLE_LABEL}
-          rules={superviseeFieldRules('title')}
-          placeholder={SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER}
-          isSubmitting={isSubmitting}
-          required
-        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormInputField
+            control={control}
+            name="title"
+            label={SUPERVISEE_CREDENTIAL_TITLE_LABEL}
+            rules={superviseeFieldRules('title')}
+            placeholder={SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER}
+            isSubmitting={isSubmitting}
+            required
+          />
+
+          {/* State tied to the credential — US convention pairs the state with the
+              credential (e.g. "TX LPC-A"); stored as the abbreviation */}
+          <FormSelectField
+            control={control}
+            name="licensureState"
+            label="State of Licensure"
+            searchable
+            rules={superviseeFieldRules('licensureState')}
+            options={licensureStateOptions}
+            placeholder="Select state"
+            loading={licensureStatesLoading}
+            isSubmitting={isSubmitting}
+            required
+          />
+        </div>
       </FormSection>
 
       <FormSection title="Supervision Needs">
-        {/* ── Type of Supervision Needed (filtered by eligibility) ── */}
-        <FormSelectField
-          control={control}
-          name="typeOfSupervisor"
-          label="Type of Supervision Needed"
-          rules={{
-            validate: (value: unknown, formValues: SuperviseeFormValues) => {
-              if (!value) {
-                return formValues.needsMedicalDirector ? true : SUPERVISION_TYPE_REQUIRED_MESSAGE
+        {/* ── Hidden in the dedicated "I need a Medical Director" flow — the
+            preset needsMedicalDirector covers the supervision need ── */}
+        {!isNeedMedicalDirector && (
+          <>
+            {/* ── Type of Supervision Needed (filtered by eligibility) ── */}
+            <FormSelectField
+              control={control}
+              name="typeOfSupervisor"
+              label="Type of Supervision Needed"
+              rules={{
+                validate: (value: unknown, formValues: SuperviseeFormValues) => {
+                  if (!value) {
+                    return formValues.needsMedicalDirector
+                      ? true
+                      : SUPERVISION_TYPE_REQUIRED_MESSAGE
+                  }
+                  const selected = supervisorTypesData.find((t) => t.name === value)
+                  if (
+                    selected &&
+                    !isSupervisorTypeEligibleForSupervisee(selected, occupationName)
+                  ) {
+                    return INELIGIBLE_SUPERVISION_TYPE_MESSAGE
+                  }
+                  return true
+                },
+              }}
+              options={supervisorTypeOptions}
+              placeholder={
+                supervisorTypesLoading
+                  ? 'Loading…'
+                  : !eligibilityComplete
+                    ? SUPERVISION_TYPE_LOCKED_PLACEHOLDER
+                    : noEligibleTypes
+                      ? NO_ELIGIBLE_SUPERVISION_TYPES_PLACEHOLDER
+                      : 'Select type of supervision'
               }
-              const selected = supervisorTypesData.find((t) => t.name === value)
-              if (selected && !isSupervisorTypeEligibleForSupervisee(selected, eligibilityCtx)) {
-                return INELIGIBLE_SUPERVISION_TYPE_MESSAGE
-              }
-              return true
-            },
-          }}
-          options={supervisorTypeOptions}
-          placeholder={
-            supervisorTypesLoading
-              ? 'Loading…'
-              : !eligibilityComplete
-                ? SUPERVISION_TYPE_LOCKED_PLACEHOLDER
-                : noEligibleTypes
-                  ? NO_ELIGIBLE_SUPERVISION_TYPES_PLACEHOLDER
-                  : 'Select type of supervision'
-          }
-          loading={supervisorTypesLoading}
-          disabled={supervisionTypeDisabled}
-          isSubmitting={isSubmitting}
-          selectKey={occupationId}
-          required={!needsMedicalDirector}
-          onValueChange={() => {
-            setValue('supervisorOccupationId', '')
-            setValue('supervisorSpecialtyId', '')
-            clearErrors(['supervisorOccupationId', 'supervisorSpecialtyId'])
-          }}
-        />
+              loading={supervisorTypesLoading}
+              disabled={supervisionTypeDisabled}
+              isSubmitting={isSubmitting}
+              selectKey={occupationId}
+              required={!needsMedicalDirector}
+              onValueChange={() => {
+                setValue('supervisorOccupationId', '')
+                setValue('supervisorSpecialtyId', '')
+                clearErrors(['supervisorOccupationId', 'supervisorSpecialtyId'])
+              }}
+            />
 
-        {/* ── Medical Director — combinable with any supervision type, or standalone ── */}
-        <FormField
-          control={control}
-          name="needsMedicalDirector"
-          render={({ field }) => (
-            <FormItem>
-              <div className="flex items-start gap-3">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value ?? false}
-                    disabled={isSubmitting}
-                    onCheckedChange={(checked) => {
-                      field.onChange(checked === true)
-                      if (checked === true) clearErrors('typeOfSupervisor')
-                    }}
-                    className="mt-0.5 shrink-0"
-                  />
-                </FormControl>
-                <div className="space-y-0.5">
-                  <p className="text-sm font-medium text-foreground">I need a Medical Director</p>
-                  <p className="text-sm text-muted-foreground">
-                    Can be combined with a supervision type above, or selected on its own.
-                  </p>
-                </div>
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            {/* ── Medical Director — combinable with any supervision type, or standalone ── */}
+            <FormField
+              control={control}
+              name="needsMedicalDirector"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-start gap-3">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value ?? false}
+                        disabled={isSubmitting}
+                        onCheckedChange={(checked) => {
+                          field.onChange(checked === true)
+                          if (checked === true) clearErrors('typeOfSupervisor')
+                        }}
+                        className="mt-0.5 shrink-0"
+                      />
+                    </FormControl>
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium text-foreground">
+                        I need a Medical Director
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Can be combined with a supervision type above, or selected on its own.
+                      </p>
+                    </div>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
 
-        {/* ── Desired supervisor's occupation/specialty (filtered by supervision type) ── */}
+        {/* ── Desired supervisor's occupation/specialty — cascades from the selected
+            supervision type; in the dedicated flow these are optional Medical
+            Director preferences ── */}
         <FormSelectField
           control={control}
           name="supervisorOccupationId"
-          label="Occupation"
+          label={isNeedMedicalDirector ? 'Preferred Occupation (optional)' : 'Occupation'}
           rules={{
             // Required only when a supervision type is selected — a Medical Director-only
             // request has no type, so no occupation cascade to fill in.
@@ -278,16 +324,20 @@ export function SuperviseeStepSupervisionNeeds({
           }}
           options={supervisionOccupationOptions}
           placeholder={
-            !typeOfSupervisor
-              ? 'Select a type of supervision first'
-              : supervisionOccupationOptions.length === 0
+            isNeedMedicalDirector
+              ? supervisionOccupationOptions.length === 0 && !supervisorTypesLoading
                 ? 'No occupations available'
-                : 'Select occupation'
+                : 'Select preferred occupation'
+              : !typeOfSupervisor
+                ? 'Select a type of supervision first'
+                : supervisionOccupationOptions.length === 0
+                  ? 'No occupations available'
+                  : 'Select occupation'
           }
           loading={supervisorTypesLoading}
-          isSubmitting={isSubmitting || !typeOfSupervisor}
-          selectKey={typeOfSupervisor}
-          required={Boolean(typeOfSupervisor)}
+          isSubmitting={isSubmitting || (!isNeedMedicalDirector && !typeOfSupervisor)}
+          selectKey={isNeedMedicalDirector ? 'need-medical-director' : typeOfSupervisor}
+          required={!isNeedMedicalDirector && Boolean(typeOfSupervisor)}
           onValueChange={() => {
             setValue('supervisorSpecialtyId', '')
             clearErrors('supervisorSpecialtyId')
@@ -297,12 +347,14 @@ export function SuperviseeStepSupervisionNeeds({
         <FormSelectField
           control={control}
           name="supervisorSpecialtyId"
-          label="Specialty"
+          label={isNeedMedicalDirector ? 'Preferred Specialty (optional)' : 'Specialty'}
           options={supervisionSpecialtyOptions}
           sortOptions
           placeholder={
             !supervisorOccupationId
-              ? 'Select an occupation first'
+              ? isNeedMedicalDirector
+                ? 'Select a preferred occupation first'
+                : 'Select an occupation first'
               : supervisionSpecialtyOptions.length === 0
                 ? 'No specialties available'
                 : 'Select specialty'
@@ -359,34 +411,6 @@ export function SuperviseeStepSupervisionNeeds({
                     }}
                     placeholder="Add a state (e.g. CA)"
                     disabled={isSubmitting}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField
-            control={control}
-            name="stateTheyAreLookingIn"
-            rules={superviseeFieldRules('stateTheyAreLookingIn')}
-            render={({ field }) => (
-              <FormItem className="sm:col-span-2">
-                <FormLabel>
-                  State(s) You Are Looking In <span className="text-destructive">*</span>
-                </FormLabel>
-                <FormControl>
-                  <TagInput
-                    options={stateOptions}
-                    value={field.value ?? []}
-                    onChange={(v) => {
-                      field.onChange(v)
-                      clearErrors(field.name)
-                    }}
-                    placeholder={statesLoading ? 'Loading…' : 'Add a state (e.g. CA)'}
-                    disabled={isSubmitting || statesLoading}
                   />
                 </FormControl>
                 <FormMessage />
@@ -470,18 +494,37 @@ export function SuperviseeStepSupervisionNeeds({
             placeholder="Select fee type"
             isSubmitting={isSubmitting}
             required
+            onValueChange={() => {
+              clearErrors(['budgetRange', 'monthlyBudget'])
+            }}
           />
-          <FormSelectField
-            control={control}
-            name="budgetRange"
-            label="Budget Range"
-            rules={superviseeFieldRules('budgetRange')}
-            options={salaryRangeOptions}
-            placeholder="Select budget"
-            loading={salaryRangesLoading}
-            isSubmitting={isSubmitting}
-            required
-          />
+          {feeType === 'monthly' ? (
+            <FormInputField
+              control={control}
+              name="monthlyBudget"
+              label="Monthly Budget"
+              type="number"
+              min={1}
+              placeholder="Enter your monthly budget"
+              startAdornment="$"
+              numberValue
+              clearErrorsOnChange
+              isSubmitting={isSubmitting}
+              required
+            />
+          ) : (
+            <FormSelectField
+              control={control}
+              name="budgetRange"
+              label="Budget Range"
+              rules={superviseeFieldRules('budgetRange')}
+              options={salaryRangeOptions}
+              placeholder="Select budget"
+              loading={salaryRangesLoading}
+              isSubmitting={isSubmitting}
+              required
+            />
+          )}
         </div>
       </FormSection>
     </>

@@ -1,9 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useForm, useFormState, useWatch } from 'react-hook-form'
 
-import { superviseeDefaultValues } from '@/components/Signup/helpers'
+import {
+  needMedicalDirectorDefaultValues,
+  superviseeDefaultValues,
+} from '@/components/Signup/helpers'
 import {
   SUPERVISEE_SIGNUP_STEP_FIELDS,
   type SuperviseeFormValues,
@@ -19,6 +22,7 @@ import {
 } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
+  filterSuperviseeOccupationOptions,
   INELIGIBLE_SUPERVISION_TYPE_MESSAGE,
   isSupervisorTypeEligibleForSupervisee,
 } from '@/lib/utils/supervisee-eligibility'
@@ -35,9 +39,17 @@ import { SuperviseeStepProfileTerms } from './SuperviseeStepProfileTerms'
 import { SuperviseeStepSupervisionNeeds } from './SuperviseeStepSupervisionNeeds'
 import { type SuperviseeSignupStepIndex, validateSuperviseeStep } from './validateSuperviseeStep'
 
-const LAST_STEP: SuperviseeSignupStepIndex = 2
+const LAST_STEP: SuperviseeSignupStepIndex = 1
 
-export function SuperviseeSignupForm() {
+export type SuperviseeSignupVariant = 'supervisee' | 'need-medical-director'
+
+type SuperviseeSignupFormProps = {
+  /** 'need-medical-director' presets needsMedicalDirector and hides the supervision-type UI. */
+  variant?: SuperviseeSignupVariant
+}
+
+export function SuperviseeSignupForm({ variant = 'supervisee' }: SuperviseeSignupFormProps) {
+  const isNeedMedicalDirector = variant === 'need-medical-director'
   const [step, setStep] = useState<SuperviseeSignupStepIndex>(0)
   const stepRef = useRef(step)
   stepRef.current = step
@@ -57,8 +69,22 @@ export function SuperviseeSignupForm() {
     isError: optionsError,
   } = useSuperviseeFormOptions()
 
+  // Regular supervisees pick from the allowlisted occupations (associate-level
+  // mental health counselors, NPs, and PAs); the Medical Director flow is open
+  // to any occupation — its typical clients (med spa owners, RNs, etc.) are
+  // outside the supervisee allowlist.
+  const superviseeOccupationOptions = useMemo(
+    () =>
+      isNeedMedicalDirector
+        ? occupationOptions
+        : filterSuperviseeOccupationOptions(occupationOptions),
+    [isNeedMedicalDirector, occupationOptions],
+  )
+
   const form = useForm<SuperviseeFormValues>({
-    defaultValues: superviseeDefaultValues,
+    defaultValues: isNeedMedicalDirector
+      ? needMedicalDirectorDefaultValues
+      : superviseeDefaultValues,
     shouldUnregister: false,
     mode: 'onTouched',
     reValidateMode: 'onChange',
@@ -151,17 +177,11 @@ export function SuperviseeSignupForm() {
     }
 
     // Defense-in-depth: the Step 2 UI only offers eligible types, but re-check before
-    // submitting in case the selection was made before the credential/occupation changed.
+    // submitting in case the selection was made before the occupation changed.
     const selectedType = supervisorTypesData.find((t) => t.name === values.typeOfSupervisor)
     const occupationName =
-      occupationOptions.find((o) => o.value === values.occupationId)?.label ?? ''
-    if (
-      selectedType &&
-      !isSupervisorTypeEligibleForSupervisee(selectedType, {
-        occupationName,
-        credentialTitle: values.title,
-      })
-    ) {
+      superviseeOccupationOptions.find((o) => o.value === values.occupationId)?.label ?? ''
+    if (selectedType && !isSupervisorTypeEligibleForSupervisee(selectedType, occupationName)) {
       form.setError('typeOfSupervisor', {
         type: 'manual',
         message: INELIGIBLE_SUPERVISION_TYPE_MESSAGE,
@@ -225,23 +245,25 @@ export function SuperviseeSignupForm() {
           />
         )}
         {step === 1 && (
-          <SuperviseeStepSupervisionNeeds
-            supervisorTypesData={supervisorTypesData}
-            supervisorTypesLoading={supervisorTypesLoading}
-            occupationOptions={occupationOptions}
-            occupationsLoading={occupationsLoading}
-            stateOptions={stateOptions}
-            howSoonOptions={howSoonOptions}
-            availabilityOptions={availabilityOptions}
-            salaryRangeOptions={salaryRangeOptions}
-            statesLoading={statesLoading}
-            howSoonLoading={howSoonLoading}
-            availabilityLoading={availabilityLoading}
-            salaryRangesLoading={salaryRangesLoading}
-            isSubmitting={isSubmitting}
-          />
+          <>
+            <SuperviseeStepSupervisionNeeds
+              variant={variant}
+              supervisorTypesData={supervisorTypesData}
+              supervisorTypesLoading={supervisorTypesLoading}
+              occupationOptions={superviseeOccupationOptions}
+              occupationsLoading={occupationsLoading}
+              stateOptions={stateOptions}
+              howSoonOptions={howSoonOptions}
+              availabilityOptions={availabilityOptions}
+              salaryRangeOptions={salaryRangeOptions}
+              howSoonLoading={howSoonLoading}
+              availabilityLoading={availabilityLoading}
+              salaryRangesLoading={salaryRangesLoading}
+              isSubmitting={isSubmitting}
+            />
+            <SuperviseeStepProfileTerms isSubmitting={isSubmitting} />
+          </>
         )}
-        {step === 2 && <SuperviseeStepProfileTerms isSubmitting={isSubmitting} />}
 
         <SuperviseeStepNavigation
           step={step}

@@ -15,8 +15,9 @@ export const supervisorSearchKeys = {
 
 export function useSupervisorSearch(input: SupervisorSearchQueryInput, enabled = true) {
   return useQuery({
+    // searchMode is part of `input`, so the two find pages never share cache entries
     queryKey: supervisorSearchKeys.query(input),
-    queryFn: () => fetchSupervisorSearch(buildSupervisorSearchParams(input)),
+    queryFn: () => fetchSupervisorSearch(buildSupervisorSearchParams(input), input.searchMode),
     enabled,
   })
 }

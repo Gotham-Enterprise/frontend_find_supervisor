@@ -2,6 +2,7 @@ import type { ApiResponse } from '@/types'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 import { apiClient } from './client'
+import type { BoardCertificationPayload, OfferingPayload } from './signup'
 
 /** GET /supervision/supervisor/profile?id=<id> — supervisor profile for that userId (own profile uses `useUser().id`). */
 export async function getSupervisorProfileById(id: string): Promise<SupervisorProfileData> {
@@ -33,6 +34,10 @@ export interface UpdateSupervisorProfilePayload {
   supervisorType?: string
   /** Full replace: every license the supervisor holds, each with its state. */
   licenses?: LicenseEntryPayload[]
+  /** Medical Director only — full replace; empty array clears all offerings. */
+  offerings?: OfferingPayload[]
+  /** Medical Director only — full replace; empty array clears all certifications. */
+  boardCertifications?: BoardCertificationPayload[]
   yearsOfExperience?: string
   npiNumber?: string
   certification?: string[]
@@ -61,6 +66,8 @@ export async function updateSupervisorProfile(
     uploadLicense,
     certification,
     licenses,
+    offerings,
+    boardCertifications,
     patientPopulation,
     acceptingSupervisees,
     supervisionFeeAmount,
@@ -95,6 +102,15 @@ export async function updateSupervisorProfile(
   // the backend replaces all license rows and re-derives stateOfLicensure from them.
   if (licenses) {
     fd.append('licenses', JSON.stringify(licenses))
+  }
+
+  // Full replace — an empty array clears the rows, so key on presence.
+  if (offerings !== undefined) {
+    fd.append('offerings', JSON.stringify(offerings))
+  }
+
+  if (boardCertifications !== undefined) {
+    fd.append('boardCertifications', JSON.stringify(boardCertifications))
   }
 
   if (patientPopulation) {

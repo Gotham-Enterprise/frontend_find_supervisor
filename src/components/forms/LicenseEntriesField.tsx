@@ -15,7 +15,15 @@ import { FormSelectField } from '@/components/ui/form-select-field'
 import type { SelectOption } from '@/lib/api/options'
 import { isPhysicianSupervisorType } from '@/lib/utils/supervisor-type'
 
+/** Array paths this component can host — top-level licenses or a Medical Director offering block. */
+export type LicenseArrayFieldName =
+  | 'licenses'
+  | 'offerings.supervising.licenses'
+  | 'offerings.collaborating.licenses'
+
 type LicenseEntriesFieldProps = {
+  /** Field-array path for the entries (defaults to the top-level `licenses`). */
+  name?: LicenseArrayFieldName
   /** License-type options for the selected supervisor type/occupation (hidden for physicians). */
   licenseTypeOptions: SelectOption[]
   stateOptions: SelectOption[]
@@ -37,6 +45,7 @@ type LicenseEntriesFieldProps = {
  * top-level degree type instead of a per-entry license type.
  */
 export function LicenseEntriesField({
+  name = 'licenses',
   licenseTypeOptions,
   stateOptions,
   licenseTypesLoading = false,
@@ -49,7 +58,7 @@ export function LicenseEntriesField({
   const { control, clearErrors } = useFormContext<LicensesFormShape>()
   const supervisorType = useWatch({ control, name: 'supervisorType' }) ?? ''
   const physicianSupervisorType = isPhysicianSupervisorType(supervisorType)
-  const { fields, append, remove } = useFieldArray({ control, name: 'licenses' })
+  const { fields, append, remove } = useFieldArray({ control, name })
 
   return (
     <div className="space-y-4">
@@ -83,7 +92,7 @@ export function LicenseEntriesField({
             {!physicianSupervisorType ? (
               <FormSelectField
                 control={control}
-                name={`licenses.${index}.licenseType`}
+                name={`${name}.${index}.licenseType`}
                 label="License Type"
                 rules={licenseEntryFieldRules('licenseType')}
                 options={licenseTypeOptions}
@@ -97,7 +106,7 @@ export function LicenseEntriesField({
             ) : null}
             <FormSelectField
               control={control}
-              name={`licenses.${index}.state`}
+              name={`${name}.${index}.state`}
               label="State of Licensure"
               rules={licenseEntryFieldRules('state')}
               options={stateOptions}
@@ -107,7 +116,7 @@ export function LicenseEntriesField({
             />
             <FormInputField
               control={control}
-              name={`licenses.${index}.licenseNumber`}
+              name={`${name}.${index}.licenseNumber`}
               label="License Number"
               rules={licenseEntryFieldRules('licenseNumber')}
               placeholder="Enter License Number"
@@ -116,7 +125,7 @@ export function LicenseEntriesField({
             />
             <FormInputField
               control={control}
-              name={`licenses.${index}.licenseExpiration`}
+              name={`${name}.${index}.licenseExpiration`}
               label="License Expiration"
               rules={licenseEntryFieldRules('licenseExpiration')}
               type="date"
@@ -134,7 +143,7 @@ export function LicenseEntriesField({
         size="sm"
         onClick={() => {
           append({ ...emptyLicenseEntry })
-          clearErrors('licenses')
+          clearErrors(name)
         }}
         disabled={isSubmitting}
       >

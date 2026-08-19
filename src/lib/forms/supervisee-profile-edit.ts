@@ -18,7 +18,7 @@ export const SUPERVISEE_PROFILE_FORMAT_OPTIONS = [
 ] as const
 
 export const SUPERVISEE_PROFILE_BUDGET_TYPE_OPTIONS = [
-  { label: 'Per Session', value: 'PER_SESSION' },
+  { label: 'Hourly', value: 'HOURLY' },
   { label: 'Monthly', value: 'MONTHLY' },
 ] as const
 
@@ -39,6 +39,8 @@ export const editSuperviseeProfileSchema = z
     occupationId: z.string().min(1, 'Occupation is required'),
     specialtyId: z.string().optional(),
     title: z.string().min(1, 'Credential or license type is required').max(100),
+    // State tied to the credential (US state abbreviation, e.g. "TX") — matches signup
+    licensureState: z.string().min(1, 'State of licensure is required'),
     stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
     // Required unless `needsMedicalDirector` is checked — enforced in the superRefine below.
     typeOfSupervisorNeeded: z.string(),
@@ -53,9 +55,6 @@ export const editSuperviseeProfileSchema = z
     preferredFormat: z.string().min(1, 'Preferred format is required'),
     availability: z.string().min(1, 'Availability is required'),
     idealSupervisor: z.string().min(1, 'Description of ideal supervisor is required').max(500),
-    stateTheyAreLookingIn: z
-      .array(z.string())
-      .min(1, 'Please select at least one state you are looking in'),
     budgetRangeType: z.string().min(1, 'Budget type is required'),
     budgetRangeStart: z.preprocess(normalizeNumberFieldInput, z.number().min(0).optional()),
     budgetRangeEnd: z.preprocess(normalizeNumberFieldInput, z.number().min(0).optional()),
@@ -110,6 +109,7 @@ export function getDefaultSuperviseeProfileFormValues(
     occupationId: defaultOccupationId,
     specialtyId: defaultSpecialtyId,
     title: profile.title ?? '',
+    licensureState: profile.licensureState ?? '',
     stateOfLicensure: profile.user.stateOfLicensure ?? [],
     typeOfSupervisorNeeded:
       storedSupervisionTypes.find((name) => !isMedicalDirectorType({ name })) ?? '',
@@ -121,7 +121,6 @@ export function getDefaultSuperviseeProfileFormValues(
     preferredFormat: profile.preferredFormat ?? '',
     availability: profile.availability ?? '',
     idealSupervisor: profile.idealSupervisor ?? '',
-    stateTheyAreLookingIn: coerceStringList(profile.stateTheyAreLookingIn),
     budgetRangeType: profile.budgetRangeType ?? '',
     budgetRangeStart: profile.budgetRangeStart ?? undefined,
     budgetRangeEnd: profile.budgetRangeEnd ?? undefined,
@@ -154,6 +153,7 @@ export function superviseeProfileFormValuesToPayload(
     occupation: values.occupationId || undefined,
     specialty: values.specialtyId || undefined,
     title: values.title.trim() || undefined,
+    licensureState: values.licensureState || undefined,
     stateOfLicensure: values.stateOfLicensure,
     typeOfSupervisorNeeded: supervisionTypes.length > 0 ? supervisionTypes : undefined,
     // '' (not undefined) when cleared, so the backend nulls the stored value — e.g. a
@@ -166,10 +166,9 @@ export function superviseeProfileFormValuesToPayload(
     preferredFormat: values.preferredFormat || undefined,
     availability: values.availability || undefined,
     idealSupervisor: values.idealSupervisor || undefined,
-    stateTheyAreLookingIn:
-      values.stateTheyAreLookingIn.length > 0 ? values.stateTheyAreLookingIn : undefined,
     budgetRangeType: values.budgetRangeType || undefined,
-    budgetRangeStart: values.budgetRangeStart,
+    // Monthly budgets are a single amount stored in `budgetRangeEnd`; `start` is 0
+    budgetRangeStart: values.budgetRangeType === 'MONTHLY' ? 0 : values.budgetRangeStart,
     budgetRangeEnd: values.budgetRangeEnd,
     uploadProfilePhoto:
       values.uploadProfilePhoto instanceof File ? values.uploadProfilePhoto : undefined,

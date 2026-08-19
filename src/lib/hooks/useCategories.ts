@@ -4,8 +4,13 @@ import { fetchOccupations } from '@/lib/api/categoriesApi'
 
 export const categoryKeys = {
   all: ['categories'] as const,
-  occupations: (params?: { limit?: number; skip?: number; hasJob?: boolean; sortBy?: string }) =>
-    [...categoryKeys.all, 'occupations', params] as const,
+  occupations: (params?: {
+    limit?: number
+    skip?: number
+    hasJob?: boolean
+    sortBy?: string
+    includeAll?: boolean
+  }) => [...categoryKeys.all, 'occupations', params] as const,
 }
 
 /**
@@ -16,6 +21,7 @@ export function useOccupations(params?: {
   skip?: number
   hasJob?: boolean
   sortBy?: string
+  includeAll?: boolean
 }) {
   return useQuery({
     queryKey: categoryKeys.occupations({ ...params }),

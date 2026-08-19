@@ -8,7 +8,7 @@ import {
 
 import { applyZodIssuesToForm } from '../SupervisorSignupForm/applyZodIssuesToForm'
 
-export type SuperviseeSignupStepIndex = 0 | 1 | 2
+export type SuperviseeSignupStepIndex = 0 | 1
 
 export function validateSuperviseeStep(
   stepIndex: SuperviseeSignupStepIndex,

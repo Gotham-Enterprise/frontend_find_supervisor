@@ -91,11 +91,6 @@ export async function purchaseSubscription(
   return data.data
 }
 
-function normalizeStateTheyAreLookingIn(value: string | string[]): string[] {
-  const raw = Array.isArray(value) ? value : [value]
-  return raw.map((s) => String(s).trim()).filter((s) => s.length > 0)
-}
-
 function normalizeSupervisionHours(
   typeOfSupervisorNeeded: string | string[],
   supervisionHours: number | null | undefined,
@@ -112,7 +107,6 @@ function normalizeSupervisionHours(
 export async function hireSupervisor(payload: HireSupervisorRequestInput): Promise<HireRecord> {
   const body: HireSupervisorPayload = {
     ...payload,
-    stateTheyAreLookingIn: normalizeStateTheyAreLookingIn(payload.stateTheyAreLookingIn),
     supervisionHours: normalizeSupervisionHours(
       payload.typeOfSupervisorNeeded,
       payload.supervisionHours,

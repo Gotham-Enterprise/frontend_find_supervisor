@@ -24,6 +24,7 @@ export interface UpdateSuperviseeProfilePayload {
   occupation?: string
   specialty?: string
   title?: string
+  licensureState?: string
   stateOfLicensure?: string[]
   typeOfSupervisorNeeded?: string[]
   superviseeOccupation?: string
@@ -33,7 +34,6 @@ export interface UpdateSuperviseeProfilePayload {
   preferredFormat?: string
   availability?: string
   idealSupervisor?: string
-  stateTheyAreLookingIn?: string[]
   budgetRangeType?: string
   budgetRangeStart?: number
   budgetRangeEnd?: number
@@ -50,7 +50,6 @@ export async function updateSuperviseeProfile(
     uploadProfilePhoto,
     stateOfLicensure,
     typeOfSupervisorNeeded,
-    stateTheyAreLookingIn,
     budgetRangeStart,
     budgetRangeEnd,
     superviseeOccupation,
@@ -88,10 +87,6 @@ export async function updateSuperviseeProfile(
 
   if (typeOfSupervisorNeeded?.length) {
     typeOfSupervisorNeeded.forEach((t) => fd.append('typeOfSupervisorNeeded[]', t))
-  }
-
-  if (stateTheyAreLookingIn?.length) {
-    stateTheyAreLookingIn.forEach((s) => fd.append('stateTheyAreLookingIn[]', s))
   }
 
   if (uploadProfilePhoto) {
