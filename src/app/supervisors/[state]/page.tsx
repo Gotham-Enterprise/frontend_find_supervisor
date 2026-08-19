@@ -18,6 +18,7 @@ import { notFound } from 'next/navigation'
 
 import { Breadcrumb } from '@/components/seo/Breadcrumb'
 import { FaqSection } from '@/components/seo/FaqSection'
+import { PublicResultsCta } from '@/components/seo/PublicResultsCta'
 import { SupervisorCard } from '@/components/seo/SupervisorCard'
 import { fetchPublicSupervisors } from '@/lib/api/public-supervisors'
 import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
@@ -183,17 +184,12 @@ export default async function StateSupervisorsPage({ params }: Props) {
               </div>
             </section>
 
-            {/* Pagination hint */}
-            {meta.totalCount > supervisors.length && (
-              <div className="mt-8 text-center">
-                <Link
-                  href={`/login?redirect=/find-supervisors`}
-                  className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  Sign in to see all {meta.totalCount} Supervisors in {stateName}
-                </Link>
-              </div>
-            )}
+            <PublicResultsCta
+              role="supervisor"
+              totalCount={meta.totalCount}
+              shownCount={supervisors.length}
+              context={`in ${stateName}`}
+            />
           </>
         )}
 

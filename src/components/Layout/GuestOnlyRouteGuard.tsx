@@ -35,11 +35,12 @@ export function GuestOnlyRouteGuard({ children }: GuestOnlyRouteGuardProps) {
   const router = useRouter()
   const { user, setUser, setIsLoading: setContextLoading } = useUser()
   /**
-   * Must start `false` on server and client so the first paint matches (avoids hydration errors).
-   * Do not read `localStorage` in the initializer — that diverges SSR from the browser.
-   * `useEffect` unlocks the guest UI or redirects once the session is known.
+   * Guest content renders IMMEDIATELY (server and first client paint match, and
+   * crawlers get real HTML for the landing page — the previous blank-until-checked
+   * behavior served an empty shell to SEO). The spinner only takes over once a
+   * session token is actually found in localStorage, while we probe and redirect.
    */
-  const [allowGuest, setAllowGuest] = useState(false)
+  const [checkingSession, setCheckingSession] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -47,17 +48,21 @@ export function GuestOnlyRouteGuard({ children }: GuestOnlyRouteGuardProps) {
     async function run() {
       const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null
 
-      if (!token) {
-        if (!cancelled) setAllowGuest(true)
-        return
-      }
+      // No token — guest content is already visible; nothing to do.
+      if (!token) return
 
       if (user) {
-        if (!cancelled) router.replace(resolvePostLoginPath(user.role))
+        if (!cancelled) {
+          setCheckingSession(true)
+          router.replace(resolvePostLoginPath(user.role))
+        }
         return
       }
 
-      if (!cancelled) setContextLoading(true)
+      if (!cancelled) {
+        setCheckingSession(true)
+        setContextLoading(true)
+      }
       try {
         const u = await getMe()
         if (cancelled) return
@@ -66,7 +71,7 @@ export function GuestOnlyRouteGuard({ children }: GuestOnlyRouteGuardProps) {
       } catch {
         if (cancelled) return
         localStorage.removeItem(TOKEN_KEY)
-        setAllowGuest(true)
+        setCheckingSession(false)
       } finally {
         if (!cancelled) setContextLoading(false)
       }
@@ -79,7 +84,7 @@ export function GuestOnlyRouteGuard({ children }: GuestOnlyRouteGuardProps) {
     }
   }, [router, setUser, setContextLoading, user])
 
-  if (!allowGuest) {
+  if (checkingSession) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-hero-bg px-4">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#006D36] border-t-transparent" />

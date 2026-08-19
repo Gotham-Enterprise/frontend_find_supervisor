@@ -1,3 +1,4 @@
+import { BrowseTeasers } from '@/components/LandingPage/browse-teasers'
 import { CtaBanner } from '@/components/LandingPage/cta-banner'
 import { FaqSection } from '@/components/LandingPage/faq-section'
 import { HeroSection } from '@/components/LandingPage/hero-section'
@@ -9,6 +10,7 @@ export function HomePage() {
   return (
     <>
       <HeroSection />
+      <BrowseTeasers />
       <WhySupervisionMatters />
       <HowItWorks />
       <KeyFeatures />

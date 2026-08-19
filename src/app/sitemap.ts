@@ -23,6 +23,12 @@ const STATIC_PAGES: MetadataRoute.Sitemap = [
     priority: 0.9,
   },
   {
+    url: `${SITE_URL}/browse-supervisees`,
+    lastModified: new Date(),
+    changeFrequency: 'daily',
+    priority: 0.8,
+  },
+  {
     url: `${SITE_URL}/contact`,
     lastModified: new Date(),
     changeFrequency: 'monthly',
@@ -42,6 +48,14 @@ const STATE_PAGES: MetadataRoute.Sitemap = Object.keys(US_STATES).map((stateSlug
   lastModified: new Date(),
   changeFrequency: 'weekly' as const,
   priority: 0.8,
+}))
+
+/** Supervisee state pSEO pages — one per US state (thin ones self-noindex). */
+const SUPERVISEE_STATE_PAGES: MetadataRoute.Sitemap = Object.keys(US_STATES).map((stateSlug) => ({
+  url: `${SITE_URL}/browse-supervisees/${stateSlug}`,
+  lastModified: new Date(),
+  changeFrequency: 'weekly' as const,
+  priority: 0.7,
 }))
 
 /** License-type + state pSEO pages — top license types only. */
@@ -97,6 +111,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...STATIC_PAGES,
     ...STATE_PAGES,
+    ...SUPERVISEE_STATE_PAGES,
     ...SUPERVISOR_TYPE_STATE_PAGES,
     ...LICENSE_STATE_PAGES,
     ...supervisorPages,

@@ -15,6 +15,7 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 
 import { JsonLd } from '@/components/seo/JsonLd'
+import { PublicResultsCta } from '@/components/seo/PublicResultsCta'
 import { PublicSearchFilters } from '@/components/seo/PublicSearchFilters'
 import { SupervisorCard } from '@/components/seo/SupervisorCard'
 import { fetchPublicSupervisors } from '@/lib/api/public-supervisors'
@@ -180,33 +181,12 @@ export default async function SupervisorsIndexPage({ searchParams }: PageProps) 
                 ))}
               </div>
 
-              {/* Sign-in CTA when there are more results */}
-              {meta.totalCount > supervisors.length && (
-                <div className="mt-8 rounded-xl border bg-muted/30 p-6 text-center">
-                  <p className="font-medium text-foreground">
-                    {meta.totalCount - supervisors.length} more Supervisor
-                    {meta.totalCount - supervisors.length !== 1 ? 's' : ''} available
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Sign in to browse all {meta.totalCount} matching Supervisors, filter by
-                    availability, patient population, fee range, and more.
-                  </p>
-                  <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-                    <Link
-                      href="/login?redirect=/find-supervisors"
-                      className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                    >
-                      Sign in to see all results
-                    </Link>
-                    <Link
-                      href="/signup"
-                      className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-6 text-sm font-medium transition-colors hover:bg-accent"
-                    >
-                      Create free account
-                    </Link>
-                  </div>
-                </div>
-              )}
+              {/* Always-on sign-up CTA — the registration funnel for visiting Supervisees */}
+              <PublicResultsCta
+                role="supervisor"
+                totalCount={meta.totalCount}
+                shownCount={supervisors.length}
+              />
             </>
           )}
         </section>

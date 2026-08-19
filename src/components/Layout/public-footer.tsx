@@ -1,17 +1,20 @@
 import Image from 'next/image'
 import Link from 'next/link'
 
-const footerColumns = [
-  {
-    heading: 'Find Supervisors',
-    links: [
-      { label: 'Browse All Supervisors', href: '/supervisors' },
-      { label: 'Supervisors in California', href: '/supervisors/california' },
-      { label: 'Supervisors in Texas', href: '/supervisors/texas' },
-      { label: 'Supervisors in Florida', href: '/supervisors/florida' },
-      { label: 'Supervisors in New York', href: '/supervisors/new-york' },
-    ],
-  },
+import { fetchPublicTopStates } from '@/lib/api/public-top-states'
+import { stateAbbreviationToDisplayName, stateAbbreviationToSlug } from '@/lib/seo/routes'
+
+interface FooterLink {
+  label: string
+  href: string
+}
+
+interface FooterColumn {
+  heading: string
+  links: FooterLink[]
+}
+
+const staticColumns: FooterColumn[] = [
   {
     heading: 'By Supervisor Type',
     links: [
@@ -43,11 +46,51 @@ const footerColumns = [
   },
 ]
 
-export function PublicFooter() {
+/**
+ * Public footer (async server component). The "Find Supervisors" and
+ * "Find Supervisees" state links are data-driven: the states with the most
+ * publicly visible members, fetched with 1h ISR. States without any members
+ * are never listed; if the data is unavailable, only the "Browse All" links
+ * render.
+ */
+export async function PublicFooter() {
+  const topStates = await fetchPublicTopStates(4)
+
+  const supervisorLinks: FooterLink[] = [
+    { label: 'Browse All Supervisors', href: '/supervisors' },
+    ...topStates.supervisors.flatMap(({ state }) => {
+      const slug = stateAbbreviationToSlug(state)
+      if (!slug) return []
+      return [
+        {
+          label: `Supervisors in ${stateAbbreviationToDisplayName(state)}`,
+          href: `/supervisors/${slug}`,
+        },
+      ]
+    }),
+  ]
+
+  const superviseeLinks: FooterLink[] = [
+    { label: 'Browse All Supervisees', href: '/browse-supervisees' },
+    ...topStates.supervisees.map(({ state }) => {
+      const slug = stateAbbreviationToSlug(state)
+      return {
+        label: `Supervisees in ${stateAbbreviationToDisplayName(state)}`,
+        href: slug ? `/browse-supervisees/${slug}` : `/browse-supervisees?state=${state}`,
+      }
+    }),
+  ]
+
+  const footerColumns: FooterColumn[] = [
+    { heading: 'Find Supervisors', links: supervisorLinks },
+    { heading: 'Find Supervisees', links: superviseeLinks },
+    ...staticColumns,
+  ]
+
   return (
     <footer className="border-t bg-background">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-7">
           <div className="lg:col-span-2">
             <a
               href="https://www.gothamenterprisesltd.com/"

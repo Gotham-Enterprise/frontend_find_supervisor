@@ -24,6 +24,7 @@ import { notFound } from 'next/navigation'
 import { Breadcrumb } from '@/components/seo/Breadcrumb'
 import { FaqSection } from '@/components/seo/FaqSection'
 import { JsonLd } from '@/components/seo/JsonLd'
+import { PublicResultsCta } from '@/components/seo/PublicResultsCta'
 import { SupervisorCard } from '@/components/seo/SupervisorCard'
 import type { PublicSupervisorSummary } from '@/lib/api/public-supervisors'
 import { fetchPublicSupervisorById, fetchPublicSupervisors } from '@/lib/api/public-supervisors'
@@ -314,16 +315,12 @@ async function LicenseTypeView({
               </div>
             </section>
 
-            {meta.totalCount > supervisors.length && (
-              <div className="mt-8 text-center">
-                <Link
-                  href="/login?redirect=/find-supervisors"
-                  className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  Sign in to see all {meta.totalCount} Supervisors
-                </Link>
-              </div>
-            )}
+            <PublicResultsCta
+              role="supervisor"
+              totalCount={meta.totalCount}
+              shownCount={supervisors.length}
+              context={`in ${stateName}`}
+            />
           </>
         )}
 
@@ -500,16 +497,12 @@ async function SupervisorTypeView({
               </div>
             </section>
 
-            {meta.totalCount > supervisors.length && (
-              <div className="mt-8 text-center">
-                <Link
-                  href="/login?redirect=/find-supervisors"
-                  className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  Sign in to see all {meta.totalCount} results
-                </Link>
-              </div>
-            )}
+            <PublicResultsCta
+              role="supervisor"
+              totalCount={meta.totalCount}
+              shownCount={supervisors.length}
+              context={`in ${stateName}`}
+            />
           </>
         )}
 

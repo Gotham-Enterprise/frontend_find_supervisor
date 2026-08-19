@@ -34,7 +34,13 @@ export const AUTH_ROUTE_PREFIXES = [
 ] as const
 
 /** Public routes that SHOULD be indexed. */
-export const PUBLIC_INDEXABLE_ROUTES = ['/', '/supervisors', '/contact', '/contact-us'] as const
+export const PUBLIC_INDEXABLE_ROUTES = [
+  '/',
+  '/supervisors',
+  '/browse-supervisees',
+  '/contact',
+  '/contact-us',
+] as const
 
 /** Returns true if the given pathname belongs to a private/auth-only section. */
 export function isPrivateRoute(pathname: string): boolean {
