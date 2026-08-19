@@ -13,6 +13,8 @@ interface SearchSupervisorHeaderProps {
   onKeywordChange: (value: string) => void
   onSupervisionFormatsChange: (values: string[]) => void
   onSearch: () => void
+  /** Page blurb (defaults to the supervisor-search copy). */
+  subtitle?: string
 }
 
 export function SearchSupervisorHeader({
@@ -21,6 +23,7 @@ export function SearchSupervisorHeader({
   onKeywordChange,
   onSupervisionFormatsChange,
   onSearch,
+  subtitle = 'Browse verified supervisors matched to your license, location, and goals.',
 }: SearchSupervisorHeaderProps) {
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') onSearch()
@@ -29,9 +32,7 @@ export function SearchSupervisorHeader({
   return (
     <div className="pb-0">
       <div className="w-full px-0">
-        <p className="text-base text-muted-foreground">
-          Browse verified supervisors matched to your license, location, and goals.
-        </p>
+        <p className="text-base text-muted-foreground">{subtitle}</p>
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-stretch">

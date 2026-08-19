@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useForm, useFormState, useWatch } from 'react-hook-form'
 
-import { superviseeDefaultValues } from '@/components/Signup/helpers'
+import {
+  needMedicalDirectorDefaultValues,
+  superviseeDefaultValues,
+} from '@/components/Signup/helpers'
 import {
   SUPERVISEE_SIGNUP_STEP_FIELDS,
   type SuperviseeFormValues,
@@ -38,7 +41,15 @@ import { type SuperviseeSignupStepIndex, validateSuperviseeStep } from './valida
 
 const LAST_STEP: SuperviseeSignupStepIndex = 1
 
-export function SuperviseeSignupForm() {
+export type SuperviseeSignupVariant = 'supervisee' | 'need-medical-director'
+
+type SuperviseeSignupFormProps = {
+  /** 'need-medical-director' presets needsMedicalDirector and hides the supervision-type UI. */
+  variant?: SuperviseeSignupVariant
+}
+
+export function SuperviseeSignupForm({ variant = 'supervisee' }: SuperviseeSignupFormProps) {
+  const isNeedMedicalDirector = variant === 'need-medical-director'
   const [step, setStep] = useState<SuperviseeSignupStepIndex>(0)
   const stepRef = useRef(step)
   stepRef.current = step
@@ -58,15 +69,22 @@ export function SuperviseeSignupForm() {
     isError: optionsError,
   } = useSuperviseeFormOptions()
 
-  // Only supervisee-eligible occupations are offered (associate-level mental
-  // health counselors, NPs, and PAs) — the generic occupations list is for job seekers.
+  // Regular supervisees pick from the allowlisted occupations (associate-level
+  // mental health counselors, NPs, and PAs); the Medical Director flow is open
+  // to any occupation — its typical clients (med spa owners, RNs, etc.) are
+  // outside the supervisee allowlist.
   const superviseeOccupationOptions = useMemo(
-    () => filterSuperviseeOccupationOptions(occupationOptions),
-    [occupationOptions],
+    () =>
+      isNeedMedicalDirector
+        ? occupationOptions
+        : filterSuperviseeOccupationOptions(occupationOptions),
+    [isNeedMedicalDirector, occupationOptions],
   )
 
   const form = useForm<SuperviseeFormValues>({
-    defaultValues: superviseeDefaultValues,
+    defaultValues: isNeedMedicalDirector
+      ? needMedicalDirectorDefaultValues
+      : superviseeDefaultValues,
     shouldUnregister: false,
     mode: 'onTouched',
     reValidateMode: 'onChange',
@@ -229,6 +247,7 @@ export function SuperviseeSignupForm() {
         {step === 1 && (
           <>
             <SuperviseeStepSupervisionNeeds
+              variant={variant}
               supervisorTypesData={supervisorTypesData}
               supervisorTypesLoading={supervisorTypesLoading}
               occupationOptions={superviseeOccupationOptions}

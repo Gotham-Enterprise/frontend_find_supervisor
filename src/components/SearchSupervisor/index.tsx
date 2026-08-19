@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
+import type { SupervisorSearchMode } from '@/lib/api/supervisor-search'
 import {
   useAvailabilityOptions,
   useStatesOptions,
@@ -11,6 +12,7 @@ import {
   useSupervisorTypesData,
 } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
+import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 
 import { DEFAULT_FILTERS, SUPERVISOR_SEARCH_PAGE_SIZE } from './helpers'
 import { SearchSupervisorFilters } from './SearchSupervisorFilters'
@@ -35,7 +37,12 @@ function sortSupervisorsLocal(
   return copy.sort((a, b) => exp(a) - exp(b))
 }
 
-export function SearchSupervisorPage() {
+interface SearchSupervisorPageProps {
+  /** 'medical-directors' renders the dedicated Medical Director search. */
+  mode?: SupervisorSearchMode
+}
+
+export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorPageProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -60,6 +67,21 @@ export function SearchSupervisorPage() {
   const statesQuery = useStatesOptions()
   const availabilityQuery = useAvailabilityOptions()
 
+  // Cross-redirects between the two find pages based on the supervisee's
+  // stored needs: the Medical Director page is only for supervisees who need
+  // one, and an MD-only supervisee has nothing to see on the supervisor page.
+  useEffect(() => {
+    if (!superviseeProfileFetched) return
+    const needs = (superviseeProfile?.typeOfSupervisorNeeded ?? []).map((need) => need.trim())
+    const hasMdNeed = needs.includes(MEDICAL_DIRECTOR_TYPE_NAME)
+    const hasNonMdNeed = needs.some((need) => need && need !== MEDICAL_DIRECTOR_TYPE_NAME)
+    if (mode === 'medical-directors' && !hasMdNeed) {
+      router.replace('/find-supervisors')
+    } else if (mode === 'supervisors' && hasMdNeed && !hasNonMdNeed) {
+      router.replace('/find-medical-directors')
+    }
+  }, [mode, superviseeProfileFetched, superviseeProfile, router])
+
   const optionsReady =
     superviseeProfileFetched &&
     supervisorTypesQuery.isFetched &&
@@ -78,8 +100,14 @@ export function SearchSupervisorPage() {
       availabilityQuery.data ?? [],
       supervisorTypesQuery.data ?? [],
     )
-    setFilters(merged)
-    setAppliedFilters(merged)
+    // The MD page hides occupation/license-type/patient-population filters, so
+    // profile-prefilled values for them must not be silently applied either.
+    const scoped =
+      mode === 'medical-directors'
+        ? { ...merged, supervisorOccupations: [], licenseTypes: [], patientPopulation: [] }
+        : merged
+    setFilters(scoped)
+    setAppliedFilters(scoped)
     setFiltersInitialized(true)
   }
 
@@ -106,8 +134,9 @@ export function SearchSupervisorPage() {
       keywords: appliedKeyword,
       filters: appliedFilters,
       sortBy,
+      searchMode: mode,
     }),
-    [page, appliedKeyword, appliedFilters, sortBy],
+    [page, appliedKeyword, appliedFilters, sortBy, mode],
   )
 
   const { data, isLoading, isError, error, refetch } = useSupervisorSearch(
@@ -166,6 +195,11 @@ export function SearchSupervisorPage() {
             setFilters({ ...filters, supervisionFormats: next })
           }
           onSearch={handleSearch}
+          subtitle={
+            mode === 'medical-directors'
+              ? 'Browse verified medical directors for your practice.'
+              : undefined
+          }
         />
       </div>
 
@@ -177,6 +211,7 @@ export function SearchSupervisorPage() {
             onChange={handleFiltersChange}
             onApply={handleApplyFilters}
             onClearFilters={handleClearFilterPanel}
+            mode={mode}
           />
         </div>
 

@@ -4,7 +4,8 @@ import type {
   SupervisorSearchFilters,
   SupervisorSearchResult,
 } from '@/components/SearchSupervisor/types'
-import { formatSupervisorTypeLabel } from '@/lib/utils/profile-formatters'
+import { formatSupervisorTypeWithOfferings } from '@/lib/utils/profile-formatters'
+import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 import { getSupervisorDisplayCredential } from '@/lib/utils/supervisor-type'
 
 import { apiClient } from './client'
@@ -41,6 +42,8 @@ export interface SupervisorSearchApiRow {
   professionalCredentials?: string
   describeYourself?: string
   profilePhotoUrl?: string
+  /** Medical Director secondary offerings (Supervising/Collaborating Physician). */
+  offerings?: { supervisorType?: string }[]
 }
 
 export interface SupervisorSearchMetaData {
@@ -59,12 +62,22 @@ export interface SupervisorSearchApiResponse {
   metaData: SupervisorSearchMetaData
 }
 
+/** Which find page is asking — Medical Directors are separated from the supervisor search. */
+export type SupervisorSearchMode = 'supervisors' | 'medical-directors'
+
+const SEARCH_MODE_TO_API: Record<SupervisorSearchMode, string> = {
+  supervisors: 'supervisors',
+  'medical-directors': 'medicalDirectors',
+}
+
 export interface SupervisorSearchQueryInput {
   page: number
   limit: number
   keywords: string
   filters: SupervisorSearchFilters
   sortBy?: SortOption
+  /** Omitted = legacy mixed behavior (public/pSEO callers). */
+  searchMode?: SupervisorSearchMode
 }
 
 function trimOrEmpty(s: string | undefined): string {
@@ -115,7 +128,7 @@ const SORT_OPTION_TO_API: Partial<Record<SortOption, string>> = {
 export function buildSupervisorSearchParams(
   input: SupervisorSearchQueryInput,
 ): Record<string, string | number | boolean> {
-  const { page, limit, keywords, filters, sortBy } = input
+  const { page, limit, keywords, filters, sortBy, searchMode } = input
   const params: Record<string, string | number | boolean> = {
     page,
     limit,
@@ -123,6 +136,10 @@ export function buildSupervisorSearchParams(
 
   if (sortBy && SORT_OPTION_TO_API[sortBy]) {
     params.sortBy = SORT_OPTION_TO_API[sortBy]!
+  }
+
+  if (searchMode) {
+    params.searchMode = SEARCH_MODE_TO_API[searchMode]
   }
 
   appendIfNonEmpty(params, 'keywords', keywords)
@@ -184,9 +201,30 @@ function initialsFromName(fullName: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
+/**
+ * Role label for a search card. In `supervisors` mode a Medical Director only
+ * appears because an offering matched, so the card shows the offering role(s)
+ * instead of "Medical Director"; everywhere else the combined label is shown.
+ */
+function searchCardSupervisorTypeLabel(
+  row: SupervisorSearchApiRow,
+  mode: SupervisorSearchMode | undefined,
+): string {
+  const primary = row.supervisorType?.trim() || row.profession?.trim()
+  if (
+    mode === 'supervisors' &&
+    primary === MEDICAL_DIRECTOR_TYPE_NAME &&
+    (row.offerings ?? []).some((offering) => offering.supervisorType?.trim())
+  ) {
+    return formatSupervisorTypeWithOfferings('', row.offerings, [], '')
+  }
+  return formatSupervisorTypeWithOfferings(primary, row.offerings)
+}
+
 export function mapApiRowToSupervisorSearchResult(
   row: SupervisorSearchApiRow,
   index: number,
+  mode?: SupervisorSearchMode,
 ): SupervisorSearchResult {
   const fullName = row.fullName ?? ''
   const formats = parseSupervisionFormats(row.supervisionFormat)
@@ -200,7 +238,7 @@ export function mapApiRowToSupervisorSearchResult(
       licenseType: row.licenseType,
       degreeType: row.degreeType,
     }),
-    supervisorType: formatSupervisorTypeLabel(row.supervisorType?.trim() || row.profession?.trim()),
+    supervisorType: searchCardSupervisorTypeLabel(row, mode),
     yearsOfExperience: row.yearsOfExperience != null ? String(row.yearsOfExperience) : '',
     city: row.city ?? '',
     state: row.state ?? '',
@@ -220,11 +258,12 @@ export function mapApiRowToSupervisorSearchResult(
 
 export async function fetchSupervisorSearch(
   query: Record<string, string | number | boolean>,
+  mode?: SupervisorSearchMode,
 ): Promise<{ results: SupervisorSearchResult[]; meta: SupervisorSearchMetaData }> {
   const { data } = await apiClient.get<SupervisorSearchApiResponse>('/supervision/search', {
     params: query,
   })
 
-  const results = (data.data ?? []).map((row, i) => mapApiRowToSupervisorSearchResult(row, i))
+  const results = (data.data ?? []).map((row, i) => mapApiRowToSupervisorSearchResult(row, i, mode))
   return { results, meta: data.metaData }
 }

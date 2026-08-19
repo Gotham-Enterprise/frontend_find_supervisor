@@ -18,8 +18,8 @@ import { useCheckConnectionAvailability } from '@/lib/hooks/useConnections'
 import {
   formatDisplayName,
   formatNameWithCredentials,
-  formatSupervisorTypeLabel,
   getInitials,
+  getSupervisorTypeDisplayLabels,
 } from '@/lib/utils/profile-formatters'
 import {
   getConnectionBadgeClassName,
@@ -166,7 +166,12 @@ export function SupervisorProfileHero({ profile, supervisorId }: SupervisorProfi
   const specialty =
     profile.supervisorSpecialty?.trim() || profile.user.specialty?.name || profile.specialty?.name
   const subline = [occupation, specialty].filter(Boolean).join(' · ')
-  const roleBadgeLabel = formatSupervisorTypeLabel(profile.supervisorType, supervisorTypeOptions)
+  // One badge per role: the primary type plus any Medical Director secondary offerings
+  const roleBadgeLabels = getSupervisorTypeDisplayLabels(
+    profile.supervisorType,
+    profile.offerings,
+    supervisorTypeOptions,
+  )
   const filledStars = Math.round(overallRating)
 
   return (
@@ -182,9 +187,14 @@ export function SupervisorProfileHero({ profile, supervisorId }: SupervisorProfi
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-bold text-[#181818]">{displayNameWithCredentials}</h1>
-            <span className="rounded-full bg-[#E2F0E8] px-2.5 py-0.5 text-xs font-medium text-[#006D36]">
-              {roleBadgeLabel}
-            </span>
+            {roleBadgeLabels.map((label) => (
+              <span
+                key={label}
+                className="rounded-full bg-[#E2F0E8] px-2.5 py-0.5 text-xs font-medium text-[#006D36]"
+              >
+                {label}
+              </span>
+            ))}
           </div>
 
           {subline && <p className="text-sm text-[#6B7280]">{subline}</p>}

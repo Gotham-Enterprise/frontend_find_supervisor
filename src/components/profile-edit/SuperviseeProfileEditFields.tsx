@@ -321,6 +321,7 @@ export function SuperviseeProfileEditFields({
             name="specialtyId"
             label="Specialty"
             options={specialtyOptions}
+            sortOptions
             placeholder="Select Specialty"
             isSubmitting={isSubmitting}
             disabled={!selectedOccupationId}
@@ -440,6 +441,7 @@ export function SuperviseeProfileEditFields({
             name="superviseeSpecialty"
             label="Specialty"
             options={supervisionSpecialtyOptions}
+            sortOptions
             placeholder={
               !superviseeOccupation
                 ? 'Select an occupation first'

@@ -44,7 +44,7 @@ import { mergeSupervisorProfileDisplayName } from '@/lib/profile/supervisor-prof
 import { cn } from '@/lib/utils'
 import {
   formatNameWithCredentials,
-  formatSupervisorTypeLabel,
+  formatSupervisorTypeWithOfferings,
   resolveOptionLabels,
 } from '@/lib/utils/profile-formatters'
 import type {
@@ -709,7 +709,13 @@ function ProfilePreview({
         subline:
           [
             profile.licenseType,
-            formatSupervisorTypeLabel(profile.supervisorType, supervisorTypeOptions, ''),
+            // Primary type plus any Medical Director secondary offerings
+            formatSupervisorTypeWithOfferings(
+              profile.supervisorType,
+              profile.offerings,
+              supervisorTypeOptions,
+              '',
+            ),
             profile.profession,
           ]
             .filter((part) => Boolean(part?.trim()))

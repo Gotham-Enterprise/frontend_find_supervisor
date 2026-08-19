@@ -1,4 +1,11 @@
-import type { SuperviseeFormValues, SupervisorFormValues } from '@/components/Signup/schema'
+import {
+  type MedicalDirectorFormValues,
+  OFFERING_SUPERVISOR_TYPE_NAMES,
+  type OfferingKey,
+  type SuperviseeFormValues,
+  type SupervisorFormValues,
+} from '@/components/Signup/schema'
+import { OTHER_CERTIFYING_BOARD_VALUE } from '@/lib/utils/board-certification'
 import { normalizeUSPhoneNumber } from '@/lib/utils/phone'
 import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 import { isPhysicianSupervisorType } from '@/lib/utils/supervisor-type'
@@ -42,7 +49,104 @@ function parseBudgetRange(budgetRange: string): { start: number; end: number } {
 // ─── FormData builders ────────────────────────────────────────────────────────
 // `confirmPassword` is client-only and must not be sent to the API.
 
-export function buildSupervisorFormData(values: SupervisorFormValues): FormData {
+/**
+ * Supervisor registration input — plain supervisors carry no offering or
+ * board-certification fields, the Medical Director variant includes them
+ * (see buildOfferingsPayload / buildBoardCertificationsPayload).
+ */
+export type SupervisorRegisterValues = SupervisorFormValues &
+  Partial<
+    Pick<
+      MedicalDirectorFormValues,
+      | 'offerSupervisingPhysician'
+      | 'offerCollaboratingPhysician'
+      | 'offerings'
+      | 'boardCertified'
+      | 'boardCertifications'
+    >
+  >
+
+export type OfferingPayload = {
+  supervisorType: string
+  occupation: string
+  specialty?: string
+  degreeType: string
+  licenses: { licenseNumber: string; state: string; licenseExpiration: string }[]
+}
+
+/** Minimal form shape the offering payload builder needs — shared by signup and profile edit. */
+export type OfferingFormFields = Partial<
+  Pick<
+    MedicalDirectorFormValues,
+    'offerSupervisingPhysician' | 'offerCollaboratingPhysician' | 'offerings'
+  >
+>
+
+/**
+ * One payload entry per CHECKED offering. Offering types are physician types,
+ * so license entries carry no licenseType (mirrors the primary `licenses`
+ * convention for physicians).
+ */
+export function buildOfferingsPayload(values: OfferingFormFields): OfferingPayload[] {
+  const checkedKeys: OfferingKey[] = []
+  if (values.offerSupervisingPhysician) checkedKeys.push('supervising')
+  if (values.offerCollaboratingPhysician) checkedKeys.push('collaborating')
+
+  return checkedKeys.flatMap((key) => {
+    const block = values.offerings?.[key]
+    if (!block) return []
+    return [
+      {
+        supervisorType: OFFERING_SUPERVISOR_TYPE_NAMES[key],
+        occupation: block.occupation,
+        ...(block.specialty ? { specialty: block.specialty } : {}),
+        degreeType: block.degreeType,
+        licenses: block.licenses.map(({ licenseNumber, state, licenseExpiration }) => ({
+          licenseNumber,
+          state,
+          licenseExpiration,
+        })),
+      },
+    ]
+  })
+}
+
+export type BoardCertificationPayload = {
+  certifyingBoard: string
+  specialty: string
+  subspecialty?: string
+  certificationNumber?: string
+  expirationDate?: string
+}
+
+/** Minimal form shape the board-cert payload builder needs — shared by signup and profile edit. */
+export type BoardCertificationFormFields = Partial<
+  Pick<MedicalDirectorFormValues, 'boardCertified' | 'boardCertifications'>
+>
+
+/**
+ * One payload entry per board certification — only when "Board Certified?" is
+ * Yes. "Other" resolves to the free-text board name; empty optionals are
+ * omitted.
+ */
+export function buildBoardCertificationsPayload(
+  values: BoardCertificationFormFields,
+): BoardCertificationPayload[] {
+  if (!values.boardCertified) return []
+
+  return (values.boardCertifications ?? []).map((entry) => ({
+    certifyingBoard:
+      entry.certifyingBoard === OTHER_CERTIFYING_BOARD_VALUE
+        ? entry.certifyingBoardOther
+        : entry.certifyingBoard,
+    specialty: entry.specialty,
+    ...(entry.subspecialty ? { subspecialty: entry.subspecialty } : {}),
+    ...(entry.certificationNumber ? { certificationNumber: entry.certificationNumber } : {}),
+    ...(entry.expirationDate ? { expirationDate: entry.expirationDate } : {}),
+  }))
+}
+
+export function buildSupervisorFormData(values: SupervisorRegisterValues): FormData {
   const fd = new FormData()
 
   // Account
@@ -82,6 +186,14 @@ export function buildSupervisorFormData(values: SupervisorFormValues): FormData 
       })),
     ),
   )
+  // Medical Director secondary offerings — appended only when at least one is checked
+  const offerings = buildOfferingsPayload(values)
+  if (offerings.length > 0) fd.append('offerings', JSON.stringify(offerings))
+  // Medical Director board certifications — appended only when "Board Certified?" is Yes
+  const boardCertifications = buildBoardCertificationsPayload(values)
+  if (boardCertifications.length > 0) {
+    fd.append('boardCertifications', JSON.stringify(boardCertifications))
+  }
   fd.append('yearsOfExperience', values.yearsOfExperience)
   if (values.npiNumber) fd.append('npiNumber', values.npiNumber)
   if (!physician) {
@@ -195,7 +307,7 @@ export interface SignupSuccessResponse {
 // ─── API calls ────────────────────────────────────────────────────────────────
 
 export async function registerSupervisor(
-  values: SupervisorFormValues,
+  values: SupervisorRegisterValues,
 ): Promise<SignupSuccessResponse> {
   const formData = buildSupervisorFormData(values)
   // Do not set Content-Type manually — axios detects FormData and sets multipart/form-data with the correct boundary

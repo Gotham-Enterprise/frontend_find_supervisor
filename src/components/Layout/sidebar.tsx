@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Settings,
   Star,
+  Stethoscope,
   UserCheck,
   Users,
 } from 'lucide-react'
@@ -19,11 +20,27 @@ import { usePathname } from 'next/navigation'
 import { isSuperviseeRole } from '@/lib/auth/roles'
 import { usePendingRequestsCount, useUser } from '@/lib/hooks'
 import { useConversations } from '@/lib/hooks/useChat'
+import { useSuperviseeProfile } from '@/lib/hooks/useSuperviseeProfile'
 import { cn } from '@/lib/utils'
+import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Find Supervisors', href: '/find-supervisors', icon: Users, superviseeOnly: true },
+  // Which find pages show depends on the supervisee's stored supervision needs
+  {
+    label: 'Find Supervisors',
+    href: '/find-supervisors',
+    icon: Users,
+    superviseeOnly: true,
+    requiresNonMdNeed: true,
+  },
+  {
+    label: 'Find Medical Directors',
+    href: '/find-medical-directors',
+    icon: Stethoscope,
+    superviseeOnly: true,
+    requiresMdNeed: true,
+  },
   { label: 'Hired Supervisors', href: '/hired-supervisors', icon: Briefcase, superviseeOnly: true },
   { label: 'Find Supervisees', href: '/find-supervisees', icon: Users, supervisorOnly: true },
   { label: 'My Supervisees', href: '/supervisees', icon: UserCheck, supervisorOnly: true },
@@ -54,16 +71,35 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname()
   const { user } = useUser()
+  const isSupervisee = user ? isSuperviseeRole(user.role) : false
   const { data: pendingCount } = usePendingRequestsCount(!isSuperviseeRole(user?.role))
   const { data: conversations = [] } = useConversations()
   const totalUnreadMessages = conversations.filter((c) => (c.unreadCount ?? 0) > 0).length
 
+  // Supervision needs decide which find pages appear. While the profile is
+  // still loading, keep the pre-existing default (Find Supervisors only).
+  const { data: superviseeProfile, isFetched: superviseeProfileFetched } =
+    useSuperviseeProfile(isSupervisee)
+  const needs = (superviseeProfile?.typeOfSupervisorNeeded ?? []).map((need) => need.trim())
+  const hasMdNeed = superviseeProfileFetched && needs.includes(MEDICAL_DIRECTOR_TYPE_NAME)
+  // Legacy profiles without stored needs keep the unrestricted supervisor search.
+  const hasNonMdNeed =
+    !superviseeProfileFetched ||
+    needs.length === 0 ||
+    needs.some((need) => need && need !== MEDICAL_DIRECTOR_TYPE_NAME)
+
   const visibleNavItems = navItems.filter((item) => {
-    if ('superviseeOnly' in item && item.superviseeOnly) {
-      return user ? isSuperviseeRole(user.role) : false
+    if ('superviseeOnly' in item && item.superviseeOnly && !isSupervisee) {
+      return false
     }
     if ('supervisorOnly' in item && item.supervisorOnly) {
       return user ? !isSuperviseeRole(user.role) : false
+    }
+    if ('requiresMdNeed' in item && item.requiresMdNeed) {
+      return hasMdNeed
+    }
+    if ('requiresNonMdNeed' in item && item.requiresNonMdNeed) {
+      return hasNonMdNeed
     }
     return true
   })

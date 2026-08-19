@@ -5,7 +5,10 @@ import { useFormContext, useWatch } from 'react-hook-form'
 
 import { FormatSelector } from '@/components/Signup/FormatSelector'
 import { FormSection } from '@/components/Signup/FormSection'
-import { supervisionFeeTypeOptions, type SupervisorFormValues } from '@/components/Signup/schema'
+import {
+  type MedicalDirectorFormValues,
+  supervisionFeeTypeOptions,
+} from '@/components/Signup/schema'
 import { supervisorFieldRules } from '@/components/Signup/supervisorFieldRules'
 import { Checkbox } from '@/components/ui/checkbox'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -28,6 +31,8 @@ type SupervisorStepPracticeDetailsProps = {
   patientPopulationsLoading: boolean
   availabilityLoading: boolean
   isSubmitting: boolean
+  /** MD variant: patient population applies only when a physician offering is checked. */
+  isMedicalDirector?: boolean
 }
 
 export function SupervisorStepPracticeDetails({
@@ -36,12 +41,20 @@ export function SupervisorStepPracticeDetails({
   patientPopulationsLoading,
   availabilityLoading,
   isSubmitting,
+  isMedicalDirector = false,
 }: SupervisorStepPracticeDetailsProps) {
-  const { control, clearErrors, setValue } = useFormContext<SupervisorFormValues>()
+  const { control, clearErrors, setValue } = useFormContext<MedicalDirectorFormValues>()
   const professionalSummaryValue = useWatch({ control, name: 'professionalSummary' }) ?? ''
   const describeYourselfValue = useWatch({ control, name: 'describeYourself' }) ?? ''
   const supervisorTypeValue = useWatch({ control, name: 'supervisorType' }) ?? ''
   const supervisionFeeTypeValue = useWatch({ control, name: 'supervisionFeeType' })
+  const offerSupervisingPhysician =
+    useWatch({ control, name: 'offerSupervisingPhysician' }) ?? false
+  const offerCollaboratingPhysician =
+    useWatch({ control, name: 'offerCollaboratingPhysician' }) ?? false
+  // A plain Medical Director (no clinical-supervision offering) has no patient population.
+  const showPatientPopulation =
+    !isMedicalDirector || offerSupervisingPhysician || offerCollaboratingPhysician
 
   const monthlyFeeOnly = isMonthlyOnlySupervisorType(supervisorTypeValue)
   const feeTypeOptions = monthlyFeeOnly
@@ -58,32 +71,36 @@ export function SupervisorStepPracticeDetails({
   return (
     <>
       <FormSection title="Practice Details">
-        <FormField
-          control={control}
-          name="patientPopulation"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Patient Population <span className="text-destructive">*</span>
-              </FormLabel>
-              <FormControl>
-                <TagInput
-                  options={patientPopulationOptions.sort((a, b) => a.label.localeCompare(b.label))}
-                  value={field.value ?? []}
-                  onChange={(v) => {
-                    field.onChange(v)
-                    clearErrors(field.name)
-                  }}
-                  placeholder={
-                    patientPopulationsLoading ? 'Loading…' : 'Add population (e.g. Adults)'
-                  }
-                  disabled={patientPopulationsLoading || isSubmitting}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {showPatientPopulation && (
+          <FormField
+            control={control}
+            name="patientPopulation"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Patient Population <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <TagInput
+                    options={patientPopulationOptions.sort((a, b) =>
+                      a.label.localeCompare(b.label),
+                    )}
+                    value={field.value ?? []}
+                    onChange={(v) => {
+                      field.onChange(v)
+                      clearErrors(field.name)
+                    }}
+                    placeholder={
+                      patientPopulationsLoading ? 'Loading…' : 'Add population (e.g. Adults)'
+                    }
+                    disabled={patientPopulationsLoading || isSubmitting}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <FormField
           control={control}

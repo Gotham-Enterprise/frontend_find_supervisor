@@ -26,6 +26,7 @@ const PAGE_TITLES: Array<{ prefix: string; title: string }> = [
   { prefix: '/my-profile', title: 'My Profile' },
   { prefix: '/dashboard', title: 'Dashboard' },
   { prefix: '/find-supervisors', title: 'Find Supervisors' },
+  { prefix: '/find-medical-directors', title: 'Find Medical Directors' },
   { prefix: '/supervisees', title: 'Supervisees' },
   { prefix: '/hired-supervisors', title: 'Hired Supervisors' },
   { prefix: '/supervision-requests', title: 'Supervision Requests' },
