@@ -63,6 +63,18 @@ export interface SuperviseeProfileData {
   /** Budget upper bound in whole dollars */
   budgetRangeEnd: number | null
 
+  /** Medical Director need preferences — set only when typeOfSupervisorNeeded
+   *  includes "Medical Director"; the fields above stay supervision-only. */
+  mdPreferredOccupation?: string | null
+  mdPreferredSpecialty?: string | null
+  mdHowSoonLooking?: LookingTimeline | null
+  mdLookingDate?: string | null
+  mdMonthlyBudget?: number | null
+  mdIdealDescription?: string | null
+
+  /** Optional self introduction (separate from idealSupervisor) */
+  introduction?: string | null
+
   /** Number of completed supervision sessions */
   completedCount: number
   /** Number of remaining required supervision hours/sessions */

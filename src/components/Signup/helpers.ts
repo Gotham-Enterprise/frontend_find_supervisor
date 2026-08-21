@@ -1,8 +1,20 @@
-import type { LicenseEntryValues, SuperviseeFormValues, SupervisorFormValues } from './schema'
+import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
+
+import type {
+  BoardCertificationEntryValues,
+  LicenseEntryValues,
+  MedicalDirectorFormValues,
+  OfferingCredentialsValues,
+  SuperviseeFormValues,
+  SupervisorFormValues,
+} from './schema'
 import type { SignupRole } from './types'
 
 export function parseSignupRoleFromType(type?: string | null): SignupRole {
-  return type === 'supervisee' ? 'supervisee' : 'supervisor'
+  if (type === 'supervisee') return 'supervisee'
+  if (type === 'medical-director') return 'medical-director'
+  if (type === 'need-medical-director') return 'need-medical-director'
+  return 'supervisor'
 }
 
 /** Blank license entry for field arrays ("Add another license" + defaults). */
@@ -44,6 +56,47 @@ export const supervisorDefaultValues: Partial<SupervisorFormValues> = {
   agreedToTerms: false,
 }
 
+/** Blank offering credentials block ("Offer as …" checkboxes start unchecked). */
+export const emptyOfferingCredentials = (): OfferingCredentialsValues => ({
+  occupation: '',
+  specialty: '',
+  degreeType: '',
+  licenses: [{ ...emptyLicenseEntry }],
+})
+
+/** Blank board-certification entry ("Board Certified?" starts as No). */
+export const emptyBoardCertification = (): BoardCertificationEntryValues => ({
+  certifyingBoard: '',
+  certifyingBoardOther: '',
+  specialty: '',
+  subspecialty: '',
+  certificationNumber: '',
+  expirationDate: '',
+})
+
+/**
+ * Superset defaults shared by both SupervisorSignupForm variants — the form is
+ * typed as MedicalDirectorFormValues, so the plain supervisor variant also
+ * carries (and ignores) the offering keys.
+ */
+export const supervisorSignupDefaultValues: Partial<MedicalDirectorFormValues> = {
+  ...supervisorDefaultValues,
+  offerSupervisingPhysician: false,
+  offerCollaboratingPhysician: false,
+  offerings: {
+    supervising: emptyOfferingCredentials(),
+    collaborating: emptyOfferingCredentials(),
+  },
+  boardCertified: false,
+  boardCertifications: [emptyBoardCertification()],
+}
+
+export const medicalDirectorDefaultValues: Partial<MedicalDirectorFormValues> = {
+  ...supervisorSignupDefaultValues,
+  // Preset — the Medical Director flow renders no Supervisor Type select.
+  supervisorType: MEDICAL_DIRECTOR_TYPE_NAME,
+}
+
 export const superviseeDefaultValues: Partial<SuperviseeFormValues> = {
   fullName: '',
   email: '',
@@ -60,6 +113,13 @@ export const superviseeDefaultValues: Partial<SuperviseeFormValues> = {
   stateOfLicensure: [],
   howSoon: '',
   howSoonDate: '',
+  mdPreferredOccupationId: '',
+  mdPreferredSpecialtyId: '',
+  mdHowSoon: '',
+  mdHowSoonDate: '',
+  mdMonthlyBudget: undefined,
+  mdIdealDescription: '',
+  introduction: '',
   preferredFormat: 'virtual',
   feeType: 'hourly',
   budgetRange: '',
@@ -72,4 +132,11 @@ export const superviseeDefaultValues: Partial<SuperviseeFormValues> = {
   description: '',
   agreedToPost: false,
   agreedToTerms: false,
+}
+
+export const needMedicalDirectorDefaultValues: Partial<SuperviseeFormValues> = {
+  ...superviseeDefaultValues,
+  // Preset — the "I need a Medical Director" flow renders no supervision-type
+  // select or checkbox; the payload builder sends typeOfSupervisorNeeded[]=Medical Director.
+  needsMedicalDirector: true,
 }

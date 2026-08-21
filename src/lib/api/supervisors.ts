@@ -67,6 +67,8 @@ interface RecommendedSupervisorsApiResponse {
 export interface GetRecommendedSupervisorsParams {
   page?: number
   limit?: number
+  /** Dashboard sections: 'supervisors' excludes plain Medical Directors, 'medicalDirectors' shows only them. */
+  mode?: 'supervisors' | 'medicalDirectors'
 }
 
 export async function getRecommendedSupervisors(

@@ -7,6 +7,7 @@ import {
   cancelHire,
   getAgreement,
   getSuperviseeUpcomingSessions,
+  type HiresListMode,
   hireSupervisor,
   listHires,
   markHireAsCompleted,
@@ -63,10 +64,15 @@ export function useHireSupervisor() {
   })
 }
 
-export function useHiresList(page = 1, limit = 10, status?: HireStatus | HireStatus[]) {
+export function useHiresList(
+  page = 1,
+  limit = 10,
+  status?: HireStatus | HireStatus[],
+  mode?: HiresListMode,
+) {
   return useQuery({
-    queryKey: hireKeys.list(page, limit, status),
-    queryFn: () => listHires(page, limit, status),
+    queryKey: [...hireKeys.list(page, limit, status), mode ?? 'all'],
+    queryFn: () => listHires(page, limit, status, mode),
     staleTime: 2 * 60 * 1000,
   })
 }

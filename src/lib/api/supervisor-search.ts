@@ -4,7 +4,7 @@ import type {
   SupervisorSearchFilters,
   SupervisorSearchResult,
 } from '@/components/SearchSupervisor/types'
-import { formatSupervisorTypeLabel } from '@/lib/utils/profile-formatters'
+import { formatSupervisorTypeWithOfferings } from '@/lib/utils/profile-formatters'
 import { getSupervisorDisplayCredential } from '@/lib/utils/supervisor-type'
 
 import { apiClient } from './client'
@@ -41,6 +41,8 @@ export interface SupervisorSearchApiRow {
   professionalCredentials?: string
   describeYourself?: string
   profilePhotoUrl?: string
+  /** Medical Director secondary offerings (Supervising/Collaborating Physician). */
+  offerings?: { supervisorType?: string }[]
 }
 
 export interface SupervisorSearchMetaData {
@@ -59,12 +61,22 @@ export interface SupervisorSearchApiResponse {
   metaData: SupervisorSearchMetaData
 }
 
+/** Which find page is asking — Medical Directors are separated from the supervisor search. */
+export type SupervisorSearchMode = 'supervisors' | 'medical-directors'
+
+const SEARCH_MODE_TO_API: Record<SupervisorSearchMode, string> = {
+  supervisors: 'supervisors',
+  'medical-directors': 'medicalDirectors',
+}
+
 export interface SupervisorSearchQueryInput {
   page: number
   limit: number
   keywords: string
   filters: SupervisorSearchFilters
   sortBy?: SortOption
+  /** Omitted = legacy mixed behavior (public/pSEO callers). */
+  searchMode?: SupervisorSearchMode
 }
 
 function trimOrEmpty(s: string | undefined): string {
@@ -115,7 +127,7 @@ const SORT_OPTION_TO_API: Partial<Record<SortOption, string>> = {
 export function buildSupervisorSearchParams(
   input: SupervisorSearchQueryInput,
 ): Record<string, string | number | boolean> {
-  const { page, limit, keywords, filters, sortBy } = input
+  const { page, limit, keywords, filters, sortBy, searchMode } = input
   const params: Record<string, string | number | boolean> = {
     page,
     limit,
@@ -123,6 +135,10 @@ export function buildSupervisorSearchParams(
 
   if (sortBy && SORT_OPTION_TO_API[sortBy]) {
     params.sortBy = SORT_OPTION_TO_API[sortBy]!
+  }
+
+  if (searchMode) {
+    params.searchMode = SEARCH_MODE_TO_API[searchMode]
   }
 
   appendIfNonEmpty(params, 'keywords', keywords)
@@ -184,6 +200,16 @@ function initialsFromName(fullName: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
+/**
+ * Role label for a search card: every role the supervisor holds, primary
+ * first — a Medical Director offering supervision shows as
+ * "Medical Director · Supervising Physician" on every page.
+ */
+function searchCardSupervisorTypeLabel(row: SupervisorSearchApiRow): string {
+  const primary = row.supervisorType?.trim() || row.profession?.trim()
+  return formatSupervisorTypeWithOfferings(primary, row.offerings)
+}
+
 export function mapApiRowToSupervisorSearchResult(
   row: SupervisorSearchApiRow,
   index: number,
@@ -200,7 +226,7 @@ export function mapApiRowToSupervisorSearchResult(
       licenseType: row.licenseType,
       degreeType: row.degreeType,
     }),
-    supervisorType: formatSupervisorTypeLabel(row.supervisorType?.trim() || row.profession?.trim()),
+    supervisorType: searchCardSupervisorTypeLabel(row),
     yearsOfExperience: row.yearsOfExperience != null ? String(row.yearsOfExperience) : '',
     city: row.city ?? '',
     state: row.state ?? '',

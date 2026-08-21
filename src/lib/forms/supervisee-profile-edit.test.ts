@@ -77,6 +77,35 @@ describe('needsMedicalDirector — supervisee profile edit round trip', () => {
     expect(payload.typeOfSupervisorNeeded).toEqual(['Mental Health Counselors'])
   })
 
+  it('maps the stored md* fields into the form and back into the payload', () => {
+    const defaults = getDefaultSuperviseeProfileFormValues(
+      makeProfile({
+        typeOfSupervisorNeeded: ['Medical Director'],
+        mdPreferredOccupation: 'Medical Doctor',
+        mdPreferredSpecialty: 'Family Medicine',
+        mdHowSoonLooking: 'IMMEDIATELY',
+        mdLookingDate: null,
+        mdMonthlyBudget: 2000,
+      }),
+    )
+    expect(defaults.mdPreferredOccupation).toBe('Medical Doctor')
+    expect(defaults.mdHowSoonLooking).toBe('IMMEDIATELY')
+    expect(defaults.mdMonthlyBudget).toBe(2000)
+
+    const payload = superviseeProfileFormValuesToPayload(defaults)
+    expect(payload.mdPreferredOccupation).toBe('Medical Doctor')
+    expect(payload.mdPreferredSpecialty).toBe('Family Medicine')
+    expect(payload.mdHowSoonLooking).toBe('IMMEDIATELY')
+    expect(payload.mdMonthlyBudget).toBe(2000)
+    // MD-only — the supervision-side preferences stay untouched (undefined)
+    expect(payload.howSoonLooking).toBeUndefined()
+    expect(payload.budgetRangeType).toBeUndefined()
+    expect(payload.budgetRangeStart).toBeUndefined()
+    expect(payload.budgetRangeEnd).toBeUndefined()
+    // MD-only — the About description doubles as the MD description
+    expect(payload.mdIdealDescription).toBe('Supportive supervisor with CBT experience.')
+  })
+
   it('sends empty occupation/specialty (not undefined) so switching to Medical Director-only clears them', () => {
     const defaults = getDefaultSuperviseeProfileFormValues(makeProfile())
     const payload = superviseeProfileFormValuesToPayload({
@@ -106,6 +135,38 @@ describe('editSuperviseeProfileSchema — supervision type requiredness', () => 
         typeOfSupervisorNeeded: '',
         superviseeOccupation: '',
         needsMedicalDirector: true,
+        mdHowSoonLooking: 'IMMEDIATELY',
+        mdMonthlyBudget: 1500,
+        mdIdealDescription: 'A collaborative medical director for our clinic.',
+      }).success,
+    ).toBe(true)
+  })
+
+  it('requires the MD block (how soon + monthly budget) once the checkbox is on', () => {
+    const result = editSuperviseeProfileSchema.safeParse({
+      ...validValues,
+      needsMedicalDirector: true,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const paths = result.error.issues.map((i) => i.path[0])
+      expect(paths).toContain('mdHowSoonLooking')
+      expect(paths).toContain('mdMonthlyBudget')
+    }
+  })
+
+  it('skips the supervision how-soon and budget for an MD-only profile', () => {
+    expect(
+      editSuperviseeProfileSchema.safeParse({
+        ...validValues,
+        typeOfSupervisorNeeded: '',
+        superviseeOccupation: '',
+        needsMedicalDirector: true,
+        howSoonLooking: '',
+        budgetRangeType: '',
+        mdHowSoonLooking: 'IMMEDIATELY',
+        mdMonthlyBudget: 1500,
+        mdIdealDescription: 'A collaborative medical director for our clinic.',
       }).success,
     ).toBe(true)
   })

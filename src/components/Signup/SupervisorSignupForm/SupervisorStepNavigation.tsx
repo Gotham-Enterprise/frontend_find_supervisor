@@ -17,6 +17,8 @@ type SupervisorStepNavigationProps = {
   isSubmitting: boolean
   isValidatingAddress: boolean
   canSubmit: boolean
+  /** Final-step submit button label (defaults to the supervisor wording). */
+  submitLabel?: string
 }
 
 export function SupervisorStepNavigation({
@@ -28,6 +30,7 @@ export function SupervisorStepNavigation({
   isSubmitting,
   isValidatingAddress,
   canSubmit,
+  submitLabel,
 }: SupervisorStepNavigationProps) {
   const busy = isAdvancing || isSubmitting
 
@@ -67,7 +70,7 @@ export function SupervisorStepNavigation({
             className="w-full sm:w-auto sm:min-w-[200px]"
             disabled={!canSubmit || isAdvancing || isSubmitting}
           >
-            {isPending ? 'Creating your account…' : 'Sign Up as Supervisor →'}
+            {isPending ? 'Creating your account…' : (submitLabel ?? 'Sign Up as Supervisor →')}
           </Button>
         )}
       </div>

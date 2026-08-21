@@ -37,6 +37,13 @@ export interface UpdateSuperviseeProfilePayload {
   budgetRangeType?: string
   budgetRangeStart?: number
   budgetRangeEnd?: number
+  mdPreferredOccupation?: string
+  mdPreferredSpecialty?: string
+  mdHowSoonLooking?: string
+  mdLookingDate?: string
+  mdMonthlyBudget?: number
+  mdIdealDescription?: string
+  introduction?: string
   uploadProfilePhoto?: File
 }
 
@@ -54,6 +61,10 @@ export async function updateSuperviseeProfile(
     budgetRangeEnd,
     superviseeOccupation,
     superviseeSpecialty,
+    mdPreferredOccupation,
+    mdPreferredSpecialty,
+    mdMonthlyBudget,
+    introduction,
     ...rest
   } = payload
 
@@ -71,6 +82,21 @@ export async function updateSuperviseeProfile(
   }
   if (superviseeSpecialty !== undefined) {
     fd.append('superviseeSpecialty', superviseeSpecialty)
+  }
+
+  // Same present-but-empty semantics for the Medical Director preference selects.
+  if (mdPreferredOccupation !== undefined) {
+    fd.append('mdPreferredOccupation', mdPreferredOccupation)
+  }
+  if (mdPreferredSpecialty !== undefined) {
+    fd.append('mdPreferredSpecialty', mdPreferredSpecialty)
+  }
+  if (mdMonthlyBudget !== undefined) {
+    fd.append('mdMonthlyBudget', String(mdMonthlyBudget))
+  }
+  // Present-but-empty clears the stored introduction (it is optional and erasable).
+  if (introduction !== undefined) {
+    fd.append('introduction', introduction)
   }
 
   if (budgetRangeStart !== undefined) {

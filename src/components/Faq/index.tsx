@@ -133,6 +133,36 @@ const supervisorFaqs: FaqCategory[] = [
     ],
   },
   {
+    title: 'Medical Directors',
+    items: [
+      {
+        question: 'I signed up as a Medical Director — how is my account different?',
+        answer:
+          'Medical Director accounts use a dedicated signup with physician credentials (MD/DO), optional board certifications, and monthly-only fees. Instead of appearing in the regular supervisor search, your profile is listed on the Find Medical Directors page for people looking for medical direction. Everything else — verification, plans, messaging, and reviews — works the same as for Supervisors.',
+      },
+      {
+        question: 'What are "Additional Physician Offerings"?',
+        answer:
+          'As a Medical Director you can also offer Supervising Physician and/or Collaborating Physician services for PAs and NPs. Each offering has its own credentials and license entries. With an offering enabled, your profile also appears in the regular supervisor search under that role — your card shows every role you hold (e.g. "Medical Director · Supervising Physician"). You can manage offerings from Edit Profile.',
+      },
+      {
+        question: 'Where do I see clients who hired me as a Medical Director?',
+        answer:
+          'They are listed on the Medical Director Clients page in the sidebar. If you also provide supervision through a physician offering, those supervisees appear separately under My Supervisees — each hire is filed by the role you were hired for.',
+      },
+      {
+        question: 'How do board certifications work?',
+        answer:
+          'You can add board certifications during signup or later from Edit Profile — each entry needs the certifying board, specialty, certification number, and expiration date. Certifications are displayed on your public profile, but your certification numbers are only visible to you.',
+      },
+      {
+        question: 'Why can’t I change my Supervisor Type?',
+        answer:
+          'Medical Director accounts are a distinct account type with their own credentials and review flow, so the type is locked after signup. If you believe your account was created under the wrong type, contact support and we will help you sort it out.',
+      },
+    ],
+  },
+  {
     title: 'Supervisees & Messaging',
     items: [
       {
@@ -177,6 +207,42 @@ const superviseeFaqs: FaqCategory[] = [
         question: 'How many Supervisors can I connect with at once?',
         answer:
           'There is no hard limit on the number of Supervisors you can message or request. However, we recommend focusing on a few strong matches to build quality supervision relationships.',
+      },
+    ],
+  },
+  {
+    title: 'Medical Directors',
+    items: [
+      {
+        question: 'How do I find a Medical Director?',
+        answer:
+          'If your profile includes a Medical Director need, a Find Medical Directors page appears in your sidebar. It works like the supervisor search — filter by specialty, state, and format — and every listed Medical Director is verified. Open a profile and use "Hire as Medical Director" to send a request.',
+      },
+      {
+        question: 'Why don’t I see the Find Medical Directors page?',
+        answer:
+          'It only appears when your profile says you need a Medical Director. Open Edit Profile, check "I need a Medical Director" under the Medical Director Needs section, fill in your timeline, monthly budget, and a short description of your ideal Medical Director, then save. The page appears immediately.',
+      },
+      {
+        question: 'Can I look for a Supervisor and a Medical Director at the same time?',
+        answer:
+          'Yes. The two needs are tracked separately, each with its own preferences — your supervision need keeps its own budget and timeline, and your Medical Director need has a separate monthly budget, timeline, and description. Your dashboard shows separate recommendations for each, and the Find pages are separate as well.',
+      },
+      {
+        question: 'Why is the Medical Director budget monthly only?',
+        answer:
+          'Medical Directors on the platform work on a monthly retainer basis, so their fees and your budget are always expressed per month. Supervision budgets can still be hourly or monthly.',
+      },
+      {
+        question: 'Where do I see the Medical Directors I’ve hired?',
+        answer:
+          'They are listed on the Hired Medical Directors page in your sidebar, separate from Hired Supervisors. Requests, statuses, agreements, and reviews work the same way on both pages.',
+      },
+      {
+        question:
+          'Why does a search card show more than one role, like "Medical Director · Supervising Physician"?',
+        answer:
+          'Some physicians serve in more than one capacity — for example a Medical Director who also offers Supervising Physician services for PAs. The card lists every role they hold; which one you hire them for depends on the page you found them on.',
       },
     ],
   },

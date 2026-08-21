@@ -27,6 +27,9 @@ export interface SuperviseeSearchApiRow {
   budgetRangeType?: string
   budgetRangeStart?: number | null
   budgetRangeEnd?: number | null
+  typeOfSupervisorNeeded?: string[]
+  mdHowSoonLooking?: string
+  mdMonthlyBudget?: number | null
   hireStatusWithCurrentSupervisor?: string
   isConnectedWithCurrentSupervisor?: boolean
 }
@@ -136,6 +139,9 @@ export function mapApiRowToSuperviseeSearchResult(
     budgetRangeType: row.budgetRangeType ?? '',
     budgetRangeStart: row.budgetRangeStart ?? null,
     budgetRangeEnd: row.budgetRangeEnd ?? null,
+    typeOfSupervisorNeeded: row.typeOfSupervisorNeeded ?? [],
+    mdHowSoonLooking: row.mdHowSoonLooking ?? '',
+    mdMonthlyBudget: row.mdMonthlyBudget ?? null,
     profilePhotoUrl: row.profilePhotoUrl,
     initials: initialsFromName(fullName),
     avatarColor: getAvatarColor(index),

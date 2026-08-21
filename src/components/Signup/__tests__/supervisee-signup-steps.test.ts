@@ -5,6 +5,7 @@ import {
   SUPERVISEE_SIGNUP_STEP_META,
   SUPERVISEE_SIGNUP_STEP_SCHEMAS,
   superviseeStep2Schema,
+  superviseeStep3Schema,
 } from '@/components/Signup/schema'
 
 const validStep2Values = {
@@ -19,6 +20,10 @@ const validStep2Values = {
   stateOfLicensure: ['CA'],
   howSoon: 'IMMEDIATELY',
   howSoonDate: '',
+  mdPreferredOccupationId: '',
+  mdPreferredSpecialtyId: '',
+  mdHowSoon: '',
+  mdHowSoonDate: '',
   availability: 'FLEXIBLE',
   feeType: 'hourly',
   budgetRange: '$0 - $50',
@@ -97,13 +102,45 @@ describe('Medical Director checkbox (needsMedicalDirector)', () => {
         typeOfSupervisor: '',
         supervisorOccupationId: '',
         needsMedicalDirector: true,
+        mdHowSoon: 'IMMEDIATELY',
+        mdMonthlyBudget: 1200,
       }).success,
     ).toBe(true)
   })
 
   it('can be combined with a supervision type', () => {
     expect(
-      superviseeStep2Schema.safeParse({ ...validStep2Values, needsMedicalDirector: true }).success,
+      superviseeStep2Schema.safeParse({
+        ...validStep2Values,
+        needsMedicalDirector: true,
+        mdHowSoon: 'IMMEDIATELY',
+        mdMonthlyBudget: 1200,
+        mdIdealDescription: 'A collaborative medical director for our clinic.',
+      }).success,
+    ).toBe(true)
+  })
+
+  it('requires its own MD description only in the combined case', () => {
+    const combined = superviseeStep2Schema.safeParse({
+      ...validStep2Values,
+      needsMedicalDirector: true,
+      mdHowSoon: 'IMMEDIATELY',
+      mdMonthlyBudget: 1200,
+    })
+    expect(combined.success).toBe(false)
+    if (!combined.success) {
+      expect(combined.error.issues.map((i) => i.path[0])).toContain('mdIdealDescription')
+    }
+    // MD-only reuses the main description — no own MD description required
+    expect(
+      superviseeStep2Schema.safeParse({
+        ...validStep2Values,
+        typeOfSupervisor: '',
+        supervisorOccupationId: '',
+        needsMedicalDirector: true,
+        mdHowSoon: 'IMMEDIATELY',
+        mdMonthlyBudget: 1200,
+      }).success,
     ).toBe(true)
   })
 
@@ -112,41 +149,103 @@ describe('Medical Director checkbox (needsMedicalDirector)', () => {
       ...validStep2Values,
       supervisorOccupationId: '',
       needsMedicalDirector: true,
+      mdHowSoon: 'IMMEDIATELY',
+      mdMonthlyBudget: 1200,
+      mdIdealDescription: 'A collaborative medical director for our clinic.',
     })
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.error.issues.map((i) => i.path[0])).toContain('supervisorOccupationId')
     }
   })
-})
 
-describe('two-step structure (Ideal Supervisor & Terms merged into step 2)', () => {
-  it('has exactly two steps across schemas, fields, and meta', () => {
-    expect(SUPERVISEE_SIGNUP_STEP_SCHEMAS).toHaveLength(2)
-    expect(SUPERVISEE_SIGNUP_STEP_FIELDS).toHaveLength(2)
-    expect(SUPERVISEE_SIGNUP_STEP_META).toHaveLength(2)
+  it('requires the MD block (how soon + monthly budget) once the checkbox is ticked', () => {
+    const result = superviseeStep2Schema.safeParse({
+      ...validStep2Values,
+      needsMedicalDirector: true,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const paths = result.error.issues.map((i) => i.path[0])
+      expect(paths).toContain('mdHowSoon')
+      expect(paths).toContain('mdMonthlyBudget')
+    }
   })
 
-  it('validates the merged terms fields on step 2', () => {
-    const missingTerms = superviseeStep2Schema.safeParse({
+  it('requires a date when mdHowSoon is CUSTOM_DATE', () => {
+    const result = superviseeStep2Schema.safeParse({
+      ...validStep2Values,
+      needsMedicalDirector: true,
+      mdHowSoon: 'CUSTOM_DATE',
+      mdMonthlyBudget: 1200,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.map((i) => i.path[0])).toContain('mdHowSoonDate')
+    }
+  })
+
+  it('skips the supervision how-soon and budget for an MD-only request', () => {
+    expect(
+      superviseeStep2Schema.safeParse({
+        ...validStep2Values,
+        typeOfSupervisor: '',
+        supervisorOccupationId: '',
+        needsMedicalDirector: true,
+        howSoon: '',
+        feeType: 'hourly',
+        budgetRange: '',
+        mdHowSoon: 'IMMEDIATELY',
+        mdMonthlyBudget: 1200,
+      }).success,
+    ).toBe(true)
+  })
+})
+
+describe('three-step structure (Introduction & Terms split into step 3)', () => {
+  it('has exactly three steps across schemas, fields, and meta', () => {
+    expect(SUPERVISEE_SIGNUP_STEP_SCHEMAS).toHaveLength(3)
+    expect(SUPERVISEE_SIGNUP_STEP_FIELDS).toHaveLength(3)
+    expect(SUPERVISEE_SIGNUP_STEP_META).toHaveLength(3)
+  })
+
+  it('validates the description on step 2 and the terms on step 3', () => {
+    const missingDescription = superviseeStep2Schema.safeParse({
       ...validStep2Values,
       description: '',
+    })
+    expect(missingDescription.success).toBe(false)
+    if (!missingDescription.success) {
+      expect(missingDescription.error.issues.map((i) => i.path[0])).toContain('description')
+    }
+
+    const missingTerms = superviseeStep3Schema.safeParse({
+      introduction: '',
       agreedToPost: false,
       agreedToTerms: false,
     })
     expect(missingTerms.success).toBe(false)
     if (!missingTerms.success) {
       const paths = missingTerms.error.issues.map((i) => i.path[0])
-      expect(paths).toContain('description')
       expect(paths).toContain('agreedToPost')
       expect(paths).toContain('agreedToTerms')
     }
   })
+
+  it('accepts step 3 with the agreements checked (introduction optional)', () => {
+    expect(
+      superviseeStep3Schema.safeParse({
+        introduction: '',
+        agreedToPost: true,
+        agreedToTerms: true,
+      }).success,
+    ).toBe(true)
+  })
 })
 
 describe('step field lists', () => {
-  it('lists profile and terms fields under step 2', () => {
-    const [, step2Fields] = SUPERVISEE_SIGNUP_STEP_FIELDS
+  it('lists profile fields under step 2 and intro/terms under step 3', () => {
+    const [, step2Fields, step3Fields] = SUPERVISEE_SIGNUP_STEP_FIELDS
     expect(step2Fields).toEqual(
       expect.arrayContaining([
         'title',
@@ -154,9 +253,10 @@ describe('step field lists', () => {
         'specialtyId',
         'typeOfSupervisor',
         'description',
-        'agreedToPost',
-        'agreedToTerms',
       ]),
+    )
+    expect(step3Fields).toEqual(
+      expect.arrayContaining(['introduction', 'agreedToPost', 'agreedToTerms']),
     )
   })
 
