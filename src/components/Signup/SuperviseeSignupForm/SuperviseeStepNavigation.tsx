@@ -6,12 +6,14 @@ import { SUPERVISEE_SIGNUP_STEP_META } from '@/components/Signup/schema'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
+import type { SuperviseeSignupVariant } from './index'
 import type { SuperviseeSignupStepIndex } from './validateSuperviseeStep'
 
 const LAST_STEP = SUPERVISEE_SIGNUP_STEP_META.length - 1
 
 type SuperviseeStepNavigationProps = {
   step: SuperviseeSignupStepIndex
+  variant?: SuperviseeSignupVariant
   onBack: () => void
   onNext: () => void
   isAdvancing: boolean
@@ -24,6 +26,7 @@ type SuperviseeStepNavigationProps = {
 
 export function SuperviseeStepNavigation({
   step,
+  variant = 'supervisee',
   onBack,
   onNext,
   isAdvancing,
@@ -75,7 +78,11 @@ export function SuperviseeStepNavigation({
             className="w-full sm:w-auto sm:min-w-[200px]"
             disabled={!canSubmit || isAdvancing || isSubmitting}
           >
-            {isPending ? 'Creating your account…' : 'Sign Up as Supervisee →'}
+            {isPending
+              ? 'Creating your account…'
+              : variant === 'need-medical-director'
+                ? 'Complete Sign Up →'
+                : 'Sign Up as Supervisee →'}
           </Button>
         )}
       </div>

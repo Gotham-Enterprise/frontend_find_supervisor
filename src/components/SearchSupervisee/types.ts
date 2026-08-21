@@ -28,6 +28,10 @@ export interface SuperviseeSearchResult {
   budgetRangeType: string
   budgetRangeStart: number | null
   budgetRangeEnd: number | null
+  /** Roles they're looking for (supervision types + "Medical Director") */
+  typeOfSupervisorNeeded: string[]
+  mdHowSoonLooking: string
+  mdMonthlyBudget: number | null
   profilePhotoUrl?: string
   initials: string
   avatarColor: string

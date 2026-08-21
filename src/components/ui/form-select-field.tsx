@@ -5,7 +5,10 @@ import type { Control, FieldPath, FieldValues, RegisterOptions } from 'react-hoo
 
 import {
   Combobox,
+  ComboboxCollection,
   ComboboxContent,
+  ComboboxGroup,
+  ComboboxGroupLabel,
   ComboboxItem,
   ComboboxTrigger,
   ComboboxValue,
@@ -22,6 +25,12 @@ import type { SelectOption } from '@/lib/api/options'
 import { selectBlurHandlers } from '@/lib/form/select-blur-handlers'
 
 export { selectBlurHandlers }
+
+/** A labeled section of options for grouped rendering (searchable mode only). */
+export type SelectOptionGroup = {
+  label: string
+  options: readonly SelectOption[]
+}
 
 /** Maps empty field values to a non-empty `SelectItem` value (empty string is not allowed). */
 export type FormSelectEmptySentinel = {
@@ -79,6 +88,12 @@ export type FormSelectFieldProps<
   searchable?: boolean
   /** Placeholder for the search input when `searchable` is set. */
   searchPlaceholder?: string
+  /**
+   * `searchable` only: renders options under labeled group headers, in the given group order
+   * (search filters within groups and hides emptied ones). Replaces `options` as the list source;
+   * `sortOptions` sorts labels within each group.
+   */
+  groups?: readonly SelectOptionGroup[]
 }
 
 function defaultItemToStringLabel(
@@ -118,13 +133,22 @@ export function FormSelectField<
   onValueChange,
   searchable = false,
   searchPlaceholder,
+  groups,
 }: FormSelectFieldProps<TFieldValues, TName>) {
   const resolvedPlaceholder = loading ? loadingPlaceholder : (placeholder ?? 'Select…')
   const mergedDisabled = Boolean(disabled || isSubmitting)
 
-  const displayOptions = sortOptions
-    ? [...options].sort((a, b) => a.label.localeCompare(b.label))
-    : [...options]
+  const sortByLabel = (list: readonly SelectOption[]) =>
+    sortOptions ? [...list].sort((a, b) => a.label.localeCompare(b.label)) : [...list]
+
+  // Base UI grouped-items shape ({ value, items }); empty groups are dropped up front,
+  // and the flattened list backs the selected-value lookup.
+  const groupedItems = groups
+    ?.filter((group) => group.options.length > 0)
+    .map((group) => ({ value: group.label, items: sortByLabel(group.options) }))
+  const displayOptions = groupedItems
+    ? groupedItems.flatMap((group) => group.items)
+    : sortByLabel(options)
 
   return (
     <FormField
@@ -150,7 +174,7 @@ export function FormSelectField<
               </FormLabel>
               <Combobox
                 key={selectKey}
-                items={displayOptions}
+                items={groupedItems ?? displayOptions}
                 value={selected}
                 onValueChange={(item: SelectOption | null) => {
                   field.onChange((item?.value ?? '') as (typeof field)['value'])
@@ -169,11 +193,24 @@ export function FormSelectField<
                   searchPlaceholder={searchPlaceholder}
                   emptyState={emptyState?.when ? emptyState.children : undefined}
                 >
-                  {(item: SelectOption) => (
-                    <ComboboxItem key={item.value} value={item}>
-                      {item.label}
-                    </ComboboxItem>
-                  )}
+                  {groupedItems
+                    ? (group: { value: string; items: SelectOption[] }) => (
+                        <ComboboxGroup key={group.value} items={group.items}>
+                          <ComboboxGroupLabel>{group.value}</ComboboxGroupLabel>
+                          <ComboboxCollection>
+                            {(item: SelectOption) => (
+                              <ComboboxItem key={item.value} value={item}>
+                                {item.label}
+                              </ComboboxItem>
+                            )}
+                          </ComboboxCollection>
+                        </ComboboxGroup>
+                      )
+                    : (item: SelectOption) => (
+                        <ComboboxItem key={item.value} value={item}>
+                          {item.label}
+                        </ComboboxItem>
+                      )}
                 </ComboboxContent>
               </Combobox>
               <FormMessage />

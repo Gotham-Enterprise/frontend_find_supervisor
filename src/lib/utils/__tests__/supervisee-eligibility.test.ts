@@ -4,6 +4,7 @@ import type { SupervisorTypeData } from '@/lib/api/options'
 import {
   filterSuperviseeOccupationOptions,
   getEligibleSupervisorTypes,
+  groupSuperviseeOccupationOptions,
   hasCompletedEligibilityFields,
   isAllowedSuperviseeOccupation,
   isSupervisorTypeEligibleForSupervisee,
@@ -198,5 +199,35 @@ describe('hasCompletedEligibilityFields', () => {
     expect(hasCompletedEligibilityFields('')).toBe(false)
     expect(hasCompletedEligibilityFields('   ')).toBe(false)
     expect(hasCompletedEligibilityFields('Associate Professional Counselor')).toBe(true)
+  })
+})
+
+describe('groupSuperviseeOccupationOptions', () => {
+  const np = { label: 'Nurse Practitioner', value: '1' }
+  const pa = { label: 'Physician Assistant', value: '2' }
+  const lsw = { label: 'Licensed Social Worker', value: '3' }
+  const apc = { label: 'Associate Professional Counselor', value: '4' }
+
+  it('puts Medical (NP + PA) first, then Mental Health', () => {
+    const groups = groupSuperviseeOccupationOptions([lsw, np, apc, pa])
+    expect(groups.map((g) => g.label)).toEqual(['Medical', 'Mental Health'])
+    expect(groups[0].options).toEqual([np, pa])
+    expect(groups[1].options).toEqual([lsw, apc])
+  })
+
+  it('omits empty groups', () => {
+    const groups = groupSuperviseeOccupationOptions([lsw, apc])
+    expect(groups.map((g) => g.label)).toEqual(['Mental Health'])
+  })
+
+  it('buckets non-allowlisted (kept legacy) occupations under Other', () => {
+    const legacy = { label: 'Esthetician', value: '9' }
+    const groups = groupSuperviseeOccupationOptions([np, legacy])
+    expect(groups.map((g) => g.label)).toEqual(['Medical', 'Other'])
+    expect(groups[1].options).toEqual([legacy])
+  })
+
+  it('returns no groups for an empty list', () => {
+    expect(groupSuperviseeOccupationOptions([])).toEqual([])
   })
 })

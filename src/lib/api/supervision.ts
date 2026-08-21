@@ -117,10 +117,13 @@ export async function hireSupervisor(payload: HireSupervisorRequestInput): Promi
 }
 
 /** GET /api/supervision/hires — paginated hire list for the authenticated user (supervisor or supervisee). */
+export type HiresListMode = 'supervisors' | 'medicalDirectors'
+
 export async function listHires(
   page = 1,
   limit = 10,
   status?: HireStatus | HireStatus[],
+  mode?: HiresListMode,
 ): Promise<HireListResponse> {
   const statusParam =
     status === undefined
@@ -128,8 +131,9 @@ export async function listHires(
       : {
           status: Array.isArray(status) ? status.join(',') : status,
         }
+  const modeParam = mode ? { mode } : {}
   const { data } = await apiClient.get<ApiResponse<HireListResponse>>('/supervision/hires', {
-    params: { page, limit, ...statusParam },
+    params: { page, limit, ...statusParam, ...modeParam },
   })
   return data.data
 }

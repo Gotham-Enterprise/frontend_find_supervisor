@@ -14,10 +14,14 @@ export const recommendedSupervisorKeys = {
     [...recommendedSupervisorKeys.all, 'list', params] as const,
 }
 
-export function useRecommendedSupervisors(params?: GetRecommendedSupervisorsParams) {
+export function useRecommendedSupervisors(
+  params?: GetRecommendedSupervisorsParams,
+  enabled = true,
+) {
   return useQuery<RecommendedSupervisorsPageData>({
     queryKey: recommendedSupervisorKeys.list(params),
     queryFn: () => getRecommendedSupervisors(params),
     staleTime: 5 * 60 * 1000,
+    enabled,
   })
 }

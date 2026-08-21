@@ -1,14 +1,27 @@
 import { z } from 'zod'
 
 import {
+  applyMedicalDirectorBoardCertRules,
+  applyMedicalDirectorOfferingRules,
+  boardCertificationEntrySchema,
+  type BoardCertificationEntryValues,
   licenseEntrySchema,
   type LicenseEntryValues,
+  OFFERING_SUPERVISOR_TYPE_NAMES,
+  offeringCredentialsSchema,
+  type OfferingCredentialsValues,
   professionalCredentialsSchema,
   yearsOfExperienceOptions,
 } from '@/components/Signup/schema'
+import { buildBoardCertificationsPayload, buildOfferingsPayload } from '@/lib/api/signup'
 import type { UpdateSupervisorProfilePayload } from '@/lib/api/supervisor-profile'
+import {
+  ABMS_CERTIFYING_BOARDS,
+  OTHER_CERTIFYING_BOARD_VALUE,
+} from '@/lib/utils/board-certification'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
 import { formatUSPhoneForDisplay, normalizeUSPhoneNumber } from '@/lib/utils/phone'
+import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 import {
   isMonthlyOnlySupervisorType,
   isPhysicianSupervisorType,
@@ -75,7 +88,9 @@ const editSupervisorProfileFieldsSchema = z.object({
     }),
   npiNumber: z.string().max(20).optional(),
   certification: z.array(z.string()),
-  patientPopulation: z.array(z.string()).min(1, 'Add at least one patient population'),
+  // Required unless a plain Medical Director (no physician offerings) — see
+  // the superRefine in createEditSupervisorProfileSchema.
+  patientPopulation: z.array(z.string()),
   supervisionFormat: z
     .string()
     .min(1, 'Please select a supervision format')
@@ -104,6 +119,18 @@ const editSupervisorProfileFieldsSchema = z.object({
     z.number('Please enter a fee amount').min(1, 'Fee amount must be at least $1'),
   ),
   uploadProfilePhoto: z.any().optional(),
+
+  // Medical Director only — same field names/shapes as the MD signup so the
+  // shared components (OfferingCredentialsFields, BoardCertificationEntriesField)
+  // and conditional rules work unchanged. Blank/false for other supervisors.
+  offerSupervisingPhysician: z.boolean(),
+  offerCollaboratingPhysician: z.boolean(),
+  offerings: z.object({
+    supervising: offeringCredentialsSchema,
+    collaborating: offeringCredentialsSchema,
+  }),
+  boardCertified: z.boolean(),
+  boardCertifications: z.array(boardCertificationEntrySchema),
 })
 
 export type EditSupervisorProfileFormValues = z.infer<typeof editSupervisorProfileFieldsSchema>
@@ -164,6 +191,25 @@ export function createEditSupervisorProfileSchema(profile: SupervisorProfileData
         code: z.ZodIssueCode.custom,
         path: ['supervisionFeeType'],
         message: MONTHLY_ONLY_FEE_TYPE_MESSAGE,
+      })
+    }
+
+    // Self-gating on the checked/Yes flags — no-ops for non-Medical-Director
+    // profiles whose flags stay false.
+    applyMedicalDirectorOfferingRules(data, ctx)
+    applyMedicalDirectorBoardCertRules(data, ctx)
+
+    // Patient population is a clinical-supervision field: plain Medical
+    // Directors (no physician offerings) skip it, everyone else requires it.
+    const plainMedicalDirector =
+      data.supervisorType === MEDICAL_DIRECTOR_TYPE_NAME &&
+      !data.offerSupervisingPhysician &&
+      !data.offerCollaboratingPhysician
+    if (!plainMedicalDirector && data.patientPopulation.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['patientPopulation'],
+        message: 'Add at least one patient population',
       })
     }
   })
@@ -228,6 +274,96 @@ export function getSupervisorLicenseEntryDefaults(profile: SupervisorProfileData
   return { entries, entriesNeedingReview }
 }
 
+const emptyOfferingBlock = (): OfferingCredentialsValues => ({
+  occupation: '',
+  specialty: '',
+  degreeType: '',
+  licenses: [{ licenseType: '', licenseNumber: '', state: '', licenseExpiration: '' }],
+})
+
+const OFFERING_KEY_BY_TYPE_NAME: Record<string, 'supervising' | 'collaborating'> = {
+  [OFFERING_SUPERVISOR_TYPE_NAMES.supervising]: 'supervising',
+  [OFFERING_SUPERVISOR_TYPE_NAMES.collaborating]: 'collaborating',
+}
+
+/** Stored offering rows → checkbox flags + keyed credential blocks. */
+export function getSupervisorOfferingDefaults(profile: SupervisorProfileData): {
+  offerSupervisingPhysician: boolean
+  offerCollaboratingPhysician: boolean
+  offerings: { supervising: OfferingCredentialsValues; collaborating: OfferingCredentialsValues }
+} {
+  const blocks = {
+    supervising: emptyOfferingBlock(),
+    collaborating: emptyOfferingBlock(),
+  }
+  const flags = { supervising: false, collaborating: false }
+  const toDateInput = (value: string | null | undefined) => (value ? value.slice(0, 10) : '')
+
+  for (const offering of profile.offerings ?? []) {
+    const key = OFFERING_KEY_BY_TYPE_NAME[offering.supervisorType]
+    if (!key) continue
+    flags[key] = true
+    blocks[key] = {
+      occupation: offering.occupation ?? '',
+      specialty: offering.specialty ?? '',
+      degreeType: offering.degreeType ?? '',
+      licenses: (offering.licenses ?? []).map((license) => ({
+        licenseType: '',
+        licenseNumber: license.licenseNumber ?? '',
+        state: license.state ?? '',
+        licenseExpiration: toDateInput(license.licenseExpiration),
+      })),
+    }
+    if (blocks[key].licenses.length === 0) {
+      blocks[key].licenses = emptyOfferingBlock().licenses
+    }
+  }
+
+  return {
+    offerSupervisingPhysician: flags.supervising,
+    offerCollaboratingPhysician: flags.collaborating,
+    offerings: blocks,
+  }
+}
+
+/** Stored board-certification rows → Yes/No flag + entries ("Other" detected against the ABMS list). */
+export function getSupervisorBoardCertificationDefaults(profile: SupervisorProfileData): {
+  boardCertified: boolean
+  boardCertifications: BoardCertificationEntryValues[]
+} {
+  const toDateInput = (value: string | null | undefined) => (value ? value.slice(0, 10) : '')
+  const rows = profile.boardCertifications ?? []
+
+  const entries: BoardCertificationEntryValues[] = rows.map((row) => {
+    const isKnownBoard = (ABMS_CERTIFYING_BOARDS as readonly string[]).includes(row.certifyingBoard)
+    return {
+      certifyingBoard: isKnownBoard ? row.certifyingBoard : OTHER_CERTIFYING_BOARD_VALUE,
+      certifyingBoardOther: isKnownBoard ? '' : row.certifyingBoard,
+      specialty: row.specialty ?? '',
+      subspecialty: row.subspecialty ?? '',
+      certificationNumber: row.certificationNumber ?? '',
+      expirationDate: toDateInput(row.expirationDate),
+    }
+  })
+
+  return {
+    boardCertified: entries.length > 0,
+    boardCertifications:
+      entries.length > 0
+        ? entries
+        : [
+            {
+              certifyingBoard: '',
+              certifyingBoardOther: '',
+              specialty: '',
+              subspecialty: '',
+              certificationNumber: '',
+              expirationDate: '',
+            },
+          ],
+  }
+}
+
 export function getDefaultSupervisorProfileFormValues(
   profile: SupervisorProfileData,
 ): SupervisorProfileFormInput {
@@ -264,6 +400,8 @@ export function getDefaultSupervisorProfileFormValues(
       : 'HOURLY') as 'HOURLY' | 'MONTHLY',
     supervisionFeeAmount: profile.supervisionFeeAmount ?? undefined,
     uploadProfilePhoto: undefined,
+    ...getSupervisorOfferingDefaults(profile),
+    ...getSupervisorBoardCertificationDefaults(profile),
   }
 }
 
@@ -308,5 +446,13 @@ export function supervisorProfileFormValuesToPayload(
     supervisionFeeAmount: values.supervisionFeeAmount,
     uploadProfilePhoto:
       values.uploadProfilePhoto instanceof File ? values.uploadProfilePhoto : undefined,
+    // Medical Director only: full replace — unchecked boxes / "No" send empty
+    // arrays so removed offerings/certifications are cleared server-side.
+    ...(values.supervisorType === MEDICAL_DIRECTOR_TYPE_NAME
+      ? {
+          offerings: buildOfferingsPayload(values),
+          boardCertifications: buildBoardCertificationsPayload(values),
+        }
+      : {}),
   }
 }

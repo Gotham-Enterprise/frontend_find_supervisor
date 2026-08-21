@@ -99,7 +99,7 @@ export function SupervisorStepLicenseCredentials({
         label="Supervisor Type"
         rules={supervisorFieldRules('supervisorType')}
         options={supervisorTypeOptions}
-        placeholder={supervisorTypesLoading ? 'Loading…' : 'Select supervisor type'}
+        placeholder={supervisorTypesLoading ? 'Loading…' : 'Select Supervisor Type'}
         loading={supervisorTypesLoading}
         isSubmitting={isSubmitting}
         required
@@ -126,7 +126,7 @@ export function SupervisorStepLicenseCredentials({
           label="Occupation"
           rules={supervisorFieldRules('supervisorOccupationId')}
           options={occupationOptions}
-          placeholder={occupationDisabled ? 'Select a supervisor type first' : 'Select occupation'}
+          placeholder={occupationDisabled ? 'Select a Supervisor Type First' : 'Select Occupation'}
           loading={supervisorTypesLoading}
           disabled={occupationDisabled}
           isSubmitting={isSubmitting}
@@ -145,7 +145,7 @@ export function SupervisorStepLicenseCredentials({
           label="Specialty"
           options={specialtyOptions}
           sortOptions
-          placeholder="Select specialty (optional)"
+          placeholder="Select Specialty (optional)"
           loading={supervisorTypesLoading}
           disabled={specialtyDisabled}
           isSubmitting={isSubmitting}
@@ -162,7 +162,7 @@ export function SupervisorStepLicenseCredentials({
             label="Degree Type"
             rules={supervisorFieldRules('degreeType')}
             options={credentialOptions}
-            placeholder="Select degree type"
+            placeholder="Select Degree Type"
             loading={supervisorTypesLoading}
             disabled={supervisorTypesLoading}
             selectKey={supervisorOccupationId}
@@ -178,7 +178,7 @@ export function SupervisorStepLicenseCredentials({
         licenseTypesLoading={supervisorTypesLoading}
         licenseTypeDisabled={licenseTypeDisabled}
         licenseTypePlaceholder={
-          licenseTypeDisabled ? 'Select an occupation first' : 'Select license type'
+          licenseTypeDisabled ? 'Select an Occupation First' : 'Select License Type'
         }
         licenseTypeSelectKey={supervisorOccupationId}
         isSubmitting={isSubmitting}
@@ -190,7 +190,7 @@ export function SupervisorStepLicenseCredentials({
           name="npiNumber"
           label="NPI Number"
           rules={supervisorFieldRules('npiNumber')}
-          placeholder="Enter your NPI Number"
+          placeholder="Enter Your NPI Number"
           maxLength={20}
           isSubmitting={isSubmitting}
         />
@@ -200,7 +200,7 @@ export function SupervisorStepLicenseCredentials({
           label="Years of Experience"
           rules={supervisorFieldRules('yearsOfExperience')}
           options={yearsOfExperienceSelectOptions}
-          placeholder="Select years of experience"
+          placeholder="Select Years of Experience"
           isSubmitting={isSubmitting}
           required
         />
@@ -234,7 +234,7 @@ export function SupervisorStepLicenseCredentials({
                       ? 'Not applicable for this supervisor type'
                       : certificatesLoading
                         ? 'Loading…'
-                        : 'Add certification (e.g. BLS)'
+                        : 'Add Certification (e.g. BLS)'
                   }
                   disabled={certificationsDisabled}
                 />

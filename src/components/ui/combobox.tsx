@@ -107,6 +107,32 @@ function ComboboxContent({
   )
 }
 
+function ComboboxGroup({ className, ...props }: ComboboxPrimitive.Group.Props) {
+  return (
+    <ComboboxPrimitive.Group
+      data-slot="combobox-group"
+      className={cn('py-1 first:pt-0 last:pb-0', className)}
+      {...props}
+    />
+  )
+}
+
+function ComboboxGroupLabel({ className, ...props }: ComboboxPrimitive.GroupLabel.Props) {
+  return (
+    <ComboboxPrimitive.GroupLabel
+      data-slot="combobox-group-label"
+      className={cn(
+        'px-1.5 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground',
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
+/** Renders the filtered items of the enclosing `ComboboxGroup`. */
+const ComboboxCollection = ComboboxPrimitive.Collection
+
 function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.Props) {
   return (
     <ComboboxPrimitive.Item
@@ -129,4 +155,13 @@ function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.
   )
 }
 
-export { Combobox, ComboboxContent, ComboboxItem, ComboboxTrigger, ComboboxValue }
+export {
+  Combobox,
+  ComboboxCollection,
+  ComboboxContent,
+  ComboboxGroup,
+  ComboboxGroupLabel,
+  ComboboxItem,
+  ComboboxTrigger,
+  ComboboxValue,
+}

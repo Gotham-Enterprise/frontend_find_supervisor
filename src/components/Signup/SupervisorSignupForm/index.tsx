@@ -3,10 +3,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { useForm, useFormState, useWatch } from 'react-hook-form'
 
-import { supervisorDefaultValues } from '@/components/Signup/helpers'
 import {
+  medicalDirectorDefaultValues,
+  supervisorSignupDefaultValues,
+} from '@/components/Signup/helpers'
+import {
+  MEDICAL_DIRECTOR_SIGNUP_STEP_FIELDS,
+  MEDICAL_DIRECTOR_SIGNUP_STEP_SCHEMAS,
+  type MedicalDirectorFormValues,
+  medicalDirectorSchema,
   SUPERVISOR_SIGNUP_STEP_FIELDS,
-  type SupervisorFormValues,
+  SUPERVISOR_SIGNUP_STEP_SCHEMAS,
   supervisorSchema,
 } from '@/components/Signup/schema'
 import { Form } from '@/components/ui/form'
@@ -19,9 +26,11 @@ import {
   useUserSnackbar,
 } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
+import { isMedicalDirectorType } from '@/lib/utils/supervisee-eligibility'
 import { validateAddressForSignup } from '@/lib/utils/validate-address'
 
 import { applyZodIssuesToForm, findFirstStepWithError } from './applyZodIssuesToForm'
+import { MedicalDirectorStepLicenseCredentials } from './MedicalDirectorStepLicenseCredentials'
 import { SupervisorStepAccount } from './SupervisorStepAccount'
 import { SupervisorStepIndicator } from './SupervisorStepIndicator'
 import { SupervisorStepLicenseCredentials } from './SupervisorStepLicenseCredentials'
@@ -31,7 +40,23 @@ import { type SupervisorSignupStepIndex, validateSupervisorStep } from './valida
 
 const LAST_STEP: SupervisorSignupStepIndex = 2
 
-export function SupervisorSignupForm() {
+export type SupervisorSignupVariant = 'supervisor' | 'medical-director'
+
+type SupervisorSignupFormProps = {
+  /** 'medical-director' presets the supervisor type and adds the offerings step-2 UI. */
+  variant?: SupervisorSignupVariant
+}
+
+export function SupervisorSignupForm({ variant = 'supervisor' }: SupervisorSignupFormProps) {
+  const isMedicalDirector = variant === 'medical-director'
+  const fullSchema = isMedicalDirector ? medicalDirectorSchema : supervisorSchema
+  const stepSchemas = isMedicalDirector
+    ? MEDICAL_DIRECTOR_SIGNUP_STEP_SCHEMAS
+    : SUPERVISOR_SIGNUP_STEP_SCHEMAS
+  const stepFields = isMedicalDirector
+    ? MEDICAL_DIRECTOR_SIGNUP_STEP_FIELDS
+    : SUPERVISOR_SIGNUP_STEP_FIELDS
+
   const [step, setStep] = useState<SupervisorSignupStepIndex>(0)
   /** Always read current step in submit/keyboard handlers (avoids stale closure vs `step` state). */
   const stepRef = useRef(step)
@@ -56,10 +81,14 @@ export function SupervisorSignupForm() {
 
   const { data: supervisorTypesData = [], isLoading: supervisorTypesLoading } =
     useSupervisorTypesData()
-  const supervisorTypeOptions = supervisorTypesData.map((t) => ({ label: t.name, value: t.name }))
+  // Medical Director has its own dedicated signup path — keep it out of the
+  // regular flow's dropdown (the full hierarchy stays available for cascades).
+  const supervisorTypeOptions = supervisorTypesData
+    .filter((t) => !isMedicalDirectorType(t))
+    .map((t) => ({ label: t.name, value: t.name }))
 
-  const form = useForm<SupervisorFormValues>({
-    defaultValues: supervisorDefaultValues,
+  const form = useForm<MedicalDirectorFormValues>({
+    defaultValues: isMedicalDirector ? medicalDirectorDefaultValues : supervisorSignupDefaultValues,
     shouldUnregister: false,
     mode: 'onTouched',
     reValidateMode: 'onChange',
@@ -101,6 +130,8 @@ export function SupervisorSignupForm() {
         form.getValues,
         form.setError,
         form.clearErrors,
+        stepSchemas,
+        stepFields,
       )
       if (!ok) return
 
@@ -135,15 +166,15 @@ export function SupervisorSignupForm() {
     setStep((s) => Math.max(0, s - 1) as SupervisorSignupStepIndex)
   }
 
-  async function onSubmit(values: SupervisorFormValues) {
+  async function onSubmit(values: MedicalDirectorFormValues) {
     if (stepRef.current !== LAST_STEP) return
 
-    const parsed = supervisorSchema.safeParse(values)
+    const parsed = fullSchema.safeParse(values)
     if (!parsed.success) {
       const erroredPaths = applyZodIssuesToForm(parsed.error, form.setError)
       // Errors can land on fields from earlier steps (unmounted) — jump there so the
       // submit never silently does nothing.
-      const errorStep = findFirstStepWithError(erroredPaths, SUPERVISOR_SIGNUP_STEP_FIELDS)
+      const errorStep = findFirstStepWithError(erroredPaths, stepFields)
       if (errorStep >= 0 && errorStep !== stepRef.current) {
         setStep(errorStep as SupervisorSignupStepIndex)
       }
@@ -195,6 +226,7 @@ export function SupervisorSignupForm() {
 
         {step === 0 && (
           <SupervisorStepAccount
+            isMedicalDirector={isMedicalDirector}
             stateOptions={stateOptions}
             cityOptions={cityOptions}
             statesLoading={statesLoading}
@@ -204,17 +236,25 @@ export function SupervisorSignupForm() {
             isSubmitting={isSubmitting}
           />
         )}
-        {step === 1 && (
-          <SupervisorStepLicenseCredentials
-            supervisorTypeOptions={supervisorTypeOptions}
-            supervisorTypesData={supervisorTypesData}
-            certificateOptions={certificateOptions}
-            stateOptions={stateOptions}
-            supervisorTypesLoading={supervisorTypesLoading}
-            certificatesLoading={certificatesLoading}
-            isSubmitting={isSubmitting}
-          />
-        )}
+        {step === 1 &&
+          (isMedicalDirector ? (
+            <MedicalDirectorStepLicenseCredentials
+              supervisorTypesData={supervisorTypesData}
+              stateOptions={stateOptions}
+              supervisorTypesLoading={supervisorTypesLoading}
+              isSubmitting={isSubmitting}
+            />
+          ) : (
+            <SupervisorStepLicenseCredentials
+              supervisorTypeOptions={supervisorTypeOptions}
+              supervisorTypesData={supervisorTypesData}
+              certificateOptions={certificateOptions}
+              stateOptions={stateOptions}
+              supervisorTypesLoading={supervisorTypesLoading}
+              certificatesLoading={certificatesLoading}
+              isSubmitting={isSubmitting}
+            />
+          ))}
         {step === 2 && (
           <SupervisorStepPracticeDetails
             patientPopulationOptions={patientPopulationOptions}
@@ -222,6 +262,7 @@ export function SupervisorSignupForm() {
             patientPopulationsLoading={patientPopulationsLoading}
             availabilityLoading={availabilityLoading}
             isSubmitting={isSubmitting}
+            isMedicalDirector={isMedicalDirector}
           />
         )}
 
@@ -234,6 +275,7 @@ export function SupervisorSignupForm() {
           isSubmitting={isSubmitting}
           isValidatingAddress={isValidatingAddress}
           canSubmit={canSubmit}
+          submitLabel={isMedicalDirector ? 'Sign Up as Medical Director →' : undefined}
         />
       </form>
     </Form>

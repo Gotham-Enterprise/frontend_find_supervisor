@@ -118,6 +118,49 @@ export function filterSuperviseeOccupationOptions<T extends { label: string }>(
   return options.filter((option) => isAllowedSuperviseeOccupation(option.label) || keep?.(option))
 }
 
+/**
+ * Splits the (already filtered) supervisee occupation options into labeled dropdown
+ * groups: "Medical" (NP + PA) first, then "Mental Health". Anything outside the
+ * allowlist (e.g. a kept legacy occupation on profile edit) falls into "Other".
+ * Empty groups are omitted.
+ */
+export function groupSuperviseeOccupationOptions<T extends { label: string }>(
+  options: readonly T[],
+): { label: string; options: T[] }[] {
+  const medical: T[] = []
+  const mentalHealth: T[] = []
+  const other: T[] = []
+  for (const option of options) {
+    if (
+      isNursePractitionerOccupation(option.label) ||
+      isPhysicianAssistantOccupation(option.label)
+    ) {
+      medical.push(option)
+    } else if (isMentalHealthSuperviseeOccupation(option.label)) {
+      mentalHealth.push(option)
+    } else {
+      other.push(option)
+    }
+  }
+  return [
+    { label: 'Medical', options: medical },
+    { label: 'Mental Health', options: mentalHealth },
+    { label: 'Other', options: other },
+  ].filter((group) => group.options.length > 0)
+}
+
+/**
+ * Display-only label overrides for the supervisee-facing "Type of Supervision
+ * Needed" dropdown. The stored value stays the backend type name.
+ */
+const SUPERVISION_TYPE_DISPLAY_LABELS: Record<string, string> = {
+  'mental health counselors': 'Supervising Mental Health Counselors',
+}
+
+export function supervisionTypeDisplayLabel(typeName: string): string {
+  return SUPERVISION_TYPE_DISPLAY_LABELS[normalize(typeName)] ?? typeName
+}
+
 export function resolveSupervisorTypeCode(type: { code?: string; name?: string }): string {
   if (type.code?.trim()) return type.code.trim().toUpperCase()
   return SUPERVISOR_TYPE_NAME_TO_CODE[normalize(type.name ?? '')] ?? ''
@@ -185,7 +228,7 @@ export function reconcileSelectedSupervisorType(
   return isSupervisorTypeEligibleForSupervisee(selected, occupationName) ? selectedTypeName : ''
 }
 
-export const SUPERVISION_TYPE_LOCKED_PLACEHOLDER = 'Select your occupation first'
+export const SUPERVISION_TYPE_LOCKED_PLACEHOLDER = 'Select Your Occupation First'
 
 export const INELIGIBLE_SUPERVISION_TYPE_MESSAGE =
   'This supervision type is not available for your occupation.'
@@ -194,4 +237,4 @@ export const SUPERVISION_TYPE_REQUIRED_MESSAGE =
   'Please select a type of supervision or check "I need a Medical Director".'
 
 export const NO_ELIGIBLE_SUPERVISION_TYPES_PLACEHOLDER =
-  'No supervision types match your occupation'
+  'No Supervision Types Match Your Occupation'

@@ -134,19 +134,30 @@ interface SuperviseeDashboardRecommendedSupervisorsProps {
   supervisors: RecommendedSupervisorApiItem[]
   isLoading: boolean
   isError: boolean
+  /** Section copy — defaults are the supervisor-section wording. */
+  title?: string
+  subtitle?: string
+  browseHref?: string
+  browseLabel?: string
+  emptyMessage?: string
 }
 
 export function SuperviseeDashboardRecommendedSupervisors({
   supervisors,
   isLoading,
   isError,
+  title = 'Recommended for You',
+  subtitle = 'Based on your supervision needs',
+  browseHref = '/find-supervisors',
+  browseLabel = 'Browse all supervisors →',
+  emptyMessage = 'No supervisors available right now.',
 }: SuperviseeDashboardRecommendedSupervisorsProps) {
   if (isLoading) {
     return (
       <Card className="flex flex-col">
         <CardHeader className="border-b pb-3">
-          <CardTitle className="text-base font-semibold">Recommended for You</CardTitle>
-          <p className="text-sm text-muted-foreground">Based on your supervision needs</p>
+          <CardTitle className="text-base font-semibold">{title}</CardTitle>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
         </CardHeader>
         <CardContent className="flex-1 divide-y pt-0">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -161,19 +172,16 @@ export function SuperviseeDashboardRecommendedSupervisors({
     return (
       <Card className="flex flex-col">
         <CardHeader className="border-b pb-3">
-          <CardTitle className="text-base font-semibold">Recommended for You</CardTitle>
-          <p className="text-sm text-muted-foreground">Based on your supervision needs</p>
+          <CardTitle className="text-base font-semibold">{title}</CardTitle>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
         </CardHeader>
         <CardContent className="flex flex-1 flex-col items-center justify-center py-10 text-center">
           <AlertCircle className="mb-2 size-8 text-destructive/50" />
           <p className="text-sm text-muted-foreground">
             Could not load recommendations. Please try again later.
           </p>
-          <Link
-            href="/find-supervisors"
-            className="mt-2 text-sm font-medium text-primary hover:underline"
-          >
-            Browse all supervisors →
+          <Link href={browseHref} className="mt-2 text-sm font-medium text-primary hover:underline">
+            {browseLabel}
           </Link>
         </CardContent>
       </Card>
@@ -184,17 +192,14 @@ export function SuperviseeDashboardRecommendedSupervisors({
     return (
       <Card className="flex flex-col">
         <CardHeader className="border-b pb-3">
-          <CardTitle className="text-base font-semibold">Recommended for You</CardTitle>
-          <p className="text-sm text-muted-foreground">Based on your supervision needs</p>
+          <CardTitle className="text-base font-semibold">{title}</CardTitle>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
         </CardHeader>
         <CardContent className="flex flex-1 flex-col items-center justify-center py-10 text-center">
           <Star className="mb-2 size-8 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">No supervisors available right now.</p>
-          <Link
-            href="/find-supervisors"
-            className="mt-2 text-sm font-medium text-primary hover:underline"
-          >
-            Browse all supervisors →
+          <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+          <Link href={browseHref} className="mt-2 text-sm font-medium text-primary hover:underline">
+            {browseLabel}
           </Link>
         </CardContent>
       </Card>
@@ -205,10 +210,10 @@ export function SuperviseeDashboardRecommendedSupervisors({
     <Card className="flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between border-b pb-3">
         <div>
-          <CardTitle className="text-base font-semibold">Recommended for You</CardTitle>
-          <p className="text-sm text-muted-foreground">Based on your supervision needs</p>
+          <CardTitle className="text-base font-semibold">{title}</CardTitle>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
         </div>
-        <Link href="/find-supervisors" className="text-sm font-medium text-primary hover:underline">
+        <Link href={browseHref} className="text-sm font-medium text-primary hover:underline">
           Browse all →
         </Link>
       </CardHeader>

@@ -67,7 +67,7 @@ export function SuperviseeStepAccount({
           name="fullName"
           label="Full Name"
           rules={superviseeFieldRules('fullName')}
-          placeholder="Enter your full name"
+          placeholder="Enter Your Full Name"
           autoCapitalizePersonName
           isSubmitting={isSubmitting}
           required
@@ -117,7 +117,7 @@ export function SuperviseeStepAccount({
           name="password"
           label="Password"
           rules={superviseeFieldRules('password')}
-          placeholder="Min. 8 characters"
+          placeholder="Min. 8 Characters"
           passwordToggle
           isSubmitting={isSubmitting}
           required
@@ -127,7 +127,7 @@ export function SuperviseeStepAccount({
           name="confirmPassword"
           label="Confirm Password"
           rules={superviseeFieldRules('confirmPassword')}
-          placeholder="Re-enter your password"
+          placeholder="Re-enter Your Password"
           passwordToggle
           isSubmitting={isSubmitting}
           required
@@ -143,7 +143,7 @@ export function SuperviseeStepAccount({
           rules={superviseeFieldRules('city')}
           options={cityOptions}
           placeholder={
-            !stateValue ? 'Select a state first' : citiesLoading ? 'Loading…' : 'Select city'
+            !stateValue ? 'Select a State First' : citiesLoading ? 'Loading…' : 'Select City'
           }
           disabled={!stateValue || citiesLoading}
           selectKey={stateValue || 'no-state'}
@@ -169,7 +169,7 @@ export function SuperviseeStepAccount({
           searchable
           rules={superviseeFieldRules('state')}
           options={stateOptions}
-          placeholder="Select state"
+          placeholder="Select State"
           loading={statesLoading}
           required
           isSubmitting={isSubmitting}

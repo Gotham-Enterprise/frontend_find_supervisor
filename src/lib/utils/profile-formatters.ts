@@ -302,6 +302,40 @@ export function formatSupervisorTypeLabel(
   return resolveOneSupervisorTypeLabel(raw, options)
 }
 
+/**
+ * Unique display labels for every role a supervisor serves: the primary
+ * `supervisorType` plus any Medical Director secondary offerings
+ * (Supervising/Collaborating Physician). Empty `fallback` yields an empty
+ * list when there is no type at all.
+ */
+export function getSupervisorTypeDisplayLabels(
+  supervisorType: string | null | undefined,
+  offerings: { supervisorType?: string | null }[] | null | undefined,
+  options: SelectOption[] = [],
+  fallback: string = DEFAULT_SUPERVISOR_ROLE_LABEL,
+): string[] {
+  const labels: string[] = []
+  const primary = typeof supervisorType === 'string' ? supervisorType.trim() : ''
+  if (primary) labels.push(resolveOneSupervisorTypeLabel(primary, options))
+  for (const offering of offerings ?? []) {
+    const name = offering.supervisorType?.trim()
+    if (name) labels.push(resolveOneSupervisorTypeLabel(name, options))
+  }
+  const unique = [...new Set(labels)]
+  if (unique.length > 0) return unique
+  return fallback ? [fallback] : []
+}
+
+/** `getSupervisorTypeDisplayLabels` joined for one-line sublines, e.g. "Medical Director · Supervising Physician". */
+export function formatSupervisorTypeWithOfferings(
+  supervisorType: string | null | undefined,
+  offerings: { supervisorType?: string | null }[] | null | undefined,
+  options: SelectOption[] = [],
+  fallback: string = DEFAULT_SUPERVISOR_ROLE_LABEL,
+): string {
+  return getSupervisorTypeDisplayLabels(supervisorType, offerings, options, fallback).join(' · ')
+}
+
 /** Supervisor type for mental health counselor supervisees (MHC). */
 export const MHC_SUPERVISOR_TYPE = SUPERVISOR_TYPE_QUERY_MAP['mental-health-counselor']!
 

@@ -38,6 +38,13 @@ interface SuperviseeDashboardContentProps {
   totalRecommendedCount: number
   isRecommendedLoading: boolean
   isRecommendedError: boolean
+  /** True when the supervisee's needs include a non-MD supervision type. */
+  showSupervisorsSection: boolean
+  /** Medical Director recommendations — separate section, shown only for MD needs. */
+  showMedicalDirectorsSection: boolean
+  recommendedMedicalDirectors: RecommendedSupervisorApiItem[]
+  isRecommendedMdLoading: boolean
+  isRecommendedMdError: boolean
   /** Full supervisee profile — undefined while loading, null on error/not-found */
   superviseeProfile: SuperviseeProfileData | null | undefined
   isProfileLoading: boolean
@@ -60,6 +67,11 @@ export function SuperviseeDashboardContent({
   totalRecommendedCount,
   isRecommendedLoading,
   isRecommendedError,
+  showSupervisorsSection,
+  showMedicalDirectorsSection,
+  recommendedMedicalDirectors,
+  isRecommendedMdLoading,
+  isRecommendedMdError,
   superviseeProfile,
   isProfileLoading,
   isProfileError,
@@ -120,14 +132,31 @@ export function SuperviseeDashboardContent({
         onRetry={onRetryUpcomingSessions}
       />
 
-      {/* Recommended Supervisors (3/5) + Active Requests (2/5) */}
+      {/* Recommended sections (3/5) + Active Requests (2/5). Supervisors and
+          Medical Directors are separate products, so each gets its own card,
+          shown only when the supervisee's needs call for it. */}
       <div className="grid gap-4 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-          <SuperviseeDashboardRecommendedSupervisors
-            supervisors={recommendedSupervisors}
-            isLoading={isRecommendedLoading}
-            isError={isRecommendedError}
-          />
+        <div className="flex flex-col gap-4 lg:col-span-3">
+          {showSupervisorsSection && (
+            <SuperviseeDashboardRecommendedSupervisors
+              supervisors={recommendedSupervisors}
+              isLoading={isRecommendedLoading}
+              isError={isRecommendedError}
+              title="Recommended Supervisors"
+            />
+          )}
+          {showMedicalDirectorsSection && (
+            <SuperviseeDashboardRecommendedSupervisors
+              supervisors={recommendedMedicalDirectors}
+              isLoading={isRecommendedMdLoading}
+              isError={isRecommendedMdError}
+              title="Recommended Medical Directors"
+              subtitle="Based on your medical director need"
+              browseHref="/find-medical-directors"
+              browseLabel="Browse all medical directors →"
+              emptyMessage="No medical directors available right now."
+            />
+          )}
         </div>
         <div className="lg:col-span-2">
           <SuperviseeDashboardActiveRequests hires={pendingHires} isError={isHiresError} />
