@@ -28,6 +28,7 @@ import {
   useUserSnackbar,
 } from '@/lib/hooks'
 import { useConfetti } from '@/lib/hooks/useConfetti'
+import { todayLocalISO } from '@/lib/utils/date'
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
   coerceStringList,
@@ -55,7 +56,14 @@ const hireSupervisorSchema = z
       { error: 'Preferred availability is required' },
     ),
     typeOfSupervisorNeeded: z.string().min(1, 'Please select a type of supervision needed'),
-    preferredStartDate: z.string().min(1, 'Preferred start date is required'),
+    preferredStartDate: z
+      .string()
+      .min(1, 'Preferred start date is required')
+      // String comparison on YYYY-MM-DD — parsing with `new Date(val)` reads UTC
+      // midnight and rejects today's date in timezones behind UTC.
+      .refine((val) => val >= todayLocalISO(), {
+        message: 'Preferred start date cannot be in the past',
+      }),
     budgetRangeType: z.enum(['HOURLY', 'MONTHLY'], {
       error: 'Budget type is required',
     }),
@@ -347,6 +355,7 @@ export function HireSupervisorModal({
                 label="Preferred Start Date"
                 required
                 type="date"
+                min={todayLocalISO()}
                 isSubmitting={isSubmitting}
                 rules={{ required: 'Preferred start date is required' }}
               />

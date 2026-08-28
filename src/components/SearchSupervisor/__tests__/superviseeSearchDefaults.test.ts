@@ -4,7 +4,10 @@ import type { SupervisorTypeData } from '@/lib/api/options'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 import { DEFAULT_FILTERS } from '../helpers'
-import { mergeSuperviseeProfileIntoSearchFilters } from '../superviseeSearchDefaults'
+import {
+  hasSeededFilterValues,
+  mergeSuperviseeProfileIntoSearchFilters,
+} from '../superviseeSearchDefaults'
 
 const supervisorTypesData: SupervisorTypeData[] = [
   {
@@ -97,5 +100,31 @@ describe('mergeSuperviseeProfileIntoSearchFilters', () => {
       supervisorTypesData,
     )
     expect(merged).toEqual(DEFAULT_FILTERS)
+  })
+})
+
+describe('hasSeededFilterValues', () => {
+  it('is false for the untouched defaults', () => {
+    expect(hasSeededFilterValues(DEFAULT_FILTERS)).toBe(false)
+  })
+
+  it('is true when any seedable field carries a value', () => {
+    expect(
+      hasSeededFilterValues({ ...DEFAULT_FILTERS, supervisorOccupations: ['LMHC Supervisors'] }),
+    ).toBe(true)
+    expect(
+      hasSeededFilterValues({ ...DEFAULT_FILTERS, supervisorSpecialties: ['Eating Disorders'] }),
+    ).toBe(true)
+    expect(hasSeededFilterValues({ ...DEFAULT_FILTERS, stateLicenses: ['CA'] })).toBe(true)
+    expect(hasSeededFilterValues({ ...DEFAULT_FILTERS, supervisionFormats: ['VIRTUAL'] })).toBe(
+      true,
+    )
+    expect(hasSeededFilterValues({ ...DEFAULT_FILTERS, availability: ['WEEKDAYS'] })).toBe(true)
+  })
+
+  it('ignores non-seedable fields like acceptingOnly and radius', () => {
+    expect(
+      hasSeededFilterValues({ ...DEFAULT_FILTERS, acceptingOnly: false, radiusMiles: 100 }),
+    ).toBe(false)
   })
 })

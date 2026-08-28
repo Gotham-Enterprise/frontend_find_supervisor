@@ -38,8 +38,9 @@ export type FormInputFieldProps<
   /** Disables the control while the form is submitting (e.g. formState.isSubmitting or mutation isPending). */
   isSubmitting?: boolean
   maxLength?: number
-  min?: number
-  max?: number
+  /** Number inputs take numbers; date inputs take YYYY-MM-DD strings. */
+  min?: number | string
+  max?: number | string
   step?: number | string
   autoComplete?: string
   startAdornment?: InputProps['startAdornment']

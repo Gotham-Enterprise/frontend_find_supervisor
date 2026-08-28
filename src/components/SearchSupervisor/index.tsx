@@ -19,7 +19,11 @@ import { SearchSupervisorFilters } from './SearchSupervisorFilters'
 import { SearchSupervisorHeader } from './SearchSupervisorHeader'
 import { SearchSupervisorResults } from './SearchSupervisorResults'
 import { buildSearchUrlParams, parseSearchUrlState } from './searchUrlState'
-import { mergeSuperviseeProfileIntoSearchFilters } from './superviseeSearchDefaults'
+import { SeededFiltersNotice } from './SeededFiltersNotice'
+import {
+  hasSeededFilterValues,
+  mergeSuperviseeProfileIntoSearchFilters,
+} from './superviseeSearchDefaults'
 import type { SortOption, SupervisorSearchFilters, SupervisorSearchResult } from './types'
 
 // Client-side sort is only used for experience_asc — all other options are
@@ -61,6 +65,13 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
   const [page, setPage] = useState(initialUrlState.page)
   // A URL that already carries search state skips the profile prefill below.
   const [filtersInitialized, setFiltersInitialized] = useState(initialUrlState.hasState)
+
+  // Zero-result auto-relax for the profile-seeded first search: `seededFilters`
+  // keeps the prefill snapshot for "Reapply my preferences", `awaitingSeededResult`
+  // arms the relax for that first untouched search only.
+  const [seededFilters, setSeededFilters] = useState<SupervisorSearchFilters | null>(null)
+  const [awaitingSeededResult, setAwaitingSeededResult] = useState(false)
+  const [relaxNoticeVisible, setRelaxNoticeVisible] = useState(false)
 
   const { data: superviseeProfile, isFetched: superviseeProfileFetched } = useSuperviseeProfile()
   const supervisorTypesQuery = useSupervisorTypesData()
@@ -108,13 +119,20 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
         : merged
     setFilters(scoped)
     setAppliedFilters(scoped)
+    if (hasSeededFilterValues(scoped)) {
+      setSeededFilters(scoped)
+      setAwaitingSeededResult(true)
+    }
     setFiltersInitialized(true)
   }
 
   // Mirror the applied search state into the URL (replace, not push — filter tweaks
   // shouldn't grow browser history) so it survives navigating away and back.
+  // Held off while the seeded first search is settling: router.replace commits
+  // async, so writing the seeded params here could land AFTER the zero-result
+  // relax below resets them — leaving a stale seeded URL nothing cleans up.
   useEffect(() => {
-    if (!filtersInitialized) return
+    if (!filtersInitialized || awaitingSeededResult) return
     const qs = buildSearchUrlParams({
       keyword: appliedKeyword,
       filters: appliedFilters,
@@ -125,7 +143,16 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
     if (window.location.pathname + window.location.search !== target) {
       router.replace(target, { scroll: false })
     }
-  }, [filtersInitialized, appliedKeyword, appliedFilters, sortBy, page, pathname, router])
+  }, [
+    filtersInitialized,
+    awaitingSeededResult,
+    appliedKeyword,
+    appliedFilters,
+    sortBy,
+    page,
+    pathname,
+    router,
+  ])
 
   const searchInput = useMemo(
     () => ({
@@ -144,6 +171,21 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
     filtersInitialized,
   )
 
+  // If the auto-seeded first search comes back empty, clear the seeded filters and
+  // rerun so the user never lands on an empty page they didn't cause. Any user
+  // interaction before the result settles disarms this instead. Like the prefill
+  // above, state is adjusted during render (not in an effect) so the relaxed
+  // search fires before the empty result ever paints.
+  if (awaitingSeededResult && !isLoading && (data || isError)) {
+    setAwaitingSeededResult(false)
+    if (!isError && (data?.meta?.totalCount ?? 0) === 0) {
+      setFilters(DEFAULT_FILTERS)
+      setAppliedFilters(DEFAULT_FILTERS)
+      setPage(1)
+      setRelaxNoticeVisible(true)
+    }
+  }
+
   const supervisors = useMemo(() => {
     const raw = data?.results ?? []
     return sortSupervisorsLocal(raw, sortBy)
@@ -155,7 +197,15 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
     ? parseApiError(error) || 'Something went wrong while loading supervisors.'
     : null
 
+  // Once the user drives the search themselves, the seeded first search no longer
+  // owns the results — stop any pending auto-relax and drop its notice.
+  function disarmSeededRelax() {
+    setAwaitingSeededResult(false)
+    setRelaxNoticeVisible(false)
+  }
+
   function handleSearch() {
+    disarmSeededRelax()
     setAppliedKeyword(keyword.trim())
     setAppliedFilters(filters)
     setPage(1)
@@ -166,11 +216,13 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
   }
 
   function handleApplyFilters() {
+    disarmSeededRelax()
     setAppliedFilters(filters)
     setPage(1)
   }
 
   function handleResetSearch() {
+    disarmSeededRelax()
     setFilters(DEFAULT_FILTERS)
     setAppliedFilters(DEFAULT_FILTERS)
     setKeyword('')
@@ -179,9 +231,18 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
   }
 
   function handleClearFilterPanel() {
+    disarmSeededRelax()
     setFilters(DEFAULT_FILTERS)
     setAppliedFilters(DEFAULT_FILTERS)
     setPage(1)
+  }
+
+  function handleReapplySeededFilters() {
+    if (!seededFilters) return
+    setFilters(seededFilters)
+    setAppliedFilters(seededFilters)
+    setPage(1)
+    setRelaxNoticeVisible(false)
   }
 
   return (
@@ -216,6 +277,13 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
         </div>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          {relaxNoticeVisible && (
+            <SeededFiltersNotice
+              mode={mode}
+              onReapply={handleReapplySeededFilters}
+              onDismiss={() => setRelaxNoticeVisible(false)}
+            />
+          )}
           <SearchSupervisorResults
             supervisors={supervisors}
             total={total}

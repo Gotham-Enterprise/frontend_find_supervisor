@@ -79,3 +79,17 @@ export function mergeSuperviseeProfileIntoSearchFilters(
 
   return next
 }
+
+/**
+ * True when the merged filters actually carry profile-seeded values — used to
+ * arm the zero-result auto-relax only when the prefill applied something.
+ */
+export function hasSeededFilterValues(filters: SupervisorSearchFilters): boolean {
+  return (
+    filters.supervisorOccupations.length > 0 ||
+    filters.supervisorSpecialties.length > 0 ||
+    filters.stateLicenses.length > 0 ||
+    filters.supervisionFormats.length > 0 ||
+    filters.availability.length > 0
+  )
+}
