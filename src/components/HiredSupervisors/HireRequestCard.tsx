@@ -105,13 +105,11 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
   const completeMutation = useMarkHireAsCompleted()
 
   const supervisorName = formatDisplayName(hire.supervisor)
-  // A supervisor's occupation/specialty live on their profile; the user-level
-  // relations are only populated for supervisees and stay null here.
-  const occupation =
-    hire.supervisor.supervisorProfile?.occupation?.trim() ||
-    hire.supervisor.occupation?.name?.trim()
-  const specialty =
-    hire.supervisor.supervisorProfile?.specialty?.trim() || hire.supervisor.specialty?.name?.trim()
+  // A supervisor's occupation/specialty live on their PROFILE. The account-level
+  // user.occupation/specialty relations are jobseeker-side leftovers that can
+  // hold unrelated values (e.g. "Accountant"), so they are deliberately ignored.
+  const occupation = hire.supervisor.supervisorProfile?.occupation?.trim()
+  const specialty = hire.supervisor.supervisorProfile?.specialty?.trim()
   const occupationDisplay =
     occupation && specialty
       ? `${occupation} · ${specialty}`

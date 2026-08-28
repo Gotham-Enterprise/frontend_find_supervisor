@@ -165,12 +165,11 @@ export function SupervisorProfileHero({
     displayName,
     profile.professionalCredentials,
   )
-  const occupation =
-    profile.supervisorOccupation?.trim() ||
-    profile.user.occupation?.name ||
-    profile.occupation?.name
-  const specialty =
-    profile.supervisorSpecialty?.trim() || profile.user.specialty?.name || profile.specialty?.name
+  // Profile strings only — the account-level user.occupation/specialty
+  // relations are jobseeker-side leftovers that can hold unrelated values
+  // (e.g. "Accountant" on a physician), so they are deliberately ignored.
+  const occupation = profile.supervisorOccupation?.trim()
+  const specialty = profile.supervisorSpecialty?.trim()
   const subline = [occupation, specialty].filter(Boolean).join(' · ')
   // One badge per role: the primary type plus any Medical Director secondary offerings
   const roleBadgeLabels = getSupervisorTypeDisplayLabels(

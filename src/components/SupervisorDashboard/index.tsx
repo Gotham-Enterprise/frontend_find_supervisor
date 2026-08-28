@@ -680,12 +680,10 @@ function ProfilePreview({
   const tags = useMemo(() => {
     const certLabels = resolveOptionLabels(profile.certification ?? [], certificationOptions)
     const popLabels = resolveOptionLabels(profile.patientPopulation ?? [], patientPopulationOptions)
-    return [
-      profile.user.specialty?.name,
-      profile.user.occupation?.name,
-      ...certLabels,
-      ...popLabels,
-    ]
+    // Occupation/specialty come from the supervisor PROFILE (hierarchy strings) —
+    // the account-level user.occupation/specialty relations are jobseeker-side
+    // leftovers and can hold unrelated values (e.g. "Accountant").
+    return [profile.supervisorSpecialty, profile.supervisorOccupation, ...certLabels, ...popLabels]
       .filter((v): v is string => Boolean(v?.trim()))
       .slice(0, 5)
   }, [profile, certificationOptions, patientPopulationOptions])
