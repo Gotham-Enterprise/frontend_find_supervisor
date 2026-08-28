@@ -28,6 +28,7 @@ import {
 } from '@/lib/utils/supervisee-eligibility'
 import { validateAddressForSignup } from '@/lib/utils/validate-address'
 
+import { matchSignupServerFieldError } from '../serverFieldErrors'
 import {
   applyZodIssuesToForm,
   findFirstStepWithError,
@@ -201,6 +202,20 @@ export function SuperviseeSignupForm({ variant = 'supervisee' }: SuperviseeSignu
         )
       },
       onError: (error) => {
+        // Server rejections tied to a specific field get a persistent inline
+        // error on that field, with the wizard jumped to its step — the toast
+        // alone vanishes and the offending field may live on an earlier step.
+        const fieldError = matchSignupServerFieldError(error)
+        if (fieldError) {
+          form.setError(fieldError.field, { type: 'server', message: fieldError.message })
+          const errorStep = findFirstStepWithError(
+            [fieldError.field],
+            SUPERVISEE_SIGNUP_STEP_FIELDS,
+          )
+          if (errorStep >= 0 && errorStep !== stepRef.current) {
+            setStep(errorStep as SuperviseeSignupStepIndex)
+          }
+        }
         showError(parseApiError(error))
       },
     })

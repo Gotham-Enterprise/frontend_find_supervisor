@@ -157,8 +157,48 @@ const SUPERVISION_TYPE_DISPLAY_LABELS: Record<string, string> = {
   'mental health counselors': 'Supervising Mental Health Counselors',
 }
 
+/**
+ * Labels for the enum-code values the original signup stored in
+ * typeOfSupervisorNeeded (backend commit 5f941bfa's supervisorTypeOptions).
+ * Legacy accounts still carry these codes, so they must render as the label
+ * the user actually picked — the generic humanizer below would mangle the
+ * acronym-based ones (e.g. LPC_SUPERVISOR → "Lpc Supervisor").
+ */
+const LEGACY_SUPERVISION_TYPE_LABELS: Record<string, string> = {
+  LPC_SUPERVISOR: 'LPC Supervisor',
+  LPCC_SUPERVISOR: 'LPCC Supervisor',
+  LMHC_SUPERVISOR: 'LMHC Supervisor',
+  LMFT_SUPERVISOR: 'LMFT Supervisor',
+  LCSW_SUPERVISOR: 'LCSW Supervisor',
+  LICSW_SUPERVISOR: 'LICSW Supervisor',
+  CLINICAL_SUPERVISOR: 'Clinical Supervisor',
+  ACS: 'Approved Clinical Supervisor (ACS)',
+  BOARD_APPROVED_SUPERVISOR: 'Board Approved Supervisor',
+  FIELD_SUPERVISOR: 'Field Supervisor',
+  PRECEPTOR: 'Preceptor',
+  MENTAL_HEALTH_COUNSELORS: 'Mental Health Counselors',
+  SUPERVISING_PHYSICIAN: 'Supervising Physician',
+  COLLABORATING_PHYSICIAN: 'Collaborating Physician',
+  MEDICAL_DIRECTOR: 'Medical Director',
+}
+
+/** "SOME_OLD_CODE" → "Some Old Code" — last resort for unlisted legacy codes. */
+function humanizeEnumCode(code: string): string {
+  return code
+    .toLowerCase()
+    .split('_')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
 export function supervisionTypeDisplayLabel(typeName: string): string {
-  return SUPERVISION_TYPE_DISPLAY_LABELS[normalize(typeName)] ?? typeName
+  const trimmed = typeName.trim()
+  // Legacy accounts stored the enum code rather than the display name.
+  const resolved = /^[A-Z0-9_]+$/.test(trimmed)
+    ? (LEGACY_SUPERVISION_TYPE_LABELS[trimmed] ?? humanizeEnumCode(trimmed))
+    : trimmed
+  return SUPERVISION_TYPE_DISPLAY_LABELS[normalize(resolved)] ?? resolved
 }
 
 export function resolveSupervisorTypeCode(type: { code?: string; name?: string }): string {

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { OTHER_CERTIFYING_BOARD_VALUE } from '@/lib/utils/board-certification'
 import { todayLocalISO } from '@/lib/utils/date'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
+import { isServerAcceptedPhoneNumber } from '@/lib/utils/phone'
 import { SUPERVISION_TYPE_REQUIRED_MESSAGE } from '@/lib/utils/supervisee-eligibility'
 import {
   applySupervisorMonthlyOnlyFeeRule,
@@ -50,8 +51,12 @@ export const accountSchemaBase = z.object({
   email: z.string().min(1, 'Email is required').email('Please enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters').max(128),
   confirmPassword: z.string().min(1, 'Please confirm your password').max(128),
-  contactNumber: z.string().min(1, 'Contact number is required'),
-  // .refine(isValidUSPhoneNumber, 'Please enter a valid US phone number.'),
+  contactNumber: z
+    .string()
+    .min(1, 'Contact number is required')
+    // Matches the server rule (PhoneNumberService.validatePhoneNumber) so an
+    // invalid phone is rejected on step 1 instead of at final submit.
+    .refine(isServerAcceptedPhoneNumber, 'Please enter a valid US phone number.'),
   city: z.string().min(1, 'City is required').max(100),
   state: z.string().min(1, 'State is required'),
   zipcode: z

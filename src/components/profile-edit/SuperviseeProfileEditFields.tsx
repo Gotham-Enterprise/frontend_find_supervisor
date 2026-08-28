@@ -251,7 +251,6 @@ export function SuperviseeProfileEditFields({
             label="Full Name"
             required
             placeholder="Enter Full Name"
-            autoCapitalizePersonName
             isSubmitting={isSubmitting}
           />
           <FormField

@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/form'
 import { Input, type InputProps } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { capitalizePersonNameWords } from '@/lib/utils/person-name'
 
 export type FormInputFieldProps<
   TFieldValues extends FieldValues,
@@ -61,10 +60,6 @@ export type FormInputFieldProps<
   numberValue?: boolean
   /** Call `clearErrors(name)` after each change. */
   clearErrorsOnChange?: boolean
-  /**
-   * Title-case each word as the user types (full name fields). Ignored when `numberValue` is true.
-   */
-  autoCapitalizePersonName?: boolean
 }
 
 export function FormInputField<
@@ -94,7 +89,6 @@ export function FormInputField<
   passwordToggle,
   numberValue,
   clearErrorsOnChange,
-  autoCapitalizePersonName,
 }: FormInputFieldProps<TFieldValues, TName>) {
   const { clearErrors } = useFormContext<TFieldValues>()
   const [showPassword, setShowPassword] = useState(false)
@@ -157,9 +151,7 @@ export function FormInputField<
               normalizeEmptyToString ? (field.value ?? '') : (field.value as string | undefined)
             }
             onChange={(e) => {
-              const raw = e.target.value
-              const next = autoCapitalizePersonName ? capitalizePersonNameWords(raw) : raw
-              field.onChange(next)
+              field.onChange(e.target.value)
               if (clearErrorsOnChange) clearErrors(name)
             }}
           />

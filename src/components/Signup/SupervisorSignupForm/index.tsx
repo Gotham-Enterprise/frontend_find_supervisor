@@ -29,6 +29,7 @@ import { parseApiError } from '@/lib/utils/error-parser'
 import { isMedicalDirectorType } from '@/lib/utils/supervisee-eligibility'
 import { validateAddressForSignup } from '@/lib/utils/validate-address'
 
+import { matchSignupServerFieldError } from '../serverFieldErrors'
 import { applyZodIssuesToForm, findFirstStepWithError } from './applyZodIssuesToForm'
 import { MedicalDirectorStepLicenseCredentials } from './MedicalDirectorStepLicenseCredentials'
 import { SupervisorStepAccount } from './SupervisorStepAccount'
@@ -189,6 +190,17 @@ export function SupervisorSignupForm({ variant = 'supervisor' }: SupervisorSignu
         )
       },
       onError: (error) => {
+        // Server rejections tied to a specific field get a persistent inline
+        // error on that field, with the wizard jumped to its step — the toast
+        // alone vanishes and the offending field may live on an earlier step.
+        const fieldError = matchSignupServerFieldError(error)
+        if (fieldError) {
+          form.setError(fieldError.field, { type: 'server', message: fieldError.message })
+          const errorStep = findFirstStepWithError([fieldError.field], stepFields)
+          if (errorStep >= 0 && errorStep !== stepRef.current) {
+            setStep(errorStep as SupervisorSignupStepIndex)
+          }
+        }
         showError(parseApiError(error))
       },
     })

@@ -10,6 +10,7 @@ import {
   isSupervisorTypeEligibleForSupervisee,
   reconcileSelectedSupervisorType,
   SUPERVISEE_ALLOWED_OCCUPATIONS,
+  supervisionTypeDisplayLabel,
 } from '@/lib/utils/supervisee-eligibility'
 
 function makeType(code: string, name: string): SupervisorTypeData {
@@ -229,5 +230,36 @@ describe('groupSuperviseeOccupationOptions', () => {
 
   it('returns no groups for an empty list', () => {
     expect(groupSuperviseeOccupationOptions([])).toEqual([])
+  })
+})
+
+describe('supervisionTypeDisplayLabel', () => {
+  it('keeps current display names, with the Mental Health Counselors override', () => {
+    expect(supervisionTypeDisplayLabel('Medical Director')).toBe('Medical Director')
+    expect(supervisionTypeDisplayLabel('Supervising Physician')).toBe('Supervising Physician')
+    expect(supervisionTypeDisplayLabel('Mental Health Counselors')).toBe(
+      'Supervising Mental Health Counselors',
+    )
+  })
+
+  it('maps legacy enum codes to the labels the original signup showed', () => {
+    expect(supervisionTypeDisplayLabel('PRECEPTOR')).toBe('Preceptor')
+    expect(supervisionTypeDisplayLabel('COLLABORATING_PHYSICIAN')).toBe('Collaborating Physician')
+    expect(supervisionTypeDisplayLabel('LPC_SUPERVISOR')).toBe('LPC Supervisor')
+    expect(supervisionTypeDisplayLabel('LICSW_SUPERVISOR')).toBe('LICSW Supervisor')
+    expect(supervisionTypeDisplayLabel('ACS')).toBe('Approved Clinical Supervisor (ACS)')
+    expect(supervisionTypeDisplayLabel('BOARD_APPROVED_SUPERVISOR')).toBe(
+      'Board Approved Supervisor',
+    )
+  })
+
+  it('routes legacy MENTAL_HEALTH_COUNSELORS through the display override', () => {
+    expect(supervisionTypeDisplayLabel('MENTAL_HEALTH_COUNSELORS')).toBe(
+      'Supervising Mental Health Counselors',
+    )
+  })
+
+  it('humanizes unlisted enum codes instead of leaking them raw', () => {
+    expect(supervisionTypeDisplayLabel('SOME_OLD_TYPE')).toBe('Some Old Type')
   })
 })
