@@ -50,11 +50,11 @@ describe('mapApiRowToSupervisorSearchResult — role label', () => {
     expect(result.supervisorType).toBe('Medical Director')
   })
 
-  it('leaves non-Medical-Director rows unchanged', () => {
+  it('applies the supervisee-facing display override to non-Medical-Director rows', () => {
     const result = mapApiRowToSupervisorSearchResult(
       { id: '3', fullName: 'Jane LCSW', supervisorType: 'Mental Health Counselors' },
       0,
     )
-    expect(result.supervisorType).toBe('Mental Health Counselors')
+    expect(result.supervisorType).toBe('Supervising Mental Health Counselors')
   })
 })

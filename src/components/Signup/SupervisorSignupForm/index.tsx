@@ -26,7 +26,10 @@ import {
   useUserSnackbar,
 } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
-import { isMedicalDirectorType } from '@/lib/utils/supervisee-eligibility'
+import {
+  isMedicalDirectorType,
+  supervisionTypeDisplayLabel,
+} from '@/lib/utils/supervisee-eligibility'
 import { validateAddressForSignup } from '@/lib/utils/validate-address'
 
 import { matchSignupServerFieldError } from '../serverFieldErrors'
@@ -84,9 +87,10 @@ export function SupervisorSignupForm({ variant = 'supervisor' }: SupervisorSignu
     useSupervisorTypesData()
   // Medical Director has its own dedicated signup path — keep it out of the
   // regular flow's dropdown (the full hierarchy stays available for cascades).
+  // Labels use the shared display override; the stored value stays the type name.
   const supervisorTypeOptions = supervisorTypesData
     .filter((t) => !isMedicalDirectorType(t))
-    .map((t) => ({ label: t.name, value: t.name }))
+    .map((t) => ({ label: supervisionTypeDisplayLabel(t.name), value: t.name }))
 
   const form = useForm<MedicalDirectorFormValues>({
     defaultValues: isMedicalDirector ? medicalDirectorDefaultValues : supervisorSignupDefaultValues,

@@ -105,12 +105,17 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
   const completeMutation = useMarkHireAsCompleted()
 
   const supervisorName = formatDisplayName(hire.supervisor)
-  const occupation = hire.supervisor.occupation?.name?.trim()
-  const specialty = hire.supervisor.specialty?.name?.trim()
+  // A supervisor's occupation/specialty live on their profile; the user-level
+  // relations are only populated for supervisees and stay null here.
+  const occupation =
+    hire.supervisor.supervisorProfile?.occupation?.trim() ||
+    hire.supervisor.occupation?.name?.trim()
+  const specialty =
+    hire.supervisor.supervisorProfile?.specialty?.trim() || hire.supervisor.specialty?.name?.trim()
   const occupationDisplay =
     occupation && specialty
       ? `${occupation} · ${specialty}`
-      : (occupation ?? specialty ?? 'Not specified')
+      : occupation || specialty || 'Not specified'
 
   const locationRaw = formatLocation(hire.supervisor.city, hire.supervisor.state)
   const formatRaw = formatSupervisionFormat(hire.supervisorFormat)

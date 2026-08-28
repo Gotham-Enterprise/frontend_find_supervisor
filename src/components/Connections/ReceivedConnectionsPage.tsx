@@ -28,7 +28,12 @@ import {
   useReceivedConnections,
 } from '@/lib/hooks/useConnections'
 import { parseApiError } from '@/lib/utils/error-parser'
-import { formatDate, formatDisplayName, formatLocation } from '@/lib/utils/profile-formatters'
+import {
+  formatDate,
+  formatDisplayName,
+  formatLocation,
+  formatSupervisorTypeLabel,
+} from '@/lib/utils/profile-formatters'
 import type { ConnectionRequest, ConnectionStatus } from '@/types/connections'
 
 import { ConnectionStatusBadge } from './ConnectionStatusBadge'
@@ -279,7 +284,10 @@ function ReceivedRequestCard({ request }: { request: ConnectionRequest }) {
   const supervisorType = request.requester?.supervisorProfile?.supervisorType
   const occupation = request.requester?.supervisorProfile?.occupation
   const specialty = request.requester?.supervisorProfile?.specialty
-  const subline = [supervisorType ?? occupation, specialty].filter(Boolean).join(' · ') || null
+  const subline =
+    [supervisorType ? formatSupervisorTypeLabel(supervisorType) : occupation, specialty]
+      .filter(Boolean)
+      .join(' · ') || null
 
   const location = request.requester
     ? formatLocation(request.requester.city, request.requester.state)

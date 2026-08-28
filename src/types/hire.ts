@@ -32,8 +32,15 @@ export interface HireUser {
   profilePhotoUrl?: string | null
   stateOfLicensure: string[]
   status?: string | null
+  /** User-level relations — populated for supervisees, null for supervisors. */
   occupation: { id: number; name: string } | null
   specialty: { id: number; name: string } | null
+  /** A supervisor's real occupation/specialty live on the profile. */
+  supervisorProfile?: {
+    supervisorType: string | null
+    occupation: string | null
+    specialty: string | null
+  } | null
 }
 
 // ─── POST /api/supervision/hires ──────────────────────────────────────────────

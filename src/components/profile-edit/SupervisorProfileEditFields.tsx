@@ -41,6 +41,7 @@ import {
 import {
   isMedicalDirectorType,
   resolveSupervisorTypeCode,
+  supervisionTypeDisplayLabel,
   SUPERVISOR_TYPE_CODES,
 } from '@/lib/utils/supervisee-eligibility'
 import {
@@ -130,7 +131,8 @@ export function SupervisorProfileEditFields({
     () =>
       supervisorTypesData
         .filter((t) => isMedicalDirectorProfile || !isMedicalDirectorType(t))
-        .map((t) => ({ label: t.name, value: t.name })),
+        // Labels use the shared display override; the stored value stays the type name.
+        .map((t) => ({ label: supervisionTypeDisplayLabel(t.name), value: t.name })),
     [supervisorTypesData, isMedicalDirectorProfile],
   )
 

@@ -1,6 +1,7 @@
 import type { SelectOption } from '@/lib/api/options'
 import { SUPERVISOR_TYPE_QUERY_MAP } from '@/lib/seo/routes'
 import { formatUSPhoneForDisplay } from '@/lib/utils/phone'
+import { supervisionTypeDisplayLabel } from '@/lib/utils/supervisee-eligibility'
 
 // ─── Display name ──────────────────────────────────────────────────────────────
 
@@ -264,11 +265,13 @@ export function coerceStringList(value: unknown): string[] {
 }
 
 function resolveOneSupervisorTypeLabel(key: string, options: SelectOption[]): string {
-  const fromOptions = options.find((o) => o.value === key)?.label
-  if (fromOptions) return fromOptions
-  const legacy = LEGACY_SUPERVISOR_TYPE_LABELS[key]
-  if (legacy) return legacy
-  return humanizeSupervisorTypeFallback(key)
+  const label =
+    options.find((o) => o.value === key)?.label ??
+    LEGACY_SUPERVISOR_TYPE_LABELS[key] ??
+    humanizeSupervisorTypeFallback(key)
+  // Shared display override so "Mental Health Counselors" reads
+  // "Supervising Mental Health Counselors" everywhere this family renders.
+  return supervisionTypeDisplayLabel(label)
 }
 
 /**
