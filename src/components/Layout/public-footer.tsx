@@ -42,7 +42,7 @@ const staticColumns: FooterColumn[] = [
     heading: 'Company',
     links: [
       { label: 'Contact Us', href: '/contact-us' },
-      { label: 'Terms & Conditions', href: '/terms-of-service' },
+      { label: 'Terms of Service', href: '/terms-of-service' },
       { label: 'Privacy Policy', href: '/privacy-policy' },
     ],
   },

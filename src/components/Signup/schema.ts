@@ -218,7 +218,7 @@ export const supervisorSchemaObject = accountSchemaBase.extend({
   agreedToPost: z.boolean().refine((val) => val === true, 'You must agree to post your profile'),
   agreedToTerms: z
     .boolean()
-    .refine((val) => val === true, 'You must agree to the terms and conditions'),
+    .refine((val) => val === true, 'You must agree to the Terms of Service'),
 })
 
 export const supervisorSchema = withPasswordConfirmation(
@@ -497,7 +497,7 @@ export const superviseeSchemaObject = accountSchemaBase.extend({
   agreedToPost: z.boolean().refine((val) => val === true, 'You must agree to post your profile'),
   agreedToTerms: z
     .boolean()
-    .refine((val) => val === true, 'You must agree to the terms and conditions'),
+    .refine((val) => val === true, 'You must agree to the Terms of Service'),
 })
 
 /**

@@ -309,8 +309,16 @@ export function SupervisorStepPracticeDetails({
                   />
                 </FormControl>
                 <p className="text-sm leading-relaxed text-muted-foreground">
-                  I agree to all of the terms and conditions of use on{' '}
-                  <span className="font-semibold text-primary">Gotham Enterprises Ltd</span>.
+                  I agree to the{' '}
+                  <a
+                    href="/terms-of-service"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-primary hover:underline"
+                  >
+                    Terms of Service
+                  </a>{' '}
+                  of <span className="font-semibold text-primary">Gotham Enterprises Ltd</span>.
                 </p>
               </div>
               <FormMessage />
