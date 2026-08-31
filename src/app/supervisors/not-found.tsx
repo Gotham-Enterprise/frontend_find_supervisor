@@ -12,5 +12,10 @@ export const metadata = {
 export default function SupervisorsNotFound() {
   // The /supervisors layout already renders the full PublicHeader, so the
   // content is embedded (standalone would duplicate the header).
-  return <NotFoundContent showBrowseSupervisors standalone={false} />
+  return (
+    <NotFoundContent
+      secondaryLink={{ href: '/supervisors', label: 'Browse Supervisors by State' }}
+      standalone={false}
+    />
+  )
 }

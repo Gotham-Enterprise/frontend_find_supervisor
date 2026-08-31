@@ -3,8 +3,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 
 interface NotFoundContentProps {
-  /** Adds a "Browse Supervisors by State" action — for 404s under /supervisors. */
-  showBrowseSupervisors?: boolean
+  /** Optional contextual action next to "Back to Home" (e.g. a browse link for the segment). */
+  secondaryLink?: { href: string; label: string }
   /**
    * Renders the minimal logo header + full-height page chrome. Turn off inside
    * segments whose layout already provides a header (e.g. /supervisors).
@@ -16,10 +16,7 @@ interface NotFoundContentProps {
  * Shared branded 404 body. Server-component-safe on purpose (no client-module
  * imports like buttonVariants) so not-found boundaries can render it.
  */
-export function NotFoundContent({
-  showBrowseSupervisors = false,
-  standalone = true,
-}: NotFoundContentProps) {
+export function NotFoundContent({ secondaryLink, standalone = true }: NotFoundContentProps) {
   const body = (
     <main className="flex flex-1 items-center justify-center px-4 py-20">
       <div className="flex max-w-md flex-col items-center text-center">
@@ -41,12 +38,12 @@ export function NotFoundContent({
           >
             Back to Home
           </Link>
-          {showBrowseSupervisors && (
+          {secondaryLink && (
             <Link
-              href="/supervisors"
+              href={secondaryLink.href}
               className="inline-flex items-center justify-center rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             >
-              Browse Supervisors by State
+              {secondaryLink.label}
             </Link>
           )}
         </div>
