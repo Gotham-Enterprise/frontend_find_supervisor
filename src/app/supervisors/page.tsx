@@ -22,6 +22,7 @@ import { fetchPublicSupervisors } from '@/lib/api/public-supervisors'
 import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
 import { generateOrganizationJsonLd, generateWebSiteJsonLd } from '@/lib/seo/jsonld'
 import {
+  stateAbbreviationToSlug,
   stateSlugToDisplayName,
   SUPERVISOR_TYPE_QUERY_MAP,
   SUPERVISOR_TYPE_SLUGS,
@@ -89,9 +90,12 @@ interface PageProps {
 }
 
 export default async function SupervisorsIndexPage({ searchParams }: PageProps) {
-  const { state, type, format, q } = await searchParams
+  const { state: rawState, type, format, q } = await searchParams
 
-  // Resolve URL params to API values
+  // Resolve URL params to API values. Unknown values are ignored rather than
+  // echoed into the heading/filter chip (JF-2536: ?state=ZZ must not render
+  // "Supervisors in ZZ") — same policy as unknown type/format params.
+  const state = rawState && stateAbbreviationToSlug(rawState) ? rawState.toUpperCase() : undefined
   const supervisorTypeName = type ? (SUPERVISOR_TYPE_QUERY_MAP[type] ?? '') : ''
   const supervisionFormat = format ? (FORMAT_PARAM_MAP[format] ?? '') : ''
 
