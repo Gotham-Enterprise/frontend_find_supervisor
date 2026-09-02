@@ -35,7 +35,7 @@ export function SuperviseeCard({ supervisee, index }: SuperviseeCardProps) {
           supervisee.budgetRangeType,
         )
       : ''
-  const lookingIn = supervisee.stateTheyAreLookingIn.join(', ')
+  const licensedIn = supervisee.stateOfLicensure.join(', ')
   const supervisorNeeded = supervisee.typeOfSupervisorNeeded.filter(Boolean).join(', ')
   const credentialLine = [supervisee.title, supervisee.occupation, supervisee.specialty]
     .filter(Boolean)
@@ -71,7 +71,7 @@ export function SuperviseeCard({ supervisee, index }: SuperviseeCardProps) {
       </div>
 
       {/* What they're looking for in a supervisor */}
-      {(supervisorNeeded || format || lookingIn || timeline || budget) && (
+      {(supervisorNeeded || format || licensedIn || timeline || budget) && (
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Looking For
@@ -89,10 +89,10 @@ export function SuperviseeCard({ supervisee, index }: SuperviseeCardProps) {
                 <dd className="text-muted-foreground">{format}</dd>
               </div>
             )}
-            {lookingIn && (
+            {licensedIn && (
               <div className="flex gap-1.5">
-                <dt className="shrink-0 font-medium text-foreground">States:</dt>
-                <dd className="text-muted-foreground">{lookingIn}</dd>
+                <dt className="shrink-0 font-medium text-foreground">Licensed in:</dt>
+                <dd className="text-muted-foreground">{licensedIn}</dd>
               </div>
             )}
             {timeline && (

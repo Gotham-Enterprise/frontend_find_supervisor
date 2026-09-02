@@ -49,7 +49,6 @@ function getSuperviseeProfileCompletionChecks(profile: SuperviseeProfileData): b
     !!profile.preferredFormat,
     !!profile.availability,
     !!profile.howSoonLooking,
-    hasProfileStringList(profile.stateTheyAreLookingIn),
     !!profile.budgetRangeType,
     !!profile.idealSupervisor,
   ]

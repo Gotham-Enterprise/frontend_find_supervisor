@@ -4,14 +4,13 @@ import type { ReactNode } from 'react'
 
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
-import { useStatesOptions, useSuperviseeFormOptions } from '@/lib/hooks'
+import { useSuperviseeFormOptions } from '@/lib/hooks'
 import {
   formatAvailability,
   formatBudgetRange,
   formatDate,
   formatDisplayName,
   formatFeeAmount,
-  formatLookingInStatesLabel,
   formatSupervisionFormat,
   formatSupervisionHours,
   resolveSupervisorTypeLabel,
@@ -93,7 +92,6 @@ export function HireRequestDetailsDialog({
   onOpenChange,
 }: HireRequestDetailsDialogProps) {
   const { supervisorTypes } = useSuperviseeFormOptions()
-  const { data: stateOptions = [] } = useStatesOptions()
   const supervisorTypeOptions = supervisorTypes.data ?? []
   const supervisorName = formatDisplayName(hire.supervisor)
   const licenseStates =
@@ -116,13 +114,6 @@ export function HireRequestDetailsDialog({
       value: displayText(
         null,
         resolveSupervisorTypeLabel(hire.typeOfSupervisorNeeded, supervisorTypeOptions),
-      ),
-    },
-    {
-      label: 'State they are looking in',
-      value: displayText(
-        null,
-        formatLookingInStatesLabel(hire.stateTheyAreLookingIn, stateOptions),
       ),
     },
     {

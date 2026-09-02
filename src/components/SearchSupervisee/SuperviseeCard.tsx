@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { formatHowSoonLooking } from '@/lib/utils/profile-formatters'
+import { formatCredentialWithState, formatHowSoonLooking } from '@/lib/utils/profile-formatters'
+import { supervisionTypeDisplayLabel } from '@/lib/utils/supervisee-eligibility'
 
 import { SearchResultAvatar } from '../SearchSupervisor/SearchResultAvatar'
 import { FORMAT_BADGE_CLASSES, FORMAT_LABELS } from './helpers'
@@ -21,12 +22,14 @@ export function SuperviseeCard({ supervisee }: SuperviseeCardProps) {
     id,
     fullName,
     title,
+    licensureState,
     occupation,
     specialty,
     location,
     preferredFormat,
     howSoonLooking,
-    stateTheyAreLookingIn,
+    mdHowSoonLooking,
+    typeOfSupervisorNeeded,
     bio,
     initials,
     avatarColor,
@@ -36,14 +39,18 @@ export function SuperviseeCard({ supervisee }: SuperviseeCardProps) {
 
   // The API already masks fullName to "Katie C" until the supervisor is connected
   // with this supervisee, so it can be rendered directly.
-  const credentialLine = [title, occupation, specialty].filter(Boolean).join(' · ')
-  const timelineLabel = howSoonLooking
-    ? formatHowSoonLooking(howSoonLooking, undefined, {
+  const credentialLine = [formatCredentialWithState(title, licensureState), occupation, specialty]
+    .filter(Boolean)
+    .join(' · ')
+  // MD-only supervisees keep their timeline in the md* fields
+  const timelineSource = howSoonLooking || mdHowSoonLooking
+  const timelineLabel = timelineSource
+    ? formatHowSoonLooking(timelineSource, undefined, {
         compact: true,
         emptyFallback: '',
       })
     : null
-  const lookingIn = stateTheyAreLookingIn.length > 0 ? stateTheyAreLookingIn.join(', ') : null
+  const neededRoleLabels = (typeOfSupervisorNeeded ?? []).map(supervisionTypeDisplayLabel)
 
   return (
     <div className="flex gap-5 rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
@@ -95,7 +102,6 @@ export function SuperviseeCard({ supervisee }: SuperviseeCardProps) {
               {timelineLabel}
             </span>
           )}
-          {lookingIn && <span>Looking in: {lookingIn}</span>}
           {preferredFormat && (
             <span
               className={cn(
@@ -124,6 +130,21 @@ export function SuperviseeCard({ supervisee }: SuperviseeCardProps) {
                 {specialty}
               </Badge>
             )}
+          </div>
+        )}
+
+        {neededRoleLabels.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+            <span>Looking for:</span>
+            {neededRoleLabels.map((label) => (
+              <Badge
+                key={label}
+                variant="outline"
+                className="border-emerald-200 bg-emerald-50 text-xs text-emerald-700"
+              >
+                {label}
+              </Badge>
+            ))}
           </div>
         )}
       </div>

@@ -75,7 +75,7 @@ export function EditSupervisorProfileModal({
   }
 
   const isSubmitting = form.formState.isSubmitting || mutation.isPending
-  const { isValid } = form.formState
+  const { isValid, submitCount } = form.formState
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
@@ -91,18 +91,31 @@ export function EditSupervisorProfileModal({
               locationSyncEpoch={locationSyncEpoch}
             />
 
-            <div className="flex justify-end gap-3 border-t pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={isSubmitting}
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting || !isValid}>
-                {isSubmitting ? 'Saving…' : 'Save Changes'}
-              </Button>
+            <div className="border-t pt-4">
+              <div className="flex justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isSubmitting}
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cancel
+                </Button>
+                {/* Save stays enabled while invalid: submitting jumps to (focuses)
+                    the first highlighted field via react-hook-form's
+                    shouldFocusError — migrated supervisors must confirm per-state
+                    license details, and a silently disabled button reads as a
+                    broken page. */}
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving…' : 'Save Changes'}
+                </Button>
+              </div>
+              {submitCount > 0 && !isValid && (
+                <p className="mt-2 text-right text-sm text-destructive">
+                  Please complete the highlighted fields — Save jumps to the first one (often a
+                  license entry that needs confirmation).
+                </p>
+              )}
             </div>
           </form>
         </Form>

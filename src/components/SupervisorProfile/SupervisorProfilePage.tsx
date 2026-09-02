@@ -2,7 +2,8 @@
 
 import { AlertCircle, ArrowLeftIcon } from 'lucide-react'
 import Link from 'next/link'
-import { type ReadonlyURLSearchParams, useSearchParams } from 'next/navigation'
+import { type ReadonlyURLSearchParams, useRouter, useSearchParams } from 'next/navigation'
+import { useEffect } from 'react'
 
 import { buttonVariants } from '@/components/ui/button'
 import {
@@ -14,7 +15,9 @@ import {
 import { useSupervisor } from '@/lib/hooks/useSupervisor'
 import { cn } from '@/lib/utils'
 import { resolveOptionLabels } from '@/lib/utils/profile-formatters'
+import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 
+import { type HireContext } from './HireSupervisorModal'
 import { SupervisorProfileAbout } from './SupervisorProfileAbout'
 import { SupervisorProfileCheckList } from './SupervisorProfileCheckList'
 import { SupervisorProfileConsultation } from './SupervisorProfileConsultation'
@@ -26,8 +29,12 @@ import { SupervisorProfileProfessional } from './SupervisorProfileProfessional'
 import { SupervisorProfileReviews } from './SupervisorProfileReviews'
 import { SupervisorProfileSkeleton } from './SupervisorProfileSkeleton'
 
+export type SupervisorProfileBasePath = '/find-supervisors' | '/find-medical-directors'
+
 interface SupervisorProfilePageProps {
   supervisorId: string
+  /** Which find page this detail route belongs to (drives the back link + guard). */
+  basePath?: SupervisorProfileBasePath
 }
 
 const BACK_LINK_CONFIG: Record<string, { href: string; label: string }> = {
@@ -36,27 +43,67 @@ const BACK_LINK_CONFIG: Record<string, { href: string; label: string }> = {
   'received-connections': { href: '/connections/received', label: 'Back to Connection Requests' },
 }
 
-const DEFAULT_BACK = { href: '/find-supervisors', label: 'Back to Find Supervisors' }
+const DEFAULT_BACK_BY_BASE: Record<SupervisorProfileBasePath, { href: string; label: string }> = {
+  '/find-supervisors': { href: '/find-supervisors', label: 'Back to Find Supervisors' },
+  '/find-medical-directors': {
+    href: '/find-medical-directors',
+    label: 'Back to Find Medical Directors',
+  },
+}
 
-function buildFindSupervisorsBackLink(searchParams: URLSearchParams | ReadonlyURLSearchParams) {
+function buildFindBackLink(
+  searchParams: URLSearchParams | ReadonlyURLSearchParams,
+  base: { href: string; label: string },
+) {
   const params = new URLSearchParams(searchParams.toString())
   params.delete('from')
   const query = params.toString()
-  return query ? { ...DEFAULT_BACK, href: `${DEFAULT_BACK.href}?${query}` } : DEFAULT_BACK
+  return query ? { ...base, href: `${base.href}?${query}` } : base
 }
 
-export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePageProps) {
+export function SupervisorProfilePage({
+  supervisorId,
+  basePath = '/find-supervisors',
+}: SupervisorProfilePageProps) {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const from = searchParams.get('from') ?? ''
-  // The find-supervisors search state (filters/keyword/page) is carried on this
+  // The find-page search state (filters/keyword/page) is carried on this
   // page's URL by SupervisorCard — pass it back so the search page restores it.
-  const backLink = BACK_LINK_CONFIG[from] ?? buildFindSupervisorsBackLink(searchParams)
+  const backLink =
+    BACK_LINK_CONFIG[from] ?? buildFindBackLink(searchParams, DEFAULT_BACK_BY_BASE[basePath])
 
   const { data: profile, isLoading, isError } = useSupervisor(supervisorId)
+
+  // The MD detail route only serves Medical Directors. (The reverse is allowed:
+  // an offering-MD opened from /find-supervisors stays on that route so the
+  // viewer's back link keeps working.)
+  useEffect(() => {
+    if (
+      basePath === '/find-medical-directors' &&
+      profile &&
+      profile.supervisorType !== MEDICAL_DIRECTOR_TYPE_NAME
+    ) {
+      const query = searchParams.toString()
+      router.replace(`/find-supervisors/${supervisorId}${query ? `?${query}` : ''}`)
+    }
+  }, [basePath, profile, supervisorId, searchParams, router])
   const { data: certificationOptions = [] } = useCertificateOptions()
   const { data: patientPopulationOptions = [] } = usePatientPopulationOptions()
   const { data: stateOptions = [] } = useStatesOptions()
   const { data: availabilityOptions = [] } = useAvailabilityOptions()
+
+  // Which role the hire CTA targets: the page the supervisee came from decides
+  // (an offering-MD reached via /find-supervisors is hired "as Supervisor").
+  // A plain Medical Director with no offerings can only be hired as one,
+  // whichever route showed the profile.
+  const isPlainMedicalDirector =
+    profile?.supervisorType === MEDICAL_DIRECTOR_TYPE_NAME && !profile?.offerings?.length
+  const hireContext: HireContext =
+    basePath === '/find-medical-directors' || isPlainMedicalDirector
+      ? 'medical-director'
+      : 'supervisor'
+
   if (isLoading) {
     return <SupervisorProfileSkeleton />
   }
@@ -99,7 +146,11 @@ export function SupervisorProfilePage({ supervisorId }: SupervisorProfilePagePro
           {backLink.label}
         </Link>
 
-        <SupervisorProfileHero profile={profile} supervisorId={supervisorId} />
+        <SupervisorProfileHero
+          profile={profile}
+          supervisorId={supervisorId}
+          hireContext={hireContext}
+        />
         <SupervisorProfileContact profile={profile} />
         <SupervisorProfileAbout profile={profile} />
 

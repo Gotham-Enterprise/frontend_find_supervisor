@@ -1,11 +1,14 @@
 import { z } from 'zod'
 
+import { OTHER_CERTIFYING_BOARD_VALUE } from '@/lib/utils/board-certification'
 import { todayLocalISO } from '@/lib/utils/date'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
+import { isServerAcceptedPhoneNumber } from '@/lib/utils/phone'
 import { SUPERVISION_TYPE_REQUIRED_MESSAGE } from '@/lib/utils/supervisee-eligibility'
 import {
   applySupervisorMonthlyOnlyFeeRule,
   applySupervisorPhysicianRules,
+  isValidPhysicianDegreeType,
 } from '@/lib/utils/supervisor-type'
 
 // ─── Shared options ──────────────────────────────────────────────────────────
@@ -48,8 +51,12 @@ export const accountSchemaBase = z.object({
   email: z.string().min(1, 'Email is required').email('Please enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters').max(128),
   confirmPassword: z.string().min(1, 'Please confirm your password').max(128),
-  contactNumber: z.string().min(1, 'Contact number is required'),
-  // .refine(isValidUSPhoneNumber, 'Please enter a valid US phone number.'),
+  contactNumber: z
+    .string()
+    .min(1, 'Contact number is required')
+    // Matches the server rule (PhoneNumberService.validatePhoneNumber) so an
+    // invalid phone is rejected on step 1 instead of at final submit.
+    .refine(isServerAcceptedPhoneNumber, 'Please enter a valid US phone number.'),
   city: z.string().min(1, 'City is required').max(100),
   state: z.string().min(1, 'State is required'),
   zipcode: z
@@ -93,6 +100,58 @@ export const licenseEntrySchema = z.object({
 })
 
 export type LicenseEntryValues = z.infer<typeof licenseEntrySchema>
+
+// ─── Medical Director offerings ───────────────────────────────────────────────
+
+export type OfferingKey = 'supervising' | 'collaborating'
+
+/** Form key → supervisorType name sent in the `offerings` payload. */
+export const OFFERING_SUPERVISOR_TYPE_NAMES: Record<OfferingKey, string> = {
+  supervising: 'Supervising Physician',
+  collaborating: 'Collaborating Physician',
+}
+
+/**
+ * Lenient by design — required-ness is enforced by
+ * `applyMedicalDirectorOfferingRules` only when the offering's checkbox is
+ * checked (unchecked blocks hold blank defaults). Offering types are
+ * physician types, so entries carry no licenseType (the `licenseType` key is
+ * kept for the shared LicenseEntriesField shape and stripped from the payload).
+ */
+export const offeringCredentialsSchema = z.object({
+  occupation: z.string(),
+  specialty: z.string().optional(),
+  degreeType: z.string(),
+  licenses: z.array(
+    z.object({
+      licenseType: z.string(),
+      licenseNumber: z.string(),
+      state: z.string(),
+      licenseExpiration: z.string(),
+    }),
+  ),
+})
+
+export type OfferingCredentialsValues = z.infer<typeof offeringCredentialsSchema>
+
+// ─── Medical Director board certifications ────────────────────────────────────
+
+/**
+ * Lenient by design — required-ness is enforced by
+ * `applyMedicalDirectorBoardCertRules` only when "Board Certified?" is Yes.
+ * `certifyingBoardOther` holds the free-text board name when the select is
+ * "Other" (UI-only split; the payload sends a single certifyingBoard string).
+ */
+export const boardCertificationEntrySchema = z.object({
+  certifyingBoard: z.string(),
+  certifyingBoardOther: z.string(),
+  specialty: z.string(),
+  subspecialty: z.string(),
+  certificationNumber: z.string().max(50, 'Certification number must be 50 characters or less'),
+  expirationDate: z.string(),
+})
+
+export type BoardCertificationEntryValues = z.infer<typeof boardCertificationEntrySchema>
 
 // ─── Supervisor schema ─────────────────────────────────────────────────────────
 
@@ -159,13 +218,205 @@ export const supervisorSchemaObject = accountSchemaBase.extend({
   agreedToPost: z.boolean().refine((val) => val === true, 'You must agree to post your profile'),
   agreedToTerms: z
     .boolean()
-    .refine((val) => val === true, 'You must agree to the terms and conditions'),
+    .refine((val) => val === true, 'You must agree to the Terms of Service'),
 })
 
 export const supervisorSchema = withPasswordConfirmation(
   supervisorSchemaObject
     .superRefine(applySupervisorPhysicianRules)
     .superRefine(applySupervisorMonthlyOnlyFeeRule),
+)
+
+// ─── Medical Director schema ──────────────────────────────────────────────────
+
+/**
+ * The Medical Director signup reuses the supervisor form with a preset
+ * `supervisorType` plus optional secondary offerings (Supervising/Collaborating
+ * Physician), each carrying its own credentials block.
+ */
+export const medicalDirectorSchemaObject = supervisorSchemaObject.extend({
+  // Patient population only applies when the MD also offers clinical
+  // supervision — required-ness lives in applyMedicalDirectorPracticeRules.
+  patientPopulation: z.array(z.string()),
+  offerSupervisingPhysician: z.boolean(),
+  offerCollaboratingPhysician: z.boolean(),
+  offerings: z.object({
+    supervising: offeringCredentialsSchema,
+    collaborating: offeringCredentialsSchema,
+  }),
+  // "Board Certified?" Yes/No; entries validated only when Yes
+  boardCertified: z.boolean(),
+  boardCertifications: z.array(boardCertificationEntrySchema),
+})
+
+export type MedicalDirectorFormValues = z.infer<typeof medicalDirectorSchemaObject>
+
+/**
+ * Each CHECKED offering requires occupation, a valid MD/DO degree type, and at
+ * least one complete license entry. Unchecked offerings are ignored entirely
+ * (their blank blocks stay in form state via `shouldUnregister: false`).
+ */
+export function applyMedicalDirectorOfferingRules(
+  data: Pick<
+    MedicalDirectorFormValues,
+    'offerSupervisingPhysician' | 'offerCollaboratingPhysician' | 'offerings'
+  >,
+  ctx: z.RefinementCtx,
+) {
+  const checkedKeys: OfferingKey[] = []
+  if (data.offerSupervisingPhysician) checkedKeys.push('supervising')
+  if (data.offerCollaboratingPhysician) checkedKeys.push('collaborating')
+
+  for (const key of checkedKeys) {
+    const block = data.offerings[key]
+
+    if (!block.occupation.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['offerings', key, 'occupation'],
+        message: 'Occupation is required',
+      })
+    }
+
+    if (!block.degreeType.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['offerings', key, 'degreeType'],
+        message: 'Degree type is required',
+      })
+    } else if (!isValidPhysicianDegreeType(block.degreeType)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['offerings', key, 'degreeType'],
+        message: 'Degree type must be MD or DO',
+      })
+    }
+
+    if (block.licenses.length === 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['offerings', key, 'licenses'],
+        message: 'Add at least one license',
+      })
+    }
+
+    // Reuse licenseEntrySchema's per-field checks (identical messages, incl.
+    // the timezone-safe past-date rule). licenseType is skipped — offering
+    // types are physician types.
+    block.licenses.forEach((license, index) => {
+      for (const field of ['licenseNumber', 'state', 'licenseExpiration'] as const) {
+        const result = licenseEntrySchema.shape[field].safeParse(license[field])
+        if (!result.success) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['offerings', key, 'licenses', index, field],
+            message: result.error.issues[0]?.message ?? 'Invalid',
+          })
+        }
+      }
+    })
+  }
+}
+
+/**
+ * When "Board Certified?" is Yes: at least one entry; per entry the certifying
+ * board (free text when "Other") and specialty are required; expiration, when
+ * provided, cannot be a past date (a lapsed cert is not a current one).
+ * When No, entries are ignored entirely (blank state persists via
+ * `shouldUnregister: false`).
+ */
+export function applyMedicalDirectorBoardCertRules(
+  data: Pick<MedicalDirectorFormValues, 'boardCertified' | 'boardCertifications'>,
+  ctx: z.RefinementCtx,
+) {
+  if (!data.boardCertified) return
+
+  if (data.boardCertifications.length === 0) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['boardCertifications'],
+      message: 'Add at least one board certification',
+    })
+  }
+
+  data.boardCertifications.forEach((entry, index) => {
+    if (!entry.certifyingBoard.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['boardCertifications', index, 'certifyingBoard'],
+        message: 'Certifying board is required',
+      })
+    } else if (
+      entry.certifyingBoard === OTHER_CERTIFYING_BOARD_VALUE &&
+      !entry.certifyingBoardOther.trim()
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['boardCertifications', index, 'certifyingBoardOther'],
+        message: 'Please enter the certifying board name',
+      })
+    }
+
+    if (!entry.specialty.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['boardCertifications', index, 'specialty'],
+        message: 'Specialty is required',
+      })
+    }
+
+    if (!entry.certificationNumber.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['boardCertifications', index, 'certificationNumber'],
+        message: 'Certification number is required',
+      })
+    }
+
+    if (!entry.expirationDate) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['boardCertifications', index, 'expirationDate'],
+        message: 'Expiration date is required',
+      })
+    } else if (entry.expirationDate < todayLocalISO()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['boardCertifications', index, 'expirationDate'],
+        message: 'Expiration cannot be a past date',
+      })
+    }
+  })
+}
+
+/**
+ * Patient population is a clinical-supervision concern: required only when at
+ * least one physician offering is checked; a plain Medical Director skips it.
+ */
+export function applyMedicalDirectorPracticeRules(
+  data: Pick<
+    MedicalDirectorFormValues,
+    'offerSupervisingPhysician' | 'offerCollaboratingPhysician' | 'patientPopulation'
+  >,
+  ctx: z.RefinementCtx,
+) {
+  const offersSupervision = data.offerSupervisingPhysician || data.offerCollaboratingPhysician
+  if (offersSupervision && data.patientPopulation.length === 0) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['patientPopulation'],
+      message: 'Add at least one patient population',
+    })
+  }
+}
+
+export const medicalDirectorSchema = withPasswordConfirmation(
+  medicalDirectorSchemaObject
+    .superRefine(applySupervisorPhysicianRules)
+    .superRefine(applySupervisorMonthlyOnlyFeeRule)
+    .superRefine(applyMedicalDirectorOfferingRules)
+    .superRefine(applyMedicalDirectorBoardCertRules)
+    .superRefine(applyMedicalDirectorPracticeRules),
 )
 
 // ─── Supervisee schema ─────────────────────────────────────────────────────────
@@ -186,21 +437,52 @@ export const superviseeSchemaObject = accountSchemaBase.extend({
   supervisorSpecialtyId: z.string().optional(),
 
   stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
-  stateTheyAreLookingIn: z
-    .array(z.string())
-    .min(1, 'Please select at least one state you are looking in'),
-  howSoon: z.string().min(1, 'Please select how soon you need a supervisor'),
+  // Supervision-only preference — required via applySuperviseeMdNeedRules when a
+  // supervision type is selected (hidden for an MD-only signup).
+  howSoon: z.string(),
   howSoonDate: z.string().optional(),
   preferredFormat: z.enum(['virtual', 'in-person', 'hybrid'], {
     message: 'Please select a preferred format',
   }),
-  feeType: z.enum(['per-session', 'monthly'], { message: 'Please select a fee type' }),
-  budgetRange: z.string().min(1, 'Please select a budget range'),
+  feeType: z.enum(['hourly', 'monthly'], { message: 'Please select a fee type' }),
+  // Hourly uses the range dropdown; Monthly is a single typed amount — each is
+  // required only for its fee type (see applySuperviseeBudgetRules).
+  budgetRange: z.string(),
+  monthlyBudget: z.preprocess(
+    normalizeNumberFieldInput,
+    z
+      .number('Please enter your monthly budget')
+      .min(1, 'Monthly budget must be at least $1')
+      .optional(),
+  ),
   availability: z.string().min(1, 'Availability is required'),
+
+  // Medical Director need — its own preference set (backed by the md* columns
+  // on SuperviseeProfile); required via applySuperviseeMdNeedRules only when
+  // the "I need a Medical Director" checkbox is ticked.
+  mdPreferredOccupationId: z.string(),
+  mdPreferredSpecialtyId: z.string().optional(),
+  mdHowSoon: z.string(),
+  mdHowSoonDate: z.string().optional(),
+  mdMonthlyBudget: z.preprocess(
+    normalizeNumberFieldInput,
+    z
+      .number('Please enter your monthly budget for a medical director')
+      .min(1, 'Monthly budget must be at least $1')
+      .optional(),
+  ),
+  // Own description for the MD need — required only in the combined case (a
+  // supervision type + the MD checkbox); MD-only flows reuse `description`.
+  mdIdealDescription: z.string().max(500, 'Must be 500 characters or less').optional(),
+
+  // Optional self introduction (separate from the ideal-supervisor description)
+  introduction: z.string().max(500, 'Must be 500 characters or less').optional(),
 
   // Step 2 — profile fields (sent to backend as numeric category IDs); collected before
   // `typeOfSupervisor` so the available supervision types can be filtered by eligibility
   title: z.string().min(1, 'Credential or license type is required').max(100),
+  // State tied to the credential (stored as the US state abbreviation, e.g. "TX")
+  licensureState: z.string().min(1, 'State of licensure is required'),
   occupationId: z.string().min(1, 'Occupation is required'),
   specialtyId: z.string().optional(),
 
@@ -215,7 +497,7 @@ export const superviseeSchemaObject = accountSchemaBase.extend({
   agreedToPost: z.boolean().refine((val) => val === true, 'You must agree to post your profile'),
   agreedToTerms: z
     .boolean()
-    .refine((val) => val === true, 'You must agree to the terms and conditions'),
+    .refine((val) => val === true, 'You must agree to the Terms of Service'),
 })
 
 /**
@@ -243,8 +525,96 @@ function applySuperviseeSupervisionNeedRules(
   }
 }
 
+/** Hourly budgets pick a range; Monthly budgets type a single amount. */
+function applySuperviseeBudgetRules(
+  data: { typeOfSupervisor: string; feeType: string; budgetRange: string; monthlyBudget?: number },
+  ctx: z.RefinementCtx,
+) {
+  // Supervision-only fields — hidden (and skipped) for an MD-only signup.
+  if (!data.typeOfSupervisor) return
+  if (data.feeType === 'hourly' && !data.budgetRange) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['budgetRange'],
+      message: 'Please select a budget range',
+    })
+  }
+  if (data.feeType === 'monthly' && data.monthlyBudget == null) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['monthlyBudget'],
+      message: 'Please enter your monthly budget',
+    })
+  }
+}
+
+/**
+ * Requiredness that follows the two needs: the supervision how-soon is required
+ * only when a supervision type is selected (hidden for MD-only signups), and
+ * the Medical Director block is required once the checkbox is ticked.
+ */
+function applySuperviseeMdNeedRules(
+  data: {
+    typeOfSupervisor: string
+    needsMedicalDirector: boolean
+    howSoon: string
+    mdHowSoon: string
+    mdHowSoonDate?: string
+    mdMonthlyBudget?: number
+    mdIdealDescription?: string
+  },
+  ctx: z.RefinementCtx,
+) {
+  if (data.typeOfSupervisor && !data.howSoon) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['howSoon'],
+      message: 'Please select how soon you need a supervisor',
+    })
+  }
+  if (!data.needsMedicalDirector) return
+  if (!data.mdHowSoon) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['mdHowSoon'],
+      message: 'Please select how soon you need a medical director',
+    })
+  }
+  if (data.mdHowSoon === 'CUSTOM_DATE' && !data.mdHowSoonDate) {
+    ctx.addIssue({ code: 'custom', path: ['mdHowSoonDate'], message: 'Please select a date' })
+  }
+  if (data.mdMonthlyBudget == null) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['mdMonthlyBudget'],
+      message: 'Please enter your monthly budget for a medical director',
+    })
+  }
+  // Own MD description only in the combined case — MD-only flows reuse the
+  // main description field (relabeled), which the payload copies over.
+  if (data.typeOfSupervisor) {
+    const mdDescription = (data.mdIdealDescription ?? '').trim()
+    if (!mdDescription) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['mdIdealDescription'],
+        message: 'Please describe your ideal medical director',
+      })
+    } else if (mdDescription.length < 20) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['mdIdealDescription'],
+        message: 'Description must be at least 20 characters',
+      })
+    }
+  }
+}
+
 export const superviseeSchema = withPasswordConfirmation(
-  superviseeSchemaObject.superRefine(applySuperviseeSupervisionNeedRules),
+  superviseeSchemaObject
+    .superRefine(applySuperviseeSupervisionNeedRules)
+    .superRefine(applySuperviseeBudgetRules)
+    .superRefine(applySuperviseeMdNeedRules),
 )
 
 export type SupervisorFormValues = z.infer<typeof supervisorSchemaObject>
@@ -351,6 +721,73 @@ export const SUPERVISOR_SIGNUP_STEP_META = [
   { title: 'Practice Details', stepLabel: 'Step 3' },
 ] as const
 
+// ─── Medical Director multi-step (supervisor steps with an offerings-aware step 2) ─
+
+export const medicalDirectorStep2Schema = medicalDirectorSchemaObject
+  .pick({
+    supervisorType: true,
+    supervisorOccupationId: true,
+    supervisorSpecialtyId: true,
+    degreeType: true,
+    licenses: true,
+    npiNumber: true,
+    certifications: true,
+    yearsOfExperience: true,
+    licenseDoc: true,
+    offerSupervisingPhysician: true,
+    offerCollaboratingPhysician: true,
+    offerings: true,
+    boardCertified: true,
+    boardCertifications: true,
+  })
+  .superRefine(applySupervisorPhysicianRules)
+  .superRefine(applyMedicalDirectorOfferingRules)
+  .superRefine(applyMedicalDirectorBoardCertRules)
+
+export const medicalDirectorStep3Schema = medicalDirectorSchemaObject
+  .pick({
+    // Validated on step 2 — included so the conditional rules can see them
+    supervisorType: true,
+    offerSupervisingPhysician: true,
+    offerCollaboratingPhysician: true,
+    patientPopulation: true,
+    supervisionFormat: true,
+    availability: true,
+    acceptingNewSupervisees: true,
+    supervisionFeeType: true,
+    supervisionFeeAmount: true,
+    professionalSummary: true,
+    describeYourself: true,
+    agreedToPost: true,
+    agreedToTerms: true,
+  })
+  .superRefine(applySupervisorMonthlyOnlyFeeRule)
+  .superRefine(applyMedicalDirectorPracticeRules)
+
+export const MEDICAL_DIRECTOR_SIGNUP_STEP_SCHEMAS = [
+  supervisorStep1Schema,
+  medicalDirectorStep2Schema,
+  medicalDirectorStep3Schema,
+] as const
+
+/**
+ * Step field lists mirror the supervisor's; step 2 adds the offering flags and
+ * blocks. Nested error paths (`offerings.supervising.licenses.0.state`) route
+ * to step 2 via their root segment (`findFirstStepWithError`).
+ */
+export const MEDICAL_DIRECTOR_SIGNUP_STEP_FIELDS = [
+  SUPERVISOR_SIGNUP_STEP_FIELDS[0],
+  [
+    ...SUPERVISOR_SIGNUP_STEP_FIELDS[1],
+    'offerSupervisingPhysician',
+    'offerCollaboratingPhysician',
+    'offerings',
+    'boardCertified',
+    'boardCertifications',
+  ],
+  SUPERVISOR_SIGNUP_STEP_FIELDS[2],
+] as const satisfies ReadonlyArray<ReadonlyArray<keyof MedicalDirectorFormValues>>
+
 // ─── Supervisee multi-step (same rules as superviseeSchema, split by step) ─────
 
 export const superviseeStep1Schema = withPasswordConfirmation(
@@ -372,18 +809,27 @@ export const superviseeStep2Schema = superviseeSchemaObject
     occupationId: true,
     specialtyId: true,
     title: true,
+    licensureState: true,
     typeOfSupervisor: true,
     needsMedicalDirector: true,
     supervisorOccupationId: true,
     supervisorSpecialtyId: true,
     stateOfLicensure: true,
-    stateTheyAreLookingIn: true,
     howSoon: true,
     howSoonDate: true,
     preferredFormat: true,
     feeType: true,
     budgetRange: true,
+    monthlyBudget: true,
     availability: true,
+    mdPreferredOccupationId: true,
+    mdPreferredSpecialtyId: true,
+    mdHowSoon: true,
+    mdHowSoonDate: true,
+    mdMonthlyBudget: true,
+    mdIdealDescription: true,
+    // Ideal-supervisor description lives on step 2 with the needs it describes
+    description: true,
   })
   .superRefine((data, ctx) => {
     if (data.howSoon === 'CUSTOM_DATE' && !data.howSoonDate) {
@@ -395,9 +841,12 @@ export const superviseeStep2Schema = superviseeSchemaObject
     }
   })
   .superRefine(applySuperviseeSupervisionNeedRules)
+  .superRefine(applySuperviseeBudgetRules)
+  .superRefine(applySuperviseeMdNeedRules)
 
+// Step 3 — the light closing step: self introduction + agreements + submit.
 export const superviseeStep3Schema = superviseeSchemaObject.pick({
-  description: true,
+  introduction: true,
   agreedToPost: true,
   agreedToTerms: true,
 })
@@ -424,24 +873,39 @@ export const SUPERVISEE_SIGNUP_STEP_FIELDS = [
     'occupationId',
     'specialtyId',
     'title',
+    'licensureState',
     'typeOfSupervisor',
     'needsMedicalDirector',
     'supervisorOccupationId',
     'supervisorSpecialtyId',
     'preferredFormat',
     'stateOfLicensure',
-    'stateTheyAreLookingIn',
     'howSoon',
     'howSoonDate',
     'availability',
     'feeType',
     'budgetRange',
+    'monthlyBudget',
+    'mdPreferredOccupationId',
+    'mdPreferredSpecialtyId',
+    'mdHowSoon',
+    'mdHowSoonDate',
+    'mdMonthlyBudget',
+    'mdIdealDescription',
+    'description',
   ],
-  ['description', 'agreedToPost', 'agreedToTerms'],
+  ['introduction', 'agreedToPost', 'agreedToTerms'],
 ] as const satisfies ReadonlyArray<ReadonlyArray<keyof SuperviseeFormValues>>
 
 export const SUPERVISEE_SIGNUP_STEP_META = [
   { title: 'Account', stepLabel: 'Step 1' },
   { title: 'Supervision Needs', stepLabel: 'Step 2' },
-  { title: 'Ideal Supervisor & Terms', stepLabel: 'Step 3' },
+  { title: 'Introduction & Terms', stepLabel: 'Step 3' },
+] as const
+
+/** Step titles for the dedicated "I need a Medical Director" flow. */
+export const NEED_MEDICAL_DIRECTOR_SIGNUP_STEP_META = [
+  { title: 'Account', stepLabel: 'Step 1' },
+  { title: 'Medical Director Needs', stepLabel: 'Step 2' },
+  { title: 'Introduction & Terms', stepLabel: 'Step 3' },
 ] as const

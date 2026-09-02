@@ -79,7 +79,7 @@ function ComboboxContent({
         <ComboboxPrimitive.Popup
           data-slot="combobox-content"
           className={cn(
-            'relative isolate z-50 flex max-h-[min(18rem,var(--available-height))] w-(--anchor-width) min-w-36 origin-(--transform-origin) flex-col overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-md duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+            'relative isolate z-50 flex max-h-[min(18rem,var(--available-height))] w-max max-w-(--available-width) min-w-[max(9rem,var(--anchor-width))] origin-(--transform-origin) flex-col overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-md duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
             className,
           )}
           {...props}
@@ -107,6 +107,32 @@ function ComboboxContent({
   )
 }
 
+function ComboboxGroup({ className, ...props }: ComboboxPrimitive.Group.Props) {
+  return (
+    <ComboboxPrimitive.Group
+      data-slot="combobox-group"
+      className={cn('py-1 first:pt-0 last:pb-0', className)}
+      {...props}
+    />
+  )
+}
+
+function ComboboxGroupLabel({ className, ...props }: ComboboxPrimitive.GroupLabel.Props) {
+  return (
+    <ComboboxPrimitive.GroupLabel
+      data-slot="combobox-group-label"
+      className={cn(
+        'px-1.5 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground',
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
+/** Renders the filtered items of the enclosing `ComboboxGroup`. */
+const ComboboxCollection = ComboboxPrimitive.Collection
+
 function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.Props) {
   return (
     <ComboboxPrimitive.Item
@@ -117,7 +143,7 @@ function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.
       )}
       {...props}
     >
-      <span className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">{children}</span>
+      <span className="flex flex-1 shrink-0 gap-2">{children}</span>
       <ComboboxPrimitive.ItemIndicator
         render={
           <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />
@@ -129,4 +155,13 @@ function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.
   )
 }
 
-export { Combobox, ComboboxContent, ComboboxItem, ComboboxTrigger, ComboboxValue }
+export {
+  Combobox,
+  ComboboxCollection,
+  ComboboxContent,
+  ComboboxGroup,
+  ComboboxGroupLabel,
+  ComboboxItem,
+  ComboboxTrigger,
+  ComboboxValue,
+}

@@ -1,7 +1,7 @@
 import type { SupervisionFormat } from '@/types/supervisee-profile'
 
 export interface SuperviseeSearchFilters {
-  /** US state codes — matches supervisee stateTheyAreLookingIn */
+  /** US state codes — matches the supervisee's states of licensure */
   states: string[]
   /** Occupation names from GET /api/categories/occupations */
   occupations: string[]
@@ -15,6 +15,8 @@ export interface SuperviseeSearchResult {
   id: string
   fullName: string
   title: string
+  /** State tied to the credential/title (US state abbreviation, e.g. "TX") */
+  licensureState: string
   occupation: string
   specialty: string
   city: string
@@ -22,11 +24,14 @@ export interface SuperviseeSearchResult {
   location: string
   preferredFormat: SupervisionFormat | ''
   howSoonLooking: string
-  stateTheyAreLookingIn: string[]
   bio: string
   budgetRangeType: string
   budgetRangeStart: number | null
   budgetRangeEnd: number | null
+  /** Roles they're looking for (supervision types + "Medical Director") */
+  typeOfSupervisorNeeded: string[]
+  mdHowSoonLooking: string
+  mdMonthlyBudget: number | null
   profilePhotoUrl?: string
   initials: string
   avatarColor: string

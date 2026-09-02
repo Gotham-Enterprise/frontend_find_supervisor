@@ -4,17 +4,18 @@ import { ProfileDetailRow, ProfilePreviewCard, TagList } from '@/components/Dash
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useStatesOptions, useSuperviseeFormOptions } from '@/lib/hooks'
+import { useSuperviseeFormOptions } from '@/lib/hooks'
 import { formatUSPhoneForDisplay } from '@/lib/utils/phone'
 import {
+  formatCredentialWithState,
   formatDisplayName,
   formatHowSoonLooking,
   formatLocation,
-  formatLookingInStatesLabel,
   formatSupervisionFormat,
   resolveOptionLabel,
   resolveSupervisorTypeLabel,
 } from '@/lib/utils/profile-formatters'
+import { isMedicalDirectorType } from '@/lib/utils/supervisee-eligibility'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 // ─── Formatters specific to the supervisee domain ────────────────────────────
@@ -25,7 +26,9 @@ function formatBudget(
   end: number | null | undefined,
 ): string {
   if (type == null && start == null) return 'N/A'
-  const suffix = type === 'MONTHLY' ? '/month' : '/session'
+  const suffix = type === 'MONTHLY' ? '/month' : '/hr'
+  // Monthly budgets are a single amount (stored in `end`; `start` is 0)
+  if (type === 'MONTHLY') return end != null && end > 0 ? `$${end} ${suffix}` : 'N/A'
   if (start === 0 && end === 0) return `Open to discussion (${suffix.slice(1)})`
   if (start != null && end != null && (start > 0 || end > 0)) return `$${start} – $${end} ${suffix}`
   return 'N/A'
@@ -75,7 +78,6 @@ export function SuperviseeDashboardProfileDetails({
   onEditClick,
 }: SuperviseeDashboardProfileDetailsProps) {
   const { availability, supervisorTypes } = useSuperviseeFormOptions()
-  const { data: stateOptions = [] } = useStatesOptions()
   const availabilityOptions = availability.data ?? []
   const supervisorTypeOptions = supervisorTypes.data ?? []
 
@@ -83,7 +85,7 @@ export function SuperviseeDashboardProfileDetails({
   const location = formatLocation(profile.user.city, profile.user.state, profile.user.zipcode)
   const occupation = profile.occupation?.name ?? profile.user.occupation?.name
   const specialty = profile.specialty?.name ?? profile.user.specialty?.name
-  const credentialTitle = profile.title?.trim()
+  const credentialTitle = formatCredentialWithState(profile.title, profile.licensureState)
   const subline = [credentialTitle, occupation, specialty].filter(Boolean).join(' · ')
   const statesOfLicensure = profile.user.stateOfLicensure ?? []
 
@@ -92,7 +94,6 @@ export function SuperviseeDashboardProfileDetails({
     profile.typeOfSupervisorNeeded,
     supervisorTypeOptions,
   )
-  const lookingInLabel = formatLookingInStatesLabel(profile.stateTheyAreLookingIn, stateOptions)
   const formatLabel = formatSupervisionFormat(profile.preferredFormat)
   const howSoonLabel = formatHowSoonLooking(profile.howSoonLooking, profile.lookingDate)
   const budgetLabel = formatBudget(
@@ -104,6 +105,17 @@ export function SuperviseeDashboardProfileDetails({
   const hasTypeOfSupervisorNeeded = Array.isArray(profile.typeOfSupervisorNeeded)
     ? profile.typeOfSupervisorNeeded.length > 0
     : Boolean(String(profile.typeOfSupervisorNeeded ?? '').trim())
+
+  // Medical Director need — its own preference block (md* fields)
+  const hasMdNeed = (
+    Array.isArray(profile.typeOfSupervisorNeeded) ? profile.typeOfSupervisorNeeded : []
+  ).some((name) => isMedicalDirectorType({ name }))
+  // MD-only profiles: the single description belongs to the MD need
+  const hasNonMdNeed = (
+    Array.isArray(profile.typeOfSupervisorNeeded) ? profile.typeOfSupervisorNeeded : []
+  ).some((name) => !isMedicalDirectorType({ name }))
+  const mdHowSoonLabel = formatHowSoonLooking(profile.mdHowSoonLooking, profile.mdLookingDate)
+  const mdBudgetLabel = formatBudget('MONTHLY', 0, profile.mdMonthlyBudget)
 
   return (
     <ProfilePreviewCard
@@ -136,7 +148,6 @@ export function SuperviseeDashboardProfileDetails({
       }}
       stats={[
         { value: profile.completedCount, label: 'Completed' },
-        { value: lookingInLabel !== '—' ? lookingInLabel : '—', label: 'Looking In' },
         { value: formatLabel !== 'N/A' ? formatLabel : '—', label: 'Format' },
       ]}
     >
@@ -169,22 +180,66 @@ export function SuperviseeDashboardProfileDetails({
       {/* States of Licensure */}
       {statesOfLicensure.length > 0 && (
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            States of Licensure
-          </p>
+          <p className="mb-2 text-sm text-muted-foreground">States of Licensure</p>
           <TagList values={statesOfLicensure} />
         </div>
       )}
 
-      {/* Ideal supervisor description */}
+      {/* Ideal supervisor / medical director description */}
       {profile.idealSupervisor && (
         <div>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Ideal Supervisor
+          <p className="mb-1 text-sm text-muted-foreground">
+            {hasNonMdNeed ? 'Ideal Supervisor' : 'Ideal Medical Director'}
           </p>
           <p className="text-sm leading-relaxed text-muted-foreground line-clamp-4">
             {profile.idealSupervisor}
           </p>
+        </div>
+      )}
+
+      {/* Optional self introduction */}
+      {profile.introduction && (
+        <div>
+          <p className="mb-1 text-sm text-muted-foreground">Introduction</p>
+          <p className="text-sm leading-relaxed text-muted-foreground line-clamp-4">
+            {profile.introduction}
+          </p>
+        </div>
+      )}
+
+      {/* Medical Director need — preferences live in their own md* fields */}
+      {hasMdNeed && (
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Medical Director Needs
+          </p>
+          <div>
+            {profile.mdPreferredOccupation && (
+              <ProfileDetailRow label="Preferred Occupation">
+                {profile.mdPreferredOccupation}
+              </ProfileDetailRow>
+            )}
+            {profile.mdPreferredSpecialty && (
+              <ProfileDetailRow label="Preferred Specialty">
+                {profile.mdPreferredSpecialty}
+              </ProfileDetailRow>
+            )}
+            {profile.mdHowSoonLooking && (
+              <ProfileDetailRow label="How Soon">{mdHowSoonLabel}</ProfileDetailRow>
+            )}
+            {profile.mdMonthlyBudget != null && profile.mdMonthlyBudget > 0 && (
+              <ProfileDetailRow label="Monthly Budget">{mdBudgetLabel}</ProfileDetailRow>
+            )}
+          </div>
+          {/* Skipped when it just mirrors the main description (MD-only signups copy it) */}
+          {profile.mdIdealDescription && profile.mdIdealDescription !== profile.idealSupervisor && (
+            <div className="mt-2">
+              <p className="mb-1 text-sm text-muted-foreground">Ideal Medical Director</p>
+              <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground line-clamp-4">
+                {profile.mdIdealDescription}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </ProfilePreviewCard>

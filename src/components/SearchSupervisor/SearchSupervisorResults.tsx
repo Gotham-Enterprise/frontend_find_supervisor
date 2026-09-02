@@ -30,6 +30,7 @@ interface SearchSupervisorResultsProps {
   onPageChange: (page: number) => void
   onSortChange: (sort: SortOption) => void
   onClearFilters: () => void
+  profileBasePath?: '/find-supervisors' | '/find-medical-directors'
 }
 
 export function SearchSupervisorResults({
@@ -44,6 +45,7 @@ export function SearchSupervisorResults({
   onPageChange,
   onSortChange,
   onClearFilters,
+  profileBasePath = '/find-supervisors',
 }: SearchSupervisorResultsProps) {
   const totalPages = Math.ceil(total / pageSize)
   const from = total > 0 ? (page - 1) * pageSize + 1 : 0
@@ -101,7 +103,9 @@ export function SearchSupervisorResults({
           ) : supervisors.length === 0 ? (
             <EmptyState onClearFilters={onClearFilters} />
           ) : (
-            supervisors.map((s) => <SupervisorCard key={s.id} supervisor={s} />)
+            supervisors.map((s) => (
+              <SupervisorCard key={s.id} supervisor={s} profileBasePath={profileBasePath} />
+            ))
           )}
         </div>
 

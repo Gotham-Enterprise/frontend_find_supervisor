@@ -45,26 +45,28 @@ function humanize(raw: string): string {
   return raw
 }
 
-export function parseApiError(error: unknown): string {
-  if (axios.isAxiosError(error)) {
-    if (!error.response) {
-      return 'Unable to reach the server. Please check your connection and try again.'
-    }
+/** Raw backend error string (pre-humanize), or null when the shape is unrecognized. */
+export function getRawApiErrorMessage(error: unknown): string | null {
+  if (!axios.isAxiosError(error) || !error.response) return null
 
-    const data = error.response.data as BackendErrorBody | undefined
+  const data = error.response.data as BackendErrorBody | undefined
+  if (!data) return null
 
-    if (data) {
-      if (typeof data.error === 'string') {
-        return humanize(data.error)
-      }
-      if (typeof data.error === 'object' && typeof data.error?.message === 'string') {
-        return humanize(data.error.message)
-      }
-      if (typeof data.message === 'string') {
-        return humanize(data.message)
-      }
-    }
+  if (typeof data.error === 'string') return data.error
+  if (typeof data.error === 'object' && typeof data.error?.message === 'string') {
+    return data.error.message
   }
+  if (typeof data.message === 'string') return data.message
+  return null
+}
+
+export function parseApiError(error: unknown): string {
+  if (axios.isAxiosError(error) && !error.response) {
+    return 'Unable to reach the server. Please check your connection and try again.'
+  }
+
+  const raw = getRawApiErrorMessage(error)
+  if (raw) return humanize(raw)
 
   return "We couldn't complete your request. Please try again."
 }

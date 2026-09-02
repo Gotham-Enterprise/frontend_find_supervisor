@@ -91,11 +91,6 @@ export async function purchaseSubscription(
   return data.data
 }
 
-function normalizeStateTheyAreLookingIn(value: string | string[]): string[] {
-  const raw = Array.isArray(value) ? value : [value]
-  return raw.map((s) => String(s).trim()).filter((s) => s.length > 0)
-}
-
 function normalizeSupervisionHours(
   typeOfSupervisorNeeded: string | string[],
   supervisionHours: number | null | undefined,
@@ -112,7 +107,6 @@ function normalizeSupervisionHours(
 export async function hireSupervisor(payload: HireSupervisorRequestInput): Promise<HireRecord> {
   const body: HireSupervisorPayload = {
     ...payload,
-    stateTheyAreLookingIn: normalizeStateTheyAreLookingIn(payload.stateTheyAreLookingIn),
     supervisionHours: normalizeSupervisionHours(
       payload.typeOfSupervisorNeeded,
       payload.supervisionHours,
@@ -123,10 +117,13 @@ export async function hireSupervisor(payload: HireSupervisorRequestInput): Promi
 }
 
 /** GET /api/supervision/hires — paginated hire list for the authenticated user (supervisor or supervisee). */
+export type HiresListMode = 'supervisors' | 'medicalDirectors'
+
 export async function listHires(
   page = 1,
   limit = 10,
   status?: HireStatus | HireStatus[],
+  mode?: HiresListMode,
 ): Promise<HireListResponse> {
   const statusParam =
     status === undefined
@@ -134,8 +131,9 @@ export async function listHires(
       : {
           status: Array.isArray(status) ? status.join(',') : status,
         }
+  const modeParam = mode ? { mode } : {}
   const { data } = await apiClient.get<ApiResponse<HireListResponse>>('/supervision/hires', {
-    params: { page, limit, ...statusParam },
+    params: { page, limit, ...statusParam, ...modeParam },
   })
   return data.data
 }

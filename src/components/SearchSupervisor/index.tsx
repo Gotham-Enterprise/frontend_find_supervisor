@@ -3,21 +3,16 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
-import {
-  useAvailabilityOptions,
-  useStatesOptions,
-  useSuperviseeProfile,
-  useSupervisorSearch,
-  useSupervisorTypesData,
-} from '@/lib/hooks'
+import type { SupervisorSearchMode } from '@/lib/api/supervisor-search'
+import { useSuperviseeProfile, useSupervisorSearch } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
+import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 
 import { DEFAULT_FILTERS, SUPERVISOR_SEARCH_PAGE_SIZE } from './helpers'
 import { SearchSupervisorFilters } from './SearchSupervisorFilters'
 import { SearchSupervisorHeader } from './SearchSupervisorHeader'
 import { SearchSupervisorResults } from './SearchSupervisorResults'
 import { buildSearchUrlParams, parseSearchUrlState } from './searchUrlState'
-import { mergeSuperviseeProfileIntoSearchFilters } from './superviseeSearchDefaults'
 import type { SortOption, SupervisorSearchFilters, SupervisorSearchResult } from './types'
 
 // Client-side sort is only used for experience_asc — all other options are
@@ -35,13 +30,21 @@ function sortSupervisorsLocal(
   return copy.sort((a, b) => exp(a) - exp(b))
 }
 
-export function SearchSupervisorPage() {
+interface SearchSupervisorPageProps {
+  /** 'medical-directors' renders the dedicated Medical Director search. */
+  mode?: SupervisorSearchMode
+}
+
+export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorPageProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
   // Captured once on mount — the URL is the source of truth when returning from a
   // supervisor profile ("Back to Find Supervisors") or opening a shared link.
+  // Without URL state, the page deliberately starts with NO filters applied:
+  // results are still scoped server-side to the supervisee's stored needs, and
+  // any narrowing beyond that is the user's own choice.
   const [initialUrlState] = useState(() => parseSearchUrlState(searchParams))
 
   const [keyword, setKeyword] = useState(initialUrlState.keyword)
@@ -52,41 +55,27 @@ export function SearchSupervisorPage() {
   )
   const [sortBy, setSortBy] = useState<SortOption>(initialUrlState.sortBy)
   const [page, setPage] = useState(initialUrlState.page)
-  // A URL that already carries search state skips the profile prefill below.
-  const [filtersInitialized, setFiltersInitialized] = useState(initialUrlState.hasState)
 
   const { data: superviseeProfile, isFetched: superviseeProfileFetched } = useSuperviseeProfile()
-  const supervisorTypesQuery = useSupervisorTypesData()
-  const statesQuery = useStatesOptions()
-  const availabilityQuery = useAvailabilityOptions()
 
-  const optionsReady =
-    superviseeProfileFetched &&
-    supervisorTypesQuery.isFetched &&
-    statesQuery.isFetched &&
-    availabilityQuery.isFetched
-
-  // Populate the filters from the supervisee's Supervision Needs once everything has
-  // loaded, before the first search fires. Applied only once — after that the filters
-  // belong to the user (removable via chips / "Clear all"). State is adjusted during
-  // render (not in an effect) so the search query never fires with the empty defaults.
-  if (optionsReady && !filtersInitialized) {
-    const merged = mergeSuperviseeProfileIntoSearchFilters(
-      superviseeProfile ?? undefined,
-      DEFAULT_FILTERS,
-      statesQuery.data ?? [],
-      availabilityQuery.data ?? [],
-      supervisorTypesQuery.data ?? [],
-    )
-    setFilters(merged)
-    setAppliedFilters(merged)
-    setFiltersInitialized(true)
-  }
+  // Cross-redirects between the two find pages based on the supervisee's
+  // stored needs: the Medical Director page is only for supervisees who need
+  // one, and an MD-only supervisee has nothing to see on the supervisor page.
+  useEffect(() => {
+    if (!superviseeProfileFetched) return
+    const needs = (superviseeProfile?.typeOfSupervisorNeeded ?? []).map((need) => need.trim())
+    const hasMdNeed = needs.includes(MEDICAL_DIRECTOR_TYPE_NAME)
+    const hasNonMdNeed = needs.some((need) => need && need !== MEDICAL_DIRECTOR_TYPE_NAME)
+    if (mode === 'medical-directors' && !hasMdNeed) {
+      router.replace('/find-supervisors')
+    } else if (mode === 'supervisors' && hasMdNeed && !hasNonMdNeed) {
+      router.replace('/find-medical-directors')
+    }
+  }, [mode, superviseeProfileFetched, superviseeProfile, router])
 
   // Mirror the applied search state into the URL (replace, not push — filter tweaks
   // shouldn't grow browser history) so it survives navigating away and back.
   useEffect(() => {
-    if (!filtersInitialized) return
     const qs = buildSearchUrlParams({
       keyword: appliedKeyword,
       filters: appliedFilters,
@@ -97,7 +86,7 @@ export function SearchSupervisorPage() {
     if (window.location.pathname + window.location.search !== target) {
       router.replace(target, { scroll: false })
     }
-  }, [filtersInitialized, appliedKeyword, appliedFilters, sortBy, page, pathname, router])
+  }, [appliedKeyword, appliedFilters, sortBy, page, pathname, router])
 
   const searchInput = useMemo(
     () => ({
@@ -106,14 +95,12 @@ export function SearchSupervisorPage() {
       keywords: appliedKeyword,
       filters: appliedFilters,
       sortBy,
+      searchMode: mode,
     }),
-    [page, appliedKeyword, appliedFilters, sortBy],
+    [page, appliedKeyword, appliedFilters, sortBy, mode],
   )
 
-  const { data, isLoading, isError, error, refetch } = useSupervisorSearch(
-    searchInput,
-    filtersInitialized,
-  )
+  const { data, isLoading, isError, error, refetch } = useSupervisorSearch(searchInput)
 
   const supervisors = useMemo(() => {
     const raw = data?.results ?? []
@@ -166,6 +153,11 @@ export function SearchSupervisorPage() {
             setFilters({ ...filters, supervisionFormats: next })
           }
           onSearch={handleSearch}
+          subtitle={
+            mode === 'medical-directors'
+              ? 'Browse verified medical directors for your practice.'
+              : undefined
+          }
         />
       </div>
 
@@ -177,6 +169,7 @@ export function SearchSupervisorPage() {
             onChange={handleFiltersChange}
             onApply={handleApplyFilters}
             onClearFilters={handleClearFilterPanel}
+            mode={mode}
           />
         </div>
 
@@ -187,7 +180,7 @@ export function SearchSupervisorPage() {
             page={page}
             pageSize={SUPERVISOR_SEARCH_PAGE_SIZE}
             sortBy={sortBy}
-            isLoading={!filtersInitialized || isLoading}
+            isLoading={isLoading}
             errorMessage={errorMessage}
             onRetry={() => void refetch()}
             onPageChange={setPage}
@@ -196,6 +189,9 @@ export function SearchSupervisorPage() {
               setPage(1)
             }}
             onClearFilters={handleResetSearch}
+            profileBasePath={
+              mode === 'medical-directors' ? '/find-medical-directors' : '/find-supervisors'
+            }
           />
         </div>
       </div>

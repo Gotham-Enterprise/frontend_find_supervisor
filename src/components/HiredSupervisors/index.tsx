@@ -50,22 +50,26 @@ function HiredSupervisorsCardsSkeleton() {
 
 // ─── Empty state ───────────────────────────────────────────────────────────────
 
-function HiredSupervisorsEmpty() {
+function HiredSupervisorsEmpty({ isMedicalDirectors = false }: { isMedicalDirectors?: boolean }) {
   return (
     <Card className="border-dashed shadow-sm">
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10">
           <Briefcase className="size-7 text-primary" aria-hidden />
         </div>
-        <p className="text-base font-semibold text-foreground">No hired supervisors yet</p>
+        <p className="text-base font-semibold text-foreground">
+          {isMedicalDirectors ? 'No hired medical directors yet' : 'No hired supervisors yet'}
+        </p>
         <p className="mt-2 max-w-sm text-sm leading-relaxed text-foreground/80">
-          Browse available supervisors and send a hire request to get started.
+          {isMedicalDirectors
+            ? 'Browse available medical directors and send a hire request to get started.'
+            : 'Browse available supervisors and send a hire request to get started.'}
         </p>
         <Link
-          href="/find-supervisors"
+          href={isMedicalDirectors ? '/find-medical-directors' : '/find-supervisors'}
           className={buttonVariants({ size: 'default', className: 'mt-6' })}
         >
-          Find a Supervisor
+          {isMedicalDirectors ? 'Find a Medical Director' : 'Find a Supervisor'}
         </Link>
       </div>
     </Card>
@@ -146,9 +150,20 @@ function Pagination({
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
-export function HiredSupervisorsPage() {
+interface HiredSupervisorsPageProps {
+  /** 'medical-directors' renders the Hired Medical Directors page. */
+  mode?: 'supervisors' | 'medical-directors'
+}
+
+export function HiredSupervisorsPage({ mode = 'supervisors' }: HiredSupervisorsPageProps) {
+  const isMedicalDirectors = mode === 'medical-directors'
   const [page, setPage] = useState(1)
-  const { data, isLoading, isError } = useHiresList(page, PAGE_SIZE)
+  const { data, isLoading, isError } = useHiresList(
+    page,
+    PAGE_SIZE,
+    undefined,
+    isMedicalDirectors ? 'medicalDirectors' : 'supervisors',
+  )
   const { data: reviewsData } = useMyReviews(0)
 
   const items = data?.items ?? []
@@ -178,7 +193,7 @@ export function HiredSupervisorsPage() {
       ) : isError ? (
         <HiredSupervisorsError />
       ) : items.length === 0 ? (
-        <HiredSupervisorsEmpty />
+        <HiredSupervisorsEmpty isMedicalDirectors={isMedicalDirectors} />
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

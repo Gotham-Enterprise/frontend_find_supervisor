@@ -21,7 +21,12 @@ import { SuperviseeCard } from '@/components/seo/SuperviseeCard'
 import { fetchPublicSupervisees } from '@/lib/api/public-supervisees'
 import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
 import { generateOrganizationJsonLd, generateWebSiteJsonLd } from '@/lib/seo/jsonld'
-import { stateAbbreviationToDisplayName, stateSlugToDisplayName, US_STATES } from '@/lib/seo/routes'
+import {
+  stateAbbreviationToDisplayName,
+  stateAbbreviationToSlug,
+  stateSlugToDisplayName,
+  US_STATES,
+} from '@/lib/seo/routes'
 
 // ---------------------------------------------------------------------------
 // Metadata
@@ -72,8 +77,12 @@ interface PageProps {
 }
 
 export default async function BrowseSuperviseesPage({ searchParams }: PageProps) {
-  const { state, format, q } = await searchParams
+  const { state: rawState, format, q } = await searchParams
 
+  // Unknown state codes are ignored rather than echoed into the heading/filter
+  // chip (JF-2536: ?state=ZZ must not render a "ZZ" filter) — same policy as
+  // unknown format params.
+  const state = rawState && stateAbbreviationToSlug(rawState) ? rawState.toUpperCase() : undefined
   const preferredFormat = format ? (FORMAT_PARAM_MAP[format] ?? '') : ''
   const hasFilters = Boolean(state || format || q)
 

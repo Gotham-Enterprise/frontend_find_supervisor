@@ -5,7 +5,7 @@ export type PreferredAvailability =
   | 'EVENINGS'
   | 'WEEKENDS'
   | 'BY_APPOINTMENT'
-export type BudgetRangeType = 'PER_SESSION' | 'MONTHLY'
+export type BudgetRangeType = 'HOURLY' | 'MONTHLY'
 export type HireStatus =
   | 'PENDING'
   | 'ACCEPTED'
@@ -32,8 +32,15 @@ export interface HireUser {
   profilePhotoUrl?: string | null
   stateOfLicensure: string[]
   status?: string | null
+  /** User-level relations — populated for supervisees, null for supervisors. */
   occupation: { id: number; name: string } | null
   specialty: { id: number; name: string } | null
+  /** A supervisor's real occupation/specialty live on the profile. */
+  supervisorProfile?: {
+    supervisorType: string | null
+    occupation: string | null
+    specialty: string | null
+  } | null
 }
 
 // ─── POST /api/supervision/hires ──────────────────────────────────────────────
@@ -48,8 +55,6 @@ export interface HireSupervisorPayload {
   preferredAvailability: PreferredAvailability
   /** Backend accepts a single string or a non-empty string array. */
   typeOfSupervisorNeeded: string | string[]
-  /** Backend requires `isArray({ min: 1 })` — always send a JSON array. */
-  stateTheyAreLookingIn: string[]
   preferredStartDate: string // ISO date string
   budgetRangeType: BudgetRangeType
   budgetRangeStart: number
@@ -60,10 +65,7 @@ export interface HireSupervisorPayload {
   supervisionHours: number | null
 }
 
-/** Client-side input: `hireSupervisor()` coerces `stateTheyAreLookingIn` to a non-empty array. */
-export type HireSupervisorRequestInput = Omit<HireSupervisorPayload, 'stateTheyAreLookingIn'> & {
-  stateTheyAreLookingIn: string | string[]
-}
+export type HireSupervisorRequestInput = HireSupervisorPayload
 
 export interface HireRecord {
   id: string
@@ -72,7 +74,6 @@ export interface HireRecord {
   preferredFormat: PreferredFormat | null
   preferredAvailability: PreferredAvailability | null
   typeOfSupervisorNeeded: string | string[] | null
-  stateTheyAreLookingIn: string | string[] | null
   preferredStartDate: string | null
   budgetRangeType: BudgetRangeType | null
   budgetRangeStart: number | null
@@ -158,7 +159,6 @@ export interface HireListItem {
   preferredFormat: PreferredFormat | null
   preferredAvailability: PreferredAvailability | null
   typeOfSupervisorNeeded: string | string[] | null
-  stateTheyAreLookingIn: string | string[] | null
   preferredStartDate: string | null
   budgetRangeType: BudgetRangeType | null
   budgetRangeStart: number | null

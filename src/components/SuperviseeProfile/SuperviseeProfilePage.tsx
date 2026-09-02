@@ -12,9 +12,7 @@ import {
   useSuperviseeProfileById,
 } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
-import { coerceStringList, resolveOptionLabels } from '@/lib/utils/profile-formatters'
 
-import { SupervisorProfileCheckList } from '../SupervisorProfile/SupervisorProfileCheckList'
 import { SuperviseeProfileAbout } from './SuperviseeProfileAbout'
 import { SuperviseeProfileAvailability } from './SuperviseeProfileAvailability'
 import { SuperviseeProfileContact } from './SuperviseeProfileContact'
@@ -72,11 +70,6 @@ export function SuperviseeProfilePage({ superviseeId }: SuperviseeProfilePagePro
   // Contact details surface only after the supervisee accepts the request; the
   // backend enforces this and echoes `canViewContact` (and strips email/phone otherwise).
   const showContactInfo = profile.canViewContact ?? false
-  const lookingInLabels = resolveOptionLabels(
-    coerceStringList(profile.stateTheyAreLookingIn),
-    stateOptions,
-  )
-
   return (
     <div className="min-h-full bg-white px-6 pt-6 pb-12">
       <div className="mx-auto max-w-4xl">
@@ -91,9 +84,6 @@ export function SuperviseeProfilePage({ superviseeId }: SuperviseeProfilePagePro
         <SuperviseeProfileHero profile={profile} />
         {showContactInfo && <SuperviseeProfileContact profile={profile} />}
         <SuperviseeProfileAbout profile={profile} />
-        {lookingInLabels.length > 0 && (
-          <SupervisorProfileCheckList title="Looking for Supervision In" items={lookingInLabels} />
-        )}
         <SuperviseeProfileProfessional
           profile={profile}
           supervisorTypeOptions={supervisorTypeOptions}

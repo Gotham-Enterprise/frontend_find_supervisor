@@ -44,7 +44,7 @@ import { mergeSupervisorProfileDisplayName } from '@/lib/profile/supervisor-prof
 import { cn } from '@/lib/utils'
 import {
   formatNameWithCredentials,
-  formatSupervisorTypeLabel,
+  formatSupervisorTypeWithOfferings,
   resolveOptionLabels,
 } from '@/lib/utils/profile-formatters'
 import type {
@@ -680,12 +680,10 @@ function ProfilePreview({
   const tags = useMemo(() => {
     const certLabels = resolveOptionLabels(profile.certification ?? [], certificationOptions)
     const popLabels = resolveOptionLabels(profile.patientPopulation ?? [], patientPopulationOptions)
-    return [
-      profile.user.specialty?.name,
-      profile.user.occupation?.name,
-      ...certLabels,
-      ...popLabels,
-    ]
+    // Occupation/specialty come from the supervisor PROFILE (hierarchy strings) —
+    // the account-level user.occupation/specialty relations are jobseeker-side
+    // leftovers and can hold unrelated values (e.g. "Accountant").
+    return [profile.supervisorSpecialty, profile.supervisorOccupation, ...certLabels, ...popLabels]
       .filter((v): v is string => Boolean(v?.trim()))
       .slice(0, 5)
   }, [profile, certificationOptions, patientPopulationOptions])
@@ -709,7 +707,13 @@ function ProfilePreview({
         subline:
           [
             profile.licenseType,
-            formatSupervisorTypeLabel(profile.supervisorType, supervisorTypeOptions, ''),
+            // Primary type plus any Medical Director secondary offerings
+            formatSupervisorTypeWithOfferings(
+              profile.supervisorType,
+              profile.offerings,
+              supervisorTypeOptions,
+              '',
+            ),
             profile.profession,
           ]
             .filter((part) => Boolean(part?.trim()))
