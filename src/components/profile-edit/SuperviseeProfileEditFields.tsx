@@ -217,6 +217,84 @@ export function SuperviseeProfileEditFields({
     return selectedOccupation?.specialties.map((s) => ({ label: s.name, value: s.name })) ?? []
   }, [typeOfSupervisorNeeded, superviseeOccupation, supervisorTypesData])
 
+  // MD preference/timing grids are shared between the two layouts: inline in
+  // the Medical Director Needs section for supervision users, and hoisted into
+  // the Medical Director Preferences section for MD-only profiles (mirrors the
+  // dedicated signup's field order).
+  const mdPreferredFields = (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <FormSelectField
+        control={form.control}
+        name="mdPreferredOccupation"
+        label="Preferred Occupation (optional)"
+        options={mdOccupationOptions}
+        placeholder={
+          mdOccupationOptions.length === 0 && !supervisorTypesLoading
+            ? 'No Occupations Available'
+            : 'Select Preferred Occupation'
+        }
+        loading={supervisorTypesLoading}
+        isSubmitting={isSubmitting}
+        onValueChange={() => {
+          form.setValue('mdPreferredSpecialty', '')
+          form.clearErrors('mdPreferredSpecialty')
+        }}
+      />
+      <FormSelectField
+        control={form.control}
+        name="mdPreferredSpecialty"
+        label="Preferred Specialty (optional)"
+        options={mdSpecialtyOptions}
+        sortOptions
+        placeholder={
+          !mdPreferredOccupation
+            ? 'Select a Preferred Occupation First'
+            : mdSpecialtyOptions.length === 0
+              ? 'No Specialties Available'
+              : 'Select Specialty'
+        }
+        loading={supervisorTypesLoading}
+        isSubmitting={isSubmitting || !mdPreferredOccupation}
+        selectKey={`md-${mdPreferredOccupation}`}
+      />
+    </div>
+  )
+
+  const mdTimingFields = (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <FormSelectField
+        control={form.control}
+        name="mdHowSoonLooking"
+        label="How Soon Needed?"
+        options={howSoonOptions}
+        placeholder="Select Timeline"
+        isSubmitting={isSubmitting}
+        required
+      />
+      {mdHowSoonLooking === 'CUSTOM_DATE' && (
+        <FormInputField
+          control={form.control}
+          name="mdLookingDate"
+          label="Looking Date"
+          type="date"
+          isSubmitting={isSubmitting}
+          required
+        />
+      )}
+      <FormInputField
+        control={form.control}
+        name="mdMonthlyBudget"
+        label="Monthly Budget for Medical Director ($)"
+        type="number"
+        numberValue
+        min={1}
+        placeholder="1500"
+        isSubmitting={isSubmitting}
+        required
+      />
+    </div>
+  )
+
   return (
     <div className="space-y-6">
       <div className="flex justify-center">
@@ -400,34 +478,41 @@ export function SuperviseeProfileEditFields({
 
       <fieldset className="space-y-4">
         <legend className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Supervision Needs
+          {isMdOnly ? 'Medical Director Preferences' : 'Supervision Needs'}
         </legend>
 
-        <FormSelectField
-          control={form.control}
-          name="typeOfSupervisorNeeded"
-          label="Type of Supervision Needed"
-          options={supervisorTypeOptions}
-          placeholder={
-            supervisorTypesLoading
-              ? 'Loading…'
-              : !eligibilityComplete
-                ? SUPERVISION_TYPE_LOCKED_PLACEHOLDER
-                : noEligibleTypes
-                  ? NO_ELIGIBLE_SUPERVISION_TYPES_PLACEHOLDER
-                  : 'Select type of supervision'
-          }
-          loading={supervisorTypesLoading}
-          disabled={supervisorTypesLoading || !eligibilityComplete || noEligibleTypes}
-          isSubmitting={isSubmitting}
-          selectKey={selectedOccupationId}
-          required={!needsMedicalDirector}
-          onValueChange={() => {
-            form.setValue('superviseeOccupation', '')
-            form.setValue('superviseeSpecialty', '')
-            form.clearErrors(['superviseeOccupation', 'superviseeSpecialty'])
-          }}
-        />
+        {/* MD-only profiles have no supervision type to pick — hiding the
+            permanently-disabled dropdown instead of showing a dead control
+            (mirrors signup, where the type UI is absent for this variant). */}
+        {isMdOnly ? null : (
+          <FormSelectField
+            control={form.control}
+            name="typeOfSupervisorNeeded"
+            label="Type of Supervision Needed"
+            options={supervisorTypeOptions}
+            placeholder={
+              supervisorTypesLoading
+                ? 'Loading…'
+                : !eligibilityComplete
+                  ? SUPERVISION_TYPE_LOCKED_PLACEHOLDER
+                  : noEligibleTypes
+                    ? NO_ELIGIBLE_SUPERVISION_TYPES_PLACEHOLDER
+                    : 'Select type of supervision'
+            }
+            loading={supervisorTypesLoading}
+            disabled={supervisorTypesLoading || !eligibilityComplete || noEligibleTypes}
+            isSubmitting={isSubmitting}
+            selectKey={selectedOccupationId}
+            required={!needsMedicalDirector}
+            onValueChange={() => {
+              form.setValue('superviseeOccupation', '')
+              form.setValue('superviseeSpecialty', '')
+              form.clearErrors(['superviseeOccupation', 'superviseeSpecialty'])
+            }}
+          />
+        )}
+
+        {isMdOnly && mdPreferredFields}
 
         {isMdOnly ? null : (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -538,6 +623,8 @@ export function SuperviseeProfileEditFields({
             required
           />
         </div>
+
+        {isMdOnly && mdTimingFields}
       </fieldset>
 
       {isMdOnly ? null : (
@@ -613,150 +700,92 @@ export function SuperviseeProfileEditFields({
         />
       </fieldset>
 
-      {/* ── Medical Director — own section; checking the box reveals the
-          MD-specific required fields (md* columns) ── */}
-      <fieldset className="space-y-4">
-        <legend className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Medical Director Needs
-        </legend>
+      {/* ── Medical Director — own section for supervision users; checking the
+          box reveals the MD-specific required fields (md* columns). MD-only
+          profiles do not render this section at all — their MD fields live in
+          the Medical Director Preferences section above, in signup order. ── */}
+      {!isMdOnly && (
+        <fieldset className="space-y-4">
+          <legend className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Medical Director Needs
+          </legend>
 
-        <FormField
-          control={form.control}
-          name="needsMedicalDirector"
-          render={({ field }) => (
-            <FormItem>
-              <div className="flex items-start gap-3">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value ?? false}
-                    disabled={isSubmitting}
-                    onCheckedChange={(checked) => {
-                      field.onChange(checked === true)
-                      if (checked === true) {
-                        form.clearErrors('typeOfSupervisorNeeded')
-                      } else {
-                        form.clearErrors([
-                          'mdPreferredOccupation',
-                          'mdPreferredSpecialty',
-                          'mdHowSoonLooking',
-                          'mdLookingDate',
-                          'mdMonthlyBudget',
-                          'mdIdealDescription',
-                        ])
-                      }
-                    }}
-                    className="mt-0.5 shrink-0"
-                  />
-                </FormControl>
-                <div className="space-y-0.5">
-                  <p className="text-sm font-medium text-foreground">I need a Medical Director</p>
-                  <p className="text-sm text-muted-foreground">
-                    Can be combined with a supervision type above, or selected on its own.
-                  </p>
-                </div>
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {needsMedicalDirector && (
-          <>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormSelectField
-                control={form.control}
-                name="mdPreferredOccupation"
-                label="Preferred Occupation (optional)"
-                options={mdOccupationOptions}
-                placeholder={
-                  mdOccupationOptions.length === 0 && !supervisorTypesLoading
-                    ? 'No Occupations Available'
-                    : 'Select Preferred Occupation'
-                }
-                loading={supervisorTypesLoading}
-                isSubmitting={isSubmitting}
-                onValueChange={() => {
-                  form.setValue('mdPreferredSpecialty', '')
-                  form.clearErrors('mdPreferredSpecialty')
-                }}
-              />
-              <FormSelectField
-                control={form.control}
-                name="mdPreferredSpecialty"
-                label="Preferred Specialty (optional)"
-                options={mdSpecialtyOptions}
-                sortOptions
-                placeholder={
-                  !mdPreferredOccupation
-                    ? 'Select a Preferred Occupation First'
-                    : mdSpecialtyOptions.length === 0
-                      ? 'No Specialties Available'
-                      : 'Select Specialty'
-                }
-                loading={supervisorTypesLoading}
-                isSubmitting={isSubmitting || !mdPreferredOccupation}
-                selectKey={`md-${mdPreferredOccupation}`}
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormSelectField
-                control={form.control}
-                name="mdHowSoonLooking"
-                label="How Soon Needed?"
-                options={howSoonOptions}
-                placeholder="Select Timeline"
-                isSubmitting={isSubmitting}
-                required
-              />
-              {mdHowSoonLooking === 'CUSTOM_DATE' && (
-                <FormInputField
-                  control={form.control}
-                  name="mdLookingDate"
-                  label="Looking Date"
-                  type="date"
-                  isSubmitting={isSubmitting}
-                  required
-                />
-              )}
-              <FormInputField
-                control={form.control}
-                name="mdMonthlyBudget"
-                label="Monthly Budget for Medical Director ($)"
-                type="number"
-                numberValue
-                min={1}
-                placeholder="1500"
-                isSubmitting={isSubmitting}
-                required
-              />
-            </div>
-            {!isMdOnly && (
-              <FormField
-                control={form.control}
-                name="mdIdealDescription"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Describe Your Ideal Medical Director{' '}
-                      <span className="text-destructive">*</span>
-                    </FormLabel>
+          {isMdOnly ? null : (
+            <FormField
+              control={form.control}
+              name="needsMedicalDirector"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-start gap-3">
                     <FormControl>
-                      <Textarea
-                        {...field}
-                        value={field.value ?? ''}
-                        rows={4}
-                        maxLength={500}
+                      <Checkbox
+                        checked={field.value ?? false}
                         disabled={isSubmitting}
+                        onCheckedChange={(checked) => {
+                          field.onChange(checked === true)
+                          if (checked === true) {
+                            form.clearErrors('typeOfSupervisorNeeded')
+                          } else {
+                            form.clearErrors([
+                              'mdPreferredOccupation',
+                              'mdPreferredSpecialty',
+                              'mdHowSoonLooking',
+                              'mdLookingDate',
+                              'mdMonthlyBudget',
+                              'mdIdealDescription',
+                            ])
+                          }
+                        }}
+                        className="mt-0.5 shrink-0"
                       />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-          </>
-        )}
-      </fieldset>
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium text-foreground">
+                        I need a Medical Director
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Can be combined with a supervision type above, or selected on its own.
+                      </p>
+                    </div>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+
+          {needsMedicalDirector && (
+            <>
+              {mdPreferredFields}
+              {mdTimingFields}
+              {!isMdOnly && (
+                <FormField
+                  control={form.control}
+                  name="mdIdealDescription"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Describe Your Ideal Medical Director{' '}
+                        <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          value={field.value ?? ''}
+                          rows={4}
+                          maxLength={500}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </>
+          )}
+        </fieldset>
+      )}
 
       <fieldset className="space-y-4">
         <FormField

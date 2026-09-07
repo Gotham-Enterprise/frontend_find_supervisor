@@ -24,6 +24,8 @@ const blankOffering = {
   specialty: '',
   degreeType: '',
   licenses: [{ licenseType: '', licenseNumber: '', state: '', licenseExpiration: '' }],
+  verificationDoc: undefined as File | undefined,
+  existingDocFileName: '',
 }
 
 const blankBoardCertification = {
@@ -44,12 +46,17 @@ const validBoardCertification = {
   expirationDate: FUTURE_DATE,
 }
 
-const validOffering = {
+// Factory (not a shared object): Files do not survive structuredClone with
+// their prototype intact, so each use gets a freshly constructed document.
+const makeValidOffering = () => ({
   occupation: 'MD for Physician Assistants',
   specialty: 'Internal Medicine',
   degreeType: 'MD',
   licenses: [{ ...validLicense }],
-}
+  // Each checked offering requires its own license/verification document.
+  verificationDoc: new File(['x'], 'offering-doc.pdf', { type: 'application/pdf' }),
+  existingDocFileName: '',
+})
 
 function makeFile(name = 'license.pdf') {
   return new File(['x'], name, { type: 'application/pdf' })
@@ -105,6 +112,20 @@ describe('medicalDirectorDefaultValues', () => {
 })
 
 describe('medicalDirectorStep2Schema — offerings', () => {
+  it('requires a verification document for a checked offering (new file or existing)', () => {
+    const base = step2Base()
+    base.offerSupervisingPhysician = true
+    base.offerings.supervising = { ...makeValidOffering(), verificationDoc: undefined }
+    const result = medicalDirectorStep2Schema.safeParse(base)
+    expect(result.success).toBe(false)
+    const paths = result.success ? [] : result.error.issues.map((i) => i.path.join('.'))
+    expect(paths).toContain('offerings.supervising.verificationDoc')
+
+    // An existing stored document (edit flow) satisfies the requirement.
+    base.offerings.supervising.existingDocFileName = 'stored-doc.pdf'
+    expect(medicalDirectorStep2Schema.safeParse(base).success).toBe(true)
+  })
+
   it('passes with both offerings unchecked and blank blocks', () => {
     const result = medicalDirectorStep2Schema.safeParse(step2Base())
     expect(issuePaths(result)).toEqual([])
@@ -127,7 +148,7 @@ describe('medicalDirectorStep2Schema — offerings', () => {
 
   it('ignores a filled block whose checkbox is unchecked', () => {
     const base = step2Base()
-    base.offerings.collaborating = structuredClone(validOffering)
+    base.offerings.collaborating = makeValidOffering()
     const result = medicalDirectorStep2Schema.safeParse(base)
     expect(result.success).toBe(true)
   })
@@ -135,7 +156,7 @@ describe('medicalDirectorStep2Schema — offerings', () => {
   it('passes with a fully valid checked offering', () => {
     const base = step2Base()
     base.offerSupervisingPhysician = true
-    base.offerings.supervising = structuredClone(validOffering)
+    base.offerings.supervising = makeValidOffering()
     const result = medicalDirectorStep2Schema.safeParse(base)
     expect(issuePaths(result)).toEqual([])
     expect(result.success).toBe(true)
@@ -144,7 +165,7 @@ describe('medicalDirectorStep2Schema — offerings', () => {
   it('rejects a degree type other than MD/DO inside a checked offering', () => {
     const base = step2Base()
     base.offerCollaboratingPhysician = true
-    base.offerings.collaborating = structuredClone({ ...validOffering, degreeType: 'PhD' })
+    base.offerings.collaborating = { ...makeValidOffering(), degreeType: 'PhD' }
     const result = medicalDirectorStep2Schema.safeParse(base)
     expect(issuePaths(result)).toContain('offerings.collaborating.degreeType')
   })
@@ -152,7 +173,7 @@ describe('medicalDirectorStep2Schema — offerings', () => {
   it('rejects a past license expiration inside a checked offering', () => {
     const base = step2Base()
     base.offerSupervisingPhysician = true
-    base.offerings.supervising = structuredClone(validOffering)
+    base.offerings.supervising = makeValidOffering()
     base.offerings.supervising.licenses[0].licenseExpiration = PAST_DATE
     const result = medicalDirectorStep2Schema.safeParse(base)
     expect(issuePaths(result)).toContain('offerings.supervising.licenses.0.licenseExpiration')
@@ -161,7 +182,7 @@ describe('medicalDirectorStep2Schema — offerings', () => {
   it('requires at least one license entry in a checked offering', () => {
     const base = step2Base()
     base.offerSupervisingPhysician = true
-    base.offerings.supervising = structuredClone({ ...validOffering, licenses: [] })
+    base.offerings.supervising = { ...makeValidOffering(), licenses: [] }
     const result = medicalDirectorStep2Schema.safeParse(base)
     expect(issuePaths(result)).toContain('offerings.supervising.licenses')
   })
@@ -299,7 +320,7 @@ describe('medicalDirectorSchema — full form', () => {
   it('passes end-to-end with one checked, valid offering', () => {
     const values = fullValues()
     values.offerSupervisingPhysician = true
-    values.offerings.supervising = structuredClone(validOffering)
+    values.offerings.supervising = makeValidOffering()
     const result = medicalDirectorSchema.safeParse(values)
     expect(issuePaths(result)).toEqual([])
     expect(result.success).toBe(true)
@@ -324,7 +345,7 @@ describe('medicalDirectorSchema — full form', () => {
     const values = fullValues()
     values.patientPopulation = []
     values.offerSupervisingPhysician = true
-    values.offerings.supervising = structuredClone(validOffering)
+    values.offerings.supervising = makeValidOffering()
     const result = medicalDirectorSchema.safeParse(values)
     expect(issuePaths(result)).toContain('patientPopulation')
   })

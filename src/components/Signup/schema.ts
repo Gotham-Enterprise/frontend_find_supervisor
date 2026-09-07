@@ -122,6 +122,16 @@ export const offeringCredentialsSchema = z.object({
   occupation: z.string(),
   specialty: z.string().optional(),
   degreeType: z.string(),
+  /** Per-offering license/verification document — required when the offering is checked. */
+  verificationDoc: z
+    .any()
+    .optional()
+    .refine(
+      (val) => val == null || !(val instanceof File) || val.size <= MAX_LICENSE_DOC_SIZE_BYTES,
+      `File is too large. Please upload a file under ${MAX_LICENSE_DOC_SIZE_LABEL}.`,
+    ),
+  /** Stored document filename (edit flow) — satisfies the requirement without a new upload. */
+  existingDocFileName: z.string().optional(),
   licenses: z.array(
     z.object({
       licenseType: z.string(),
@@ -235,6 +245,17 @@ export const supervisorSchema = withPasswordConfirmation(
  * Physician), each carrying its own credentials block.
  */
 export const medicalDirectorSchemaObject = supervisorSchemaObject.extend({
+  // Medical Directors carry no profile-level license/verification document —
+  // each enabled physician offering brings its own. Validate size only when a
+  // file was voluntarily provided.
+  // z.any() (not .optional()) keeps the inferred shape identical to the base
+  // supervisor schema; undefined still passes — no file is required.
+  licenseDoc: z
+    .any()
+    .refine(
+      (val) => val == null || !(val instanceof File) || val.size <= MAX_LICENSE_DOC_SIZE_BYTES,
+      `File is too large. Please upload a file under ${MAX_LICENSE_DOC_SIZE_LABEL}.`,
+    ),
   // Patient population only applies when the MD also offers clinical
   // supervision — required-ness lives in applyMedicalDirectorPracticeRules.
   patientPopulation: z.array(z.string()),
@@ -297,6 +318,14 @@ export function applyMedicalDirectorOfferingRules(
         code: 'custom',
         path: ['offerings', key, 'licenses'],
         message: 'Add at least one license',
+      })
+    }
+
+    if (!(block.verificationDoc instanceof File) && !block.existingDocFileName?.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['offerings', key, 'verificationDoc'],
+        message: 'Please upload a license or verification document for this offering',
       })
     }
 

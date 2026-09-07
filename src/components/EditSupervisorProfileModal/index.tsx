@@ -32,7 +32,7 @@ export function EditSupervisorProfileModal({
   profile,
 }: EditSupervisorProfileModalProps) {
   const { user } = useUser()
-  const { showError } = useUserSnackbar()
+  const { showError, showSuccess } = useUserSnackbar()
   const userId = user?.id ?? ''
 
   const mutation = useUpdateSupervisorProfile(userId)
@@ -68,6 +68,7 @@ export function EditSupervisorProfileModal({
   async function onSubmit(values: EditSupervisorProfileFormValues) {
     try {
       await mutation.mutateAsync(supervisorProfileFormValuesToPayload(values))
+      showSuccess('Profile updated successfully.')
       onOpenChange(false)
     } catch (err: unknown) {
       showError(parseApiError(err))

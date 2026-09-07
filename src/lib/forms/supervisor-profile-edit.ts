@@ -7,6 +7,8 @@ import {
   type BoardCertificationEntryValues,
   licenseEntrySchema,
   type LicenseEntryValues,
+  MAX_LICENSE_DOC_SIZE_BYTES,
+  MAX_LICENSE_DOC_SIZE_LABEL,
   OFFERING_SUPERVISOR_TYPE_NAMES,
   offeringCredentialsSchema,
   type OfferingCredentialsValues,
@@ -119,6 +121,15 @@ const editSupervisorProfileFieldsSchema = z.object({
     z.number('Please enter a fee amount').min(1, 'Fee amount must be at least $1'),
   ),
   uploadProfilePhoto: z.any().optional(),
+  // Optional replacement for the stored license/verification document — the
+  // update endpoint keeps the existing file when none is provided.
+  licenseDoc: z
+    .any()
+    .optional()
+    .refine(
+      (val) => val == null || !(val instanceof File) || val.size <= MAX_LICENSE_DOC_SIZE_BYTES,
+      `File is too large. Please upload a file under ${MAX_LICENSE_DOC_SIZE_LABEL}.`,
+    ),
 
   // Medical Director only — same field names/shapes as the MD signup so the
   // shared components (OfferingCredentialsFields, BoardCertificationEntriesField)
@@ -278,6 +289,8 @@ const emptyOfferingBlock = (): OfferingCredentialsValues => ({
   occupation: '',
   specialty: '',
   degreeType: '',
+  verificationDoc: undefined,
+  existingDocFileName: '',
   licenses: [{ licenseType: '', licenseNumber: '', state: '', licenseExpiration: '' }],
 })
 
@@ -307,6 +320,8 @@ export function getSupervisorOfferingDefaults(profile: SupervisorProfileData): {
       occupation: offering.occupation ?? '',
       specialty: offering.specialty ?? '',
       degreeType: offering.degreeType ?? '',
+      verificationDoc: undefined,
+      existingDocFileName: offering.verificationDocumentFileName ?? '',
       licenses: (offering.licenses ?? []).map((license) => ({
         licenseType: '',
         licenseNumber: license.licenseNumber ?? '',
@@ -371,6 +386,7 @@ export function getDefaultSupervisorProfileFormValues(
 
   return {
     fullName: profile.user.fullName ?? '',
+    licenseDoc: undefined,
     professionalCredentials: profile.professionalCredentials ?? '',
     contactNumber: formatUSPhoneForDisplay(profile.user.contactNumber ?? ''),
     city: profile.user.city ?? '',
@@ -446,12 +462,21 @@ export function supervisorProfileFormValuesToPayload(
     supervisionFeeAmount: values.supervisionFeeAmount,
     uploadProfilePhoto:
       values.uploadProfilePhoto instanceof File ? values.uploadProfilePhoto : undefined,
+    uploadLicense: values.licenseDoc instanceof File ? values.licenseDoc : undefined,
     // Medical Director only: full replace — unchecked boxes / "No" send empty
     // arrays so removed offerings/certifications are cleared server-side.
     ...(values.supervisorType === MEDICAL_DIRECTOR_TYPE_NAME
       ? {
           offerings: buildOfferingsPayload(values),
           boardCertifications: buildBoardCertificationsPayload(values),
+          uploadOfferingDocSupervising:
+            values.offerings.supervising.verificationDoc instanceof File
+              ? values.offerings.supervising.verificationDoc
+              : undefined,
+          uploadOfferingDocCollaborating:
+            values.offerings.collaborating.verificationDoc instanceof File
+              ? values.offerings.collaborating.verificationDoc
+              : undefined,
         }
       : {}),
   }

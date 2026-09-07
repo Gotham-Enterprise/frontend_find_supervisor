@@ -6,7 +6,9 @@ import { useFormContext, useWatch } from 'react-hook-form'
 import { LicenseEntriesField } from '@/components/forms/LicenseEntriesField'
 import type { MedicalDirectorFormValues, OfferingKey } from '@/components/Signup/schema'
 import { offeringFieldRules } from '@/components/Signup/supervisorFieldRules'
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { FormSelectField } from '@/components/ui/form-select-field'
+import { UploadFile } from '@/components/ui/upload-file'
 import type { SelectOption, SupervisorTypeData } from '@/lib/api/options'
 import { getSupervisorCredentialSelectOptions } from '@/lib/utils/supervisor-type'
 
@@ -39,6 +41,8 @@ export function OfferingCredentialsFields({
 }: OfferingCredentialsFieldsProps) {
   const { control, setValue, clearErrors } = useFormContext<MedicalDirectorFormValues>()
   const occupationValue = useWatch({ control, name: `offerings.${offeringKey}.occupation` }) ?? ''
+  const existingDocFileName =
+    useWatch({ control, name: `offerings.${offeringKey}.existingDocFileName` }) ?? ''
 
   const occupationOptions = useMemo<SelectOption[]>(
     () => typeData?.occupations.map((o) => ({ label: o.name, value: o.name })) ?? [],
@@ -121,6 +125,40 @@ export function OfferingCredentialsFields({
         licenseTypeOptions={[]}
         stateOptions={stateOptions}
         isSubmitting={isSubmitting}
+      />
+
+      {/* Each enabled offering ships its own license/verification document —
+          the Medical Director profile itself carries none. */}
+      <FormField
+        control={control}
+        name={`offerings.${offeringKey}.verificationDoc`}
+        render={({ field: { value, onChange, onBlur, ref } }) => (
+          <FormItem>
+            <FormLabel>
+              License or Verification Document <span className="text-destructive">*</span>
+            </FormLabel>
+            <FormControl>
+              <UploadFile
+                inputRef={ref}
+                value={value}
+                onChange={onChange}
+                onBlur={onBlur}
+                accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/*"
+                uploadTitle="Upload license or verification document"
+                uploadHint="PDF, JPG, or PNG (max 5 MB) · Click to browse"
+                removeFileAriaLabel="Remove offering document"
+                disabled={isSubmitting}
+              />
+            </FormControl>
+            {existingDocFileName && !(value instanceof File) ? (
+              <p className="text-sm text-muted-foreground">
+                Current document: <span className="font-medium">{existingDocFileName}</span> —
+                upload a new file to replace it.
+              </p>
+            ) : null}
+            <FormMessage />
+          </FormItem>
+        )}
       />
     </div>
   )

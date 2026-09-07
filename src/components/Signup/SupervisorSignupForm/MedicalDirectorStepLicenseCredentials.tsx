@@ -211,12 +211,9 @@ export function MedicalDirectorStepLicenseCredentials({
       <FormField
         control={control}
         name="licenseDoc"
-        rules={supervisorFieldRules('licenseDoc')}
         render={({ field: { value, onChange, onBlur, ref } }) => (
           <FormItem>
-            <FormLabel>
-              License or Verification Document <span className="text-destructive">*</span>
-            </FormLabel>
+            <FormLabel>License or Verification Document (optional)</FormLabel>
             <FormControl>
               <UploadFile
                 inputRef={ref}

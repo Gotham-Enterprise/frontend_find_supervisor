@@ -23,6 +23,7 @@ import { PhoneInput } from '@/components/ui/PhoneInput'
 import { Switch } from '@/components/ui/switch'
 import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
+import { UploadFile } from '@/components/ui/upload-file'
 import type { SelectOption } from '@/lib/api/options'
 import {
   type EditSupervisorProfileFormValues,
@@ -457,6 +458,38 @@ export function SupervisorProfileEditFields({
           licenseTypeSelectKey={supervisorOccupationWatch}
           isSubmitting={isSubmitting}
           entriesNeedingReview={licenseEntriesNeedingReview}
+        />
+
+        {/* Optional replacement for the license/verification document stored at
+            signup — the backend keeps the existing file when none is chosen. */}
+        <FormField
+          control={form.control}
+          name="licenseDoc"
+          render={({ field: { value, onChange, onBlur, ref } }) => (
+            <FormItem>
+              <FormLabel>License or Verification Document (optional)</FormLabel>
+              <FormControl>
+                <UploadFile
+                  inputRef={ref}
+                  value={value}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/*"
+                  uploadTitle="Upload license or verification document"
+                  uploadHint="PDF, JPG, or PNG (max 5 MB) · Click to browse"
+                  removeFileAriaLabel="Remove license document"
+                  disabled={isSubmitting}
+                />
+              </FormControl>
+              {profile.licenseFileName && !(value instanceof File) ? (
+                <p className="text-sm text-muted-foreground">
+                  Current document: <span className="font-medium">{profile.licenseFileName}</span> —
+                  upload a new file to replace it.
+                </p>
+              ) : null}
+              <FormMessage />
+            </FormItem>
+          )}
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <FormSelectField

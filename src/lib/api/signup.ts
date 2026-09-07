@@ -217,7 +217,23 @@ export function buildSupervisorFormData(values: SupervisorRegisterValues): FormD
   fd.append('agreedToPost', String(values.agreedToPost))
 
   // Files
-  fd.append('uploadLicense', values.licenseDoc as File)
+  if (values.licenseDoc instanceof File) {
+    fd.append('uploadLicense', values.licenseDoc)
+  }
+  // Per-offering license/verification documents (Medical Director offerings)
+  const mdValues = values as Partial<MedicalDirectorFormValues>
+  if (
+    mdValues.offerSupervisingPhysician &&
+    mdValues.offerings?.supervising.verificationDoc instanceof File
+  ) {
+    fd.append('uploadOfferingDoc_supervising', mdValues.offerings.supervising.verificationDoc)
+  }
+  if (
+    mdValues.offerCollaboratingPhysician &&
+    mdValues.offerings?.collaborating.verificationDoc instanceof File
+  ) {
+    fd.append('uploadOfferingDoc_collaborating', mdValues.offerings.collaborating.verificationDoc)
+  }
   fd.append('uploadProfilePhoto', values.uploadProfilePhoto as File)
 
   return fd

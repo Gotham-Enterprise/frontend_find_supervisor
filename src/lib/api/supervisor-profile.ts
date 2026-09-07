@@ -53,6 +53,9 @@ export interface UpdateSupervisorProfilePayload {
   professionalCredentials?: string
   uploadProfilePhoto?: File
   uploadLicense?: File
+  /** Per-offering license/verification documents (Medical Director offerings). */
+  uploadOfferingDocSupervising?: File
+  uploadOfferingDocCollaborating?: File
 }
 
 /** PUT /supervision/supervisor/profile — update the authenticated supervisor's own profile. */
@@ -64,6 +67,8 @@ export async function updateSupervisorProfile(
   const {
     uploadProfilePhoto,
     uploadLicense,
+    uploadOfferingDocSupervising,
+    uploadOfferingDocCollaborating,
     certification,
     licenses,
     offerings,
@@ -123,6 +128,14 @@ export async function updateSupervisorProfile(
 
   if (uploadLicense) {
     fd.append('uploadLicense', uploadLicense)
+  }
+
+  if (uploadOfferingDocSupervising) {
+    fd.append('uploadOfferingDoc_supervising', uploadOfferingDocSupervising)
+  }
+
+  if (uploadOfferingDocCollaborating) {
+    fd.append('uploadOfferingDoc_collaborating', uploadOfferingDocCollaborating)
   }
 
   const { data } = await apiClient.put<ApiResponse<SupervisorProfileData>>(

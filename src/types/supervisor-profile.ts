@@ -156,6 +156,9 @@ export interface SupervisorOfferingEntry {
   occupation?: string | null
   specialty?: string | null
   degreeType?: string | null
+  /** Per-offering license/verification document (owner-visible only). */
+  verificationDocumentUrl?: string | null
+  verificationDocumentFileName?: string | null
   sortOrder?: number
   /** License numbers are redacted (null) for non-owner viewers. */
   licenses?: {

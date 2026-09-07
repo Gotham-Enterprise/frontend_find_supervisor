@@ -58,6 +58,8 @@ export const supervisorDefaultValues: Partial<SupervisorFormValues> = {
 
 /** Blank offering credentials block ("Offer as …" checkboxes start unchecked). */
 export const emptyOfferingCredentials = (): OfferingCredentialsValues => ({
+  verificationDoc: undefined,
+  existingDocFileName: '',
   occupation: '',
   specialty: '',
   degreeType: '',
