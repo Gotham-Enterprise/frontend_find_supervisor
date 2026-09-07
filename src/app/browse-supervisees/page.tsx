@@ -77,13 +77,15 @@ interface PageProps {
 }
 
 export default async function BrowseSuperviseesPage({ searchParams }: PageProps) {
-  const { state: rawState, format, q } = await searchParams
+  const { state: rawState, format: rawFormat, q } = await searchParams
 
   // Unknown state codes are ignored rather than echoed into the heading/filter
   // chip (JF-2536: ?state=ZZ must not render a "ZZ" filter) — same policy as
   // unknown format params.
   const state = rawState && stateAbbreviationToSlug(rawState) ? rawState.toUpperCase() : undefined
-  const preferredFormat = format ? (FORMAT_PARAM_MAP[format] ?? '') : ''
+  const format =
+    rawFormat && FORMAT_PARAM_MAP[rawFormat.toLowerCase()] ? rawFormat.toLowerCase() : undefined
+  const preferredFormat = format ? FORMAT_PARAM_MAP[format] : ''
   const hasFilters = Boolean(state || format || q)
 
   // Fetch results (always — even without filters, show a default listing)

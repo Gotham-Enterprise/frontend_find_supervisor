@@ -60,8 +60,12 @@ export function SearchSuperviseeResults({
           <p className="text-sm text-destructive">{errorMessage}</p>
         ) : (
           <p className="text-sm text-foreground">
-            <span className="font-semibold">{total.toLocaleString()} supervisees</span>
-            <span className="text-muted-foreground"> match your criteria</span>
+            <span className="font-semibold">
+              {total.toLocaleString()} {total === 1 ? 'supervisee' : 'supervisees'}
+            </span>
+            <span className="text-muted-foreground">
+              {total === 1 ? ' matches your criteria' : ' match your criteria'}
+            </span>
           </p>
         )}
 

@@ -29,6 +29,13 @@ const FORMAT_OPTIONS = [
   { label: 'Hybrid', value: 'hybrid' },
 ]
 
+/** Canonical option value for a raw query param (case-insensitive), or '' when it matches none. */
+function resolveOptionValue(options: Array<{ value: string }>, raw: string | null): string {
+  if (!raw) return ''
+  const lower = raw.toLowerCase()
+  return options.find((o) => o.value.toLowerCase() === lower)?.value ?? ''
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -59,9 +66,13 @@ export function PublicSearchFilters({ initialValues }: PublicSearchFiltersProps)
 
   // Derive state/type/format directly from the URL — they push immediately so
   // there is never a desync, and no useEffect is needed to keep them in sync.
-  const state = searchParams.get('state') ?? ''
-  const type = searchParams.get('type') ?? ''
-  const format = searchParams.get('format') ?? ''
+  // Params are resolved against the option lists the same way the server
+  // resolves them for the listing/heading: wrong-case values canonicalize
+  // (?state=al → AL) and invalid ones (?state=ZZ) count as no filter, so the
+  // selects and chips never echo a value the results ignored.
+  const state = resolveOptionValue(STATE_OPTIONS, searchParams.get('state'))
+  const type = resolveOptionValue(SUPERVISOR_TYPE_OPTIONS, searchParams.get('type'))
+  const format = resolveOptionValue(FORMAT_OPTIONS, searchParams.get('format'))
 
   // q needs local state for the debounced text input only.
   const [q, setQ] = useState(initialValues.q)

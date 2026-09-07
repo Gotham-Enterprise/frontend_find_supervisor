@@ -192,6 +192,15 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
             profileBasePath={
               mode === 'medical-directors' ? '/find-medical-directors' : '/find-supervisors'
             }
+            noun={
+              mode === 'medical-directors'
+                ? {
+                    singular: 'medical director',
+                    plural: 'medical directors',
+                    title: 'Medical Directors',
+                  }
+                : { singular: 'supervisor', plural: 'supervisors', title: 'Supervisors' }
+            }
           />
         </div>
       </div>
