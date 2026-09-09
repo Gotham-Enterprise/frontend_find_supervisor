@@ -109,7 +109,9 @@ export function getAgreementStageLabel(stage: AgreementStage): string {
     case 'AWAITING_SIGNATURE':
       return 'Awaiting Signature'
     default:
-      return 'No Agreement'
+      // Only shown on ACCEPTED/ACTIVE hires — the supervisor has yet to send the
+      // agreement, so phrase it as the next step rather than "No Agreement".
+      return 'Awaiting Agreement'
   }
 }
 

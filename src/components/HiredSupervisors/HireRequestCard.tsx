@@ -80,9 +80,15 @@ function DetailCell({
 interface HireRequestCardProps {
   hire: HireListItem
   existingReview?: Review
+  /** Rendered on Hired Medical Directors — profile links + back links target the MD routes. */
+  isMedicalDirectors?: boolean
 }
 
-export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) {
+export function HireRequestCard({
+  hire,
+  existingReview,
+  isMedicalDirectors = false,
+}: HireRequestCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   // Deep link: agreement notifications/emails point to /hired-supervisors?hire=<id>,
   // which auto-opens this card's agreement dialog. Lazy init only (no effect); the
@@ -122,7 +128,11 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
 
   const hasRejectionReason = hire.status === 'REJECTED' && Boolean(hire.rejectionReason?.trim())
   const canCancel = CANCELABLE_STATUSES.includes(hire.status)
-  const profileHref = `/find-supervisors/${hire.supervisorId}?from=hired-supervisors`
+  // Open the profile on the route matching the list it was reached from, and tell
+  // the profile page where to go back to (the two hired lists are separate pages).
+  const profileHref = isMedicalDirectors
+    ? `/find-medical-directors/${hire.supervisorId}?from=hired-medical-directors`
+    : `/find-supervisors/${hire.supervisorId}?from=hired-supervisors`
 
   // Agreement: sign while the supervisor's proposal awaits the supervisee's signature
   const agreementStage = getAgreementStage(hire)

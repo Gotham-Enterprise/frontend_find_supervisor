@@ -31,7 +31,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
-import { useHiresList, useMyReviews, useRemindAgreement, useUserSnackbar } from '@/lib/hooks'
+import {
+  useHiresList,
+  useMyReviews,
+  useRemindAgreement,
+  useSuperviseeFormOptions,
+  useUserSnackbar,
+} from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
   formatAvailability,
@@ -41,6 +47,7 @@ import {
   formatLocation,
   formatSupervisionFormat,
   formatSupervisionHours,
+  resolveSupervisorTypeLabel,
 } from '@/lib/utils/profile-formatters'
 import { getAgreementStage, getAgreementStageLabel } from '@/lib/utils/supervision-status'
 import type { HireListItem, HireStatus } from '@/types/hire'
@@ -273,6 +280,8 @@ function SuperviseeDetailsDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const { supervisorTypes } = useSuperviseeFormOptions()
+  const supervisorTypeOptions = supervisorTypes.data ?? []
   const { supervisee } = hire
   const occupation = supervisee.occupation?.name
   const specialty = supervisee.specialty?.name
@@ -280,6 +289,11 @@ function SuperviseeDetailsDialog({
   const licensureStates = supervisee.stateOfLicensure?.length
     ? supervisee.stateOfLicensure.join(', ')
     : null
+  // All needs on the profile — the hire itself only records the role hired for.
+  const profileNeeds = resolveSupervisorTypeLabel(
+    supervisee.superviseeProfile?.typeOfSupervisorNeeded,
+    supervisorTypeOptions,
+  )
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
@@ -299,6 +313,9 @@ function SuperviseeDetailsDialog({
             <DetailItem label="Specialty" value={specialty} />
             <DetailItem label="Location" value={location} />
             <DetailItem label="State(s) of Licensure" value={licensureStates} />
+            {profileNeeds !== 'N/A' && (
+              <DetailItem label="Supervision Needs" value={profileNeeds} />
+            )}
           </dl>
         </section>
 

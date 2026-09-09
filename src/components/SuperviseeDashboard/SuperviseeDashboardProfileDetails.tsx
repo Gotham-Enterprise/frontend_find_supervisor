@@ -25,7 +25,9 @@ function formatBudget(
   start: number | null | undefined,
   end: number | null | undefined,
 ): string {
-  if (type == null && start == null) return 'N/A'
+  // A missing type means no supervision budget was ever set (the backend stores
+  // start/end as 0 for MD-only signups) — never read that as "Open to discussion".
+  if (!type || start == null) return 'N/A'
   const suffix = type === 'MONTHLY' ? '/month' : '/hr'
   // Monthly budgets are a single amount (stored in `end`; `start` is 0)
   if (type === 'MONTHLY') return end != null && end > 0 ? `$${end} ${suffix}` : 'N/A'
@@ -116,6 +118,9 @@ export function SuperviseeDashboardProfileDetails({
   ).some((name) => !isMedicalDirectorType({ name }))
   const mdHowSoonLabel = formatHowSoonLooking(profile.mdHowSoonLooking, profile.mdLookingDate)
   const mdBudgetLabel = formatBudget('MONTHLY', 0, profile.mdMonthlyBudget)
+  // The supervision budget belongs to a non-MD need; an MD-only profile's budget is
+  // the Monthly Budget under Medical Director Needs, so don't show it twice.
+  const showSupervisionBudget = hasNonMdNeed && Boolean(profile.budgetRangeType)
 
   return (
     <ProfilePreviewCard
@@ -166,7 +171,7 @@ export function SuperviseeDashboardProfileDetails({
           {profile.howSoonLooking && (
             <ProfileDetailRow label="How Soon">{howSoonLabel}</ProfileDetailRow>
           )}
-          {(profile.budgetRangeType || profile.budgetRangeStart != null) && (
+          {showSupervisionBudget && (
             <ProfileDetailRow label="Budget">{budgetLabel}</ProfileDetailRow>
           )}
           {profile.user.contactNumber && (

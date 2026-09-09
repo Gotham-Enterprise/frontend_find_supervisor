@@ -1,8 +1,44 @@
+import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 import type { User } from '@/types'
 import type { HireListItem } from '@/types/hire'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 import type { GoalStep } from './SuperviseeDashboardTypes'
+
+/** Where a supervisee edits their own profile (there is no `/profile` route). */
+const MY_PROFILE_HREF = '/my-profile'
+
+/**
+ * Browse page for the "Find your first supervisor" goal. Supervisees whose only stored
+ * need is Medical Director browse `/find-medical-directors` (matches the sidebar split);
+ * everyone else, including legacy profiles without stored needs, browses `/find-supervisors`.
+ */
+export function getFindFirstSupervisorHref(profile?: SuperviseeProfileData | null): string {
+  return isMedicalDirectorOnlyProfile(profile) ? '/find-medical-directors' : '/find-supervisors'
+}
+
+/** True when the only stored need is Medical Director (legacy profiles without needs are not). */
+function isMedicalDirectorOnlyProfile(profile?: SuperviseeProfileData | null): boolean {
+  const needs = profile ? getSuperviseeNeeds(profile) : []
+  return needs.length > 0 && needs.every((need) => need === MEDICAL_DIRECTOR_TYPE_NAME)
+}
+
+/** Label + description for the last goal, worded for what the supervisee is actually looking for. */
+function getFindFirstSupervisorCopy(profile?: SuperviseeProfileData | null): {
+  label: string
+  description: string
+} {
+  if (isMedicalDirectorOnlyProfile(profile)) {
+    return {
+      label: 'Find your first medical director',
+      description: 'Browse verified medical directors and send a request',
+    }
+  }
+  return {
+    label: 'Find your first supervisor',
+    description: 'Browse verified supervisors and send a request',
+  }
+}
 
 export function getInitials(name: string | null | undefined): string {
   if (!name?.trim()) return '?'
@@ -26,17 +62,29 @@ export function getSuperviseeProfileCompletion(user: User): number {
   return Math.round((checks.filter(Boolean).length / checks.length) * 100)
 }
 
-/** True when profile field is a non-empty string or a non-empty string array (API may return either). */
-function hasProfileStringList(value: string | string[] | null | undefined): boolean {
-  if (value == null) return false
-  if (Array.isArray(value)) return value.some((x) => String(x).trim().length > 0)
-  return String(value).trim().length > 0
+/** Stored supervision needs as trimmed names (API may return a string or an array). */
+function getSuperviseeNeeds(profile: SuperviseeProfileData): string[] {
+  const raw = profile.typeOfSupervisorNeeded
+  return (Array.isArray(raw) ? raw : raw ? [raw] : [])
+    .map((need) => String(need).trim())
+    .filter(Boolean)
 }
 
-/** Individual checks used for dashboard completion % and onboarding goal "profile complete". */
+/**
+ * Individual checks used for dashboard completion % and onboarding goal "profile complete".
+ * The how-soon / budget checks follow the stored needs: a supervision need is answered by
+ * `howSoonLooking` + `budgetRangeType`, a Medical Director need by the md* columns. An
+ * MD-only signup never sets the supervision-side fields, so they must not count against it.
+ */
 function getSuperviseeProfileCompletionChecks(profile: SuperviseeProfileData): boolean[] {
   const { user } = profile
-  return [
+  const needs = getSuperviseeNeeds(profile)
+  const hasMdNeed = needs.includes(MEDICAL_DIRECTOR_TYPE_NAME)
+  // Legacy profiles without stored needs are treated as supervision-only.
+  const hasNonMdNeed =
+    needs.length === 0 || needs.some((need) => need !== MEDICAL_DIRECTOR_TYPE_NAME)
+
+  const checks = [
     !!user.emailVerified,
     !!user.profilePhotoUrl,
     !!(user.fullName ?? user.firstName ?? user.lastName),
@@ -45,13 +93,22 @@ function getSuperviseeProfileCompletionChecks(profile: SuperviseeProfileData): b
     !!user.contactNumber,
     (user.stateOfLicensure?.length ?? 0) > 0,
     !!profile.title?.trim(),
-    hasProfileStringList(profile.typeOfSupervisorNeeded),
+    needs.length > 0,
     !!profile.preferredFormat,
     !!profile.availability,
-    !!profile.howSoonLooking,
-    !!profile.budgetRangeType,
     !!profile.idealSupervisor,
   ]
+  if (hasNonMdNeed) {
+    checks.push(!!profile.howSoonLooking, !!profile.budgetRangeType)
+  }
+  if (hasMdNeed) {
+    checks.push(
+      !!profile.mdPreferredOccupation,
+      !!profile.mdHowSoonLooking,
+      (profile.mdMonthlyBudget ?? 0) > 0,
+    )
+  }
+  return checks
 }
 
 /**
@@ -110,19 +167,18 @@ export function getGoalSteps(
       label: 'Verify your email',
       description: 'Confirm your email address',
       status: emailVerified ? 'done' : 'current',
-      ctaHref: '/profile',
+      ctaHref: MY_PROFILE_HREF,
     },
     {
       label: 'Complete your profile',
       description: 'Add your supervision goals and license info',
       status: profileStepDone ? 'done' : emailVerified ? 'current' : 'upcoming',
-      ctaHref: '/profile',
+      ctaHref: MY_PROFILE_HREF,
     },
     {
-      label: 'Find your first supervisor',
-      description: 'Browse verified supervisors and send a request',
+      ...getFindFirstSupervisorCopy(profile),
       status: hasMetFirstSupervisorGoal ? 'done' : readyToFindSupervisor ? 'current' : 'upcoming',
-      ctaHref: '/find-supervisors',
+      ctaHref: getFindFirstSupervisorHref(profile),
     },
   ]
 }

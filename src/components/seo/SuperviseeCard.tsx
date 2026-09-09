@@ -27,8 +27,12 @@ export function SuperviseeCard({ supervisee, index }: SuperviseeCardProps) {
     compact: true,
     emptyFallback: '',
   })
+  // The supervision budget belongs to a non-MD need. MD-only supervisees carry the
+  // backend's 0/0 defaults with no budget type, and their real budget is the MD
+  // monthly budget — so only show it when a budget type was actually chosen.
   const budget =
-    supervisee.budgetRangeStart != null || supervisee.budgetRangeEnd != null
+    supervisee.budgetRangeType &&
+    (supervisee.budgetRangeStart != null || supervisee.budgetRangeEnd != null)
       ? formatBudgetRange(
           supervisee.budgetRangeStart,
           supervisee.budgetRangeEnd,

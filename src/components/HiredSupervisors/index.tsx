@@ -202,6 +202,7 @@ export function HiredSupervisorsPage({ mode = 'supervisors' }: HiredSupervisorsP
                 key={hire.id}
                 hire={hire}
                 existingReview={reviewsByHireId.get(hire.id)}
+                isMedicalDirectors={isMedicalDirectors}
               />
             ))}
           </div>

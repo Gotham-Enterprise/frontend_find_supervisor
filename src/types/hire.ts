@@ -41,6 +41,14 @@ export interface HireUser {
     occupation: string | null
     specialty: string | null
   } | null
+  /**
+   * Every need stored on the supervisee's profile — populated for supervisees in
+   * hire lists. The hire's own `typeOfSupervisorNeeded` is only the role requested
+   * from that supervisor.
+   */
+  superviseeProfile?: {
+    typeOfSupervisorNeeded: string | string[] | null
+  } | null
 }
 
 // ─── POST /api/supervision/hires ──────────────────────────────────────────────
