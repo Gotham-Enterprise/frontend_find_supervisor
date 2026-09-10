@@ -722,7 +722,7 @@ function ProfilePreview({
       }}
       stats={[
         { value: profile.yearsOfExperience ?? '—', label: 'Yrs Exp.' },
-        { value: profile.totalCompletedSupervision ?? 0, label: 'Reviews' },
+        { value: profile.totalCompletedSupervision ?? 0, label: 'Completed' },
         {
           value: formatAvailability(profile.availability),
           label: 'Availability',

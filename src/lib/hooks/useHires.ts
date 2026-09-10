@@ -25,6 +25,7 @@ import type {
   SignAgreementPayload,
 } from '@/types/hire'
 
+import { notificationKeys } from './useNotifications'
 import { supervisorDetailKeys } from './useSupervisor'
 
 export const hireKeys = {
@@ -201,6 +202,8 @@ export function useSignAgreement() {
       signAgreement(hireId, payload),
     onSettled: async () => {
       await invalidateHireRelatedQueries(queryClient)
+      // The backend clears the "sign your agreement" notifications on sign.
+      await queryClient.invalidateQueries({ queryKey: notificationKeys.all })
     },
   })
 }

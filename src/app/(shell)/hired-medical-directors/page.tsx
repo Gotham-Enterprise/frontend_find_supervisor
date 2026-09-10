@@ -1,3 +1,5 @@
+import { Suspense } from 'react'
+
 import { HiredSupervisorsPage } from '@/components/HiredSupervisors'
 
 export const metadata = {
@@ -6,5 +8,10 @@ export const metadata = {
 }
 
 export default function HiredMedicalDirectorsRoutePage() {
-  return <HiredSupervisorsPage mode="medical-directors" />
+  // Suspense: the hire cards read ?hire=<id> via useSearchParams (agreement deep links)
+  return (
+    <Suspense fallback={null}>
+      <HiredSupervisorsPage mode="medical-directors" />
+    </Suspense>
+  )
 }

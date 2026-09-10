@@ -12,8 +12,14 @@ import { useTopbarDropdown } from '@/lib/hooks/useTopbarDropdown'
 import { cn } from '@/lib/utils'
 
 import { NotificationPanel } from './NotificationPanel'
-import type { AppNotification } from './types'
+import type { AppNotification, NotificationType } from './types'
 import { resolveNotificationRedirect } from './utils'
+
+/** Notification types that remain unread after opening — cleared server-side once actioned. */
+const STAYS_UNREAD_UNTIL_ACTIONED: ReadonlySet<NotificationType> = new Set<NotificationType>([
+  'agreement_sent',
+  'agreement_reminder',
+])
 
 /**
  * Self-contained notification bell for the dashboard topbar.
@@ -40,7 +46,11 @@ export function NotificationBell() {
   function handleNotificationOpen(notification: AppNotification) {
     const slug = notification.redirectSlug?.trim()
     if (!slug) return
-    markRead(notification.id)
+    // "Sign your agreement" notifications are the reminder: they stay unread
+    // until the agreement is signed (the backend clears them on sign).
+    if (!STAYS_UNREAD_UNTIL_ACTIONED.has(notification.type)) {
+      markRead(notification.id)
+    }
     close()
     const target = resolveNotificationRedirect(slug)
     if (target.kind === 'external') {
