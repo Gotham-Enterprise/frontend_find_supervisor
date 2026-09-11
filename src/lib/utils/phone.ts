@@ -1,6 +1,34 @@
 import { parsePhoneNumberFromString } from 'libphonenumber-js'
+import { phone as phoneLib } from 'phone'
 
 const US_COUNTRY = 'US'
+
+/**
+ * Mirrors the backend's `PhoneNumberService.validatePhoneNumber` exactly — same
+ * `phone` package and the same normalization — so signup rejects a number on
+ * step 1 only when the register API would reject it at submit. Deliberately more
+ * lenient than `isValidUSPhoneNumber` (the server does not enforce strict NANP
+ * exchange-code rules). Keep in sync with
+ * backend_job_finder/services/phone_number_service.js.
+ */
+export function isServerAcceptedPhoneNumber(input: string): boolean {
+  if (!input?.trim()) return false
+
+  let cleaned = input.trim()
+  if (!cleaned.startsWith('+')) {
+    const digits = cleaned.replace(/\D/g, '')
+    if (digits.length === 11 && digits.startsWith('1')) {
+      cleaned = '+' + digits
+    } else if (digits.length === 10) {
+      cleaned = '+1' + digits
+    } else {
+      cleaned = '+' + digits
+    }
+  }
+
+  const { isValid, countryIso3 } = phoneLib(cleaned)
+  return isValid && (countryIso3 === 'USA' || countryIso3 === 'CAN')
+}
 
 /** Max digits for US local format (area + exchange + subscriber). */
 const US_LOCAL_DIGITS = 10

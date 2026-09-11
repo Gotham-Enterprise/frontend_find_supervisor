@@ -10,6 +10,7 @@ import {
   useUser,
 } from '@/lib/hooks'
 import { useSuperviseeProfile } from '@/lib/hooks/useSuperviseeProfile'
+import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 
 import { SuperviseeDashboardContent } from './SuperviseeDashboardContent'
 import { SuperviseeDashboardSkeleton } from './SuperviseeDashboardSkeleton'
@@ -31,15 +32,32 @@ export function SuperviseeDashboard() {
     refetch: refetchUpcomingSessions,
   } = useSuperviseeUpcomingSessions()
   const {
-    data: recommendedData,
-    isLoading: recommendedLoading,
-    isError: recommendedError,
-  } = useRecommendedSupervisors({ page: 1, limit: 6 })
-  const {
     data: superviseeProfile,
     isLoading: profileLoading,
     isError: profileError,
+    isFetched: profileFetched,
   } = useSuperviseeProfile()
+
+  // Which recommendation sections apply — supervisors and Medical Directors
+  // are separate products with separate cards.
+  const needs = (superviseeProfile?.typeOfSupervisorNeeded ?? []).map((need) => need.trim())
+  const hasMdNeed = profileFetched && needs.includes(MEDICAL_DIRECTOR_TYPE_NAME)
+  // Legacy profiles without stored needs keep the general supervisors section.
+  const hasNonMdNeed =
+    !profileFetched ||
+    needs.length === 0 ||
+    needs.some((need) => need && need !== MEDICAL_DIRECTOR_TYPE_NAME)
+
+  const {
+    data: recommendedData,
+    isLoading: recommendedLoading,
+    isError: recommendedError,
+  } = useRecommendedSupervisors({ page: 1, limit: 6, mode: 'supervisors' }, hasNonMdNeed)
+  const {
+    data: recommendedMdData,
+    isLoading: recommendedMdLoading,
+    isError: recommendedMdError,
+  } = useRecommendedSupervisors({ page: 1, limit: 6, mode: 'medicalDirectors' }, hasMdNeed)
 
   // Block the full skeleton on hires data; recommended and profile load independently
   if (hiresLoading) return <SuperviseeDashboardSkeleton />
@@ -77,6 +95,11 @@ export function SuperviseeDashboard() {
         totalRecommendedCount={totalRecommendedCount}
         isRecommendedLoading={recommendedLoading}
         isRecommendedError={recommendedError}
+        showSupervisorsSection={hasNonMdNeed}
+        showMedicalDirectorsSection={hasMdNeed}
+        recommendedMedicalDirectors={recommendedMdData?.items ?? []}
+        isRecommendedMdLoading={recommendedMdLoading}
+        isRecommendedMdError={recommendedMdError}
         superviseeProfile={superviseeProfile ?? null}
         isProfileLoading={profileLoading}
         isProfileError={profileError}

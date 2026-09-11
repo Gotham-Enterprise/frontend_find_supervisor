@@ -1,5 +1,6 @@
 import type { SelectOption } from '@/lib/api/options'
 import {
+  formatCredentialWithState,
   formatLocation,
   resolveOptionLabels,
   resolveSupervisorTypeLabel,
@@ -76,7 +77,11 @@ export function SuperviseeProfileProfessional({
     <section className="border-b border-[#E5E7EB] py-8">
       <h2 className="mb-2 text-base font-semibold text-[#181818]">Credentials &amp; Background</h2>
       <div>
-        {profile.title && <Row label="Credential / Title">{profile.title}</Row>}
+        {profile.title && (
+          <Row label="Credential / Title">
+            {formatCredentialWithState(profile.title, profile.licensureState)}
+          </Row>
+        )}
         {occupation && <Row label="Occupation">{occupation}</Row>}
         {specialty && <Row label="Specialty">{specialty}</Row>}
         {supervisorTypes !== 'N/A' && (

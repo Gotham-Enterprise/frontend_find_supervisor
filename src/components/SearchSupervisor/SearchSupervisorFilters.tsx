@@ -14,6 +14,7 @@ import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { TagInput } from '@/components/ui/tag-input'
 import type { SelectOption } from '@/lib/api/options'
+import type { SupervisorSearchMode } from '@/lib/api/supervisor-search'
 import {
   useAvailabilityOptions,
   useCitiesOptions,
@@ -21,6 +22,7 @@ import {
   useSupervisorFormOptions,
   useSupervisorTypesData,
 } from '@/lib/hooks'
+import { isMedicalDirectorType } from '@/lib/utils/supervisee-eligibility'
 
 import { ActiveFilterChips } from './ActiveFilterChips'
 import type { ChipOptions } from './helpers'
@@ -45,6 +47,8 @@ interface SearchSupervisorFiltersProps {
   onApply: () => void
   /** Clears draft + applied filter state (does not clear header keyword). */
   onClearFilters: () => void
+  /** 'medical-directors' hides the irrelevant sections (occupation, license type, patient population). */
+  mode?: SupervisorSearchMode
 }
 
 function FilterLabel({ children }: { children: React.ReactNode }) {
@@ -64,7 +68,9 @@ export function SearchSupervisorFilters({
   onChange,
   onApply,
   onClearFilters,
+  mode = 'supervisors',
 }: SearchSupervisorFiltersProps) {
+  const isMedicalDirectors = mode === 'medical-directors'
   const {
     patientPopulations: {
       data: patientPopulationOptions = [],
@@ -93,11 +99,25 @@ export function SearchSupervisorFilters({
     return opts
   }, [supervisorTypesData])
 
-  // Specialty options — union of specialties across selected occupations
+  // Specialty options — union of specialties across selected occupations. On
+  // the Medical Director page there is no occupation filter, so the physician
+  // specialties list directly from the Medical Director type.
   const specialtyOptions = useMemo<SelectOption[]>(() => {
-    if (filters.supervisorOccupations.length === 0) return []
     const seen = new Set<string>()
     const opts: SelectOption[] = []
+    if (isMedicalDirectors) {
+      const mdType = supervisorTypesData.find((t) => isMedicalDirectorType(t))
+      for (const o of mdType?.occupations ?? []) {
+        for (const s of o.specialties) {
+          if (!seen.has(s.name)) {
+            seen.add(s.name)
+            opts.push({ label: s.name, value: s.name })
+          }
+        }
+      }
+      return opts
+    }
+    if (filters.supervisorOccupations.length === 0) return []
     for (const t of supervisorTypesData) {
       for (const o of t.occupations) {
         if (filters.supervisorOccupations.includes(o.name)) {
@@ -111,7 +131,7 @@ export function SearchSupervisorFilters({
       }
     }
     return opts
-  }, [filters.supervisorOccupations, supervisorTypesData])
+  }, [isMedicalDirectors, filters.supervisorOccupations, supervisorTypesData])
 
   // License Type options — union of license types across selected occupations
   // (if no occupation selected, show all unique license types)
@@ -157,6 +177,15 @@ export function SearchSupervisorFilters({
 
   useEffect(() => {
     const f = filtersRef.current
+    if (isMedicalDirectors) {
+      // No occupation cascade here; keep selections while the hierarchy loads.
+      if (specialtyOptions.length === 0) return
+      const valid = new Set(specialtyOptions.map((o) => o.value))
+      const next = f.supervisorSpecialties.filter((v) => valid.has(v))
+      if (JSON.stringify(next) === JSON.stringify(f.supervisorSpecialties)) return
+      onChange({ ...f, supervisorSpecialties: next })
+      return
+    }
     if (f.supervisorOccupations.length === 0) {
       if (f.supervisorSpecialties.length > 0) onChange({ ...f, supervisorSpecialties: [] })
       return
@@ -165,7 +194,14 @@ export function SearchSupervisorFilters({
     const next = f.supervisorSpecialties.filter((v) => valid.has(v))
     if (JSON.stringify(next) === JSON.stringify(f.supervisorSpecialties)) return
     onChange({ ...f, supervisorSpecialties: next })
-  }, [occupationsKey, specialtiesKey, specialtyValuesKey, specialtyOptions, onChange])
+  }, [
+    isMedicalDirectors,
+    occupationsKey,
+    specialtiesKey,
+    specialtyValuesKey,
+    specialtyOptions,
+    onChange,
+  ])
 
   const { data: availabilityOptions = [], isLoading: availabilityLoading } =
     useAvailabilityOptions()
@@ -238,22 +274,26 @@ export function SearchSupervisorFilters({
           <ActiveFilterChips chips={chips} onRemove={(key) => onChange(removeChip(filters, key))} />
         )}
 
-        <div>
-          <FilterLabel>Occupation</FilterLabel>
-          <TagInput
-            options={occupationOptions}
-            value={filters.supervisorOccupations}
-            onChange={(v) =>
-              onChange({
-                ...filters,
-                supervisorOccupations: v,
-                supervisorSpecialties: v.length === 0 ? [] : filters.supervisorSpecialties,
-              })
-            }
-            placeholder={hierarchyLoading ? 'Loading…' : 'Select occupations…'}
-            disabled={hierarchyLoading}
-          />
-        </div>
+        {/* Occupation/License Type are meaningless for Medical Directors
+            (single occupation, degree-typed) — hidden on that page. */}
+        {!isMedicalDirectors && (
+          <div>
+            <FilterLabel>Occupation</FilterLabel>
+            <TagInput
+              options={occupationOptions}
+              value={filters.supervisorOccupations}
+              onChange={(v) =>
+                onChange({
+                  ...filters,
+                  supervisorOccupations: v,
+                  supervisorSpecialties: v.length === 0 ? [] : filters.supervisorSpecialties,
+                })
+              }
+              placeholder={hierarchyLoading ? 'Loading…' : 'Select occupations…'}
+              disabled={hierarchyLoading}
+            />
+          </div>
+        )}
 
         <div>
           <FilterLabel>Specialty</FilterLabel>
@@ -262,24 +302,33 @@ export function SearchSupervisorFilters({
             value={filters.supervisorSpecialties}
             onChange={(v) => set('supervisorSpecialties', v)}
             placeholder={
-              filters.supervisorOccupations.length === 0
-                ? 'Select occupation first'
-                : 'Select specialties…'
+              isMedicalDirectors
+                ? hierarchyLoading
+                  ? 'Loading…'
+                  : 'Select specialties…'
+                : filters.supervisorOccupations.length === 0
+                  ? 'Select occupation first'
+                  : 'Select specialties…'
             }
-            disabled={filters.supervisorOccupations.length === 0 || hierarchyLoading}
+            disabled={
+              hierarchyLoading ||
+              (!isMedicalDirectors && filters.supervisorOccupations.length === 0)
+            }
           />
         </div>
 
-        <div>
-          <FilterLabel>License Type</FilterLabel>
-          <TagInput
-            options={licenseTypeOptions}
-            value={filters.licenseTypes}
-            onChange={(v) => set('licenseTypes', v)}
-            placeholder={hierarchyLoading ? 'Loading…' : 'Select license types…'}
-            disabled={hierarchyLoading}
-          />
-        </div>
+        {!isMedicalDirectors && (
+          <div>
+            <FilterLabel>License Type</FilterLabel>
+            <TagInput
+              options={licenseTypeOptions}
+              value={filters.licenseTypes}
+              onChange={(v) => set('licenseTypes', v)}
+              placeholder={hierarchyLoading ? 'Loading…' : 'Select license types…'}
+              disabled={hierarchyLoading}
+            />
+          </div>
+        )}
 
         <div>
           <FilterLabel>State License</FilterLabel>
@@ -398,25 +447,28 @@ export function SearchSupervisorFilters({
           />
         </div>
 
-        <div>
-          <FilterLabel>Patient Population</FilterLabel>
-          {populationsLoading ? (
-            <div className="flex flex-wrap gap-1.5">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-7 w-16 animate-pulse rounded-md bg-muted" />
-              ))}
-            </div>
-          ) : populationsError ? (
-            <FilterError message="Unable to load population options." />
-          ) : (
-            <TagInput
-              options={patientPopulationOptions}
-              value={filters.patientPopulation}
-              onChange={(v) => set('patientPopulation', v)}
-              placeholder="Select populations…"
-            />
-          )}
-        </div>
+        {/* Not part of the medical-directorship search. */}
+        {!isMedicalDirectors && (
+          <div>
+            <FilterLabel>Patient Population</FilterLabel>
+            {populationsLoading ? (
+              <div className="flex flex-wrap gap-1.5">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-7 w-16 animate-pulse rounded-md bg-muted" />
+                ))}
+              </div>
+            ) : populationsError ? (
+              <FilterError message="Unable to load population options." />
+            ) : (
+              <TagInput
+                options={patientPopulationOptions}
+                value={filters.patientPopulation}
+                onChange={(v) => set('patientPopulation', v)}
+                placeholder="Select populations…"
+              />
+            )}
+          </div>
+        )}
 
         <div>
           <FilterLabel>Availability</FilterLabel>

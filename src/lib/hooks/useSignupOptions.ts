@@ -67,9 +67,11 @@ export function useBudgetTypeOptions() {
 
 /**
  * Occupation dropdown options from GET /api/categories/occupations (same as job_finder `useOccupations`).
+ * `includeAll` also returns `isDropdown=false` rows — required for the supervision-only
+ * supervisee occupations, which are hidden from the job-board dropdown.
  */
-export function useOccupationOptions() {
-  const q = useOccupations({ limit: 0 })
+export function useOccupationOptions(params?: { includeAll?: boolean }) {
+  const q = useOccupations({ limit: 0, ...params })
   return {
     ...q,
     data: q.data?.data?.map((o) => ({ label: o.name, value: String(o.id) })),
@@ -136,7 +138,8 @@ export function useSuperviseeFormOptions() {
   const supervisorTypes = useSupervisorTypeOptions()
   const supervisorTypesData = useSupervisorTypesData()
   const salaryRanges = useSalaryRangesOptions()
-  const occupations = useOccupationOptions()
+  // Supervisee occupations are supervision-only rows hidden from the job board
+  const occupations = useOccupationOptions({ includeAll: true })
 
   return {
     availability,

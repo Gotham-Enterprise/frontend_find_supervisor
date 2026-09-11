@@ -17,6 +17,8 @@ import { PhoneInput } from '@/components/ui/PhoneInput'
 import type { SelectOption } from '@/lib/api/options'
 
 type SupervisorStepAccountProps = {
+  /** MD signup shows physician-style credential examples. */
+  isMedicalDirector?: boolean
   stateOptions: SelectOption[]
   cityOptions: SelectOption[]
   statesLoading: boolean
@@ -34,6 +36,7 @@ export function SupervisorStepAccount({
   statesError,
   citiesError,
   isSubmitting,
+  isMedicalDirector = false,
 }: SupervisorStepAccountProps) {
   const { control } = useFormContext<SupervisorFormValues>()
   const stateValue = useWatch({ control, name: 'state' }) ?? ''
@@ -72,7 +75,6 @@ export function SupervisorStepAccount({
           label="Full Name"
           rules={supervisorFieldRules('fullName')}
           placeholder="Enter Full Name"
-          autoCapitalizePersonName
           isSubmitting={isSubmitting}
           required
         />
@@ -86,7 +88,7 @@ export function SupervisorStepAccount({
             </>
           }
           rules={supervisorFieldRules('professionalCredentials')}
-          placeholder="Ph.D., NCC, LPC-S (AL)"
+          placeholder={isMedicalDirector ? 'MD, DO' : 'Ph.D., NCC, LPC-S (AL)'}
           description={PROFESSIONAL_CREDENTIALS_HELPER_TEXT}
           maxLength={PROFESSIONAL_CREDENTIALS_MAX_LENGTH}
           normalizeEmptyToString
@@ -137,7 +139,7 @@ export function SupervisorStepAccount({
           name="password"
           label="Password"
           rules={supervisorFieldRules('password')}
-          placeholder="Min. 8 characters"
+          placeholder="Min. 8 Characters"
           passwordToggle
           isSubmitting={isSubmitting}
           required
@@ -147,7 +149,7 @@ export function SupervisorStepAccount({
           name="confirmPassword"
           label="Confirm Password"
           rules={supervisorFieldRules('confirmPassword')}
-          placeholder="Re-enter your password"
+          placeholder="Re-enter Your Password"
           passwordToggle
           isSubmitting={isSubmitting}
           required
@@ -163,7 +165,7 @@ export function SupervisorStepAccount({
           rules={supervisorFieldRules('city')}
           options={cityOptions}
           placeholder={
-            !stateValue ? 'Select a state first' : citiesLoading ? 'Loading…' : 'Select city'
+            !stateValue ? 'Select a State First' : citiesLoading ? 'Loading…' : 'Select City'
           }
           disabled={!stateValue || citiesLoading}
           selectKey={stateValue || 'no-state'}
@@ -190,7 +192,7 @@ export function SupervisorStepAccount({
           searchable
           rules={supervisorFieldRules('state')}
           options={stateOptions}
-          placeholder="Select state"
+          placeholder="Select State"
           loading={statesLoading}
           required
           isSubmitting={isSubmitting}

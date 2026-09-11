@@ -214,7 +214,6 @@ export function MakeConnectionModal({
               name="fullName"
               label="Full Name"
               required
-              autoCapitalizePersonName
               autoComplete="name"
               disabled={contactFieldsDisabled}
               isSubmitting={isSubmitting}

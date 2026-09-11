@@ -169,9 +169,8 @@ export async function fetchPublicSupervisors(
     if (params.keywords?.trim()) query.set('keywords', params.keywords.trim())
     query.set('page', String(params.page ?? 1))
     query.set('limit', String(params.limit ?? 20))
-    // Always send acceptingSupervisees=true for public SEO pages.
-    // The backend defaults this param to `false` when omitted, which would
-    // incorrectly filter OUT supervisors who are accepting new supervisees.
+    // Public SEO pages only list supervisors who are open to new supervisees.
+    // (true = restrict to accepting; omitted applies no filter server-side.)
     query.set('acceptingSupervisees', 'true')
 
     const url = `${API_BASE_URL}/supervision/search?${query.toString()}`

@@ -73,9 +73,28 @@ export const metadata: Metadata = {
   },
 }
 
+/**
+ * Pre-paint guard for landing-page hash links (/#features etc.): hides the body
+ * until ScrollToHash has positioned the section, so the visitor never sees the
+ * top of the page flash before the jump. The timeout is a safety net that
+ * reveals the page even if the section never renders.
+ */
+const HASH_SCROLL_GUARD = `
+if (location.pathname === '/' && location.hash.length > 1) {
+  document.documentElement.setAttribute('data-hash-scroll-pending', '');
+  setTimeout(function () {
+    document.documentElement.removeAttribute('data-hash-scroll-pending');
+  }, 3000);
+}
+`
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={cn('font-sans', geist.variable)}>
+      <head>
+        <style>{`html[data-hash-scroll-pending] body { visibility: hidden; }`}</style>
+        <script dangerouslySetInnerHTML={{ __html: HASH_SCROLL_GUARD }} />
+      </head>
       <body className="antialiased">
         <Providers>{children}</Providers>
       </body>

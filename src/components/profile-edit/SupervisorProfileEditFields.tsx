@@ -7,10 +7,15 @@ import { useWatch } from 'react-hook-form'
 import { LicenseEntriesField } from '@/components/forms/LicenseEntriesField'
 import { ProfilePhotoField } from '@/components/profile-photo/ProfilePhotoField'
 import {
+  OFFERING_SUPERVISOR_TYPE_NAMES,
+  type OfferingKey,
   PROFESSIONAL_CREDENTIALS_HELPER_TEXT,
   PROFESSIONAL_CREDENTIALS_MAX_LENGTH,
   yearsOfExperienceOptions,
 } from '@/components/Signup/schema'
+import { BoardCertificationEntriesField } from '@/components/Signup/SupervisorSignupForm/BoardCertificationEntriesField'
+import { OfferingCredentialsFields } from '@/components/Signup/SupervisorSignupForm/OfferingCredentialsFields'
+import { Checkbox } from '@/components/ui/checkbox'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { FormInputField } from '@/components/ui/form-input-field'
 import { FormSelectField } from '@/components/ui/form-select-field'
@@ -18,6 +23,7 @@ import { PhoneInput } from '@/components/ui/PhoneInput'
 import { Switch } from '@/components/ui/switch'
 import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
+import { UploadFile } from '@/components/ui/upload-file'
 import type { SelectOption } from '@/lib/api/options'
 import {
   type EditSupervisorProfileFormValues,
@@ -33,6 +39,12 @@ import {
   useStatesOptions,
   useSupervisorTypesData,
 } from '@/lib/hooks'
+import {
+  isMedicalDirectorType,
+  resolveSupervisorTypeCode,
+  supervisionTypeDisplayLabel,
+  SUPERVISOR_TYPE_CODES,
+} from '@/lib/utils/supervisee-eligibility'
 import {
   getSupervisorCredentialSelectOptions,
   isMonthlyOnlySupervisorType,
@@ -104,11 +116,54 @@ export function SupervisorProfileEditFields({
   const supervisorTypeWatch = useWatch({ control: form.control, name: 'supervisorType' }) ?? ''
   const supervisorOccupationWatch =
     useWatch({ control: form.control, name: 'supervisorOccupation' }) ?? ''
+  const offerSupervisingPhysician =
+    useWatch({ control: form.control, name: 'offerSupervisingPhysician' }) ?? false
+  const offerCollaboratingPhysician =
+    useWatch({ control: form.control, name: 'offerCollaboratingPhysician' }) ?? false
+  const boardCertified = useWatch({ control: form.control, name: 'boardCertified' }) ?? false
+
+  // Medical Director profiles cannot switch type (dedicated signup path);
+  // conversely no other profile may switch INTO Medical Director from edit.
+  const isMedicalDirectorProfile = isMedicalDirectorType({
+    name: profile.supervisorType ?? '',
+  })
 
   const supervisorTypeOptions = useMemo<SelectOption[]>(
-    () => supervisorTypesData.map((t) => ({ label: t.name, value: t.name })),
+    () =>
+      supervisorTypesData
+        .filter((t) => isMedicalDirectorProfile || !isMedicalDirectorType(t))
+        // Labels use the shared display override; the stored value stays the type name.
+        .map((t) => ({ label: supervisionTypeDisplayLabel(t.name), value: t.name })),
+    [supervisorTypesData, isMedicalDirectorProfile],
+  )
+
+  const medicalDirectorType = useMemo(
+    () => supervisorTypesData.find((t) => isMedicalDirectorType(t)),
     [supervisorTypesData],
   )
+  const supervisingType = useMemo(
+    () =>
+      supervisorTypesData.find(
+        (t) => resolveSupervisorTypeCode(t) === SUPERVISOR_TYPE_CODES.SUPERVISING_PHYSICIAN,
+      ),
+    [supervisorTypesData],
+  )
+  const collaboratingType = useMemo(
+    () =>
+      supervisorTypesData.find(
+        (t) => resolveSupervisorTypeCode(t) === SUPERVISOR_TYPE_CODES.COLLABORATING_PHYSICIAN,
+      ),
+    [supervisorTypesData],
+  )
+
+  // Physician specialties for board certifications — independent of the chosen
+  // occupation (every MD-type occupation carries the same specialty list).
+  const boardCertSpecialtyOptions = useMemo<SelectOption[]>(() => {
+    const source = medicalDirectorType?.occupations.find(
+      (occupation) => occupation.specialties.length > 0,
+    )
+    return source?.specialties.map((s) => ({ label: s.name, value: s.name })) ?? []
+  }, [medicalDirectorType])
 
   const supervisionOccupationOptions = useMemo<SelectOption[]>(() => {
     if (!supervisorTypeWatch) return []
@@ -194,7 +249,6 @@ export function SupervisorProfileEditFields({
             label="Full Name"
             required
             placeholder="Enter Full Name"
-            autoCapitalizePersonName
             isSubmitting={isSubmitting}
           />
           <FormField
@@ -308,31 +362,39 @@ export function SupervisorProfileEditFields({
         <legend className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           License &amp; Credentials
         </legend>
-        <FormSelectField
-          control={form.control}
-          name="supervisorType"
-          label="Supervisor Type"
-          required
-          options={supervisorTypeOptions}
-          placeholder={supervisorTypesLoading ? 'Loading…' : 'Select supervisor type'}
-          loading={supervisorTypesLoading}
-          isSubmitting={isSubmitting}
-          emptySentinel={{ value: '__none__', label: 'None' }}
-          onValueChange={() => {
-            form.setValue('supervisorOccupation', '')
-            form.setValue('supervisorSpecialty', '')
-            form.setValue('degreeType', '')
-            form.setValue('certification', [])
-            resetLicenseEntryTypes()
-            form.clearErrors([
-              'supervisorOccupation',
-              'supervisorSpecialty',
-              'degreeType',
-              'certification',
-              'licenses',
-            ])
-          }}
-        />
+        <div>
+          <FormSelectField
+            control={form.control}
+            name="supervisorType"
+            label="Supervisor Type"
+            required
+            options={supervisorTypeOptions}
+            placeholder={supervisorTypesLoading ? 'Loading…' : 'Select supervisor type'}
+            loading={supervisorTypesLoading}
+            disabled={isMedicalDirectorProfile}
+            isSubmitting={isSubmitting}
+            emptySentinel={{ value: '__none__', label: 'None' }}
+            onValueChange={() => {
+              form.setValue('supervisorOccupation', '')
+              form.setValue('supervisorSpecialty', '')
+              form.setValue('degreeType', '')
+              form.setValue('certification', [])
+              resetLicenseEntryTypes()
+              form.clearErrors([
+                'supervisorOccupation',
+                'supervisorSpecialty',
+                'degreeType',
+                'certification',
+                'licenses',
+              ])
+            }}
+          />
+          {isMedicalDirectorProfile ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              The supervisor type cannot be changed for Medical Directors.
+            </p>
+          ) : null}
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormSelectField
             control={form.control}
@@ -359,6 +421,7 @@ export function SupervisorProfileEditFields({
             name="supervisorSpecialty"
             label="Specialty"
             options={supervisionSpecialtyOptions}
+            sortOptions
             placeholder="Select specialty (optional)"
             loading={supervisorTypesLoading}
             disabled={supervisorTypesLoading || !supervisorOccupationWatch}
@@ -396,6 +459,38 @@ export function SupervisorProfileEditFields({
           isSubmitting={isSubmitting}
           entriesNeedingReview={licenseEntriesNeedingReview}
         />
+
+        {/* Optional replacement for the license/verification document stored at
+            signup — the backend keeps the existing file when none is chosen. */}
+        <FormField
+          control={form.control}
+          name="licenseDoc"
+          render={({ field: { value, onChange, onBlur, ref } }) => (
+            <FormItem>
+              <FormLabel>License or Verification Document (optional)</FormLabel>
+              <FormControl>
+                <UploadFile
+                  inputRef={ref}
+                  value={value}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/*"
+                  uploadTitle="Upload license or verification document"
+                  uploadHint="PDF, JPG, or PNG (max 5 MB) · Click to browse"
+                  removeFileAriaLabel="Remove license document"
+                  disabled={isSubmitting}
+                />
+              </FormControl>
+              {profile.licenseFileName && !(value instanceof File) ? (
+                <p className="text-sm text-muted-foreground">
+                  Current document: <span className="font-medium">{profile.licenseFileName}</span> —
+                  upload a new file to replace it.
+                </p>
+              ) : null}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           <FormSelectField
             control={form.control}
@@ -414,70 +509,184 @@ export function SupervisorProfileEditFields({
             isSubmitting={isSubmitting}
           />
         </div>
-        <FormField
-          control={form.control}
-          name="certification"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Certifications
-                {!physicianSupervisorType ? <span className="text-destructive"> *</span> : null}
-              </FormLabel>
-              <FormControl>
-                <div
-                  title={
-                    physicianSupervisorType ? PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE : undefined
-                  }
-                >
-                  <TagInput
-                    options={certificationOptions}
-                    value={field.value ?? []}
-                    onChange={field.onChange}
-                    placeholder={
+        {!isMedicalDirectorProfile ? (
+          <FormField
+            control={form.control}
+            name="certification"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Certifications
+                  {!physicianSupervisorType ? <span className="text-destructive"> *</span> : null}
+                </FormLabel>
+                <FormControl>
+                  <div
+                    title={
                       physicianSupervisorType
-                        ? 'Not applicable for this supervisor type'
-                        : 'Select Certifications...'
+                        ? PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE
+                        : undefined
                     }
-                    disabled={physicianSupervisorType || isSubmitting}
-                  />
-                </div>
-              </FormControl>
-              {physicianSupervisorType ? (
-                <p className="text-xs text-muted-foreground">
-                  {PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE}
-                </p>
-              ) : null}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                  >
+                    <TagInput
+                      options={certificationOptions}
+                      value={field.value ?? []}
+                      onChange={field.onChange}
+                      placeholder={
+                        physicianSupervisorType
+                          ? 'Not applicable for this supervisor type'
+                          : 'Select Certifications...'
+                      }
+                      disabled={physicianSupervisorType || isSubmitting}
+                    />
+                  </div>
+                </FormControl>
+                {physicianSupervisorType ? (
+                  <p className="text-xs text-muted-foreground">
+                    {PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE}
+                  </p>
+                ) : null}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ) : null}
       </fieldset>
+
+      {isMedicalDirectorProfile ? (
+        <fieldset className="space-y-4">
+          <legend className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Board Certification
+          </legend>
+          <FormField
+            control={form.control}
+            name="boardCertified"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Board Certified?</FormLabel>
+                <FormControl>
+                  <div className="flex h-10 items-center justify-between rounded-lg border border-input bg-card px-3">
+                    <span className="text-sm text-muted-foreground">
+                      {field.value ? 'Yes' : 'No'}
+                    </span>
+                    <Switch
+                      checked={field.value ?? false}
+                      disabled={isSubmitting}
+                      onCheckedChange={(checked) => {
+                        field.onChange(checked)
+                        if (!checked) form.clearErrors('boardCertifications')
+                      }}
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          {boardCertified ? (
+            <BoardCertificationEntriesField
+              specialtyOptions={boardCertSpecialtyOptions}
+              specialtiesLoading={supervisorTypesLoading}
+              isSubmitting={isSubmitting}
+            />
+          ) : null}
+        </fieldset>
+      ) : null}
+
+      {isMedicalDirectorProfile ? (
+        <fieldset className="space-y-4">
+          <legend className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Additional Physician Offerings
+          </legend>
+          <p className="text-sm text-muted-foreground">
+            Also offer your services as a Supervising and/or Collaborating Physician. Each offering
+            requires its own credentials.
+          </p>
+          {[
+            {
+              key: 'supervising' as OfferingKey,
+              fieldName: 'offerSupervisingPhysician' as const,
+              typeData: supervisingType,
+              checked: offerSupervisingPhysician,
+            },
+            {
+              key: 'collaborating' as OfferingKey,
+              fieldName: 'offerCollaboratingPhysician' as const,
+              typeData: collaboratingType,
+              checked: offerCollaboratingPhysician,
+            },
+          ].map(({ key, fieldName, typeData, checked }) => (
+            <div key={key} className="space-y-4">
+              <FormField
+                control={form.control}
+                name={fieldName}
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-start gap-3">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value ?? false}
+                          disabled={isSubmitting}
+                          onCheckedChange={(isChecked) => {
+                            field.onChange(isChecked === true)
+                            if (isChecked !== true) form.clearErrors(`offerings.${key}`)
+                          }}
+                          className="mt-0.5 shrink-0"
+                        />
+                      </FormControl>
+                      <p className="text-sm font-medium text-foreground">
+                        Offer as {OFFERING_SUPERVISOR_TYPE_NAMES[key]}
+                      </p>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {checked ? (
+                <OfferingCredentialsFields
+                  offeringKey={key}
+                  title={`${OFFERING_SUPERVISOR_TYPE_NAMES[key]} Credentials`}
+                  typeData={typeData}
+                  stateOptions={stateOptions}
+                  supervisorTypesLoading={supervisorTypesLoading}
+                  isSubmitting={isSubmitting}
+                />
+              ) : null}
+            </div>
+          ))}
+        </fieldset>
+      ) : null}
 
       <fieldset className="space-y-4">
         <legend className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Practice Details
         </legend>
-        <FormField
-          control={form.control}
-          name="patientPopulation"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Patient Population <span className="text-destructive">*</span>
-              </FormLabel>
-              <FormControl>
-                <TagInput
-                  options={patientPopulationOptions}
-                  value={field.value ?? []}
-                  onChange={field.onChange}
-                  placeholder="Select Patient Populations..."
-                  disabled={isSubmitting}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Clinical-supervision field — a plain Medical Director (no physician
+            offerings) has no patient population. */}
+        {(!isMedicalDirectorProfile ||
+          offerSupervisingPhysician ||
+          offerCollaboratingPhysician) && (
+          <FormField
+            control={form.control}
+            name="patientPopulation"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Patient Population <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <TagInput
+                    options={patientPopulationOptions}
+                    value={field.value ?? []}
+                    onChange={field.onChange}
+                    placeholder="Select Patient Populations..."
+                    disabled={isSubmitting}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
           <FormSelectField
             control={form.control}

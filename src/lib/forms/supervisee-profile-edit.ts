@@ -18,7 +18,7 @@ export const SUPERVISEE_PROFILE_FORMAT_OPTIONS = [
 ] as const
 
 export const SUPERVISEE_PROFILE_BUDGET_TYPE_OPTIONS = [
-  { label: 'Per Session', value: 'PER_SESSION' },
+  { label: 'Hourly', value: 'HOURLY' },
   { label: 'Monthly', value: 'MONTHLY' },
 ] as const
 
@@ -39,6 +39,8 @@ export const editSuperviseeProfileSchema = z
     occupationId: z.string().min(1, 'Occupation is required'),
     specialtyId: z.string().optional(),
     title: z.string().min(1, 'Credential or license type is required').max(100),
+    // State tied to the credential (US state abbreviation, e.g. "TX") — matches signup
+    licensureState: z.string().min(1, 'State of licensure is required'),
     stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
     // Required unless `needsMedicalDirector` is checked — enforced in the superRefine below.
     typeOfSupervisorNeeded: z.string(),
@@ -48,17 +50,29 @@ export const editSuperviseeProfileSchema = z
     // Required only when a supervision type is selected (it cascades from the type).
     superviseeOccupation: z.string(),
     superviseeSpecialty: z.string().optional(),
-    howSoonLooking: z.string().min(1, 'Please select how soon you need a supervisor'),
+    // Supervision-only preferences — required only when a supervision type is
+    // selected (hidden for an MD-only profile); enforced in the superRefine below.
+    howSoonLooking: z.string(),
     lookingDate: z.string().optional(),
     preferredFormat: z.string().min(1, 'Preferred format is required'),
     availability: z.string().min(1, 'Availability is required'),
     idealSupervisor: z.string().min(1, 'Description of ideal supervisor is required').max(500),
-    stateTheyAreLookingIn: z
-      .array(z.string())
-      .min(1, 'Please select at least one state you are looking in'),
-    budgetRangeType: z.string().min(1, 'Budget type is required'),
+    budgetRangeType: z.string(),
     budgetRangeStart: z.preprocess(normalizeNumberFieldInput, z.number().min(0).optional()),
     budgetRangeEnd: z.preprocess(normalizeNumberFieldInput, z.number().min(0).optional()),
+    // Medical Director need preferences (md* columns) — required only when the
+    // checkbox is ticked; enforced in the superRefine below.
+    mdPreferredOccupation: z.string(),
+    mdPreferredSpecialty: z.string().optional(),
+    mdHowSoonLooking: z.string(),
+    mdLookingDate: z.string().optional(),
+    mdMonthlyBudget: z.preprocess(
+      normalizeNumberFieldInput,
+      z.number().min(1, 'Monthly budget must be at least $1').optional(),
+    ),
+    mdIdealDescription: z.string().max(500, 'Must be 500 characters or less').optional(),
+    // Optional self introduction (separate from idealSupervisor)
+    introduction: z.string().max(500, 'Must be 500 characters or less').optional(),
     uploadProfilePhoto: z.any().optional(),
   })
   .superRefine((data, ctx) => {
@@ -82,6 +96,59 @@ export const editSuperviseeProfileSchema = z
         path: ['superviseeOccupation'],
         message: 'Occupation is required',
       })
+    }
+    if (data.typeOfSupervisorNeeded) {
+      if (!data.howSoonLooking) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['howSoonLooking'],
+          message: 'Please select how soon you need a supervisor',
+        })
+      }
+      if (!data.budgetRangeType) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['budgetRangeType'],
+          message: 'Budget type is required',
+        })
+      }
+    }
+    if (data.needsMedicalDirector) {
+      if (!data.mdHowSoonLooking) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['mdHowSoonLooking'],
+          message: 'Please select how soon you need a medical director',
+        })
+      }
+      if (data.mdHowSoonLooking === 'CUSTOM_DATE' && !data.mdLookingDate) {
+        ctx.addIssue({ code: 'custom', path: ['mdLookingDate'], message: 'Please select a date' })
+      }
+      if (data.mdMonthlyBudget == null) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['mdMonthlyBudget'],
+          message: 'Please enter your monthly budget for a medical director',
+        })
+      }
+      // Own MD description only in the combined case — an MD-only profile's
+      // single About description serves the MD need (mirrors signup).
+      if (data.typeOfSupervisorNeeded) {
+        const mdDescription = (data.mdIdealDescription ?? '').trim()
+        if (!mdDescription) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['mdIdealDescription'],
+            message: 'Please describe your ideal medical director',
+          })
+        } else if (mdDescription.length < 20) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['mdIdealDescription'],
+            message: 'Description must be at least 20 characters',
+          })
+        }
+      }
     }
   })
 
@@ -110,6 +177,7 @@ export function getDefaultSuperviseeProfileFormValues(
     occupationId: defaultOccupationId,
     specialtyId: defaultSpecialtyId,
     title: profile.title ?? '',
+    licensureState: profile.licensureState ?? '',
     stateOfLicensure: profile.user.stateOfLicensure ?? [],
     typeOfSupervisorNeeded:
       storedSupervisionTypes.find((name) => !isMedicalDirectorType({ name })) ?? '',
@@ -121,10 +189,17 @@ export function getDefaultSuperviseeProfileFormValues(
     preferredFormat: profile.preferredFormat ?? '',
     availability: profile.availability ?? '',
     idealSupervisor: profile.idealSupervisor ?? '',
-    stateTheyAreLookingIn: coerceStringList(profile.stateTheyAreLookingIn),
     budgetRangeType: profile.budgetRangeType ?? '',
     budgetRangeStart: profile.budgetRangeStart ?? undefined,
     budgetRangeEnd: profile.budgetRangeEnd ?? undefined,
+    mdPreferredOccupation: profile.mdPreferredOccupation ?? '',
+    mdPreferredSpecialty: profile.mdPreferredSpecialty ?? '',
+    mdHowSoonLooking: profile.mdHowSoonLooking ?? '',
+    mdLookingDate: profile.mdLookingDate ? profile.mdLookingDate.slice(0, 10) : '',
+    // 0 is the column default, not a real budget
+    mdMonthlyBudget: profile.mdMonthlyBudget || undefined,
+    mdIdealDescription: profile.mdIdealDescription ?? '',
+    introduction: profile.introduction ?? '',
     uploadProfilePhoto: undefined,
   }
 }
@@ -154,23 +229,48 @@ export function superviseeProfileFormValuesToPayload(
     occupation: values.occupationId || undefined,
     specialty: values.specialtyId || undefined,
     title: values.title.trim() || undefined,
+    licensureState: values.licensureState || undefined,
     stateOfLicensure: values.stateOfLicensure,
     typeOfSupervisorNeeded: supervisionTypes.length > 0 ? supervisionTypes : undefined,
     // '' (not undefined) when cleared, so the backend nulls the stored value — e.g. a
     // Medical Director-only request must not keep the previous type's occupation/specialty
     superviseeOccupation: values.superviseeOccupation,
     superviseeSpecialty: values.superviseeSpecialty ?? '',
-    howSoonLooking: values.howSoonLooking || undefined,
+    // Supervision-side preferences are sent only while a supervision type is
+    // selected — for an MD-only profile the hidden fields stay untouched.
+    howSoonLooking: values.typeOfSupervisorNeeded ? values.howSoonLooking || undefined : undefined,
     lookingDate:
-      values.howSoonLooking === 'CUSTOM_DATE' ? values.lookingDate || undefined : undefined,
+      values.typeOfSupervisorNeeded && values.howSoonLooking === 'CUSTOM_DATE'
+        ? values.lookingDate || undefined
+        : undefined,
     preferredFormat: values.preferredFormat || undefined,
     availability: values.availability || undefined,
     idealSupervisor: values.idealSupervisor || undefined,
-    stateTheyAreLookingIn:
-      values.stateTheyAreLookingIn.length > 0 ? values.stateTheyAreLookingIn : undefined,
-    budgetRangeType: values.budgetRangeType || undefined,
-    budgetRangeStart: values.budgetRangeStart,
-    budgetRangeEnd: values.budgetRangeEnd,
+    budgetRangeType: values.typeOfSupervisorNeeded
+      ? values.budgetRangeType || undefined
+      : undefined,
+    // Monthly budgets are a single amount stored in `budgetRangeEnd`; `start` is 0
+    budgetRangeStart: values.typeOfSupervisorNeeded
+      ? values.budgetRangeType === 'MONTHLY'
+        ? 0
+        : values.budgetRangeStart
+      : undefined,
+    budgetRangeEnd: values.typeOfSupervisorNeeded ? values.budgetRangeEnd : undefined,
+    // Medical Director preferences — the backend clears the md* columns itself
+    // when the submitted needs no longer include Medical Director.
+    mdPreferredOccupation: values.mdPreferredOccupation,
+    mdPreferredSpecialty: values.mdPreferredSpecialty ?? '',
+    mdHowSoonLooking: values.mdHowSoonLooking || undefined,
+    mdLookingDate:
+      values.mdHowSoonLooking === 'CUSTOM_DATE' ? values.mdLookingDate || undefined : undefined,
+    mdMonthlyBudget: values.mdMonthlyBudget,
+    // Combined profiles have their own MD description; an MD-only profile
+    // reuses the About description (mirrors the signup payload builder)
+    mdIdealDescription: values.typeOfSupervisorNeeded
+      ? values.mdIdealDescription?.trim() || undefined
+      : values.idealSupervisor.trim() || undefined,
+    // '' (not undefined) so an erased introduction clears the stored value
+    introduction: values.introduction?.trim() ?? '',
     uploadProfilePhoto:
       values.uploadProfilePhoto instanceof File ? values.uploadProfilePhoto : undefined,
   }

@@ -2,44 +2,49 @@
 
 import { useFormContext, useWatch } from 'react-hook-form'
 
-import { FormSection } from '@/components/Signup/FormSection'
 import { type SuperviseeFormValues } from '@/components/Signup/schema'
 import { superviseeFieldRules } from '@/components/Signup/superviseeFieldRules'
 import { Checkbox } from '@/components/ui/checkbox'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
 
+import type { SuperviseeSignupVariant } from './index'
+
 type SuperviseeStepProfileTermsProps = {
+  variant?: SuperviseeSignupVariant
   isSubmitting: boolean
 }
 
-export function SuperviseeStepProfileTerms({ isSubmitting }: SuperviseeStepProfileTermsProps) {
+/** Step 3: optional self introduction + the agreement checkboxes. */
+export function SuperviseeStepProfileTerms({
+  variant = 'supervisee',
+  isSubmitting,
+}: SuperviseeStepProfileTermsProps) {
+  const isNeedMedicalDirector = variant === 'need-medical-director'
   const { control } = useFormContext<SuperviseeFormValues>()
-  const descriptionValue = useWatch({ control, name: 'description' }) ?? ''
+  const introductionValue = useWatch({ control, name: 'introduction' }) ?? ''
 
   return (
-    <FormSection title="Ideal Supervisor & Terms">
+    <>
       <FormField
         control={control}
-        name="description"
-        rules={superviseeFieldRules('description')}
+        name="introduction"
+        rules={superviseeFieldRules('introduction')}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>
-              Description of Ideal Supervisor <span className="text-destructive">*</span>
-            </FormLabel>
+            <FormLabel>Introduce Yourself (optional)</FormLabel>
             <FormControl>
               <Textarea
                 rows={4}
-                placeholder="Describe your ideal supervisor…"
                 maxLength={500}
                 disabled={isSubmitting}
                 {...field}
+                value={field.value ?? ''}
               />
             </FormControl>
             <div className="flex justify-end">
               <span className="text-xs text-muted-foreground">
-                {descriptionValue.length} / 500 characters
+                {introductionValue.length} / 500 characters
               </span>
             </div>
             <FormMessage />
@@ -47,7 +52,7 @@ export function SuperviseeStepProfileTerms({ isSubmitting }: SuperviseeStepProfi
         )}
       />
 
-      <div className="space-y-4 pt-2">
+      <div className="space-y-4">
         <FormField
           control={control}
           name="agreedToPost"
@@ -66,7 +71,8 @@ export function SuperviseeStepProfileTerms({ isSubmitting }: SuperviseeStepProfi
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   I agree to post my profile on{' '}
                   <span className="font-semibold text-primary">Gotham Enterprises Ltd</span> and
-                  agree to be contacted by a prospective supervisor via email, messages on{' '}
+                  agree to be contacted by a prospective{' '}
+                  {isNeedMedicalDirector ? 'medical director' : 'supervisor'} via email, messages on{' '}
                   <span className="font-semibold text-primary">Gotham Enterprises Ltd</span>, SMS
                   text, and phone.
                 </p>
@@ -92,8 +98,16 @@ export function SuperviseeStepProfileTerms({ isSubmitting }: SuperviseeStepProfi
                   />
                 </FormControl>
                 <p className="text-sm leading-relaxed text-muted-foreground">
-                  I agree to all of the terms and conditions of use on{' '}
-                  <span className="font-semibold text-primary">Gotham Enterprises Ltd</span>.
+                  I agree to the{' '}
+                  <a
+                    href="/terms-of-service"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-primary hover:underline"
+                  >
+                    Terms of Service
+                  </a>{' '}
+                  of <span className="font-semibold text-primary">Gotham Enterprises Ltd</span>.
                 </p>
               </div>
               <FormMessage />
@@ -101,6 +115,6 @@ export function SuperviseeStepProfileTerms({ isSubmitting }: SuperviseeStepProfi
           )}
         />
       </div>
-    </FormSection>
+    </>
   )
 }

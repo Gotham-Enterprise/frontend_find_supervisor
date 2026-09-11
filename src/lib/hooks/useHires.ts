@@ -7,6 +7,7 @@ import {
   cancelHire,
   getAgreement,
   getSuperviseeUpcomingSessions,
+  type HiresListMode,
   hireSupervisor,
   listHires,
   markHireAsCompleted,
@@ -24,6 +25,7 @@ import type {
   SignAgreementPayload,
 } from '@/types/hire'
 
+import { notificationKeys } from './useNotifications'
 import { supervisorDetailKeys } from './useSupervisor'
 
 export const hireKeys = {
@@ -63,10 +65,15 @@ export function useHireSupervisor() {
   })
 }
 
-export function useHiresList(page = 1, limit = 10, status?: HireStatus | HireStatus[]) {
+export function useHiresList(
+  page = 1,
+  limit = 10,
+  status?: HireStatus | HireStatus[],
+  mode?: HiresListMode,
+) {
   return useQuery({
-    queryKey: hireKeys.list(page, limit, status),
-    queryFn: () => listHires(page, limit, status),
+    queryKey: [...hireKeys.list(page, limit, status), mode ?? 'all'],
+    queryFn: () => listHires(page, limit, status, mode),
     staleTime: 2 * 60 * 1000,
   })
 }
@@ -195,6 +202,8 @@ export function useSignAgreement() {
       signAgreement(hireId, payload),
     onSettled: async () => {
       await invalidateHireRelatedQueries(queryClient)
+      // The backend clears the "sign your agreement" notifications on sign.
+      await queryClient.invalidateQueries({ queryKey: notificationKeys.all })
     },
   })
 }

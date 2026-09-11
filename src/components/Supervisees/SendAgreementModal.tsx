@@ -22,7 +22,8 @@ import { previewAgreement } from '@/lib/api/supervision'
 import { useUserSnackbar } from '@/lib/hooks'
 import { useProposeAgreement, useUpdateAgreement } from '@/lib/hooks/useHires'
 import { parseApiError } from '@/lib/utils/error-parser'
-import { formatDisplayName } from '@/lib/utils/profile-formatters'
+import { coerceStringList, formatDisplayName } from '@/lib/utils/profile-formatters'
+import { isMedicalDirectorType } from '@/lib/utils/supervisee-eligibility'
 import type { AgreementSource, HireListItem, ProposeAgreementInput } from '@/types/hire'
 
 // ─── Validation schema ────────────────────────────────────────────────────────
@@ -96,18 +97,32 @@ function buildDefaultValues(hire: HireListItem): SendAgreementFormValues {
   }
 }
 
-const SOURCE_OPTIONS: { value: AgreementSource; label: string; description: string }[] = [
-  {
-    value: 'DEFAULT_TEMPLATE',
-    label: 'Use the default agreement',
-    description: "The platform's standard supervision agreement, applied with your terms below.",
-  },
-  {
-    value: 'UPLOADED',
-    label: 'Upload my own',
-    description: 'Use your own agreement document (PDF, JPG, or PNG).',
-  },
-]
+/** A hire made for the Medical Director role uses the platform's Medical Director template. */
+function isMedicalDirectorHire(hire: HireListItem): boolean {
+  return coerceStringList(hire.typeOfSupervisorNeeded).some((name) =>
+    isMedicalDirectorType({ name }),
+  )
+}
+
+function getSourceOptions(
+  hire: HireListItem,
+): { value: AgreementSource; label: string; description: string }[] {
+  const templateName = isMedicalDirectorHire(hire)
+    ? 'medical director agreement'
+    : 'supervision agreement'
+  return [
+    {
+      value: 'DEFAULT_TEMPLATE',
+      label: 'Use the default agreement',
+      description: `The platform's standard ${templateName}, applied with your terms below.`,
+    },
+    {
+      value: 'UPLOADED',
+      label: 'Upload my own',
+      description: 'Use your own agreement document (PDF, JPG, or PNG).',
+    },
+  ]
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -129,6 +144,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
 
   const isEdit = hire.agreement != null
   const superviseeName = formatDisplayName(hire.supervisee)
+  const sourceOptions = useMemo(() => getSourceOptions(hire), [hire])
   const hasExistingUploadedFile =
     hire.agreement?.source === 'UPLOADED' && hire.agreement.fileUrl != null
 
@@ -268,7 +284,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                           aria-label="Agreement document source"
                           className="grid grid-cols-1 gap-2 sm:grid-cols-2"
                         >
-                          {SOURCE_OPTIONS.map((opt) => (
+                          {sourceOptions.map((opt) => (
                             <button
                               key={opt.value}
                               type="button"

@@ -11,6 +11,7 @@ import {
   Star,
 } from 'lucide-react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 
 import { LeaveReviewModal } from '@/components/reviews/LeaveReviewModal'
@@ -80,19 +81,33 @@ function DetailCell({
 interface HireRequestCardProps {
   hire: HireListItem
   existingReview?: Review
+  /** Rendered on Hired Medical Directors — profile links + back links target the MD routes. */
+  isMedicalDirectors?: boolean
 }
 
-export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) {
+export function HireRequestCard({
+  hire,
+  existingReview,
+  isMedicalDirectors = false,
+}: HireRequestCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false)
-  // Deep link: agreement notifications/emails point to /hired-supervisors?hire=<id>,
-  // which auto-opens this card's agreement dialog. Lazy init only (no effect); the
-  // dialog renders in a portal, so SSR/hydration output is unaffected.
-  const [agreementOpen, setAgreementOpen] = useState(
-    () =>
-      hire.agreement != null &&
-      typeof window !== 'undefined' &&
-      new URLSearchParams(window.location.search).get('hire') === hire.id,
-  )
+  // Deep link: agreement notifications/emails point to the hired list with
+  // ?hire=<id>, which auto-opens this card's agreement dialog. Driven by the
+  // router's search params (not window.location at mount) so clicking a
+  // notification while already on this page opens the dialog too.
+  const deepLinkedHireId = useSearchParams().get('hire')
+  const deepLinkMatches = hire.agreement != null && deepLinkedHireId === hire.id
+  const [agreementOpenManually, setAgreementOpenManually] = useState(false)
+  // Which deep-linked hire id the user has already closed the dialog for, so
+  // the URL-driven open doesn't re-open it on the next render (derived state
+  // instead of an effect + setState).
+  const [dismissedDeepLinkId, setDismissedDeepLinkId] = useState<string | null>(null)
+  const agreementOpen =
+    agreementOpenManually || (deepLinkMatches && dismissedDeepLinkId !== deepLinkedHireId)
+  const setAgreementOpen = (open: boolean) => {
+    setAgreementOpenManually(open)
+    if (!open && deepLinkMatches) setDismissedDeepLinkId(deepLinkedHireId)
+  }
   const [reasonOpen, setReasonOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [completeOpen, setCompleteOpen] = useState(false)
@@ -105,12 +120,15 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
   const completeMutation = useMarkHireAsCompleted()
 
   const supervisorName = formatDisplayName(hire.supervisor)
-  const occupation = hire.supervisor.occupation?.name?.trim()
-  const specialty = hire.supervisor.specialty?.name?.trim()
+  // A supervisor's occupation/specialty live on their PROFILE. The account-level
+  // user.occupation/specialty relations are jobseeker-side leftovers that can
+  // hold unrelated values (e.g. "Accountant"), so they are deliberately ignored.
+  const occupation = hire.supervisor.supervisorProfile?.occupation?.trim()
+  const specialty = hire.supervisor.supervisorProfile?.specialty?.trim()
   const occupationDisplay =
     occupation && specialty
       ? `${occupation} · ${specialty}`
-      : (occupation ?? specialty ?? 'Not specified')
+      : occupation || specialty || 'Not specified'
 
   const locationRaw = formatLocation(hire.supervisor.city, hire.supervisor.state)
   const formatRaw = formatSupervisionFormat(hire.supervisorFormat)
@@ -119,7 +137,11 @@ export function HireRequestCard({ hire, existingReview }: HireRequestCardProps) 
 
   const hasRejectionReason = hire.status === 'REJECTED' && Boolean(hire.rejectionReason?.trim())
   const canCancel = CANCELABLE_STATUSES.includes(hire.status)
-  const profileHref = `/find-supervisors/${hire.supervisorId}?from=hired-supervisors`
+  // Open the profile on the route matching the list it was reached from, and tell
+  // the profile page where to go back to (the two hired lists are separate pages).
+  const profileHref = isMedicalDirectors
+    ? `/find-medical-directors/${hire.supervisorId}?from=hired-medical-directors`
+    : `/find-supervisors/${hire.supervisorId}?from=hired-supervisors`
 
   // Agreement: sign while the supervisor's proposal awaits the supervisee's signature
   const agreementStage = getAgreementStage(hire)

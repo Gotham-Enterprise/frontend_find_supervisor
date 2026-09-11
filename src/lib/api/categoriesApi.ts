@@ -11,6 +11,8 @@ export async function fetchOccupations(params?: {
   skip?: number
   hasJob?: boolean
   sortBy?: string
+  /** Include `isDropdown=false` occupations (e.g. supervision-only entries). */
+  includeAll?: boolean
 }): Promise<CategoriesApiResponse<Occupation[]>> {
   const { data } = await apiClient.get<CategoriesApiResponse<Occupation[]>>(
     '/categories/occupations',

@@ -2,6 +2,7 @@ import type { SelectOption } from '@/lib/api/options'
 import {
   formatDate,
   formatSupervisorTypeLabel,
+  formatSupervisorTypeWithOfferings,
   resolveOptionLabels,
 } from '@/lib/utils/profile-formatters'
 import {
@@ -74,6 +75,9 @@ export function SupervisorProfileProfessional({
   const credentialValue = getSupervisorDisplayCredential(profile)
   const stateLabel = (state: string) =>
     stateOptions.find((option) => option.value === state)?.label ?? state
+  // Medical Director extras — empty for other supervisor types.
+  const offerings = profile.offerings ?? []
+  const boardCertifications = profile.boardCertifications ?? []
 
   return (
     <section className="border-b border-[#E5E7EB] py-8">
@@ -81,7 +85,9 @@ export function SupervisorProfileProfessional({
       <div>
         {credentialValue && <Row label={credentialLabel}>{credentialValue}</Row>}
         {profile.supervisorType && (
-          <Row label="Supervisor Type">{formatSupervisorTypeLabel(profile.supervisorType)}</Row>
+          <Row label="Supervisor Type">
+            {formatSupervisorTypeWithOfferings(profile.supervisorType, offerings)}
+          </Row>
         )}
         {statesOfLicensure.length > 0 && (
           <Row label="States of Licensure">
@@ -116,6 +122,66 @@ export function SupervisorProfileProfessional({
             <Row label="License Expiration">{formatDate(profile.licenseExpiration)}</Row>
           )
         )}
+        {boardCertifications.length > 0 && (
+          <Row
+            label={
+              boardCertifications.length === 1 ? 'Board Certification' : 'Board Certifications'
+            }
+          >
+            <span className="flex flex-col items-end gap-1">
+              {boardCertifications.map((certification, index) => (
+                <span key={certification.id ?? index}>
+                  {[
+                    certification.certifyingBoard,
+                    [certification.specialty, certification.subspecialty]
+                      .filter(Boolean)
+                      .join(' — '),
+                    // Redacted (null) for non-owner viewers
+                    certification.certificationNumber
+                      ? `#${certification.certificationNumber}`
+                      : null,
+                    certification.expirationDate
+                      ? `valid through ${formatDate(certification.expirationDate)}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+              ))}
+            </span>
+          </Row>
+        )}
+        {/* Medical Director secondary offerings — one row per offered service,
+            each with its own credentials and license entries */}
+        {offerings.map((offering, offeringIndex) => (
+          <Row
+            key={offering.id ?? offeringIndex}
+            label={`Offered as ${formatSupervisorTypeLabel(offering.supervisorType)}`}
+          >
+            <span className="flex flex-col items-end gap-1">
+              <span>
+                {[offering.occupation, offering.specialty, offering.degreeType]
+                  .filter(Boolean)
+                  .join(' · ') || '—'}
+              </span>
+              {(offering.licenses ?? [])
+                .filter((license) => license.state?.trim())
+                .map((license, index) => (
+                  <span key={license.id ?? index}>
+                    {[
+                      stateLabel(license.state as string),
+                      license.licenseNumber ? `#${license.licenseNumber}` : null,
+                      license.licenseExpiration
+                        ? `expires ${formatDate(license.licenseExpiration)}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                ))}
+            </span>
+          </Row>
+        ))}
         {profile.yearsOfExperience && (
           <Row label="Years of Experience">{profile.yearsOfExperience}</Row>
         )}

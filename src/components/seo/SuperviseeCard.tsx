@@ -27,15 +27,19 @@ export function SuperviseeCard({ supervisee, index }: SuperviseeCardProps) {
     compact: true,
     emptyFallback: '',
   })
+  // The supervision budget belongs to a non-MD need. MD-only supervisees carry the
+  // backend's 0/0 defaults with no budget type, and their real budget is the MD
+  // monthly budget — so only show it when a budget type was actually chosen.
   const budget =
-    supervisee.budgetRangeStart != null || supervisee.budgetRangeEnd != null
+    supervisee.budgetRangeType &&
+    (supervisee.budgetRangeStart != null || supervisee.budgetRangeEnd != null)
       ? formatBudgetRange(
           supervisee.budgetRangeStart,
           supervisee.budgetRangeEnd,
           supervisee.budgetRangeType,
         )
       : ''
-  const lookingIn = supervisee.stateTheyAreLookingIn.join(', ')
+  const licensedIn = supervisee.stateOfLicensure.join(', ')
   const supervisorNeeded = supervisee.typeOfSupervisorNeeded.filter(Boolean).join(', ')
   const credentialLine = [supervisee.title, supervisee.occupation, supervisee.specialty]
     .filter(Boolean)
@@ -71,7 +75,7 @@ export function SuperviseeCard({ supervisee, index }: SuperviseeCardProps) {
       </div>
 
       {/* What they're looking for in a supervisor */}
-      {(supervisorNeeded || format || lookingIn || timeline || budget) && (
+      {(supervisorNeeded || format || licensedIn || timeline || budget) && (
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Looking For
@@ -89,10 +93,10 @@ export function SuperviseeCard({ supervisee, index }: SuperviseeCardProps) {
                 <dd className="text-muted-foreground">{format}</dd>
               </div>
             )}
-            {lookingIn && (
+            {licensedIn && (
               <div className="flex gap-1.5">
-                <dt className="shrink-0 font-medium text-foreground">States:</dt>
-                <dd className="text-muted-foreground">{lookingIn}</dd>
+                <dt className="shrink-0 font-medium text-foreground">Licensed in:</dt>
+                <dd className="text-muted-foreground">{licensedIn}</dd>
               </div>
             )}
             {timeline && (

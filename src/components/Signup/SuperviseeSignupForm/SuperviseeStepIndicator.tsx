@@ -1,26 +1,36 @@
-import { SUPERVISEE_SIGNUP_STEP_META } from '@/components/Signup/schema'
+import {
+  NEED_MEDICAL_DIRECTOR_SIGNUP_STEP_META,
+  SUPERVISEE_SIGNUP_STEP_META,
+} from '@/components/Signup/schema'
 import { cn } from '@/lib/utils'
 
+import type { SuperviseeSignupVariant } from './index'
 import type { SuperviseeSignupStepIndex } from './validateSuperviseeStep'
 
 type SuperviseeStepIndicatorProps = {
   currentStep: SuperviseeSignupStepIndex
+  variant?: SuperviseeSignupVariant
 }
 
-export function SuperviseeStepIndicator({ currentStep }: SuperviseeStepIndicatorProps) {
+export function SuperviseeStepIndicator({
+  currentStep,
+  variant = 'supervisee',
+}: SuperviseeStepIndicatorProps) {
+  const stepMeta =
+    variant === 'need-medical-director'
+      ? NEED_MEDICAL_DIRECTOR_SIGNUP_STEP_META
+      : SUPERVISEE_SIGNUP_STEP_META
   return (
     <div className="mb-8">
       <p className="mb-0.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-        {SUPERVISEE_SIGNUP_STEP_META[currentStep].stepLabel} of 3
+        {stepMeta[currentStep].stepLabel} of {stepMeta.length}
       </p>
-      <h2 className="text-lg font-semibold text-foreground">
-        {SUPERVISEE_SIGNUP_STEP_META[currentStep].title}
-      </h2>
+      <h2 className="text-lg font-semibold text-foreground">{stepMeta[currentStep].title}</h2>
       <ol
         className="mt-4 flex items-start justify-center gap-2 sm:gap-4"
         aria-label="Signup progress"
       >
-        {SUPERVISEE_SIGNUP_STEP_META.map((meta, index) => {
+        {stepMeta.map((meta, index) => {
           const done = index < currentStep
           const active = index === currentStep
           return (

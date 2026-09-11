@@ -94,7 +94,7 @@ export function SearchSuperviseeFilters({
       )}
 
       <div>
-        <FilterLabel>State (looking for supervision in)</FilterLabel>
+        <FilterLabel>State of licensure</FilterLabel>
         <TagInput
           options={stateOptions}
           value={filters.states}

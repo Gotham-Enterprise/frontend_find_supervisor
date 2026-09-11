@@ -164,7 +164,7 @@ function RequiredDocuments() {
 function ProfileFieldsRequired() {
   const fields = [
     { label: 'Profile Photo', note: 'A clear, professional headshot' },
-    { label: 'License Type', note: 'e.g. LCSW, LPC, LMFT, BCBA' },
+    { label: 'License Type', note: 'e.g. LCSW, LPC, LMFT, BCBA — Medical Directors: MD or DO' },
     { label: 'License Number or Uploaded License File', note: 'Number or scanned document' },
     { label: 'State of Licensure', note: 'One or more states where you hold an active license' },
     { label: 'Occupation / Profession', note: 'Your primary professional role' },
@@ -172,7 +172,10 @@ function ProfileFieldsRequired() {
     { label: 'Years of Experience', note: 'Total years practicing in your field' },
     { label: 'Supervision Format', note: 'In-person, virtual, or hybrid' },
     { label: 'Availability', note: 'When you are available for sessions' },
-    { label: 'Supervision Fee', note: 'Your rate per session, hour, or month' },
+    {
+      label: 'Supervision Fee',
+      note: 'Your rate per hour or month (Medical Directors: monthly only)',
+    },
     { label: 'Professional Summary / Bio', note: 'At least 2–3 sentences about your approach' },
     { label: 'Certifications', note: 'Any additional credentials you hold' },
     { label: 'Patient Populations Served', note: 'Who you specialize in working with' },
@@ -427,6 +430,59 @@ function NeedHelp() {
   )
 }
 
+function MedicalDirectorNotes() {
+  const items = [
+    {
+      label: 'Physician credentials',
+      detail:
+        'Your degree type (MD or DO) plus one or more state medical licenses — each entry needs the license number, state, and expiration date, alongside your uploaded license document and NPI number.',
+    },
+    {
+      label: 'Board certifications',
+      detail:
+        'Optional, but if you mark yourself board certified, each entry needs the certifying board, specialty, certification number, and expiration date. Certification numbers are never shown to other users.',
+    },
+    {
+      label: 'Physician offerings',
+      detail:
+        'If you also offer Supervising Physician or Collaborating Physician services, each offering carries its own occupation, degree, and license entries — these are reviewed together with your main credentials.',
+    },
+    {
+      label: 'Monthly fees',
+      detail:
+        'Medical Director engagements are billed monthly, so your fee is always a monthly amount. Patient population is only required when a physician offering is enabled.',
+    },
+  ]
+
+  return (
+    <Card>
+      <CardHeader className="border-b pb-3">
+        <div className="flex items-center gap-2">
+          <BadgeCheck className="size-5 text-primary" />
+          <CardTitle className="text-base font-semibold">For Medical Directors</CardTitle>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Medical Director accounts go through the same review flow, with a few extra credential
+          checks.
+        </p>
+      </CardHeader>
+      <CardContent className="pt-5">
+        <div className="divide-y">
+          {items.map(({ label, detail }) => (
+            <div key={label} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium">{label}</p>
+                <p className="text-xs leading-relaxed text-muted-foreground">{detail}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export function VerificationGuide() {
@@ -444,6 +500,7 @@ export function VerificationGuide() {
 
         <div className="space-y-6">
           <RequiredDocuments />
+          <MedicalDirectorNotes />
           <ReviewTimeline />
           <NeedHelp />
         </div>

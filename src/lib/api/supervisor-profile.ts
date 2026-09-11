@@ -2,6 +2,7 @@ import type { ApiResponse } from '@/types'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 import { apiClient } from './client'
+import type { BoardCertificationPayload, OfferingPayload } from './signup'
 
 /** GET /supervision/supervisor/profile?id=<id> — supervisor profile for that userId (own profile uses `useUser().id`). */
 export async function getSupervisorProfileById(id: string): Promise<SupervisorProfileData> {
@@ -33,6 +34,10 @@ export interface UpdateSupervisorProfilePayload {
   supervisorType?: string
   /** Full replace: every license the supervisor holds, each with its state. */
   licenses?: LicenseEntryPayload[]
+  /** Medical Director only — full replace; empty array clears all offerings. */
+  offerings?: OfferingPayload[]
+  /** Medical Director only — full replace; empty array clears all certifications. */
+  boardCertifications?: BoardCertificationPayload[]
   yearsOfExperience?: string
   npiNumber?: string
   certification?: string[]
@@ -48,6 +53,9 @@ export interface UpdateSupervisorProfilePayload {
   professionalCredentials?: string
   uploadProfilePhoto?: File
   uploadLicense?: File
+  /** Per-offering license/verification documents (Medical Director offerings). */
+  uploadOfferingDocSupervising?: File
+  uploadOfferingDocCollaborating?: File
 }
 
 /** PUT /supervision/supervisor/profile — update the authenticated supervisor's own profile. */
@@ -59,8 +67,12 @@ export async function updateSupervisorProfile(
   const {
     uploadProfilePhoto,
     uploadLicense,
+    uploadOfferingDocSupervising,
+    uploadOfferingDocCollaborating,
     certification,
     licenses,
+    offerings,
+    boardCertifications,
     patientPopulation,
     acceptingSupervisees,
     supervisionFeeAmount,
@@ -97,6 +109,15 @@ export async function updateSupervisorProfile(
     fd.append('licenses', JSON.stringify(licenses))
   }
 
+  // Full replace — an empty array clears the rows, so key on presence.
+  if (offerings !== undefined) {
+    fd.append('offerings', JSON.stringify(offerings))
+  }
+
+  if (boardCertifications !== undefined) {
+    fd.append('boardCertifications', JSON.stringify(boardCertifications))
+  }
+
   if (patientPopulation) {
     patientPopulation.forEach((p) => fd.append('patientPopulation', p))
   }
@@ -107,6 +128,14 @@ export async function updateSupervisorProfile(
 
   if (uploadLicense) {
     fd.append('uploadLicense', uploadLicense)
+  }
+
+  if (uploadOfferingDocSupervising) {
+    fd.append('uploadOfferingDoc_supervising', uploadOfferingDocSupervising)
+  }
+
+  if (uploadOfferingDocCollaborating) {
+    fd.append('uploadOfferingDoc_collaborating', uploadOfferingDocCollaborating)
   }
 
   const { data } = await apiClient.put<ApiResponse<SupervisorProfileData>>(

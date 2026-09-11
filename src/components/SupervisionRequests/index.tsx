@@ -39,7 +39,6 @@ import {
   useAcceptHire,
   useHiresList,
   useRejectHire,
-  useStatesOptions,
   useSuperviseeFormOptions,
   useSupervisorProfile,
   useUserSnackbar,
@@ -54,7 +53,6 @@ import {
   formatDate,
   formatDisplayName,
   formatLocation,
-  formatLookingInStatesLabel,
   formatSupervisionFormat,
   formatSupervisionHours,
   resolveSupervisorTypeLabel,
@@ -276,7 +274,6 @@ function SuperviseeDetailsDialog({
   showContactDetails,
 }: SuperviseeDetailsDialogProps) {
   const { supervisorTypes } = useSuperviseeFormOptions()
-  const { data: stateOptions = [] } = useStatesOptions()
   const supervisorTypeOptions = supervisorTypes.data ?? []
   const { supervisee } = hire
 
@@ -286,6 +283,12 @@ function SuperviseeDetailsDialog({
   const licensureStates = supervisee.stateOfLicensure?.length
     ? supervisee.stateOfLicensure.join(', ')
     : null
+  // All needs on the profile (e.g. Supervising Physician + Medical Director);
+  // the request section below shows only the role requested from this supervisor.
+  const profileNeeds = resolveSupervisorTypeLabel(
+    supervisee.superviseeProfile?.typeOfSupervisorNeeded,
+    supervisorTypeOptions,
+  )
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
@@ -320,6 +323,9 @@ function SuperviseeDetailsDialog({
             <DetailItem label="Specialty" value={specialty} />
             <DetailItem label="Location" value={location} />
             <DetailItem label="State(s) of Licensure" value={licensureStates} />
+            {profileNeeds !== 'N/A' && (
+              <DetailItem label="Supervision Needs" value={profileNeeds} />
+            )}
           </dl>
         </section>
 
@@ -338,12 +344,8 @@ function SuperviseeDetailsDialog({
               value={formatAvailability(hire.preferredAvailability)}
             />
             <DetailItem
-              label="Type of Supervisor"
+              label="Requested Type"
               value={resolveSupervisorTypeLabel(hire.typeOfSupervisorNeeded, supervisorTypeOptions)}
-            />
-            <DetailItem
-              label="Looking in State"
-              value={formatLookingInStatesLabel(hire.stateTheyAreLookingIn, stateOptions)}
             />
             <DetailItem label="Preferred Start Date" value={formatDate(hire.preferredStartDate)} />
             {hire.supervisionHours != null && (

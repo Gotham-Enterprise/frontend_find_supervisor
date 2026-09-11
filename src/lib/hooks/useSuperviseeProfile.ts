@@ -12,9 +12,10 @@ export const superviseeProfileKeys = {
 
 /**
  * Fetches the authenticated supervisee's own profile using `useUser().id`.
- * Query is disabled when the user id is not available.
+ * Query is disabled when the user id is not available (or `enabled` is false —
+ * e.g. shared components rendered for supervisors too).
  */
-export function useSuperviseeProfile() {
+export function useSuperviseeProfile(enabled = true) {
   const { user } = useUser()
   const userId = user?.id
 
@@ -23,7 +24,7 @@ export function useSuperviseeProfile() {
       ? superviseeProfileKeys.detail(userId)
       : (['supervisee-profile-disabled'] as const),
     queryFn: () => getSuperviseeProfile(userId!),
-    enabled: !!userId,
+    enabled: enabled && !!userId,
     staleTime: 1000 * 60 * 5,
   })
 }

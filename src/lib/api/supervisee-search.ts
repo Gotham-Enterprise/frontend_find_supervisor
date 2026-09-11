@@ -20,13 +20,16 @@ export interface SuperviseeSearchApiRow {
   occupation?: string
   specialty?: string
   title?: string
+  licensureState?: string
   preferredFormat?: string
   howSoonLooking?: string
-  stateTheyAreLookingIn?: string[]
   idealSupervisor?: string
   budgetRangeType?: string
   budgetRangeStart?: number | null
   budgetRangeEnd?: number | null
+  typeOfSupervisorNeeded?: string[]
+  mdHowSoonLooking?: string
+  mdMonthlyBudget?: number | null
   hireStatusWithCurrentSupervisor?: string
   isConnectedWithCurrentSupervisor?: boolean
 }
@@ -124,6 +127,7 @@ export function mapApiRowToSuperviseeSearchResult(
     id: String(row.id),
     fullName,
     title: row.title ?? '',
+    licensureState: row.licensureState ?? '',
     occupation: row.occupation ?? '',
     specialty: row.specialty ?? '',
     city: row.city ?? '',
@@ -131,13 +135,13 @@ export function mapApiRowToSuperviseeSearchResult(
     location: row.location?.trim() || [row.city, row.state].filter(Boolean).join(', '),
     preferredFormat: parsePreferredFormat(row.preferredFormat),
     howSoonLooking: row.howSoonLooking ?? '',
-    stateTheyAreLookingIn: Array.isArray(row.stateTheyAreLookingIn)
-      ? row.stateTheyAreLookingIn
-      : [],
     bio: (row.idealSupervisor ?? '').trim(),
     budgetRangeType: row.budgetRangeType ?? '',
     budgetRangeStart: row.budgetRangeStart ?? null,
     budgetRangeEnd: row.budgetRangeEnd ?? null,
+    typeOfSupervisorNeeded: row.typeOfSupervisorNeeded ?? [],
+    mdHowSoonLooking: row.mdHowSoonLooking ?? '',
+    mdMonthlyBudget: row.mdMonthlyBudget ?? null,
     profilePhotoUrl: row.profilePhotoUrl,
     initials: initialsFromName(fullName),
     avatarColor: getAvatarColor(index),

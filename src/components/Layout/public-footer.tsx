@@ -34,13 +34,15 @@ const staticColumns: FooterColumn[] = [
       { label: 'Create Account', href: '/signup' },
       { label: 'For Supervisors', href: '/signup?type=supervisor' },
       { label: 'For Supervisees', href: '/signup?type=supervisee' },
+      { label: 'For Medical Directors', href: '/signup?type=medical-director' },
+      { label: 'Need a Medical Director', href: '/signup?type=need-medical-director' },
     ],
   },
   {
     heading: 'Company',
     links: [
       { label: 'Contact Us', href: '/contact-us' },
-      { label: 'Terms & Conditions', href: '/terms-of-service' },
+      { label: 'Terms of Service', href: '/terms-of-service' },
       { label: 'Privacy Policy', href: '/privacy-policy' },
     ],
   },

@@ -30,6 +30,9 @@ interface SearchSupervisorResultsProps {
   onPageChange: (page: number) => void
   onSortChange: (sort: SortOption) => void
   onClearFilters: () => void
+  profileBasePath?: '/find-supervisors' | '/find-medical-directors'
+  /** Result noun per search mode — "supervisors" on the default page, "medical directors" on the MD page. */
+  noun?: { singular: string; plural: string; title: string }
 }
 
 export function SearchSupervisorResults({
@@ -44,6 +47,8 @@ export function SearchSupervisorResults({
   onPageChange,
   onSortChange,
   onClearFilters,
+  profileBasePath = '/find-supervisors',
+  noun = { singular: 'supervisor', plural: 'supervisors', title: 'Supervisors' },
 }: SearchSupervisorResultsProps) {
   const totalPages = Math.ceil(total / pageSize)
   const from = total > 0 ? (page - 1) * pageSize + 1 : 0
@@ -60,8 +65,12 @@ export function SearchSupervisorResults({
           <p className="text-sm text-destructive">{errorMessage}</p>
         ) : (
           <p className="text-sm text-foreground">
-            <span className="font-semibold">{total.toLocaleString()} supervisors</span>
-            <span className="text-muted-foreground"> match your criteria</span>
+            <span className="font-semibold">
+              {total.toLocaleString()} {total === 1 ? noun.singular : noun.plural}
+            </span>
+            <span className="text-muted-foreground">
+              {total === 1 ? ' matches your criteria' : ' match your criteria'}
+            </span>
           </p>
         )}
 
@@ -92,16 +101,18 @@ export function SearchSupervisorResults({
           ) : errorMessage ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-destructive/30 bg-destructive/5 py-12 text-center">
               <p className="mb-4 max-w-md text-sm text-muted-foreground">
-                We couldn&apos;t load supervisor results. Check your connection and try again.
+                We couldn&apos;t load {noun.singular} results. Check your connection and try again.
               </p>
               <Button type="button" variant="outline" onClick={onRetry}>
                 Try again
               </Button>
             </div>
           ) : supervisors.length === 0 ? (
-            <EmptyState onClearFilters={onClearFilters} />
+            <EmptyState onClearFilters={onClearFilters} entityLabel={noun.title} />
           ) : (
-            supervisors.map((s) => <SupervisorCard key={s.id} supervisor={s} />)
+            supervisors.map((s) => (
+              <SupervisorCard key={s.id} supervisor={s} profileBasePath={profileBasePath} />
+            ))
           )}
         </div>
 

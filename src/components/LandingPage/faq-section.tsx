@@ -14,7 +14,17 @@ const faqs = [
   {
     question: 'What types of Supervisors can I find on this platform?',
     answer:
-      'Find A Supervisor supports Mental Health Counselor Supervisors, Collaborating Physicians for nurse practitioners, and Supervising Physicians for physician assistants. You can filter by Supervisor type, specialty, state, and supervision format to find the right match for your profession.',
+      'Find A Supervisor supports Mental Health Counselor Supervisors, Collaborating Physicians for nurse practitioners, Supervising Physicians for physician assistants, and Medical Directors for practices that need medical direction. You can filter by Supervisor type, specialty, state, and supervision format to find the right match for your profession.',
+  },
+  {
+    question: 'Can I find a Medical Director here?',
+    answer:
+      'Yes. If your profile says you need a Medical Director, a dedicated Find Medical Directors page appears in your account. It works like the supervisor search — filter verified Medical Directors by specialty, state, and format, then send a hire request from their profile. Medical Directors work on a monthly retainer basis, and your Medical Director need is tracked separately from your supervision need, each with its own budget and timeline.',
+  },
+  {
+    question: 'I am a physician — can I join as a Medical Director?',
+    answer:
+      'Yes. Medical Directors sign up with their own dedicated flow: physician credentials (MD/DO), optional board certifications, and monthly-only fees. Your profile is listed on the Find Medical Directors page for people seeking medical direction, and you can additionally offer Supervising Physician and/or Collaborating Physician services for PAs and NPs — each offering with its own credentials. Verification, plans, messaging, and reviews work the same as for other Supervisors.',
   },
   {
     question: 'What is the matching feature?',
@@ -57,7 +67,7 @@ export function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null)
 
   return (
-    <section id="faq" className="bg-background py-20 sm:py-24">
+    <section id="faq" className="scroll-mt-16 bg-background py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <h2 className="mb-8 text-center text-2xl font-bold uppercase tracking-wide text-foreground sm:text-3xl">
           FAQ

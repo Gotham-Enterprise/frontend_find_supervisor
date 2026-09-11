@@ -30,7 +30,7 @@ const features = [
 
 export function KeyFeatures() {
   return (
-    <section id="features" className="bg-background py-20 sm:py-24">
+    <section id="features" className="scroll-mt-16 bg-background py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <h2 className="mb-12 text-center text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
           Key Features

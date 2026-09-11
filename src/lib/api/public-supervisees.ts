@@ -35,7 +35,8 @@ export interface PublicSuperviseeSummary {
   howSoonLooking: string
   /** Supervisor types they need, e.g. ["Mental Health Counselors"]. */
   typeOfSupervisorNeeded: string[]
-  stateTheyAreLookingIn: string[]
+  /** Licensed states (the retired "state looking in" concept now maps here). */
+  stateOfLicensure: string[]
   /** Truncated `idealSupervisor` free text — what they want in a supervisor. */
   bio: string
   /** "PER_SESSION" | "MONTHLY" | "" */
@@ -80,9 +81,7 @@ function parseRow(row: Record<string, unknown>): PublicSuperviseeSummary {
     typeOfSupervisorNeeded: Array.isArray(row.typeOfSupervisorNeeded)
       ? (row.typeOfSupervisorNeeded as string[])
       : [],
-    stateTheyAreLookingIn: Array.isArray(row.stateTheyAreLookingIn)
-      ? (row.stateTheyAreLookingIn as string[])
-      : [],
+    stateOfLicensure: Array.isArray(row.stateOfLicensure) ? (row.stateOfLicensure as string[]) : [],
     bio: String(row.idealSupervisor ?? '').trim(),
     budgetRangeType: String(row.budgetRangeType ?? ''),
     budgetRangeStart: row.budgetRangeStart == null ? null : Number(row.budgetRangeStart),
@@ -91,7 +90,7 @@ function parseRow(row: Record<string, unknown>): PublicSuperviseeSummary {
 }
 
 export type PublicSuperviseeSearchParams = {
-  /** State abbreviation (e.g. "CA") matched against stateTheyAreLookingIn. */
+  /** State abbreviation (e.g. "CA") matched against the supervisee's licensed states. */
   state?: string
   /** Full state name (e.g. "California") sent alongside the abbreviation as a fallback,
    *  in case some supervisees saved full state names during signup. */

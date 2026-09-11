@@ -40,17 +40,23 @@ export type ProfilePhotoUploadDialogProps = {
 
 // ─── Empty state ───────────────────────────────────────────────────────────────
 
-function CropEmptyState() {
+/** Clickable — opens the same file picker as the "Upload New Photo" button. */
+function CropEmptyState({ onUploadClick }: { onUploadClick: () => void }) {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-center">
-      <div className="flex size-14 items-center justify-center rounded-full bg-muted">
+    <button
+      type="button"
+      onClick={onUploadClick}
+      aria-label="Upload a photo"
+      className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-3 text-center transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+    >
+      <span className="flex size-14 items-center justify-center rounded-full bg-muted">
         <Upload className="size-6 text-muted-foreground" aria-hidden />
-      </div>
-      <p className="text-sm font-semibold text-foreground">No photo selected</p>
-      <p className="text-xs text-muted-foreground">
+      </span>
+      <span className="text-sm font-semibold text-foreground">No photo selected</span>
+      <span className="text-xs text-muted-foreground">
         Upload an image or take a photo to get started
-      </p>
-    </div>
+      </span>
+    </button>
   )
 }
 
@@ -262,7 +268,7 @@ export function ProfilePhotoUploadDialog({
               classes={{ containerClassName: 'rounded-xl' }}
             />
           ) : (
-            <CropEmptyState />
+            <CropEmptyState onUploadClick={triggerFileInput} />
           )}
         </div>
 

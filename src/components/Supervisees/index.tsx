@@ -31,7 +31,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
-import { useHiresList, useMyReviews, useRemindAgreement, useUserSnackbar } from '@/lib/hooks'
+import {
+  useHiresList,
+  useMyReviews,
+  useRemindAgreement,
+  useSuperviseeFormOptions,
+  useUserSnackbar,
+} from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
   formatAvailability,
@@ -41,6 +47,7 @@ import {
   formatLocation,
   formatSupervisionFormat,
   formatSupervisionHours,
+  resolveSupervisorTypeLabel,
 } from '@/lib/utils/profile-formatters'
 import { getAgreementStage, getAgreementStageLabel } from '@/lib/utils/supervision-status'
 import type { HireListItem, HireStatus } from '@/types/hire'
@@ -123,21 +130,36 @@ function SuperviseesSkeleton() {
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
-function SuperviseesEmpty({ tab }: { tab: TabStatus }) {
-  const messages: Record<TabStatus, { title: string; body: string }> = {
-    ALL: {
-      title: 'No supervisees yet',
-      body: 'Once supervisees request your supervision and you accept, they will appear here.',
-    },
-    ACCEPTED: {
-      title: 'No accepted supervisees',
-      body: 'Supervisees whose requests you have accepted will appear here.',
-    },
-    COMPLETED: {
-      title: 'No completed supervisions',
-      body: 'Supervisions that have been marked as completed will appear here.',
-    },
-  }
+function SuperviseesEmpty({ tab, isMdClients }: { tab: TabStatus; isMdClients: boolean }) {
+  const messages: Record<TabStatus, { title: string; body: string }> = isMdClients
+    ? {
+        ALL: {
+          title: 'No medical director clients yet',
+          body: 'Once someone hires you as their Medical Director and you accept, they will appear here.',
+        },
+        ACCEPTED: {
+          title: 'No accepted clients',
+          body: 'Clients whose requests you have accepted will appear here.',
+        },
+        COMPLETED: {
+          title: 'No completed engagements',
+          body: 'Engagements that have been marked as completed will appear here.',
+        },
+      }
+    : {
+        ALL: {
+          title: 'No supervisees yet',
+          body: 'Once supervisees request your supervision and you accept, they will appear here.',
+        },
+        ACCEPTED: {
+          title: 'No accepted supervisees',
+          body: 'Supervisees whose requests you have accepted will appear here.',
+        },
+        COMPLETED: {
+          title: 'No completed supervisions',
+          body: 'Supervisions that have been marked as completed will appear here.',
+        },
+      }
   const { title, body } = messages[tab]
 
   return (
@@ -258,6 +280,8 @@ function SuperviseeDetailsDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const { supervisorTypes } = useSuperviseeFormOptions()
+  const supervisorTypeOptions = supervisorTypes.data ?? []
   const { supervisee } = hire
   const occupation = supervisee.occupation?.name
   const specialty = supervisee.specialty?.name
@@ -265,6 +289,11 @@ function SuperviseeDetailsDialog({
   const licensureStates = supervisee.stateOfLicensure?.length
     ? supervisee.stateOfLicensure.join(', ')
     : null
+  // All needs on the profile — the hire itself only records the role hired for.
+  const profileNeeds = resolveSupervisorTypeLabel(
+    supervisee.superviseeProfile?.typeOfSupervisorNeeded,
+    supervisorTypeOptions,
+  )
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
@@ -284,6 +313,9 @@ function SuperviseeDetailsDialog({
             <DetailItem label="Specialty" value={specialty} />
             <DetailItem label="Location" value={location} />
             <DetailItem label="State(s) of Licensure" value={licensureStates} />
+            {profileNeeds !== 'N/A' && (
+              <DetailItem label="Supervision Needs" value={profileNeeds} />
+            )}
           </dl>
         </section>
 
@@ -554,7 +586,10 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export function SuperviseesPage() {
+export type SuperviseesPageMode = 'supervisors' | 'medical-directors'
+
+export function SuperviseesPage({ mode = 'supervisors' }: { mode?: SuperviseesPageMode }) {
+  const isMdClients = mode === 'medical-directors'
   const [activeTab, setActiveTab] = useState<TabStatus>('ACCEPTED')
   const [page, setPage] = useState(1)
 
@@ -564,7 +599,13 @@ export function SuperviseesPage() {
   const apiLimit = isCompletedTab ? 0 : PAGE_SIZE
   const apiStatus = activeTab === 'ACCEPTED' ? ('ACCEPTED' satisfies HireStatus) : undefined
 
-  const { data, isLoading, isError } = useHiresList(apiPage, apiLimit, apiStatus)
+  const { data, isLoading, isError } = useHiresList(
+    apiPage,
+    apiLimit,
+    apiStatus,
+    // Scoped by the role they hired this supervisor for (hire snapshot)
+    isMdClients ? 'medicalDirectors' : 'supervisors',
+  )
   // Reviews received by the authenticated supervisor (role-scoped on the backend),
   // joined to hires client-side — same pattern as the supervisee's /hired-supervisors page.
   const { data: reviewsData } = useMyReviews(0)
@@ -602,10 +643,13 @@ export function SuperviseesPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">My Supervisees</h2>
+        <h2 className="text-xl font-semibold tracking-tight text-foreground">
+          {isMdClients ? 'Medical Director Clients' : 'My Supervisees'}
+        </h2>
         <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
-          Everyone who has requested your supervision is listed here. Use the tabs to filter by
-          status, and open the menu on any card to view full profile and supervision details.
+          {isMdClients
+            ? 'Everyone who has hired you as their Medical Director is listed here. Use the tabs to filter by status, and open the menu on any card to view full profile and engagement details.'
+            : 'Everyone who has requested your supervision is listed here. Use the tabs to filter by status, and open the menu on any card to view full profile and supervision details.'}
         </p>
       </div>
 
@@ -639,7 +683,7 @@ export function SuperviseesPage() {
       ) : isError ? (
         <SuperviseesError />
       ) : items.length === 0 ? (
-        <SuperviseesEmpty tab={activeTab} />
+        <SuperviseesEmpty tab={activeTab} isMdClients={isMdClients} />
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

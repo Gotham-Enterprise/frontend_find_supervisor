@@ -1,15 +1,33 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 
-import { fetchCitiesApi, fetchStatesApi, type SelectOption } from '@/lib/api/locations'
+import {
+  fetchCitiesApi,
+  fetchStatesApi,
+  type SelectOption,
+  type StateSelectOption,
+} from '@/lib/api/locations'
 
 const STALE_TIME = 2 * 60 * 60 * 1000 // 2 hours
 
 export function useStatesOptions() {
-  return useQuery<SelectOption[]>({
+  return useQuery<StateSelectOption[], Error, SelectOption[]>({
     queryKey: ['location', 'states'],
     queryFn: fetchStatesApi,
     staleTime: STALE_TIME,
+  })
+}
+
+/**
+ * State options labeled with the full state name only (e.g. "Alabama");
+ * the value stays the abbreviation. Shares the states cache with `useStatesOptions`.
+ */
+export function useStateNameOptions() {
+  return useQuery<StateSelectOption[], Error, SelectOption[]>({
+    queryKey: ['location', 'states'],
+    queryFn: fetchStatesApi,
+    staleTime: STALE_TIME,
+    select: (data) => data.map((s) => ({ label: s.name, value: s.value })),
   })
 }
 
