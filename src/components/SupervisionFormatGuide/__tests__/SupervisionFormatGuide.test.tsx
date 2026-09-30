@@ -5,10 +5,10 @@ import { SupervisionFormatGuide } from '..'
 
 describe('SupervisionFormatGuide', () => {
   it('shows format statuses and summary for a single profession', () => {
-    render(<SupervisionFormatGuide state="FL" stateName="Florida" profession="COUNSELING" />)
+    render(<SupervisionFormatGuide state="FL" stateName="Florida" professions={['COUNSELING']} />)
 
-    expect(screen.getByText(/Supervision formats that count in Florida/)).toBeInTheDocument()
-    expect(screen.getByText('In-Person').parentElement).toHaveTextContent('In-Person: Counts')
+    expect(screen.getByText(/Supervision formats allowed in Florida/)).toBeInTheDocument()
+    expect(screen.getByText('In-Person').parentElement).toHaveTextContent('In-Person: Allowed')
     expect(screen.getByText('Virtual').parentElement).toHaveTextContent('Virtual: Limited')
     expect(screen.getByText(/Up to half of your supervision/)).toBeInTheDocument()
     expect(screen.getByRole('group')).not.toHaveAttribute('open')
@@ -16,7 +16,7 @@ describe('SupervisionFormatGuide', () => {
 
   it('reveals conditions and the source link on Details', () => {
     const { container } = render(
-      <SupervisionFormatGuide state="FL" stateName="Florida" profession="COUNSELING" />,
+      <SupervisionFormatGuide state="FL" stateName="Florida" professions={['COUNSELING']} />,
     )
 
     fireEvent.click(screen.getByText('Details and sources'))
@@ -30,22 +30,23 @@ describe('SupervisionFormatGuide', () => {
   })
 
   it('lists every covered profession when the profession is unknown', () => {
-    render(<SupervisionFormatGuide state="TX" stateName="Texas" profession={null} />)
+    render(<SupervisionFormatGuide state="TX" stateName="Texas" />)
 
-    expect(screen.getAllByText('Virtual')).toHaveLength(4)
+    // Counseling, Social Work, MFT, Psychology, NP, PA
+    expect(screen.getAllByText('Virtual')).toHaveLength(6)
     // Once in the chip rows, once in the collapsed details.
     expect(screen.getAllByText('Counseling (LPC / LMHC)')).toHaveLength(2)
   })
 
   it('falls back to a board reminder for states without data', () => {
-    render(<SupervisionFormatGuide state="GA" stateName="Georgia" profession="MFT" />)
+    render(<SupervisionFormatGuide state="GA" stateName="Georgia" professions={['MFT']} />)
 
     expect(screen.getByText(/haven't verified Georgia's rules/)).toBeInTheDocument()
   })
 
   it('renders nothing for states without data when hideWhenNoData is set', () => {
     const { container } = render(
-      <SupervisionFormatGuide state="GA" stateName="Georgia" profession={null} hideWhenNoData />,
+      <SupervisionFormatGuide state="GA" stateName="Georgia" hideWhenNoData />,
     )
 
     expect(container).toBeEmptyDOMElement()

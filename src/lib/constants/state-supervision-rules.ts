@@ -1,18 +1,32 @@
 /**
- * Per-state rules on which supervision formats count toward licensure.
+ * Per-state rules on which supervision formats are allowed.
  *
- * Pilot dataset (TX, CA, FL, NY, IL × counseling / social work / MFT / psychology).
+ * For mental-health professions this is whether remote supervision counts
+ * toward licensure hours. For NPs and PAs (already licensed) it is whether
+ * their Collaborating / Supervising Physician can oversee them remotely.
+ *
+ * Pilot dataset (TX, CA, FL, NY, IL × counseling / social work / MFT /
+ * psychology / NP / PA).
  * Every entry is sourced from the state board's regulation or statute text —
  * not from board FAQ/guidance pages, which are often out of date.
  *
  * Informational only: never use this to hide or block Supervisors.
  */
 
-export type ProfessionGroup = 'COUNSELING' | 'SOCIAL_WORK' | 'MFT' | 'PSYCHOLOGY'
+export type ProfessionGroup = 'COUNSELING' | 'SOCIAL_WORK' | 'MFT' | 'PSYCHOLOGY' | 'NP' | 'PA'
+
+/** Professions supervised by a Mental Health Counselor Supervisor. */
+export const MENTAL_HEALTH_PROFESSIONS: ProfessionGroup[] = [
+  'COUNSELING',
+  'SOCIAL_WORK',
+  'MFT',
+  'PSYCHOLOGY',
+]
 
 /**
- * Whether remote (video) supervision counts toward licensure hours.
- * - ALLOWED: counts, no cap on hours
+ * Whether remote (video) supervision is allowed — for NPs/PAs, whether the
+ * physician can be off site.
+ * - ALLOWED: allowed, no cap on hours
  * - LIMITED: counts, but capped or conditional (e.g. max 50%)
  * - NOT_ALLOWED: must be in person
  * - NOT_SPECIFIED: rules are silent — tell the user to check with their board
@@ -44,6 +58,8 @@ export const PROFESSION_GROUP_LABELS: Record<ProfessionGroup, string> = {
   SOCIAL_WORK: 'Social Work (LCSW)',
   MFT: 'Marriage & Family Therapy (LMFT)',
   PSYCHOLOGY: 'Psychology',
+  NP: 'Collaborating Physician (NP)',
+  PA: 'Supervising Physician (PA)',
 }
 
 const PILOT_VERIFIED = '2026-09-30'
@@ -395,6 +411,178 @@ export const STATE_SUPERVISION_RULES: StateSupervisionRule[] = [
     lastVerified: PILOT_VERIFIED,
     confidence: 'HIGH',
   },
+  // ── Collaborating / Supervising Physicians (NP / PA) ──────────────────────
+  // "Virtual" here means the physician oversees the NP/PA remotely.
+  {
+    state: 'CA',
+    profession: 'NP',
+    licensePath: 'NP with standardized procedures; 103 / 104 NP',
+    board: 'California Board of Registered Nursing (BRN)',
+    remoteStatus: 'ALLOWED',
+    remoteLimit: null,
+    summary:
+      "Your collaborating physician can be remote, as long as they're reachable by phone during patient exams.",
+    conditions: [
+      'Standardized procedures required until 103 / 104 NP status',
+      'Max 4 NPs furnishing drugs per physician',
+    ],
+    citation: 'Cal. Bus. & Prof. Code §2836.1, §§2837.101–2837.105',
+    sourceUrl:
+      'https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=2836.1',
+    lastVerified: PILOT_VERIFIED,
+    confidence: 'HIGH',
+  },
+  {
+    state: 'CA',
+    profession: 'PA',
+    licensePath: 'Licensed PA (practice agreement)',
+    board: 'Physician Assistant Board of California',
+    remoteStatus: 'ALLOWED',
+    remoteLimit: null,
+    summary:
+      "Your supervising physician can be remote, as long as they're reachable by phone or electronically while you see patients.",
+    conditions: ['Written practice agreement required', 'Max 8 PAs per physician'],
+    citation: 'Cal. Bus. & Prof. Code §3501(f), §3516',
+    sourceUrl:
+      'https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=3501',
+    lastVerified: PILOT_VERIFIED,
+    confidence: 'HIGH',
+  },
+  {
+    state: 'FL',
+    profession: 'NP',
+    licensePath: 'APRN (supervisory protocol) or Autonomous APRN',
+    board: 'Florida Board of Nursing; Board of Medicine',
+    remoteStatus: 'LIMITED',
+    remoteLimit: 'A physician can oversee only 4 off-site offices (2 for specialty care).',
+    summary:
+      "Your supervising physician doesn't need to be on site, but each physician can oversee only a few off-site offices.",
+    conditions: [
+      'Primary-care NPs can practice autonomously after 3,000 supervised hours',
+      'Dermatology offices must be within 25 miles or a neighboring county',
+    ],
+    citation: 'Fla. Stat. §458.348(3), §464.012; Fla. Admin. Code R. 64B9-4.001(14)',
+    sourceUrl:
+      'http://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0400-0499/0458/Sections/0458.348.html',
+    lastVerified: PILOT_VERIFIED,
+    confidence: 'HIGH',
+  },
+  {
+    state: 'FL',
+    profession: 'PA',
+    licensePath: 'Licensed Physician Assistant (supervised)',
+    board: 'Florida Board of Medicine / Board of Osteopathic Medicine',
+    remoteStatus: 'LIMITED',
+    remoteLimit: "The physician must be within 'reasonable physical proximity' (not defined).",
+    summary:
+      "Your supervising physician can be off site and reachable by phone or video, but must be within 'reasonable physical proximity', so a far-away physician is risky.",
+    conditions: ['Max 10 PAs per physician'],
+    citation: 'Fla. Stat. §458.347(2)(g); Fla. Admin. Code R. 64B8-30.001(5)',
+    sourceUrl:
+      'http://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0400-0499/0458/Sections/0458.347.html',
+    lastVerified: PILOT_VERIFIED,
+    confidence: 'HIGH',
+  },
+  {
+    state: 'IL',
+    profession: 'NP',
+    licensePath: 'APRN (CNP) with written collaborative agreement',
+    board: 'Illinois Department of Financial and Professional Regulation (IDFPR)',
+    remoteStatus: 'ALLOWED',
+    remoteLimit: null,
+    summary:
+      'Your collaborating physician can be remote, consulting in person or by phone or video. Not needed after 4,000 hours plus 250 CE hours.',
+    conditions: ['Collaborating physician must hold an Illinois license'],
+    citation: '225 ILCS 65/65-35, 65-43',
+    sourceUrl: 'https://ilga.gov/Documents/legislation/ilcs/documents/022500650K65-35.htm',
+    lastVerified: PILOT_VERIFIED,
+    confidence: 'HIGH',
+  },
+  {
+    state: 'IL',
+    profession: 'PA',
+    licensePath: 'PA with written collaborative agreement',
+    board: 'Illinois Department of Financial and Professional Regulation (IDFPR)',
+    remoteStatus: 'ALLOWED',
+    remoteLimit: null,
+    summary:
+      'Your collaborating physician can be remote, with monthly consultation in person or by phone or video.',
+    conditions: [
+      'The agreement lists procedures that need the physician present',
+      'Max 7 full-time PAs per physician',
+    ],
+    citation: '225 ILCS 95/7.5; 68 Ill. Adm. Code 1350.80',
+    sourceUrl: 'https://ilga.gov/Documents/legislation/ilcs/documents/022500950K7.5.htm',
+    lastVerified: PILOT_VERIFIED,
+    // Statute read from an Oct 2025 archive of ilga.gov; confirm no 2026 changes.
+    confidence: 'MEDIUM',
+  },
+  {
+    state: 'NY',
+    profession: 'NP',
+    licensePath: 'Nurse Practitioner (NYSED certification)',
+    board: 'NYSED Office of the Professions',
+    remoteStatus: 'ALLOWED',
+    remoteLimit: null,
+    summary:
+      "Your collaborating physician can be remote. NPs with more than 3,600 hours don't need one (through June 2030).",
+    conditions: ['Max 4 off-site NPs per physician', 'Records reviewed at least every 3 months'],
+    citation: 'N.Y. Education Law §6902(3)',
+    sourceUrl: 'https://www.nysenate.gov/legislation/laws/EDN/6902',
+    lastVerified: PILOT_VERIFIED,
+    confidence: 'HIGH',
+  },
+  {
+    state: 'NY',
+    profession: 'PA',
+    licensePath: 'Licensed Physician Assistant (NYSED)',
+    board: 'NYSED Office of the Professions; NYS Department of Health',
+    remoteStatus: 'ALLOWED',
+    remoteLimit: null,
+    summary:
+      "Your supervising physician can be remote. The law doesn't require them to be physically present.",
+    conditions: ['Supervision must be continuous', 'Max 6 PAs per physician in private practice'],
+    citation: 'N.Y. Education Law §6542',
+    sourceUrl: 'https://www.nysenate.gov/legislation/laws/EDN/6542',
+    lastVerified: PILOT_VERIFIED,
+    confidence: 'HIGH',
+  },
+  {
+    state: 'TX',
+    profession: 'NP',
+    licensePath: 'APRN (NP) with prescriptive authority agreement',
+    board: 'Texas Board of Nursing; Texas Medical Board',
+    remoteStatus: 'ALLOWED',
+    remoteLimit: null,
+    summary:
+      'Your delegating physician can be remote. The required monthly meetings can be by video or phone.',
+    conditions: [
+      'Prescriptive authority agreement required to prescribe',
+      'Max 7 NPs/PAs per physician (exceptions apply)',
+    ],
+    citation: 'Tex. Occ. Code §157.0512',
+    sourceUrl: 'https://statutes.capitol.texas.gov/Docs/OC/htm/OC.157.htm#157.0512',
+    lastVerified: PILOT_VERIFIED,
+    confidence: 'HIGH',
+  },
+  {
+    state: 'TX',
+    profession: 'PA',
+    licensePath: 'PA with supervising physician',
+    board: 'Texas Physician Assistant Board; Texas Medical Board',
+    remoteStatus: 'ALLOWED',
+    remoteLimit: null,
+    summary:
+      'Your supervising physician can be remote, as long as you can easily reach them by phone.',
+    conditions: [
+      'Monthly meetings (if prescribing) can be by video or phone',
+      'Max 7 PAs/NPs per physician (exceptions apply)',
+    ],
+    citation: 'Tex. Occ. Code §204.204',
+    sourceUrl: 'https://statutes.capitol.texas.gov/Docs/OC/htm/OC.204.htm#204.204',
+    lastVerified: PILOT_VERIFIED,
+    confidence: 'HIGH',
+  },
 ]
 
 export function getStateSupervisionRules(state: string): StateSupervisionRule[] {
@@ -425,7 +613,7 @@ export function getFormatStatuses(rule: StateSupervisionRule): {
 
 /**
  * Supervisee occupation (see SUPERVISEE_ALLOWED_OCCUPATIONS) → profession group.
- * NP and PA are not covered yet, so they map to nothing.
+ * Occupations outside these groups map to nothing.
  */
 const OCCUPATION_PROFESSION_GROUPS: Record<ProfessionGroup, readonly string[]> = {
   COUNSELING: [
@@ -459,6 +647,8 @@ const OCCUPATION_PROFESSION_GROUPS: Record<ProfessionGroup, readonly string[]> =
     'Licensed Social Worker Associate Independent Clinical',
   ],
   PSYCHOLOGY: ['Licensed Psychological Associate', 'Psychologist Intern'],
+  NP: ['Nurse Practitioner'],
+  PA: ['Physician Assistant'],
 }
 
 const OCCUPATION_TO_PROFESSION = new Map<string, ProfessionGroup>(

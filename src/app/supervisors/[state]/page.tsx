@@ -21,7 +21,6 @@ import { FaqSection } from '@/components/seo/FaqSection'
 import { PublicResultsCta } from '@/components/seo/PublicResultsCta'
 import { SupervisorCard } from '@/components/seo/SupervisorCard'
 import { SupervisionFormatGuide } from '@/components/SupervisionFormatGuide'
-import { PhysicianOversightGuide } from '@/components/SupervisionFormatGuide/PhysicianOversightGuide'
 import { fetchPublicSupervisors } from '@/lib/api/public-supervisors'
 import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
 import { getStateFaqs } from '@/lib/seo/faq-data'
@@ -132,20 +131,8 @@ export default async function StateSupervisorsPage({ params }: Props) {
           )}
         </header>
 
-        {/* empty:hidden drops the spacing when neither guide has data for this state */}
-        <div className="mb-8 space-y-4 empty:hidden">
-          <SupervisionFormatGuide
-            state={stateAbbreviation}
-            stateName={stateName}
-            profession={null}
-            hideWhenNoData
-          />
-          <PhysicianOversightGuide
-            state={stateAbbreviation}
-            stateName={stateName}
-            role={null}
-            hideWhenNoData
-          />
+        <div className="mb-8 empty:hidden">
+          <SupervisionFormatGuide state={stateAbbreviation} stateName={stateName} hideWhenNoData />
         </div>
 
         {/* Supervisor type quick links */}

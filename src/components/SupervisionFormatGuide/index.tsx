@@ -1,4 +1,12 @@
-import { ChevronDownIcon, ExternalLinkIcon, LandmarkIcon } from 'lucide-react'
+import {
+  AlertTriangleIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  CircleHelpIcon,
+  ExternalLinkIcon,
+  LandmarkIcon,
+  XIcon,
+} from 'lucide-react'
 
 import {
   getFormatStatuses,
@@ -10,25 +18,45 @@ import {
 } from '@/lib/constants/state-supervision-rules'
 import { cn } from '@/lib/utils'
 
-import { GUIDE_TONE_STYLES, GuideDisclaimer, type GuideTone, oldestVerifiedDate } from './shared'
-
 const STATUS_STYLES: Record<
   RemoteSupervisionStatus,
-  { label: string; legend: string; tone: GuideTone }
+  { label: string; legend: string; className: string; Icon: typeof CheckIcon }
 > = {
-  ALLOWED: { label: 'Counts', legend: 'Counts toward licensure', tone: 'good' },
-  LIMITED: { label: 'Limited', legend: 'Counts with limits', tone: 'caution' },
-  NOT_ALLOWED: { label: "Doesn't count", legend: "Doesn't count", tone: 'bad' },
+  ALLOWED: {
+    label: 'Allowed',
+    legend: 'Allowed',
+    className: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    Icon: CheckIcon,
+  },
+  LIMITED: {
+    label: 'Limited',
+    legend: 'Allowed with limits',
+    className: 'bg-amber-50 text-amber-800 border-amber-200',
+    Icon: AlertTriangleIcon,
+  },
+  NOT_ALLOWED: {
+    label: 'Not allowed',
+    legend: 'Not allowed',
+    className: 'bg-destructive/10 text-destructive border-destructive/20',
+    Icon: XIcon,
+  },
   NOT_SPECIFIED: {
     label: 'Not specified',
     legend: "Rules don't say. Ask your board",
-    tone: 'unknown',
+    className: 'bg-muted text-muted-foreground border-border',
+    Icon: CircleHelpIcon,
   },
 }
 
+function formatVerifiedDate(isoDate: string): string {
+  return new Date(`${isoDate}T00:00:00`).toLocaleDateString('en-US', {
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
 function FormatChip({ label, status }: { label: string; status: RemoteSupervisionStatus }) {
-  const { label: statusLabel, tone } = STATUS_STYLES[status]
-  const { className, Icon } = GUIDE_TONE_STYLES[tone]
+  const { label: statusLabel, className, Icon } = STATUS_STYLES[status]
   return (
     <span
       className={cn(
@@ -52,8 +80,7 @@ function StatusLegend({ rules }: { rules: StateSupervisionRule[] }) {
   return (
     <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground" aria-hidden>
       {statuses.map((status) => {
-        const { legend, tone } = STATUS_STYLES[status]
-        const { Icon } = GUIDE_TONE_STYLES[tone]
+        const { legend, Icon } = STATUS_STYLES[status]
         return (
           <li key={status} className="inline-flex items-center gap-1">
             <Icon className="size-3" />
@@ -123,15 +150,17 @@ interface SupervisionFormatGuideProps {
   state: string
   /** Display name for the state (e.g. "Texas"). */
   stateName: string
-  /** The supervisee's profession; null shows every profession we cover for the state. */
-  profession: ProfessionGroup | null
+  /** Professions to show; omit to show every profession we cover for the state. */
+  professions?: ProfessionGroup[]
   /** Render nothing (instead of a "check with your board" note) for states we haven't researched. */
   hideWhenNoData?: boolean
 }
 
 /**
- * Tells Supervisees which supervision formats count toward licensure in their
- * state. Informational only — it never filters results.
+ * Tells Supervisees which supervision formats are allowed in their state:
+ * remote supervision toward licensure for mental-health professions, remote
+ * physician oversight for NPs and PAs. Informational only — it never filters
+ * results.
  *
  * Hook-free so public pages can render it on the server; details use a native
  * <details> element so their text is in the HTML for search engines.
@@ -139,12 +168,15 @@ interface SupervisionFormatGuideProps {
 export function SupervisionFormatGuide({
   state,
   stateName,
-  profession,
+  professions,
   hideWhenNoData = false,
 }: SupervisionFormatGuideProps) {
   const stateRules = getStateSupervisionRules(state)
-  const rules = profession ? stateRules.filter((r) => r.profession === profession) : stateRules
+  const rules = professions
+    ? stateRules.filter((r) => professions.includes(r.profession))
+    : stateRules
   const showProfession = rules.length > 1
+  const lastVerified = rules.map((r) => r.lastVerified).sort()[0]
 
   if (rules.length === 0) {
     if (hideWhenNoData) return null
@@ -156,7 +188,7 @@ export function SupervisionFormatGuide({
         <LandmarkIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
         <p>
           We haven&apos;t verified {stateName}&apos;s rules on virtual supervision yet. Check with
-          your state licensing board before counting virtual hours toward licensure.
+          your state licensing board before relying on virtual supervision.
         </p>
       </section>
     )
@@ -169,7 +201,7 @@ export function SupervisionFormatGuide({
     >
       <h2 className="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-foreground">
         <LandmarkIcon className="size-4 shrink-0 text-primary" aria-hidden />
-        Supervision formats that count in {stateName}
+        Supervision formats allowed in {stateName}
         {!showProfession && (
           <span className="font-normal text-muted-foreground">
             · {PROFESSION_GROUP_LABELS[rules[0].profession]}
@@ -181,7 +213,7 @@ export function SupervisionFormatGuide({
         <div className="space-y-1.5">
           {rules.map((rule) => (
             <div key={rule.profession} className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span className="w-44 shrink-0 text-xs text-muted-foreground">
+              <span className="w-48 shrink-0 text-xs text-muted-foreground">
                 {PROFESSION_GROUP_LABELS[rule.profession]}
               </span>
               <FormatChips rule={rule} />
@@ -213,7 +245,10 @@ export function SupervisionFormatGuide({
 
       <StatusLegend rules={rules} />
 
-      <GuideDisclaimer lastVerified={oldestVerifiedDate(rules)} />
+      <p className="text-[11px] text-muted-foreground">
+        For guidance only, not legal advice. Rules change, so confirm with your state board. Last
+        verified {formatVerifiedDate(lastVerified)}.
+      </p>
     </section>
   )
 }

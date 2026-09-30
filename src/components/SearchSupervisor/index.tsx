@@ -4,13 +4,12 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
 import { SupervisionFormatGuide } from '@/components/SupervisionFormatGuide'
-import { PhysicianOversightGuide } from '@/components/SupervisionFormatGuide/PhysicianOversightGuide'
 import type { SupervisorSearchMode } from '@/lib/api/supervisor-search'
 import { useStateNameOptions, useSuperviseeProfile, useSupervisorSearch } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 
-import { DEFAULT_FILTERS, resolveStateGuideTarget, SUPERVISOR_SEARCH_PAGE_SIZE } from './helpers'
+import { DEFAULT_FILTERS, resolveFormatGuideTarget, SUPERVISOR_SEARCH_PAGE_SIZE } from './helpers'
 import { SearchSupervisorFilters } from './SearchSupervisorFilters'
 import { SearchSupervisorHeader } from './SearchSupervisorHeader'
 import { SearchSupervisorResults } from './SearchSupervisorResults'
@@ -112,10 +111,10 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
   const total = data?.meta?.totalCount ?? 0
 
   const { data: stateNameOptions = [] } = useStateNameOptions()
-  // State rules cover supervision and NP/PA collaboration, not Medical Directors.
+  // Format rules cover supervision and NP/PA collaboration, not Medical Directors.
   const guideTarget =
     mode === 'supervisors'
-      ? resolveStateGuideTarget(superviseeProfile, appliedFilters.stateLicenses)
+      ? resolveFormatGuideTarget(superviseeProfile, appliedFilters.stateLicenses)
       : null
   const guideStateName = guideTarget
     ? (stateNameOptions.find((o) => o.value === guideTarget.state)?.label ?? guideTarget.state)
@@ -188,19 +187,11 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {guideTarget && (
             <div className="mb-4 shrink-0">
-              {guideTarget.physicianRole ? (
-                <PhysicianOversightGuide
-                  state={guideTarget.state}
-                  stateName={guideStateName}
-                  role={guideTarget.physicianRole}
-                />
-              ) : (
-                <SupervisionFormatGuide
-                  state={guideTarget.state}
-                  stateName={guideStateName}
-                  profession={guideTarget.profession}
-                />
-              )}
+              <SupervisionFormatGuide
+                state={guideTarget.state}
+                stateName={guideStateName}
+                professions={guideTarget.profession ? [guideTarget.profession] : undefined}
+              />
             </div>
           )}
           <SearchSupervisorResults

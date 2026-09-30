@@ -9,7 +9,7 @@ import {
 import { SUPERVISEE_ALLOWED_OCCUPATIONS } from '@/lib/utils/supervisee-eligibility'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
-import { resolveStateGuideTarget } from '../helpers'
+import { resolveFormatGuideTarget } from '../helpers'
 
 function makeProfile(overrides: {
   occupation?: string | null
@@ -32,18 +32,18 @@ describe('getProfessionGroupForOccupation', () => {
     expect(getProfessionGroupForOccupation('associate marriage and family therapist ')).toBe('MFT')
     expect(getProfessionGroupForOccupation('Licensed Master Social Worker')).toBe('SOCIAL_WORK')
     expect(getProfessionGroupForOccupation('Psychologist Intern')).toBe('PSYCHOLOGY')
+    expect(getProfessionGroupForOccupation('Nurse Practitioner')).toBe('NP')
+    expect(getProfessionGroupForOccupation('Physician Assistant')).toBe('PA')
   })
 
-  it('returns null for professions not covered yet', () => {
-    expect(getProfessionGroupForOccupation('Nurse Practitioner')).toBeNull()
+  it('returns null for occupations outside the covered professions', () => {
+    expect(getProfessionGroupForOccupation('Dentist')).toBeNull()
     expect(getProfessionGroupForOccupation(null)).toBeNull()
   })
 
-  it('covers every mental health occupation on the allowlist', () => {
+  it('covers every supervisee occupation on the allowlist', () => {
     const uncovered = SUPERVISEE_ALLOWED_OCCUPATIONS.filter(
-      (name) =>
-        !['Nurse Practitioner', 'Physician Assistant'].includes(name) &&
-        !getProfessionGroupForOccupation(name),
+      (name) => !getProfessionGroupForOccupation(name),
     )
     expect(uncovered).toEqual([])
   })
@@ -70,23 +70,22 @@ describe('STATE_SUPERVISION_RULES', () => {
     const keys = STATE_SUPERVISION_RULES.map((r) => `${r.state}:${r.profession}`)
     expect(new Set(keys).size).toBe(keys.length)
     for (const rule of STATE_SUPERVISION_RULES) {
-      expect(rule.sourceUrl).toMatch(/^https:\/\//)
+      expect(rule.sourceUrl).toMatch(/^https?:\/\//)
       expect(rule.citation).not.toBe('')
       expect(rule.remoteStatus === 'LIMITED').toBe(rule.remoteLimit !== null)
     }
   })
 })
 
-describe('resolveStateGuideTarget', () => {
+describe('resolveFormatGuideTarget', () => {
   it('uses the supervisee licensure state and profession', () => {
     const profile = makeProfile({
       occupation: 'Associate Clinical Social Worker',
       licensureState: 'ca',
     })
-    expect(resolveStateGuideTarget(profile, [])).toEqual({
+    expect(resolveFormatGuideTarget(profile, [])).toEqual({
       state: 'CA',
       profession: 'SOCIAL_WORK',
-      physicianRole: null,
     })
   })
 
@@ -95,37 +94,32 @@ describe('resolveStateGuideTarget', () => {
       occupation: 'Associate Clinical Social Worker',
       licensureState: 'CA',
     })
-    expect(resolveStateGuideTarget(profile, ['NY'])?.state).toBe('NY')
-    expect(resolveStateGuideTarget(profile, ['NY', 'TX'])?.state).toBe('CA')
+    expect(resolveFormatGuideTarget(profile, ['NY'])?.state).toBe('NY')
+    expect(resolveFormatGuideTarget(profile, ['NY', 'TX'])?.state).toBe('CA')
   })
 
   it('falls back to the first user state of licensure', () => {
     const profile = makeProfile({ stateOfLicensure: ['FL', 'GA'] })
-    expect(resolveStateGuideTarget(profile, [])).toEqual({
+    expect(resolveFormatGuideTarget(profile, [])).toEqual({
       state: 'FL',
       profession: null,
-      physicianRole: null,
     })
   })
 
-  it('targets the physician guide for NPs and PAs', () => {
+  it('resolves NPs and PAs to their own profession rows', () => {
     const np = makeProfile({ occupation: 'Nurse Practitioner', licensureState: 'TX' })
-    expect(resolveStateGuideTarget(np, [])).toEqual({
-      state: 'TX',
-      profession: null,
-      physicianRole: 'NP',
-    })
+    expect(resolveFormatGuideTarget(np, [])).toEqual({ state: 'TX', profession: 'NP' })
     const pa = makeProfile({ occupation: 'Physician Assistant', licensureState: 'IL' })
-    expect(resolveStateGuideTarget(pa, [])?.physicianRole).toBe('PA')
+    expect(resolveFormatGuideTarget(pa, [])?.profession).toBe('PA')
   })
 
   it('hides for uncovered occupations or when no state is known', () => {
     expect(
-      resolveStateGuideTarget(makeProfile({ occupation: 'Dentist', licensureState: 'TX' }), []),
+      resolveFormatGuideTarget(makeProfile({ occupation: 'Dentist', licensureState: 'TX' }), []),
     ).toBeNull()
     expect(
-      resolveStateGuideTarget(makeProfile({ occupation: 'Licensed Master Social Worker' }), []),
+      resolveFormatGuideTarget(makeProfile({ occupation: 'Licensed Master Social Worker' }), []),
     ).toBeNull()
-    expect(resolveStateGuideTarget(undefined, ['TX'])).toBeNull()
+    expect(resolveFormatGuideTarget(undefined, ['TX'])).toBeNull()
   })
 })
