@@ -98,9 +98,6 @@ export default async function StateSuperviseesPage({ params }: Props) {
     limit: PUBLIC_RESULTS_LIMIT,
   })
 
-  // Noindex if below threshold — page is still viewable for users
-  const shouldIndex = supervisees.length >= MIN_SUPERVISEES_TO_INDEX
-
   const otherStateSlugs = Object.keys(US_STATES)
     .filter((slug) => slug !== stateSlug)
     .sort()
@@ -113,11 +110,6 @@ export default async function StateSuperviseesPage({ params }: Props) {
 
   return (
     <>
-      {!shouldIndex && (
-        // Inline noindex for thin pages — belt-and-suspenders alongside robots metadata
-        <meta name="robots" content="noindex, follow" />
-      )}
-
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <Breadcrumb items={breadcrumbs} className="mb-6" />
 

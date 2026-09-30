@@ -18,10 +18,13 @@ import { JsonLd } from '@/components/seo/JsonLd'
 import { PublicResultsCta } from '@/components/seo/PublicResultsCta'
 import { PublicSearchFilters } from '@/components/seo/PublicSearchFilters'
 import { SupervisorCard } from '@/components/seo/SupervisorCard'
+import { SupervisionFormatGuide } from '@/components/SupervisionFormatGuide'
+import { PhysicianOversightGuide } from '@/components/SupervisionFormatGuide/PhysicianOversightGuide'
 import { fetchPublicSupervisors } from '@/lib/api/public-supervisors'
 import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
 import { generateOrganizationJsonLd, generateWebSiteJsonLd } from '@/lib/seo/jsonld'
 import {
+  stateAbbreviationToDisplayName,
   stateAbbreviationToSlug,
   stateSlugToDisplayName,
   SUPERVISOR_TYPE_QUERY_MAP,
@@ -169,6 +172,35 @@ export default async function SupervisorsIndexPage({ searchParams }: PageProps) 
               <p className="mt-1 text-sm text-muted-foreground">
                 {meta.totalCount} result{meta.totalCount !== 1 ? 's' : ''} found
               </p>
+            )}
+          </div>
+        )}
+
+        {/* State rules for the filtered type; both guides when no type is set.
+            Medical Directors have no state oversight rules to show. */}
+        {state && (
+          <div className="mb-6 space-y-4 empty:hidden">
+            {(!type || type === 'mental-health-counselor') && (
+              <SupervisionFormatGuide
+                state={state}
+                stateName={stateAbbreviationToDisplayName(state)}
+                profession={null}
+                hideWhenNoData
+              />
+            )}
+            {(!type || type === 'collaborating-physician' || type === 'supervising-physician') && (
+              <PhysicianOversightGuide
+                state={state}
+                stateName={stateAbbreviationToDisplayName(state)}
+                role={
+                  type === 'collaborating-physician'
+                    ? 'NP'
+                    : type === 'supervising-physician'
+                      ? 'PA'
+                      : null
+                }
+                hideWhenNoData
+              />
             )}
           </div>
         )}

@@ -26,6 +26,8 @@ import { FaqSection } from '@/components/seo/FaqSection'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { PublicResultsCta } from '@/components/seo/PublicResultsCta'
 import { SupervisorCard } from '@/components/seo/SupervisorCard'
+import { SupervisionFormatGuide } from '@/components/SupervisionFormatGuide'
+import { PhysicianOversightGuide } from '@/components/SupervisionFormatGuide/PhysicianOversightGuide'
 import type { PublicSupervisorSummary } from '@/lib/api/public-supervisors'
 import { fetchPublicSupervisorById, fetchPublicSupervisors } from '@/lib/api/public-supervisors'
 import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
@@ -242,7 +244,6 @@ async function LicenseTypeView({
   })
 
   const faqs = getLicenseFaqs(licenseLabel, stateName)
-  const shouldIndex = supervisors.length >= MIN_SUPERVISORS_TO_INDEX
 
   const breadcrumbs = [
     { name: 'Home', href: '/' },
@@ -253,8 +254,6 @@ async function LicenseTypeView({
 
   return (
     <>
-      {!shouldIndex && <meta name="robots" content="noindex, follow" />}
-
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <Breadcrumb items={breadcrumbs} className="mb-6" />
 
@@ -396,7 +395,6 @@ async function SupervisorTypeView({
   })
 
   const faqs = getSupervisorTypeFaqs(typeSlug, stateName)
-  const shouldIndex = supervisors.length >= MIN_SUPERVISORS_TO_INDEX
 
   const heading = buildSupervisorTypePageTitle(typeSlug, stateName).split(' | ')[0]
 
@@ -422,8 +420,6 @@ async function SupervisorTypeView({
 
   return (
     <>
-      {!shouldIndex && <meta name="robots" content="noindex, follow" />}
-
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <Breadcrumb items={breadcrumbs} className="mb-6" />
 
@@ -440,6 +436,26 @@ async function SupervisorTypeView({
             </p>
           )}
         </header>
+
+        {/* Each type page shows the state rules for its own supervisees. */}
+        <div className="mb-8 empty:hidden">
+          {typeSlug === 'mental-health-counselor-supervisors' && (
+            <SupervisionFormatGuide
+              state={stateAbbreviation}
+              stateName={stateName}
+              profession={null}
+              hideWhenNoData
+            />
+          )}
+          {(typeSlug === 'collaborating-physicians' || typeSlug === 'supervising-physicians') && (
+            <PhysicianOversightGuide
+              state={stateAbbreviation}
+              stateName={stateName}
+              role={typeSlug === 'collaborating-physicians' ? 'NP' : 'PA'}
+              hideWhenNoData
+            />
+          )}
+        </div>
 
         <nav aria-label="Browse other Supervisor types" className="mb-8">
           <p className="mb-2 text-sm font-medium text-foreground">Other Supervisor Types</p>

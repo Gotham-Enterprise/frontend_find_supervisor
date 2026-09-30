@@ -1,5 +1,14 @@
 import { yearsOfExperienceOptions } from '@/components/Signup/schema'
 import type { SelectOption } from '@/lib/api/options'
+import {
+  getPhysicianRoleForOccupation,
+  type PhysicianRole,
+} from '@/lib/constants/physician-oversight-rules'
+import {
+  getProfessionGroupForOccupation,
+  type ProfessionGroup,
+} from '@/lib/constants/state-supervision-rules'
+import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 import type { SupervisionFormat, SupervisorSearchFilters } from './types'
 
@@ -195,4 +204,34 @@ export function removeChip(
 
 export function hasActiveFilters(filters: SupervisorSearchFilters): boolean {
   return getActiveChips(filters).length > 0
+}
+
+/**
+ * Which state guide to show and for whom, or null to hide it. A single
+ * "State License" filter wins over the supervisee's own licensure state.
+ * NPs and PAs get the physician oversight guide; mental-health occupations
+ * get the supervision format guide; any other occupation hides both.
+ */
+export function resolveStateGuideTarget(
+  profile: SuperviseeProfileData | null | undefined,
+  appliedStateLicenses: string[],
+): {
+  state: string
+  profession: ProfessionGroup | null
+  physicianRole: PhysicianRole | null
+} | null {
+  if (!profile) return null
+
+  const occupationName = (profile.occupation?.name ?? profile.user.occupation?.name)?.trim()
+  const profession = getProfessionGroupForOccupation(occupationName)
+  const physicianRole = getPhysicianRoleForOccupation(occupationName)
+  if (occupationName && !profession && !physicianRole) return null
+
+  const state =
+    appliedStateLicenses.length === 1
+      ? appliedStateLicenses[0]
+      : (profile.licensureState ?? profile.user.stateOfLicensure?.[0] ?? '')
+  if (!state.trim()) return null
+
+  return { state: state.trim().toUpperCase(), profession, physicianRole }
 }
