@@ -5,13 +5,16 @@
  * toward licensure hours. For NPs and PAs (already licensed) it is whether
  * their Collaborating / Supervising Physician can oversee them remotely.
  *
- * Pilot dataset (TX, CA, FL, NY, IL × counseling / social work / MFT /
- * psychology / NP / PA).
+ * Covers all 50 states + DC × counseling / social work / MFT / psychology /
+ * NP / PA: the 5-state pilot below plus the national rollout in
+ * ./state-supervision-rules-national.
  * Every entry is sourced from the state board's regulation or statute text —
  * not from board FAQ/guidance pages, which are often out of date.
  *
  * Informational only: never use this to hide or block Supervisors.
  */
+
+import { NATIONAL_SUPERVISION_RULES } from './state-supervision-rules-national'
 
 export type ProfessionGroup = 'COUNSELING' | 'SOCIAL_WORK' | 'MFT' | 'PSYCHOLOGY' | 'NP' | 'PA'
 
@@ -96,7 +99,7 @@ const CA_CONDITIONS = [
 const CA_SUMMARY =
   'Supervision can be in person, by live video, or a mix, in any work setting, as long as your supervisor documents that video is appropriate.'
 
-export const STATE_SUPERVISION_RULES: StateSupervisionRule[] = [
+const PILOT_RULES: StateSupervisionRule[] = [
   // ── California ────────────────────────────────────────────────────────────
   {
     state: 'CA',
@@ -583,6 +586,11 @@ export const STATE_SUPERVISION_RULES: StateSupervisionRule[] = [
     lastVerified: PILOT_VERIFIED,
     confidence: 'HIGH',
   },
+]
+
+export const STATE_SUPERVISION_RULES: StateSupervisionRule[] = [
+  ...PILOT_RULES,
+  ...NATIONAL_SUPERVISION_RULES,
 ]
 
 export function getStateSupervisionRules(state: string): StateSupervisionRule[] {

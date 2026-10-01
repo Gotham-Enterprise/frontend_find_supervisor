@@ -39,14 +39,14 @@ describe('SupervisionFormatGuide', () => {
   })
 
   it('falls back to a board reminder for states without data', () => {
-    render(<SupervisionFormatGuide state="GA" stateName="Georgia" professions={['MFT']} />)
+    render(<SupervisionFormatGuide state="PR" stateName="Puerto Rico" professions={['MFT']} />)
 
-    expect(screen.getByText(/haven't verified Georgia's rules/)).toBeInTheDocument()
+    expect(screen.getByText(/haven't verified Puerto Rico's rules/)).toBeInTheDocument()
   })
 
   it('renders nothing for states without data when hideWhenNoData is set', () => {
     const { container } = render(
-      <SupervisionFormatGuide state="GA" stateName="Georgia" hideWhenNoData />,
+      <SupervisionFormatGuide state="PR" stateName="Puerto Rico" hideWhenNoData />,
     )
 
     expect(container).toBeEmptyDOMElement()

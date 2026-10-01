@@ -4,8 +4,11 @@ import {
   getFormatStatuses,
   getProfessionGroupForOccupation,
   getStateSupervisionRule,
+  PROFESSION_GROUP_LABELS,
+  type ProfessionGroup,
   STATE_SUPERVISION_RULES,
 } from '@/lib/constants/state-supervision-rules'
+import { US_STATES } from '@/lib/seo/routes'
 import { SUPERVISEE_ALLOWED_OCCUPATIONS } from '@/lib/utils/supervisee-eligibility'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
@@ -66,6 +69,16 @@ describe('getFormatStatuses', () => {
 })
 
 describe('STATE_SUPERVISION_RULES', () => {
+  it('covers every profession in all 50 states and DC', () => {
+    const professions = Object.keys(PROFESSION_GROUP_LABELS)
+    const missing = Object.values(US_STATES).flatMap((state) =>
+      professions
+        .filter((profession) => !getStateSupervisionRule(state, profession as ProfessionGroup))
+        .map((profession) => `${state}:${profession}`),
+    )
+    expect(missing).toEqual([])
+  })
+
   it('has one entry per state and profession, each with a source', () => {
     const keys = STATE_SUPERVISION_RULES.map((r) => `${r.state}:${r.profession}`)
     expect(new Set(keys).size).toBe(keys.length)
