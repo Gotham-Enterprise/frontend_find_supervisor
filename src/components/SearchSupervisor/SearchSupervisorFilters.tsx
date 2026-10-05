@@ -28,6 +28,7 @@ import { ActiveFilterChips } from './ActiveFilterChips'
 import type { ChipOptions } from './helpers'
 import {
   getActiveChips,
+  getSearchableSupervisorTypes,
   hasActiveFilters,
   RADIUS_MAX,
   RADIUS_MIN,
@@ -49,6 +50,8 @@ interface SearchSupervisorFiltersProps {
   onClearFilters: () => void
   /** 'medical-directors' hides the irrelevant sections (occupation, license type, patient population). */
   mode?: SupervisorSearchMode
+  /** The supervisee's stored supervision needs (type names); scopes occupation/license options. */
+  supervisionNeeds?: string[] | null
 }
 
 function FilterLabel({ children }: { children: React.ReactNode }) {
@@ -69,6 +72,7 @@ export function SearchSupervisorFilters({
   onApply,
   onClearFilters,
   mode = 'supervisors',
+  supervisionNeeds,
 }: SearchSupervisorFiltersProps) {
   const isMedicalDirectors = mode === 'medical-directors'
   const {
@@ -82,13 +86,18 @@ export function SearchSupervisorFilters({
   // Hierarchy data from /api/supervision/supervisor-type
   const { data: supervisorTypesData = [], isLoading: hierarchyLoading } = useSupervisorTypesData()
 
-  // Occupation options — union of occupations across all supervisor types.
-  // (There is no supervisor-type filter: the backend already scopes results
-  // to the supervisee's stored supervision needs.)
+  // Only the supervisor types this supervisee needs (the backend scopes results
+  // the same way), so e.g. a PA never sees counselor or NP occupations.
+  const searchableTypes = useMemo(
+    () => getSearchableSupervisorTypes(supervisorTypesData, supervisionNeeds),
+    [supervisorTypesData, supervisionNeeds],
+  )
+
+  // Occupation options — union of occupations across the searchable types.
   const occupationOptions = useMemo<SelectOption[]>(() => {
     const seen = new Set<string>()
     const opts: SelectOption[] = []
-    for (const t of supervisorTypesData) {
+    for (const t of searchableTypes) {
       for (const o of t.occupations) {
         if (!seen.has(o.name)) {
           seen.add(o.name)
@@ -97,7 +106,7 @@ export function SearchSupervisorFilters({
       }
     }
     return opts
-  }, [supervisorTypesData])
+  }, [searchableTypes])
 
   // Specialty options — union of specialties across selected occupations. On
   // the Medical Director page there is no occupation filter, so the physician
@@ -118,7 +127,7 @@ export function SearchSupervisorFilters({
       return opts
     }
     if (filters.supervisorOccupations.length === 0) return []
-    for (const t of supervisorTypesData) {
+    for (const t of searchableTypes) {
       for (const o of t.occupations) {
         if (filters.supervisorOccupations.includes(o.name)) {
           for (const s of o.specialties) {
@@ -131,14 +140,14 @@ export function SearchSupervisorFilters({
       }
     }
     return opts
-  }, [isMedicalDirectors, filters.supervisorOccupations, supervisorTypesData])
+  }, [isMedicalDirectors, filters.supervisorOccupations, supervisorTypesData, searchableTypes])
 
   // License Type options — union of license types across selected occupations
-  // (if no occupation selected, show all unique license types)
+  // (if no occupation selected, every license type of the searchable types)
   const licenseTypeOptions = useMemo<SelectOption[]>(() => {
     const seen = new Set<string>()
     const opts: SelectOption[] = []
-    for (const t of supervisorTypesData) {
+    for (const t of searchableTypes) {
       for (const o of t.occupations) {
         const isRelevant =
           filters.supervisorOccupations.length === 0 ||
@@ -160,7 +169,7 @@ export function SearchSupervisorFilters({
       }
     }
     return opts
-  }, [filters.supervisorOccupations, supervisorTypesData])
+  }, [filters.supervisorOccupations, searchableTypes])
 
   const filtersRef = useRef(filters)
   useLayoutEffect(() => {

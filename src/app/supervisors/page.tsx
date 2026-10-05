@@ -191,8 +191,7 @@ export default async function SupervisorsIndexPage({ searchParams }: PageProps) 
         {state && type !== 'medical-director' && (
           <div className="mb-6 empty:hidden">
             <SupervisionFormatGuide
-              state={state}
-              stateName={stateAbbreviationToDisplayName(state)}
+              states={[{ code: state, name: stateAbbreviationToDisplayName(state) }]}
               professions={type ? TYPE_FILTER_PROFESSIONS[type] : undefined}
               hideWhenNoData
             />

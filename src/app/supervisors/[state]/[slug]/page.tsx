@@ -451,8 +451,7 @@ async function SupervisorTypeView({
         {TYPE_PAGE_PROFESSIONS[typeSlug] && (
           <div className="mb-8 empty:hidden">
             <SupervisionFormatGuide
-              state={stateAbbreviation}
-              stateName={stateName}
+              states={[{ code: stateAbbreviation, name: stateName }]}
               professions={TYPE_PAGE_PROFESSIONS[typeSlug]}
               hideWhenNoData
             />

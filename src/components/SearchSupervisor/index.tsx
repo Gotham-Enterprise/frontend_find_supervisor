@@ -116,9 +116,10 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
     mode === 'supervisors'
       ? resolveFormatGuideTarget(superviseeProfile, appliedFilters.stateLicenses)
       : null
-  const guideStateName = guideTarget
-    ? (stateNameOptions.find((o) => o.value === guideTarget.state)?.label ?? guideTarget.state)
-    : ''
+  const guideStates = (guideTarget?.states ?? []).map((code) => ({
+    code,
+    name: stateNameOptions.find((o) => o.value === code)?.label ?? code,
+  }))
 
   const errorMessage = isError
     ? parseApiError(error) || 'Something went wrong while loading supervisors.'
@@ -181,6 +182,7 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
             onApply={handleApplyFilters}
             onClearFilters={handleClearFilterPanel}
             mode={mode}
+            supervisionNeeds={superviseeProfile?.typeOfSupervisorNeeded}
           />
         </div>
 
@@ -188,8 +190,7 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
           {guideTarget && (
             <div className="mb-4 shrink-0">
               <SupervisionFormatGuide
-                state={guideTarget.state}
-                stateName={guideStateName}
+                states={guideStates}
                 professions={guideTarget.profession ? [guideTarget.profession] : undefined}
               />
             </div>

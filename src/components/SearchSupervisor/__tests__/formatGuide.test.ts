@@ -91,48 +91,39 @@ describe('STATE_SUPERVISION_RULES', () => {
 })
 
 describe('resolveFormatGuideTarget', () => {
-  it('uses the supervisee licensure state and profession', () => {
+  it('stays hidden until a State License filter is applied', () => {
     const profile = makeProfile({
       occupation: 'Associate Clinical Social Worker',
-      licensureState: 'ca',
+      licensureState: 'CA',
+      stateOfLicensure: ['CA'],
     })
-    expect(resolveFormatGuideTarget(profile, [])).toEqual({
-      state: 'CA',
+    expect(resolveFormatGuideTarget(profile, [])).toBeNull()
+  })
+
+  it('uses every applied state with the supervisee profession', () => {
+    const profile = makeProfile({ occupation: 'Associate Clinical Social Worker' })
+    expect(resolveFormatGuideTarget(profile, ['ny', 'TX', 'NY'])).toEqual({
+      states: ['NY', 'TX'],
       profession: 'SOCIAL_WORK',
     })
   })
 
-  it('prefers a single State License filter over the profile state', () => {
-    const profile = makeProfile({
-      occupation: 'Associate Clinical Social Worker',
-      licensureState: 'CA',
-    })
-    expect(resolveFormatGuideTarget(profile, ['NY'])?.state).toBe('NY')
-    expect(resolveFormatGuideTarget(profile, ['NY', 'TX'])?.state).toBe('CA')
+  it('resolves NPs and PAs to their own profession rows', () => {
+    const np = makeProfile({ occupation: 'Nurse Practitioner' })
+    expect(resolveFormatGuideTarget(np, ['TX'])).toEqual({ states: ['TX'], profession: 'NP' })
+    const pa = makeProfile({ occupation: 'Physician Assistant' })
+    expect(resolveFormatGuideTarget(pa, ['IL'])?.profession).toBe('PA')
   })
 
-  it('falls back to the first user state of licensure', () => {
-    const profile = makeProfile({ stateOfLicensure: ['FL', 'GA'] })
-    expect(resolveFormatGuideTarget(profile, [])).toEqual({
-      state: 'FL',
+  it('shows every profession when the occupation is unknown', () => {
+    expect(resolveFormatGuideTarget(makeProfile({}), ['FL'])).toEqual({
+      states: ['FL'],
       profession: null,
     })
   })
 
-  it('resolves NPs and PAs to their own profession rows', () => {
-    const np = makeProfile({ occupation: 'Nurse Practitioner', licensureState: 'TX' })
-    expect(resolveFormatGuideTarget(np, [])).toEqual({ state: 'TX', profession: 'NP' })
-    const pa = makeProfile({ occupation: 'Physician Assistant', licensureState: 'IL' })
-    expect(resolveFormatGuideTarget(pa, [])?.profession).toBe('PA')
-  })
-
-  it('hides for uncovered occupations or when no state is known', () => {
-    expect(
-      resolveFormatGuideTarget(makeProfile({ occupation: 'Dentist', licensureState: 'TX' }), []),
-    ).toBeNull()
-    expect(
-      resolveFormatGuideTarget(makeProfile({ occupation: 'Licensed Master Social Worker' }), []),
-    ).toBeNull()
+  it('hides for uncovered occupations or a missing profile', () => {
+    expect(resolveFormatGuideTarget(makeProfile({ occupation: 'Dentist' }), ['TX'])).toBeNull()
     expect(resolveFormatGuideTarget(undefined, ['TX'])).toBeNull()
   })
 })

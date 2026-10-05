@@ -132,7 +132,10 @@ export default async function StateSupervisorsPage({ params }: Props) {
         </header>
 
         <div className="mb-8 empty:hidden">
-          <SupervisionFormatGuide state={stateAbbreviation} stateName={stateName} hideWhenNoData />
+          <SupervisionFormatGuide
+            states={[{ code: stateAbbreviation, name: stateName }]}
+            hideWhenNoData
+          />
         </div>
 
         {/* Supervisor type quick links */}
