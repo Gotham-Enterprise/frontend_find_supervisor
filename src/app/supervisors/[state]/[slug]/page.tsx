@@ -26,8 +26,13 @@ import { FaqSection } from '@/components/seo/FaqSection'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { PublicResultsCta } from '@/components/seo/PublicResultsCta'
 import { SupervisorCard } from '@/components/seo/SupervisorCard'
+import { SupervisionFormatGuide } from '@/components/SupervisionFormatGuide'
 import type { PublicSupervisorSummary } from '@/lib/api/public-supervisors'
 import { fetchPublicSupervisorById, fetchPublicSupervisors } from '@/lib/api/public-supervisors'
+import {
+  MENTAL_HEALTH_PROFESSIONS,
+  type ProfessionGroup,
+} from '@/lib/constants/state-supervision-rules'
 import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
 import { getLicenseFaqs, getSupervisorTypeFaqs } from '@/lib/seo/faq-data'
 import { generateSupervisorJsonLd } from '@/lib/seo/jsonld'
@@ -53,6 +58,13 @@ import {
 import { isPhysicianSupervisorType } from '@/lib/utils/supervisor-type'
 
 const MIN_SUPERVISORS_TO_INDEX = 3
+
+/** Format-guide professions per supervisor-type page (Medical Directors have none). */
+const TYPE_PAGE_PROFESSIONS: Record<string, ProfessionGroup[]> = {
+  'mental-health-counselor-supervisors': MENTAL_HEALTH_PROFESSIONS,
+  'collaborating-physicians': ['NP'],
+  'supervising-physicians': ['PA'],
+}
 
 // ---------------------------------------------------------------------------
 // Helpers for type-aware metadata copy
@@ -242,7 +254,6 @@ async function LicenseTypeView({
   })
 
   const faqs = getLicenseFaqs(licenseLabel, stateName)
-  const shouldIndex = supervisors.length >= MIN_SUPERVISORS_TO_INDEX
 
   const breadcrumbs = [
     { name: 'Home', href: '/' },
@@ -253,8 +264,6 @@ async function LicenseTypeView({
 
   return (
     <>
-      {!shouldIndex && <meta name="robots" content="noindex, follow" />}
-
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <Breadcrumb items={breadcrumbs} className="mb-6" />
 
@@ -396,7 +405,6 @@ async function SupervisorTypeView({
   })
 
   const faqs = getSupervisorTypeFaqs(typeSlug, stateName)
-  const shouldIndex = supervisors.length >= MIN_SUPERVISORS_TO_INDEX
 
   const heading = buildSupervisorTypePageTitle(typeSlug, stateName).split(' | ')[0]
 
@@ -422,8 +430,6 @@ async function SupervisorTypeView({
 
   return (
     <>
-      {!shouldIndex && <meta name="robots" content="noindex, follow" />}
-
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <Breadcrumb items={breadcrumbs} className="mb-6" />
 
@@ -440,6 +446,17 @@ async function SupervisorTypeView({
             </p>
           )}
         </header>
+
+        {/* Each type page shows the format rules for its own supervisees. */}
+        {TYPE_PAGE_PROFESSIONS[typeSlug] && (
+          <div className="mb-8 empty:hidden">
+            <SupervisionFormatGuide
+              states={[{ code: stateAbbreviation, name: stateName }]}
+              professions={TYPE_PAGE_PROFESSIONS[typeSlug]}
+              hideWhenNoData
+            />
+          </div>
+        )}
 
         <nav aria-label="Browse other Supervisor types" className="mb-8">
           <p className="mb-2 text-sm font-medium text-foreground">Other Supervisor Types</p>

@@ -18,10 +18,16 @@ import { JsonLd } from '@/components/seo/JsonLd'
 import { PublicResultsCta } from '@/components/seo/PublicResultsCta'
 import { PublicSearchFilters } from '@/components/seo/PublicSearchFilters'
 import { SupervisorCard } from '@/components/seo/SupervisorCard'
+import { SupervisionFormatGuide } from '@/components/SupervisionFormatGuide'
 import { fetchPublicSupervisors } from '@/lib/api/public-supervisors'
+import {
+  MENTAL_HEALTH_PROFESSIONS,
+  type ProfessionGroup,
+} from '@/lib/constants/state-supervision-rules'
 import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
 import { generateOrganizationJsonLd, generateWebSiteJsonLd } from '@/lib/seo/jsonld'
 import {
+  stateAbbreviationToDisplayName,
   stateAbbreviationToSlug,
   stateSlugToDisplayName,
   SUPERVISOR_TYPE_QUERY_MAP,
@@ -80,6 +86,13 @@ const ALL_STATE_SLUGS = Object.keys(US_STATES)
 const OTHER_STATE_SLUGS = ALL_STATE_SLUGS.filter((s) => !TOP_STATE_SLUGS.includes(s)).sort()
 
 const PUBLIC_RESULTS_LIMIT = 12
+
+/** Format-guide professions per `type` filter value. */
+const TYPE_FILTER_PROFESSIONS: Record<string, ProfessionGroup[]> = {
+  'mental-health-counselor': MENTAL_HEALTH_PROFESSIONS,
+  'collaborating-physician': ['NP'],
+  'supervising-physician': ['PA'],
+}
 
 // ---------------------------------------------------------------------------
 // Page
@@ -170,6 +183,18 @@ export default async function SupervisorsIndexPage({ searchParams }: PageProps) 
                 {meta.totalCount} result{meta.totalCount !== 1 ? 's' : ''} found
               </p>
             )}
+          </div>
+        )}
+
+        {/* Format rules for the filtered type (all professions when no type is
+            set). Medical Directors have no format rules to show. */}
+        {state && type !== 'medical-director' && (
+          <div className="mb-6 empty:hidden">
+            <SupervisionFormatGuide
+              states={[{ code: state, name: stateAbbreviationToDisplayName(state) }]}
+              professions={type ? TYPE_FILTER_PROFESSIONS[type] : undefined}
+              hideWhenNoData
+            />
           </div>
         )}
 

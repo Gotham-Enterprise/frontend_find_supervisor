@@ -20,6 +20,7 @@ import { Breadcrumb } from '@/components/seo/Breadcrumb'
 import { FaqSection } from '@/components/seo/FaqSection'
 import { PublicResultsCta } from '@/components/seo/PublicResultsCta'
 import { SupervisorCard } from '@/components/seo/SupervisorCard'
+import { SupervisionFormatGuide } from '@/components/SupervisionFormatGuide'
 import { fetchPublicSupervisors } from '@/lib/api/public-supervisors'
 import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
 import { getStateFaqs } from '@/lib/seo/faq-data'
@@ -102,9 +103,6 @@ export default async function StateSupervisorsPage({ params }: Props) {
 
   const faqs = getStateFaqs(stateName)
 
-  // Noindex if below threshold — page is still viewable for users
-  const shouldIndex = supervisors.length >= MIN_SUPERVISORS_TO_INDEX
-
   const breadcrumbs = [
     { name: 'Home', href: '/' },
     { name: 'Supervisors', href: '/supervisors' },
@@ -113,11 +111,6 @@ export default async function StateSupervisorsPage({ params }: Props) {
 
   return (
     <>
-      {!shouldIndex && (
-        // Inline noindex for thin pages — belt-and-suspenders alongside robots metadata
-        <meta name="robots" content="noindex, follow" />
-      )}
-
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <Breadcrumb items={breadcrumbs} className="mb-6" />
 
@@ -137,6 +130,13 @@ export default async function StateSupervisorsPage({ params }: Props) {
             </p>
           )}
         </header>
+
+        <div className="mb-8 empty:hidden">
+          <SupervisionFormatGuide
+            states={[{ code: stateAbbreviation, name: stateName }]}
+            hideWhenNoData
+          />
+        </div>
 
         {/* Supervisor type quick links */}
         <nav aria-label="Browse by Supervisor type" className="mb-5">

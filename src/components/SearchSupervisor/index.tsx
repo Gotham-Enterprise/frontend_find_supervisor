@@ -3,12 +3,13 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
+import { SupervisionFormatGuide } from '@/components/SupervisionFormatGuide'
 import type { SupervisorSearchMode } from '@/lib/api/supervisor-search'
-import { useSuperviseeProfile, useSupervisorSearch } from '@/lib/hooks'
+import { useStateNameOptions, useSuperviseeProfile, useSupervisorSearch } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 
-import { DEFAULT_FILTERS, SUPERVISOR_SEARCH_PAGE_SIZE } from './helpers'
+import { DEFAULT_FILTERS, resolveFormatGuideTarget, SUPERVISOR_SEARCH_PAGE_SIZE } from './helpers'
 import { SearchSupervisorFilters } from './SearchSupervisorFilters'
 import { SearchSupervisorHeader } from './SearchSupervisorHeader'
 import { SearchSupervisorResults } from './SearchSupervisorResults'
@@ -109,6 +110,17 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
 
   const total = data?.meta?.totalCount ?? 0
 
+  const { data: stateNameOptions = [] } = useStateNameOptions()
+  // Format rules cover supervision and NP/PA collaboration, not Medical Directors.
+  const guideTarget =
+    mode === 'supervisors'
+      ? resolveFormatGuideTarget(superviseeProfile, appliedFilters.stateLicenses)
+      : null
+  const guideStates = (guideTarget?.states ?? []).map((code) => ({
+    code,
+    name: stateNameOptions.find((o) => o.value === code)?.label ?? code,
+  }))
+
   const errorMessage = isError
     ? parseApiError(error) || 'Something went wrong while loading supervisors.'
     : null
@@ -170,10 +182,19 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
             onApply={handleApplyFilters}
             onClearFilters={handleClearFilterPanel}
             mode={mode}
+            supervisionNeeds={superviseeProfile?.typeOfSupervisorNeeded}
           />
         </div>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          {guideTarget && (
+            <div className="mb-4 shrink-0">
+              <SupervisionFormatGuide
+                states={guideStates}
+                professions={guideTarget.profession ? [guideTarget.profession] : undefined}
+              />
+            </div>
+          )}
           <SearchSupervisorResults
             supervisors={supervisors}
             total={total}

@@ -1,0 +1,129 @@
+import { describe, expect, it } from 'vitest'
+
+import {
+  getFormatStatuses,
+  getProfessionGroupForOccupation,
+  getStateSupervisionRule,
+  PROFESSION_GROUP_LABELS,
+  type ProfessionGroup,
+  STATE_SUPERVISION_RULES,
+} from '@/lib/constants/state-supervision-rules'
+import { US_STATES } from '@/lib/seo/routes'
+import { SUPERVISEE_ALLOWED_OCCUPATIONS } from '@/lib/utils/supervisee-eligibility'
+import type { SuperviseeProfileData } from '@/types/supervisee-profile'
+
+import { resolveFormatGuideTarget } from '../helpers'
+
+function makeProfile(overrides: {
+  occupation?: string | null
+  licensureState?: string | null
+  stateOfLicensure?: string[]
+}): SuperviseeProfileData {
+  const occupation = overrides.occupation ? { id: 1, name: overrides.occupation } : null
+  return {
+    licensureState: overrides.licensureState ?? null,
+    occupation,
+    user: { stateOfLicensure: overrides.stateOfLicensure ?? [], occupation },
+  } as unknown as SuperviseeProfileData
+}
+
+describe('getProfessionGroupForOccupation', () => {
+  it('maps supervisee occupations to profession groups', () => {
+    expect(getProfessionGroupForOccupation('Licensed Professional Counselor Associate')).toBe(
+      'COUNSELING',
+    )
+    expect(getProfessionGroupForOccupation('associate marriage and family therapist ')).toBe('MFT')
+    expect(getProfessionGroupForOccupation('Licensed Master Social Worker')).toBe('SOCIAL_WORK')
+    expect(getProfessionGroupForOccupation('Psychologist Intern')).toBe('PSYCHOLOGY')
+    expect(getProfessionGroupForOccupation('Nurse Practitioner')).toBe('NP')
+    expect(getProfessionGroupForOccupation('Physician Assistant')).toBe('PA')
+  })
+
+  it('returns null for occupations outside the covered professions', () => {
+    expect(getProfessionGroupForOccupation('Dentist')).toBeNull()
+    expect(getProfessionGroupForOccupation(null)).toBeNull()
+  })
+
+  it('covers every supervisee occupation on the allowlist', () => {
+    const uncovered = SUPERVISEE_ALLOWED_OCCUPATIONS.filter(
+      (name) => !getProfessionGroupForOccupation(name),
+    )
+    expect(uncovered).toEqual([])
+  })
+})
+
+describe('getFormatStatuses', () => {
+  it('treats hybrid as allowed when virtual is limited', () => {
+    const fl = getStateSupervisionRule('FL', 'COUNSELING')!
+    expect(getFormatStatuses(fl)).toEqual({
+      inPerson: 'ALLOWED',
+      hybrid: 'ALLOWED',
+      remote: 'LIMITED',
+    })
+  })
+
+  it('carries not-specified through to hybrid', () => {
+    const tx = getStateSupervisionRule('tx', 'COUNSELING')!
+    expect(getFormatStatuses(tx).hybrid).toBe('NOT_SPECIFIED')
+  })
+})
+
+describe('STATE_SUPERVISION_RULES', () => {
+  it('covers every profession in all 50 states and DC', () => {
+    const professions = Object.keys(PROFESSION_GROUP_LABELS)
+    const missing = Object.values(US_STATES).flatMap((state) =>
+      professions
+        .filter((profession) => !getStateSupervisionRule(state, profession as ProfessionGroup))
+        .map((profession) => `${state}:${profession}`),
+    )
+    expect(missing).toEqual([])
+  })
+
+  it('has one entry per state and profession, each with a source', () => {
+    const keys = STATE_SUPERVISION_RULES.map((r) => `${r.state}:${r.profession}`)
+    expect(new Set(keys).size).toBe(keys.length)
+    for (const rule of STATE_SUPERVISION_RULES) {
+      expect(rule.sourceUrl).toMatch(/^https?:\/\//)
+      expect(rule.citation).not.toBe('')
+      expect(rule.remoteStatus === 'LIMITED').toBe(rule.remoteLimit !== null)
+    }
+  })
+})
+
+describe('resolveFormatGuideTarget', () => {
+  it('stays hidden until a State License filter is applied', () => {
+    const profile = makeProfile({
+      occupation: 'Associate Clinical Social Worker',
+      licensureState: 'CA',
+      stateOfLicensure: ['CA'],
+    })
+    expect(resolveFormatGuideTarget(profile, [])).toBeNull()
+  })
+
+  it('uses every applied state with the supervisee profession', () => {
+    const profile = makeProfile({ occupation: 'Associate Clinical Social Worker' })
+    expect(resolveFormatGuideTarget(profile, ['ny', 'TX', 'NY'])).toEqual({
+      states: ['NY', 'TX'],
+      profession: 'SOCIAL_WORK',
+    })
+  })
+
+  it('resolves NPs and PAs to their own profession rows', () => {
+    const np = makeProfile({ occupation: 'Nurse Practitioner' })
+    expect(resolveFormatGuideTarget(np, ['TX'])).toEqual({ states: ['TX'], profession: 'NP' })
+    const pa = makeProfile({ occupation: 'Physician Assistant' })
+    expect(resolveFormatGuideTarget(pa, ['IL'])?.profession).toBe('PA')
+  })
+
+  it('shows every profession when the occupation is unknown', () => {
+    expect(resolveFormatGuideTarget(makeProfile({}), ['FL'])).toEqual({
+      states: ['FL'],
+      profession: null,
+    })
+  })
+
+  it('hides for uncovered occupations or a missing profile', () => {
+    expect(resolveFormatGuideTarget(makeProfile({ occupation: 'Dentist' }), ['TX'])).toBeNull()
+    expect(resolveFormatGuideTarget(undefined, ['TX'])).toBeNull()
+  })
+})

@@ -1,5 +1,14 @@
 import { yearsOfExperienceOptions } from '@/components/Signup/schema'
-import type { SelectOption } from '@/lib/api/options'
+import type { SelectOption, SupervisorTypeData } from '@/lib/api/options'
+import {
+  getProfessionGroupForOccupation,
+  type ProfessionGroup,
+} from '@/lib/constants/state-supervision-rules'
+import {
+  isMedicalDirectorType,
+  resolveSupervisorTypeCode,
+} from '@/lib/utils/supervisee-eligibility'
+import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 import type { SupervisionFormat, SupervisorSearchFilters } from './types'
 
@@ -195,4 +204,55 @@ export function removeChip(
 
 export function hasActiveFilters(filters: SupervisorSearchFilters): boolean {
   return getActiveChips(filters).length > 0
+}
+
+/**
+ * Which states + profession the supervision format guide should describe, or
+ * null to hide it. The guide only appears once the supervisee applies at least
+ * one "State License" filter (one row per state); the profession comes from
+ * their own occupation, and occupations outside the covered professions hide it.
+ */
+export function resolveFormatGuideTarget(
+  profile: SuperviseeProfileData | null | undefined,
+  appliedStateLicenses: string[],
+): { states: string[]; profession: ProfessionGroup | null } | null {
+  if (!profile) return null
+
+  const states = [
+    ...new Set(appliedStateLicenses.map((s) => s.trim().toUpperCase()).filter(Boolean)),
+  ]
+  if (states.length === 0) return null
+
+  const occupationName = (profile.occupation?.name ?? profile.user.occupation?.name)?.trim()
+  const profession = getProfessionGroupForOccupation(occupationName)
+  if (occupationName && !profession) return null
+
+  return { states, profession }
+}
+
+/**
+ * Supervisor types whose occupations, specialties, and license types the
+ * Find Supervisors filters should offer: the supervisee's stored supervision
+ * needs, minus Medical Director (it has its own page). Falls back to every
+ * non-Medical-Director type when no need maps to a known type (e.g. legacy
+ * enum codes like LPC_SUPERVISOR or needs not loaded yet).
+ */
+export function getSearchableSupervisorTypes(
+  types: SupervisorTypeData[],
+  supervisionNeeds: string[] | null | undefined,
+): SupervisorTypeData[] {
+  const nonMedicalDirector = types.filter((type) => !isMedicalDirectorType(type))
+  const neededCodes = new Set(
+    (supervisionNeeds ?? [])
+      .map((need) => need.trim())
+      .filter(Boolean)
+      .map((need) =>
+        // Legacy accounts stored the enum code instead of the display name.
+        /^[A-Z0-9_]+$/.test(need) ? need : resolveSupervisorTypeCode({ name: need }),
+      ),
+  )
+  const needed = nonMedicalDirector.filter((type) =>
+    neededCodes.has(resolveSupervisorTypeCode(type)),
+  )
+  return needed.length > 0 ? needed : nonMedicalDirector
 }
