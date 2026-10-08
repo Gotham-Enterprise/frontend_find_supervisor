@@ -3,15 +3,20 @@
 import { FileText } from 'lucide-react'
 import { useState } from 'react'
 
+import { HirePaymentSetup } from '@/components/HirePayment/HirePaymentSetup'
+import { WeeklyQuoteSummary } from '@/components/HirePayment/WeeklyQuoteSummary'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { useUserSnackbar } from '@/lib/hooks'
+import { isSupervisorRole } from '@/lib/auth/roles'
+import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
+import { useUser, useUserSnackbar } from '@/lib/hooks'
 import { useConfetti } from '@/lib/hooks/useConfetti'
 import { useSignAgreement } from '@/lib/hooks/useHires'
 import { parseApiError } from '@/lib/utils/error-parser'
+import { formatUsdCents } from '@/lib/utils/money'
 import { formatDate, formatDisplayName } from '@/lib/utils/profile-formatters'
 import type { AgreementRecord, HireListItem } from '@/types/hire'
 
@@ -26,9 +31,19 @@ function formatDateTime(iso: string | null | undefined): string {
   }
 }
 
-function formatMoney(value: string): string {
+function formatMoney(value: string | null): string {
+  if (value == null) return UNSPECIFIED
   const n = Number(value)
   return Number.isFinite(n) ? `$${n.toFixed(2)}` : value
+}
+
+/** Weekly agreements are billed in-app; legacy ones carry monthly terms. */
+function isWeeklyAgreement(agreement: AgreementRecord): boolean {
+  return agreement.weeklyAmountCents != null && agreement.durationWeeks != null
+}
+
+function plural(n: number, unit: string): string {
+  return `${n} ${unit}${n === 1 ? '' : 's'}`
 }
 
 function sourceLabel(agreement: AgreementRecord): string {
@@ -87,6 +102,9 @@ function SignAgreementSection({
 
   const supervisorName = formatDisplayName(hire.supervisor)
   const isPending = signMutation.isPending
+  // Weekly agreements continue straight to the payment step in this dialog.
+  const paysInApp =
+    IN_APP_PAYMENTS_ENABLED && hire.agreement != null && isWeeklyAgreement(hire.agreement)
 
   function handleSign() {
     signMutation.mutate(
@@ -94,6 +112,12 @@ function SignAgreementSection({
       {
         onSuccess: () => {
           burst()
+          if (paysInApp) {
+            showSuccess('Agreement signed!', {
+              description: 'Set up your weekly payment to start your supervision.',
+            })
+            return
+          }
           showSuccess('Agreement signed!', {
             description: `Your supervision with ${supervisorName} is ready to begin.`,
           })
@@ -170,10 +194,14 @@ export function AgreementDialog({
   onOpenChange,
   canSign = false,
 }: AgreementDialogProps) {
+  const { user } = useUser()
   const agreement = hire.agreement
   if (!agreement) return null
 
   const showSignForm = canSign && agreement.superviseeSignedAt == null
+  const weekly = isWeeklyAgreement(agreement)
+  const viewerIsSupervisor = isSupervisorRole(user?.role)
+  const showPayment = IN_APP_PAYMENTS_ENABLED && weekly
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
@@ -187,11 +215,27 @@ export function AgreementDialog({
           <h3 className="mb-3 text-sm font-semibold text-foreground">Terms</h3>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
             <TermItem label="Start Date" value={formatDate(agreement.startDate)} />
-            <TermItem
-              label="Duration"
-              value={`${agreement.supervisionMonths} month${agreement.supervisionMonths === 1 ? '' : 's'}`}
-            />
-            <TermItem label="Monthly Amount" value={formatMoney(agreement.monthlyAmount)} />
+            {weekly ? (
+              <>
+                <TermItem label="Duration" value={plural(agreement.durationWeeks ?? 0, 'week')} />
+                <TermItem
+                  label="Weekly Amount"
+                  value={formatUsdCents(agreement.weeklyAmountCents ?? 0)}
+                />
+              </>
+            ) : (
+              <>
+                <TermItem
+                  label="Duration"
+                  value={
+                    agreement.supervisionMonths != null
+                      ? plural(agreement.supervisionMonths, 'month')
+                      : UNSPECIFIED
+                  }
+                />
+                <TermItem label="Monthly Amount" value={formatMoney(agreement.monthlyAmount)} />
+              </>
+            )}
             {agreement.transactionFeePct != null && (
               <TermItem
                 label="Platform Transaction Fee"
@@ -239,6 +283,38 @@ export function AgreementDialog({
             />
           </div>
         </section>
+
+        {showPayment && agreement.quote && (viewerIsSupervisor || showSignForm) && (
+          <>
+            <Separator className="my-5" />
+            <section>
+              <h3 className="mb-3 text-sm font-semibold text-foreground">Weekly Payment</h3>
+              <WeeklyQuoteSummary
+                quote={agreement.quote}
+                perspective={viewerIsSupervisor ? 'supervisor' : 'supervisee'}
+                durationWeeks={agreement.durationWeeks}
+              />
+              {showSignForm && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  You&apos;ll set up payment right after signing.
+                </p>
+              )}
+            </section>
+          </>
+        )}
+
+        {showPayment && !viewerIsSupervisor && agreement.superviseeSignedAt != null && (
+          <>
+            <Separator className="my-5" />
+            <section>
+              <h3 className="mb-3 text-sm font-semibold text-foreground">Weekly Payment</h3>
+              <HirePaymentSetup
+                hireId={hire.id}
+                supervisorName={formatDisplayName(hire.supervisor)}
+              />
+            </section>
+          </>
+        )}
 
         {showSignForm && <SignAgreementSection hire={hire} onOpenChange={onOpenChange} />}
       </DialogContent>

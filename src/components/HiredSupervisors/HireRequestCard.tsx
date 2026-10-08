@@ -2,6 +2,7 @@
 
 import {
   CalendarDays,
+  CreditCard,
   DollarSign,
   FileText,
   type LucideIcon,
@@ -29,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import { useCancelHire, useMarkHireAsCompleted, useUserSnackbar } from '@/lib/hooks'
 import { useConfetti } from '@/lib/hooks/useConfetti'
 import { parseApiError } from '@/lib/utils/error-parser'
@@ -150,6 +152,13 @@ export function HireRequestCard({
     agreementStage === 'AWAITING_SIGNATURE'
   const hasAgreement = hire.agreement != null
   const isAgreementSigned = hasAgreement && agreementStage === 'SIGNED'
+  // Signed weekly agreement whose weekly billing hasn't been started yet.
+  const needsPaymentSetup =
+    IN_APP_PAYMENTS_ENABLED &&
+    isAgreementSigned &&
+    hire.status === 'ACCEPTED' &&
+    hire.agreement?.weeklyAmountCents != null &&
+    hire.nextChargeAt == null
 
   // Mark as Completed: only when ACCEPTED or ACTIVE, and the agreement is fully signed
   const canComplete = canMarkHireCompleted(hire)
@@ -332,7 +341,13 @@ export function HireRequestCard({
         </div>
 
         {isAgreementSigned && (
-          <div className="flex justify-end border-t border-border/50 px-5 py-3">
+          <div className="flex justify-end gap-2 border-t border-border/50 px-5 py-3">
+            {needsPaymentSetup && (
+              <Button size="sm" onClick={() => setAgreementOpen(true)}>
+                <CreditCard className="size-3.5" aria-hidden />
+                Set up payment
+              </Button>
+            )}
             {hire.agreement?.fileUrl ? (
               <a
                 href={hire.agreement.fileUrl}

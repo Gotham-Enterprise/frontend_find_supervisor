@@ -1,10 +1,13 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
+import { AlertCircle } from 'lucide-react'
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 
+import { WeeklyQuoteSummary } from '@/components/HirePayment/WeeklyQuoteSummary'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
@@ -19,7 +22,8 @@ import {
 import { FormInputField } from '@/components/ui/form-input-field'
 import { UploadFile } from '@/components/ui/upload-file'
 import { previewAgreement } from '@/lib/api/supervision'
-import { useUserSnackbar } from '@/lib/hooks'
+import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
+import { usePayoutStatusQuery, useUserSnackbar, useWeeklyQuote } from '@/lib/hooks'
 import { useProposeAgreement, useUpdateAgreement } from '@/lib/hooks/useHires'
 import { parseApiError } from '@/lib/utils/error-parser'
 import { coerceStringList, formatDisplayName } from '@/lib/utils/profile-formatters'
@@ -31,18 +35,37 @@ import type { AgreementSource, HireListItem, ProposeAgreementInput } from '@/typ
 export const MAX_AGREEMENT_DOC_SIZE_BYTES = 5 * 1024 * 1024
 const MAX_AGREEMENT_DOC_SIZE_LABEL = '5 MB'
 
-function buildSendAgreementSchema(hasExistingUploadedFile: boolean) {
+/**
+ * Terms are monthly while in-app payments are off and weekly once they are on
+ * (the weekly agreement is what the supervisee is billed against).
+ */
+function buildSendAgreementSchema(hasExistingUploadedFile: boolean, weekly: boolean) {
+  const required = { error: 'Must be a number' }
   return z
     .object({
       source: z.enum(['DEFAULT_TEMPLATE', 'UPLOADED']),
       file: z.any().optional(),
       startDate: z.string().min(1, 'Start date is required'),
-      supervisionMonths: z
-        .number({ error: 'Must be a number' })
-        .int('Must be a whole number of months')
-        .min(1, 'Must be at least 1 month')
-        .max(60, 'Must be 60 months or less'),
-      monthlyAmount: z.number({ error: 'Must be a number' }).min(1, 'Must be at least $1'),
+      supervisionMonths: weekly
+        ? z.number().nullish()
+        : z
+            .number(required)
+            .int('Must be a whole number of months')
+            .min(1, 'Must be at least 1 month')
+            .max(60, 'Must be 60 months or less'),
+      monthlyAmount: weekly
+        ? z.number().nullish()
+        : z.number(required).min(1, 'Must be at least $1'),
+      durationWeeks: weekly
+        ? z
+            .number(required)
+            .int('Must be a whole number of weeks')
+            .min(1, 'Must be at least 1 week')
+            .max(260, 'Must be 260 weeks or less')
+        : z.number().nullish(),
+      weeklyAmount: weekly
+        ? z.number(required).min(1, 'Must be at least $1').max(100000, 'Must be $100,000 or less')
+        : z.number().nullish(),
       signatureName: z.string().min(1, 'Please type your full legal name'),
       consent: z.boolean(),
     })
@@ -87,11 +110,14 @@ function buildDefaultValues(hire: HireListItem): SendAgreementFormValues {
     file: undefined,
     startDate: toDateInputValue(agreement?.startDate ?? hire.startDate ?? hire.preferredStartDate),
     supervisionMonths: agreement?.supervisionMonths ?? hire.supervisionMonths ?? 6,
-    monthlyAmount: agreement
-      ? Number(agreement.monthlyAmount)
-      : hire.monthlyAmount != null
-        ? Number(hire.monthlyAmount)
-        : 0,
+    monthlyAmount:
+      agreement?.monthlyAmount != null
+        ? Number(agreement.monthlyAmount)
+        : hire.monthlyAmount != null
+          ? Number(hire.monthlyAmount)
+          : 0,
+    durationWeeks: agreement?.durationWeeks ?? 26,
+    weeklyAmount: agreement?.weeklyAmountCents != null ? agreement.weeklyAmountCents / 100 : null,
     signatureName: '',
     consent: false,
   }
@@ -124,6 +150,25 @@ function getSourceOptions(
   ]
 }
 
+/** The term fields the backend expects for the current billing mode. */
+function termsInput(
+  values: SendAgreementFormValues,
+  weekly: boolean,
+): Pick<
+  ProposeAgreementInput,
+  'supervisionMonths' | 'monthlyAmount' | 'weeklyAmount' | 'durationWeeks'
+> {
+  return weekly
+    ? {
+        weeklyAmount: values.weeklyAmount ?? undefined,
+        durationWeeks: values.durationWeeks ?? undefined,
+      }
+    : {
+        supervisionMonths: values.supervisionMonths ?? undefined,
+        monthlyAmount: values.monthlyAmount ?? undefined,
+      }
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface SendAgreementModalProps {
@@ -148,9 +193,10 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
   const hasExistingUploadedFile =
     hire.agreement?.source === 'UPLOADED' && hire.agreement.fileUrl != null
 
+  const weekly = IN_APP_PAYMENTS_ENABLED
   const schema = useMemo(
-    () => buildSendAgreementSchema(hasExistingUploadedFile),
-    [hasExistingUploadedFile],
+    () => buildSendAgreementSchema(hasExistingUploadedFile, weekly),
+    [hasExistingUploadedFile, weekly],
   )
 
   const form = useForm<SendAgreementFormValues>({
@@ -165,6 +211,20 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
   }, [open, hire, form])
 
   const source = useWatch({ control: form.control, name: 'source' })
+  const weeklyAmount = useWatch({ control: form.control, name: 'weeklyAmount' })
+  const durationWeeks = useWatch({ control: form.control, name: 'durationWeeks' })
+
+  // Billed agreements need the supervisor's payout account (the backend enforces it too).
+  const payoutStatus = usePayoutStatusQuery(open && weekly)
+  const payoutsReady = !weekly || payoutStatus.data?.status === 'ready'
+
+  // Debounced so the breakdown isn't re-fetched on every keystroke.
+  const [quoteAmount, setQuoteAmount] = useState<number | null>(null)
+  useEffect(() => {
+    const id = setTimeout(() => setQuoteAmount(weeklyAmount ?? null), 300)
+    return () => clearTimeout(id)
+  }, [weeklyAmount])
+  const { data: quote } = useWeeklyQuote(quoteAmount, open && weekly)
 
   useEffect(() => {
     if (source !== 'UPLOADED') {
@@ -205,15 +265,18 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
     }
 
     // Default template: the backend renders the exact PDF it would send.
-    const termsValid = await form.trigger(['startDate', 'supervisionMonths', 'monthlyAmount'])
+    const termsValid = await form.trigger(
+      weekly
+        ? ['startDate', 'durationWeeks', 'weeklyAmount']
+        : ['startDate', 'supervisionMonths', 'monthlyAmount'],
+    )
     if (!termsValid) return
     const values = form.getValues()
     setPreviewLoading(true)
     try {
       const blob = await previewAgreement(hire.id, {
         startDate: values.startDate,
-        supervisionMonths: values.supervisionMonths,
-        monthlyAmount: values.monthlyAmount,
+        ...termsInput(values, weekly),
         signatureName: values.signatureName.trim() || undefined,
       })
       setPreviewUrl(URL.createObjectURL(blob))
@@ -230,8 +293,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
       source: values.source,
       file: values.source === 'UPLOADED' && values.file instanceof File ? values.file : null,
       startDate: values.startDate,
-      supervisionMonths: values.supervisionMonths,
-      monthlyAmount: values.monthlyAmount,
+      ...termsInput(values, weekly),
       signatureName: values.signatureName,
     }
     try {
@@ -366,36 +428,82 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                   rules={{ required: 'Start date is required' }}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
-                  <FormInputField
-                    control={form.control}
-                    name="supervisionMonths"
-                    label="Number of Months Needed"
-                    required
-                    type="number"
-                    numberValue
-                    min={1}
-                    max={60}
-                    step={1}
-                    isSubmitting={isSubmitting}
-                    placeholder="e.g. 6"
-                    rules={{ required: 'Number of months is required' }}
-                  />
-                  <FormInputField
-                    control={form.control}
-                    name="monthlyAmount"
-                    label="Monthly Amount ($)"
-                    required
-                    type="number"
-                    numberValue
-                    min={1}
-                    step={1}
-                    isSubmitting={isSubmitting}
-                    placeholder="e.g. 400"
-                    rules={{ required: 'Monthly amount is required' }}
-                    startAdornment={<span className="text-muted-foreground">$</span>}
-                  />
-                </div>
+                {weekly ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormInputField
+                        control={form.control}
+                        name="durationWeeks"
+                        label="Number of Weeks"
+                        required
+                        type="number"
+                        numberValue
+                        min={1}
+                        max={260}
+                        step={1}
+                        isSubmitting={isSubmitting}
+                        placeholder="e.g. 26"
+                        rules={{ required: 'Number of weeks is required' }}
+                      />
+                      <FormInputField
+                        control={form.control}
+                        name="weeklyAmount"
+                        label="Weekly Amount ($)"
+                        required
+                        type="number"
+                        numberValue
+                        min={1}
+                        step={0.01}
+                        isSubmitting={isSubmitting}
+                        placeholder="e.g. 100"
+                        rules={{ required: 'Weekly amount is required' }}
+                        startAdornment={<span className="text-muted-foreground">$</span>}
+                      />
+                    </div>
+                    {quote && weeklyAmount != null && weeklyAmount >= 1 && (
+                      <WeeklyQuoteSummary
+                        quote={quote}
+                        perspective="supervisor"
+                        durationWeeks={durationWeeks}
+                      />
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {superviseeName} is charged weekly through the platform, starting on the start
+                      date. Payouts go to your bank account via Stripe.
+                    </p>
+                  </>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormInputField
+                      control={form.control}
+                      name="supervisionMonths"
+                      label="Number of Months Needed"
+                      required
+                      type="number"
+                      numberValue
+                      min={1}
+                      max={60}
+                      step={1}
+                      isSubmitting={isSubmitting}
+                      placeholder="e.g. 6"
+                      rules={{ required: 'Number of months is required' }}
+                    />
+                    <FormInputField
+                      control={form.control}
+                      name="monthlyAmount"
+                      label="Monthly Amount ($)"
+                      required
+                      type="number"
+                      numberValue
+                      min={1}
+                      step={1}
+                      isSubmitting={isSubmitting}
+                      placeholder="e.g. 400"
+                      rules={{ required: 'Monthly amount is required' }}
+                      startAdornment={<span className="text-muted-foreground">$</span>}
+                    />
+                  </div>
+                )}
               </fieldset>
 
               {/* ── Section: Signature ────────────────────────────────────── */}
@@ -438,6 +546,19 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                 />
               </fieldset>
 
+              {weekly && payoutStatus.data && !payoutsReady && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                  <span>
+                    Set up payouts before sending an agreement, so {superviseeName} can pay you
+                    through the platform.{' '}
+                    <Link href="/billing" className="font-medium underline">
+                      Go to Billing &amp; Invoices
+                    </Link>
+                  </span>
+                </div>
+              )}
+
               {/* ── Actions ───────────────────────────────────────────────── */}
               <div className="flex items-center justify-between gap-3 pt-2">
                 <Button
@@ -457,7 +578,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={isSubmitting}>
+                  <Button type="submit" disabled={isSubmitting || !payoutsReady}>
                     {isSubmitting
                       ? 'Sending…'
                       : isEdit

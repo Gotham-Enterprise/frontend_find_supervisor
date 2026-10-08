@@ -1,3 +1,5 @@
+import type { WeeklyQuote } from './payouts'
+
 export type PreferredFormat = 'IN_PERSON' | 'VIRTUAL' | 'HYBRID'
 export type PreferredAvailability =
   | 'FLEXIBLE'
@@ -110,10 +112,17 @@ export interface AgreementRecord {
   /** Incremented on each supervisor edit before the supervisee signs. */
   version: number
   startDate: string
-  supervisionMonths: number
+  /** Legacy monthly terms — null on weekly (in-app billed) agreements. */
+  supervisionMonths: number | null
   /** Decimal string, matching `monthlyAmount` on HireListItem. */
-  monthlyAmount: string
+  monthlyAmount: string | null
   transactionFeePct: string | null
+  /** Weekly terms billed in-app; null on legacy monthly agreements. */
+  weeklyAmountCents: number | null
+  durationWeeks: number | null
+  platformFeeBps: number | null
+  /** Weekly charge breakdown for weekly agreements. */
+  quote: WeeklyQuote | null
   supervisorSignatureName: string
   supervisorSignedAt: string
   superviseeSignatureName: string | null
@@ -130,8 +139,12 @@ export interface ProposeAgreementInput {
   /** Required when source is UPLOADED; ignored for DEFAULT_TEMPLATE. */
   file: File | null
   startDate: string // ISO date string
-  supervisionMonths: number
-  monthlyAmount: number
+  /** Monthly terms while in-app payments are off… */
+  supervisionMonths?: number
+  monthlyAmount?: number
+  /** …weekly terms (dollars) once they are on. */
+  weeklyAmount?: number
+  durationWeeks?: number
   /** Typed full legal name — the supervisor's e-signature. */
   signatureName: string
 }
@@ -139,8 +152,10 @@ export interface ProposeAgreementInput {
 /** POST /supervision/hires/:hireId/agreement/preview — render the default template PDF without saving. */
 export interface PreviewAgreementInput {
   startDate: string // ISO date string
-  supervisionMonths: number
-  monthlyAmount: number
+  supervisionMonths?: number
+  monthlyAmount?: number
+  weeklyAmount?: number
+  durationWeeks?: number
   /** Optional at preview time — the signature block shows "pending" when absent. */
   signatureName?: string
 }
@@ -190,6 +205,12 @@ export interface HireListItem {
   supervisionMonths: number | null
   monthlyAmount: string | null
   transactionFeePct: string | null
+  /** Set when the supervisee signs a weekly agreement. */
+  weeklyAmountCents: number | null
+  durationWeeks: number | null
+  /** Set once weekly billing has been started. */
+  nextChargeAt: string | null
+  paymentIssueAt: string | null
   status: HireStatus
   agreedAt: string | null
   acceptedAt: string | null

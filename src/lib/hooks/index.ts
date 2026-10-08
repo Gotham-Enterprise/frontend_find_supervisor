@@ -63,8 +63,11 @@ export {
 export {
   payoutKeys,
   useCreatePayoutDashboardLink,
+  useHirePayment,
   usePayoutStatusQuery,
+  useStartHirePayment,
   useStartPayoutOnboarding,
+  useWeeklyQuote,
 } from './usePayouts'
 export { recommendedSupervisorKeys, useRecommendedSupervisors } from './useRecommendedSupervisors'
 export { useResendVerificationEmail } from './useResendVerificationEmail'

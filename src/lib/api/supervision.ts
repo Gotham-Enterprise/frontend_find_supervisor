@@ -16,7 +16,7 @@ import type {
   UpcomingSessionItem,
 } from '@/types/hire'
 import type { PastClientHire } from '@/types/past-clients'
-import type { PayoutStatus, StripeLink } from '@/types/payouts'
+import type { HirePaymentInfo, PayoutStatus, StripeLink, WeeklyQuote } from '@/types/payouts'
 import type {
   PurchaseSubscriptionResponse,
   Subscription,
@@ -67,21 +67,6 @@ export async function reactivateSubscription(): Promise<Subscription> {
   return data.data
 }
 
-/**
- * POST /supervision/payments/purchase-subscription
- *
- * Initiates a Stripe subscription for the given plan. The backend:
- *  1. Creates/reuses a Stripe Customer for the authenticated user
- *  2. Creates a Stripe Subscription with payment_behavior: "default_incomplete"
- *  3. Returns a `clientSecret` from latest_invoice.confirmation_secret
- *
- * The frontend must then call:
- *   stripe.confirmPayment({ elements, clientSecret, confirmParams: { return_url } })
- *
- * The subscription stays INACTIVE until the Stripe webhook confirms payment.
- *
- * @param subscriptionPlanId — The UUID of the plan (query param `planId` from the URL)
- */
 /** GET /supervision/payments/connect/status — supervisor payout account status (auth: supervisor). */
 export async function getPayoutStatus(): Promise<PayoutStatus> {
   const { data } = await apiClient.get<ApiResponse<PayoutStatus>>(
@@ -112,6 +97,62 @@ export async function createPayoutDashboardLink(): Promise<StripeLink> {
   return data.data
 }
 
+/** GET /supervision/payments/quote — weekly charge breakdown for a prospective weekly rate (dollars). */
+export async function getWeeklyQuote(weeklyAmount: number): Promise<WeeklyQuote> {
+  const { data } = await apiClient.get<ApiResponse<WeeklyQuote>>('/supervision/payments/quote', {
+    params: { weeklyAmount },
+  })
+  return data.data
+}
+
+/** GET /supervision/hires/:hireId/payment — weekly billing summary (supervisor or supervisee). */
+export async function getHirePayment(hireId: string): Promise<HirePaymentInfo> {
+  const { data } = await apiClient.get<ApiResponse<HirePaymentInfo>>(
+    `/supervision/hires/${hireId}/payment`,
+  )
+  return data.data
+}
+
+/** POST /supervision/hires/:hireId/payment/setup-intent — SetupIntent for saving a new card. */
+export async function createHirePaymentSetupIntent(
+  hireId: string,
+): Promise<{ clientSecret: string }> {
+  const { data } = await apiClient.post<ApiResponse<{ clientSecret: string }>>(
+    `/supervision/hires/${hireId}/payment/setup-intent`,
+  )
+  return data.data
+}
+
+/**
+ * POST /supervision/hires/:hireId/payment/start — starts weekly billing with a
+ * saved card. Charges the first week now when the start date is today or past.
+ */
+export async function startHirePayment(
+  hireId: string,
+  paymentMethodId: string,
+): Promise<HirePaymentInfo> {
+  const { data } = await apiClient.post<ApiResponse<HirePaymentInfo>>(
+    `/supervision/hires/${hireId}/payment/start`,
+    { paymentMethodId },
+  )
+  return data.data
+}
+
+/**
+ * POST /supervision/payments/purchase-subscription
+ *
+ * Initiates a Stripe subscription for the given plan. The backend:
+ *  1. Creates/reuses a Stripe Customer for the authenticated user
+ *  2. Creates a Stripe Subscription with payment_behavior: "default_incomplete"
+ *  3. Returns a `clientSecret` from latest_invoice.confirmation_secret
+ *
+ * The frontend must then call:
+ *   stripe.confirmPayment({ elements, clientSecret, confirmParams: { return_url } })
+ *
+ * The subscription stays INACTIVE until the Stripe webhook confirms payment.
+ *
+ * @param subscriptionPlanId — The UUID of the plan (query param `planId` from the URL)
+ */
 export async function purchaseSubscription(
   subscriptionPlanId: string,
 ): Promise<PurchaseSubscriptionResponse> {
@@ -227,8 +268,13 @@ function buildAgreementFormData(input: ProposeAgreementInput): FormData {
   const formData = new FormData()
   formData.append('source', input.source)
   formData.append('startDate', input.startDate)
-  formData.append('supervisionMonths', String(input.supervisionMonths))
-  formData.append('monthlyAmount', String(input.monthlyAmount))
+  // Monthly or weekly terms, whichever the form collected (weekly once in-app payments are on).
+  if (input.supervisionMonths != null) {
+    formData.append('supervisionMonths', String(input.supervisionMonths))
+  }
+  if (input.monthlyAmount != null) formData.append('monthlyAmount', String(input.monthlyAmount))
+  if (input.weeklyAmount != null) formData.append('weeklyAmount', String(input.weeklyAmount))
+  if (input.durationWeeks != null) formData.append('durationWeeks', String(input.durationWeeks))
   formData.append('signatureName', input.signatureName.trim())
   if (input.source === 'UPLOADED' && input.file) {
     formData.append('file', input.file)

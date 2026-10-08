@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { useSuperviseeFormOptions } from '@/lib/hooks'
+import { formatUsdCents } from '@/lib/utils/money'
 import {
   formatAvailability,
   formatBudgetRange,
@@ -189,14 +190,29 @@ export function HireRequestDetailsDialog({
       : []),
     { label: 'Supervision start', value: displayText(hire.startDate, formatDate(hire.startDate)) },
     { label: 'Supervision end', value: displayText(hire.endDate, formatDate(hire.endDate)) },
-    {
-      label: 'Planned duration (months)',
-      value: hire.supervisionMonths != null ? String(hire.supervisionMonths) : UNSPECIFIED,
-    },
-    {
-      label: 'Monthly amount',
-      value: displayText(hire.monthlyAmount, hire.monthlyAmount ?? undefined),
-    },
+    // Weekly (in-app billed) hires show weekly terms; legacy hires keep the monthly ones.
+    ...(hire.weeklyAmountCents != null
+      ? [
+          {
+            label: 'Planned duration (weeks)',
+            value: hire.durationWeeks != null ? String(hire.durationWeeks) : UNSPECIFIED,
+          },
+          { label: 'Weekly amount', value: formatUsdCents(hire.weeklyAmountCents) },
+          {
+            label: 'Next weekly charge',
+            value: hire.nextChargeAt ? formatDate(hire.nextChargeAt) : 'Not set up yet',
+          },
+        ]
+      : [
+          {
+            label: 'Planned duration (months)',
+            value: hire.supervisionMonths != null ? String(hire.supervisionMonths) : UNSPECIFIED,
+          },
+          {
+            label: 'Monthly amount',
+            value: displayText(hire.monthlyAmount, hire.monthlyAmount ?? undefined),
+          },
+        ]),
     {
       label: 'Transaction fee',
       value: displayText(hire.transactionFeePct, hire.transactionFeePct ?? undefined),
