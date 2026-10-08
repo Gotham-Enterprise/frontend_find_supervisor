@@ -68,13 +68,22 @@ export function PublicHeader() {
           </a>
         </div>
 
-        <button
-          className="flex items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:text-foreground md:hidden"
-          onClick={() => setMobileOpen((prev) => !prev)}
-          aria-label="Toggle menu"
-        >
-          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <div className="flex items-center gap-2 md:hidden">
+          <Link
+            href="/signup"
+            onClick={() => setMobileOpen(false)}
+            className={buttonVariants({ size: 'sm' })}
+          >
+            Sign Up
+          </Link>
+          <button
+            className="flex items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:text-foreground"
+            onClick={() => setMobileOpen((prev) => !prev)}
+            aria-label="Toggle menu"
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
       <div
@@ -88,6 +97,7 @@ export function PublicHeader() {
             <Link
               key={href}
               href={href}
+              onClick={() => setMobileOpen(false)}
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               {label}
@@ -100,13 +110,6 @@ export function PublicHeader() {
               className={buttonVariants({ variant: 'outline', size: 'sm' })}
             >
               Log In
-            </Link>
-            <Link
-              href="/signup"
-              onClick={() => setMobileOpen(false)}
-              className={buttonVariants({ size: 'sm' })}
-            >
-              Sign Up
             </Link>
             <a
               href="https://www.gothamenterprisesltd.com/"
