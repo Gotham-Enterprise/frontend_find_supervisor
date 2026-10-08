@@ -16,6 +16,7 @@ import type {
   UpcomingSessionItem,
 } from '@/types/hire'
 import type { PastClientHire } from '@/types/past-clients'
+import type { PayoutStatus, StripeLink } from '@/types/payouts'
 import type {
   PurchaseSubscriptionResponse,
   Subscription,
@@ -81,6 +82,36 @@ export async function reactivateSubscription(): Promise<Subscription> {
  *
  * @param subscriptionPlanId — The UUID of the plan (query param `planId` from the URL)
  */
+/** GET /supervision/payments/connect/status — supervisor payout account status (auth: supervisor). */
+export async function getPayoutStatus(): Promise<PayoutStatus> {
+  const { data } = await apiClient.get<ApiResponse<PayoutStatus>>(
+    '/supervision/payments/connect/status',
+  )
+  return data.data
+}
+
+/**
+ * POST /supervision/payments/connect/onboarding-link
+ *
+ * Creates the supervisor's Stripe Express account on first use and returns a
+ * single-use Stripe-hosted onboarding URL. Stripe redirects back to
+ * /billing?payouts=return (done) or /billing?payouts=refresh (link expired).
+ */
+export async function createPayoutOnboardingLink(): Promise<StripeLink> {
+  const { data } = await apiClient.post<ApiResponse<StripeLink>>(
+    '/supervision/payments/connect/onboarding-link',
+  )
+  return data.data
+}
+
+/** POST /supervision/payments/connect/dashboard-link — Stripe Express dashboard login URL. */
+export async function createPayoutDashboardLink(): Promise<StripeLink> {
+  const { data } = await apiClient.post<ApiResponse<StripeLink>>(
+    '/supervision/payments/connect/dashboard-link',
+  )
+  return data.data
+}
+
 export async function purchaseSubscription(
   subscriptionPlanId: string,
 ): Promise<PurchaseSubscriptionResponse> {

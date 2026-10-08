@@ -60,6 +60,12 @@ export {
   useMarkNotificationRead,
   useNotifications,
 } from './useNotifications'
+export {
+  payoutKeys,
+  useCreatePayoutDashboardLink,
+  usePayoutStatusQuery,
+  useStartPayoutOnboarding,
+} from './usePayouts'
 export { recommendedSupervisorKeys, useRecommendedSupervisors } from './useRecommendedSupervisors'
 export { useResendVerificationEmail } from './useResendVerificationEmail'
 export {
