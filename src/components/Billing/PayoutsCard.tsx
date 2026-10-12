@@ -81,6 +81,9 @@ export function PayoutsCard() {
   const status = data?.status
   const config = status ? STATUS_CONFIG[status] : null
 
+  // In-app payments are a pilot: only allowlisted supervisors set up payouts.
+  if (data && !data.inAppPaymentsPilot) return null
+
   return (
     <Card className="max-w-2xl">
       <Suspense fallback={null}>

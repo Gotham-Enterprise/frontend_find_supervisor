@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 
-import { WeeklyQuoteSummary } from '@/components/HirePayment/WeeklyQuoteSummary'
+import { HourlyQuoteSummary } from '@/components/HirePayment/HourlyQuoteSummary'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
@@ -20,11 +20,13 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { FormInputField } from '@/components/ui/form-input-field'
+import { Skeleton } from '@/components/ui/skeleton'
 import { UploadFile } from '@/components/ui/upload-file'
 import { previewAgreement } from '@/lib/api/supervision'
 import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
-import { usePayoutStatusQuery, useUserSnackbar, useWeeklyQuote } from '@/lib/hooks'
+import { useHourlyQuote, usePayoutStatusQuery, useUserSnackbar } from '@/lib/hooks'
 import { useProposeAgreement, useUpdateAgreement } from '@/lib/hooks/useHires'
+import { toEasternISODate } from '@/lib/utils/date'
 import { parseApiError } from '@/lib/utils/error-parser'
 import { coerceStringList, formatDisplayName } from '@/lib/utils/profile-formatters'
 import { isMedicalDirectorType } from '@/lib/utils/supervisee-eligibility'
@@ -36,35 +38,44 @@ export const MAX_AGREEMENT_DOC_SIZE_BYTES = 5 * 1024 * 1024
 const MAX_AGREEMENT_DOC_SIZE_LABEL = '5 MB'
 
 /**
- * Terms are monthly while in-app payments are off and weekly once they are on
- * (the weekly agreement is what the supervisee is billed against).
+ * Terms are hourly when the hire is billed in-app (pilot supervisors, non-monthly
+ * fee) — that's what the supervisee's weekly prepays are based on — and monthly
+ * (paid outside the app) otherwise.
  */
-function buildSendAgreementSchema(hasExistingUploadedFile: boolean, weekly: boolean) {
+function buildSendAgreementSchema(hasExistingUploadedFile: boolean, hourly: boolean) {
   const required = { error: 'Must be a number' }
   return z
     .object({
       source: z.enum(['DEFAULT_TEMPLATE', 'UPLOADED']),
       file: z.any().optional(),
       startDate: z.string().min(1, 'Start date is required'),
-      supervisionMonths: weekly
+      supervisionMonths: hourly
         ? z.number().nullish()
         : z
             .number(required)
             .int('Must be a whole number of months')
             .min(1, 'Must be at least 1 month')
             .max(60, 'Must be 60 months or less'),
-      monthlyAmount: weekly
+      monthlyAmount: hourly
         ? z.number().nullish()
         : z.number(required).min(1, 'Must be at least $1'),
-      durationWeeks: weekly
+      hourlyRate: hourly
+        ? z.number(required).min(1, 'Must be at least $1').max(10000, 'Must be $10,000 or less')
+        : z.number().nullish(),
+      maxHoursPerWeek: hourly
         ? z
             .number(required)
-            .int('Must be a whole number of weeks')
-            .min(1, 'Must be at least 1 week')
-            .max(260, 'Must be 260 weeks or less')
+            .min(0.25, 'Must be at least 0.25 hours')
+            .max(40, 'Must be 40 hours or less')
+            .refine((v) => Number.isInteger(v * 4), 'Use 15-minute steps, e.g. 1.5')
         : z.number().nullish(),
-      weeklyAmount: weekly
-        ? z.number(required).min(1, 'Must be at least $1').max(100000, 'Must be $100,000 or less')
+      totalHours: hourly
+        ? z
+            .number()
+            .int('Must be a whole number of hours')
+            .min(1, 'Must be at least 1 hour')
+            .max(10000, 'Must be 10,000 hours or less')
+            .nullish()
         : z.number().nullish(),
       signatureName: z.string().min(1, 'Please type your full legal name'),
       consent: z.boolean(),
@@ -87,6 +98,15 @@ function buildSendAgreementSchema(hasExistingUploadedFile: boolean, weekly: bool
           })
         }
       }
+      // Hourly agreements are billed in-app from the start date, so it can't be
+      // in the past (the backend enforces the same, in US Eastern time).
+      if (hourly && data.startDate && data.startDate < toEasternISODate()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['startDate'],
+          message: "Start date can't be in the past",
+        })
+      }
       if (!data.consent) {
         ctx.addIssue({
           code: 'custom',
@@ -103,12 +123,33 @@ function toDateInputValue(iso: string | null | undefined): string {
   return iso ? iso.slice(0, 10) : ''
 }
 
+/** The later of two YYYY-MM-DD dates (an empty date counts as earliest). */
+function laterDate(a: string, b: string): string {
+  return a > b ? a : b
+}
+
+/**
+ * Start date to prefill. A new agreement starts from the supervisee's requested
+ * date, moved up to today when the request was accepted after it passed. An
+ * edit keeps the proposed date, except an hourly one that has since passed
+ * (hourly agreements can't start in the past).
+ */
+function defaultStartDate(hire: HireListItem): string {
+  const today = toEasternISODate()
+  const agreement = hire.agreement
+  if (agreement) {
+    const proposed = toDateInputValue(agreement.startDate)
+    return agreement.hourlyRateCents != null ? laterDate(proposed, today) : proposed
+  }
+  return laterDate(toDateInputValue(hire.startDate ?? hire.preferredStartDate), today)
+}
+
 function buildDefaultValues(hire: HireListItem): SendAgreementFormValues {
   const agreement = hire.agreement
   return {
     source: agreement?.source ?? 'DEFAULT_TEMPLATE',
     file: undefined,
-    startDate: toDateInputValue(agreement?.startDate ?? hire.startDate ?? hire.preferredStartDate),
+    startDate: defaultStartDate(hire),
     supervisionMonths: agreement?.supervisionMonths ?? hire.supervisionMonths ?? 6,
     monthlyAmount:
       agreement?.monthlyAmount != null
@@ -116,8 +157,16 @@ function buildDefaultValues(hire: HireListItem): SendAgreementFormValues {
         : hire.monthlyAmount != null
           ? Number(hire.monthlyAmount)
           : 0,
-    durationWeeks: agreement?.durationWeeks ?? 26,
-    weeklyAmount: agreement?.weeklyAmountCents != null ? agreement.weeklyAmountCents / 100 : null,
+    // Hourly terms: an edit keeps the proposed ones; a new agreement starts from the
+    // supervisor's listed hourly fee (stored in dollars) and the requested hours.
+    hourlyRate:
+      agreement?.hourlyRateCents != null
+        ? agreement.hourlyRateCents / 100
+        : hire.supervisorFeeType?.toUpperCase() === 'HOURLY' && hire.supervisorFeeAmount
+          ? hire.supervisorFeeAmount
+          : null,
+    maxHoursPerWeek: agreement?.weeklyCapMinutes != null ? agreement.weeklyCapMinutes / 60 : null,
+    totalHours: agreement ? agreement.totalHours : hire.supervisionHours,
     signatureName: '',
     consent: false,
   }
@@ -153,15 +202,16 @@ function getSourceOptions(
 /** The term fields the backend expects for the current billing mode. */
 function termsInput(
   values: SendAgreementFormValues,
-  weekly: boolean,
+  hourly: boolean,
 ): Pick<
   ProposeAgreementInput,
-  'supervisionMonths' | 'monthlyAmount' | 'weeklyAmount' | 'durationWeeks'
+  'supervisionMonths' | 'monthlyAmount' | 'hourlyRate' | 'maxHoursPerWeek' | 'totalHours'
 > {
-  return weekly
+  return hourly
     ? {
-        weeklyAmount: values.weeklyAmount ?? undefined,
-        durationWeeks: values.durationWeeks ?? undefined,
+        hourlyRate: values.hourlyRate ?? undefined,
+        maxHoursPerWeek: values.maxHoursPerWeek ?? undefined,
+        totalHours: values.totalHours ?? undefined,
       }
     : {
         supervisionMonths: values.supervisionMonths ?? undefined,
@@ -193,10 +243,21 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
   const hasExistingUploadedFile =
     hire.agreement?.source === 'UPLOADED' && hire.agreement.fileUrl != null
 
-  const weekly = IN_APP_PAYMENTS_ENABLED
+  // In-app (hourly) billing applies to pilot supervisors' non-monthly hires; the
+  // backend makes the same call. Monthly retainers stay on monthly terms for now.
+  const canBillInApp =
+    IN_APP_PAYMENTS_ENABLED && hire.supervisorFeeType?.toUpperCase() !== 'MONTHLY'
+  const payoutStatus = usePayoutStatusQuery(open && canBillInApp)
+  const hourly =
+    canBillInApp &&
+    (payoutStatus.data?.inAppPaymentsPilot ?? hire.agreement?.hourlyRateCents != null)
+  const termsLoading = canBillInApp && payoutStatus.isLoading
+  // Billed agreements need the supervisor's payout account (the backend enforces it too).
+  const payoutsReady = !hourly || payoutStatus.data?.status === 'ready'
+
   const schema = useMemo(
-    () => buildSendAgreementSchema(hasExistingUploadedFile, weekly),
-    [hasExistingUploadedFile, weekly],
+    () => buildSendAgreementSchema(hasExistingUploadedFile, hourly),
+    [hasExistingUploadedFile, hourly],
   )
 
   const form = useForm<SendAgreementFormValues>({
@@ -211,20 +272,22 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
   }, [open, hire, form])
 
   const source = useWatch({ control: form.control, name: 'source' })
-  const weeklyAmount = useWatch({ control: form.control, name: 'weeklyAmount' })
-  const durationWeeks = useWatch({ control: form.control, name: 'durationWeeks' })
-
-  // Billed agreements need the supervisor's payout account (the backend enforces it too).
-  const payoutStatus = usePayoutStatusQuery(open && weekly)
-  const payoutsReady = !weekly || payoutStatus.data?.status === 'ready'
+  const hourlyRate = useWatch({ control: form.control, name: 'hourlyRate' })
+  const maxHoursPerWeek = useWatch({ control: form.control, name: 'maxHoursPerWeek' })
 
   // Debounced so the breakdown isn't re-fetched on every keystroke.
-  const [quoteAmount, setQuoteAmount] = useState<number | null>(null)
+  const [quoteTerms, setQuoteTerms] = useState<{ rate: number | null; cap: number | null }>({
+    rate: null,
+    cap: null,
+  })
   useEffect(() => {
-    const id = setTimeout(() => setQuoteAmount(weeklyAmount ?? null), 300)
+    const id = setTimeout(
+      () => setQuoteTerms({ rate: hourlyRate ?? null, cap: maxHoursPerWeek ?? null }),
+      300,
+    )
     return () => clearTimeout(id)
-  }, [weeklyAmount])
-  const { data: quote } = useWeeklyQuote(quoteAmount, open && weekly)
+  }, [hourlyRate, maxHoursPerWeek])
+  const { data: quote } = useHourlyQuote(quoteTerms.rate, quoteTerms.cap, open && hourly)
 
   useEffect(() => {
     if (source !== 'UPLOADED') {
@@ -266,8 +329,8 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
 
     // Default template: the backend renders the exact PDF it would send.
     const termsValid = await form.trigger(
-      weekly
-        ? ['startDate', 'durationWeeks', 'weeklyAmount']
+      hourly
+        ? ['startDate', 'hourlyRate', 'maxHoursPerWeek', 'totalHours']
         : ['startDate', 'supervisionMonths', 'monthlyAmount'],
     )
     if (!termsValid) return
@@ -276,7 +339,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
     try {
       const blob = await previewAgreement(hire.id, {
         startDate: values.startDate,
-        ...termsInput(values, weekly),
+        ...termsInput(values, hourly),
         signatureName: values.signatureName.trim() || undefined,
       })
       setPreviewUrl(URL.createObjectURL(blob))
@@ -293,7 +356,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
       source: values.source,
       file: values.source === 'UPLOADED' && values.file instanceof File ? values.file : null,
       startDate: values.startDate,
-      ...termsInput(values, weekly),
+      ...termsInput(values, hourly),
       signatureName: values.signatureName,
     }
     try {
@@ -424,52 +487,69 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                   label="Supervision Start Date"
                   required
                   type="date"
+                  min={hourly ? toEasternISODate() : undefined}
+                  clearErrorsOnChange
                   isSubmitting={isSubmitting}
                   rules={{ required: 'Start date is required' }}
                 />
 
-                {weekly ? (
+                {termsLoading ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                  </div>
+                ) : hourly ? (
                   <>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                       <FormInputField
                         control={form.control}
-                        name="durationWeeks"
-                        label="Number of Weeks"
+                        name="hourlyRate"
+                        label="Hourly Rate ($)"
                         required
                         type="number"
                         numberValue
-                        min={1}
-                        max={260}
-                        step={1}
-                        isSubmitting={isSubmitting}
-                        placeholder="e.g. 26"
-                        rules={{ required: 'Number of weeks is required' }}
-                      />
-                      <FormInputField
-                        control={form.control}
-                        name="weeklyAmount"
-                        label="Weekly Amount ($)"
-                        required
-                        type="number"
-                        numberValue
+                        clearErrorsOnChange
                         min={1}
                         step={0.01}
                         isSubmitting={isSubmitting}
                         placeholder="e.g. 100"
-                        rules={{ required: 'Weekly amount is required' }}
                         startAdornment={<span className="text-muted-foreground">$</span>}
                       />
-                    </div>
-                    {quote && weeklyAmount != null && weeklyAmount >= 1 && (
-                      <WeeklyQuoteSummary
-                        quote={quote}
-                        perspective="supervisor"
-                        durationWeeks={durationWeeks}
+                      <FormInputField
+                        control={form.control}
+                        name="maxHoursPerWeek"
+                        label="Max Hours / Week"
+                        required
+                        type="number"
+                        numberValue
+                        clearErrorsOnChange
+                        min={0.25}
+                        max={40}
+                        step={0.25}
+                        isSubmitting={isSubmitting}
+                        placeholder="e.g. 2"
                       />
+                      <FormInputField
+                        control={form.control}
+                        name="totalHours"
+                        label="Total Hours"
+                        type="number"
+                        numberValue
+                        clearErrorsOnChange
+                        min={1}
+                        step={1}
+                        isSubmitting={isSubmitting}
+                        placeholder="e.g. 200"
+                      />
+                    </div>
+                    {quote && hourlyRate != null && maxHoursPerWeek != null && (
+                      <HourlyQuoteSummary quote={quote} perspective="supervisor" />
                     )}
                     <p className="text-xs text-muted-foreground">
-                      {superviseeName} is charged weekly through the platform, starting on the start
-                      date. Payouts go to your bank account via Stripe.
+                      You log each session in the app (in 15-minute units) and are paid for the
+                      hours {superviseeName} approves, up to the weekly max. Leave Total Hours empty
+                      if the agreement runs until either of you ends it. Payouts go to your bank
+                      account via Stripe.
                     </p>
                   </>
                 ) : (
@@ -481,6 +561,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                       required
                       type="number"
                       numberValue
+                      clearErrorsOnChange
                       min={1}
                       max={60}
                       step={1}
@@ -495,6 +576,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                       required
                       type="number"
                       numberValue
+                      clearErrorsOnChange
                       min={1}
                       step={1}
                       isSubmitting={isSubmitting}
@@ -546,7 +628,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                 />
               </fieldset>
 
-              {weekly && payoutStatus.data && !payoutsReady && (
+              {hourly && payoutStatus.data && !payoutsReady && (
                 <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                   <AlertCircle className="mt-0.5 size-4 shrink-0" />
                   <span>

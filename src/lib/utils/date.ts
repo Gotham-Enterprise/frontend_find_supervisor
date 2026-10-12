@@ -16,3 +16,18 @@ export function toLocalISODate(date: Date): string {
 export function todayLocalISO(): string {
   return toLocalISODate(new Date())
 }
+
+/**
+ * Calendar date in US Eastern time as YYYY-MM-DD. In-app billing (billing
+ * weeks, deadlines, the earliest agreement start date) runs on US Eastern,
+ * matching the backend, whatever the viewer's own timezone.
+ */
+export function toEasternISODate(date: Date = new Date()): string {
+  // en-CA formats dates as YYYY-MM-DD.
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
+}

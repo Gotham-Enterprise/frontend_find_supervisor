@@ -15,6 +15,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 
+import { HirePaymentDialog } from '@/components/HirePayment/HirePaymentDialog'
 import { LeaveReviewModal } from '@/components/reviews/LeaveReviewModal'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -110,6 +111,13 @@ export function HireRequestCard({
     setAgreementOpenManually(open)
     if (!open && deepLinkMatches) setDismissedDeepLinkId(deepLinkedHireId)
   }
+  // Supervisee's payment step for hourly agreements (its own dialog, so the card form is in view).
+  const [payment, setPayment] = useState<{ open: boolean; changeCard: boolean }>({
+    open: false,
+    changeCard: false,
+  })
+  const openPayment = (options?: { changeCard?: boolean }) =>
+    setPayment({ open: true, changeCard: options?.changeCard ?? false })
   const [reasonOpen, setReasonOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [completeOpen, setCompleteOpen] = useState(false)
@@ -152,13 +160,13 @@ export function HireRequestCard({
     agreementStage === 'AWAITING_SIGNATURE'
   const hasAgreement = hire.agreement != null
   const isAgreementSigned = hasAgreement && agreementStage === 'SIGNED'
-  // Signed weekly agreement whose weekly billing hasn't been started yet.
+  // Signed hourly agreement whose card for the weekly prepays isn't saved yet.
   const needsPaymentSetup =
     IN_APP_PAYMENTS_ENABLED &&
     isAgreementSigned &&
-    hire.status === 'ACCEPTED' &&
-    hire.agreement?.weeklyAmountCents != null &&
-    hire.nextChargeAt == null
+    (hire.status === 'ACCEPTED' || hire.status === 'ACTIVE') &&
+    hire.agreement?.hourlyRateCents != null &&
+    hire.paymentMethodSavedAt == null
 
   // Mark as Completed: only when ACCEPTED or ACTIVE, and the agreement is fully signed
   const canComplete = canMarkHireCompleted(hire)
@@ -343,7 +351,7 @@ export function HireRequestCard({
         {isAgreementSigned && (
           <div className="flex justify-end gap-2 border-t border-border/50 px-5 py-3">
             {needsPaymentSetup && (
-              <Button size="sm" onClick={() => setAgreementOpen(true)}>
+              <Button size="sm" onClick={() => openPayment()}>
                 <CreditCard className="size-3.5" aria-hidden />
                 Set up payment
               </Button>
@@ -376,6 +384,16 @@ export function HireRequestCard({
           open={agreementOpen}
           onOpenChange={setAgreementOpen}
           canSign={canSignAgreement}
+          onSetUpPayment={IN_APP_PAYMENTS_ENABLED ? openPayment : undefined}
+        />
+      )}
+
+      {hasAgreement && IN_APP_PAYMENTS_ENABLED && (
+        <HirePaymentDialog
+          hire={hire}
+          open={payment.open}
+          onOpenChange={(open) => setPayment((prev) => ({ ...prev, open }))}
+          changeCard={payment.changeCard}
         />
       )}
 

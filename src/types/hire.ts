@@ -1,4 +1,4 @@
-import type { WeeklyQuote } from './payouts'
+import type { HourlyQuote } from './payouts'
 
 export type PreferredFormat = 'IN_PERSON' | 'VIRTUAL' | 'HYBRID'
 export type PreferredAvailability =
@@ -112,17 +112,20 @@ export interface AgreementRecord {
   /** Incremented on each supervisor edit before the supervisee signs. */
   version: number
   startDate: string
-  /** Legacy monthly terms — null on weekly (in-app billed) agreements. */
+  /** Monthly terms paid outside the app — null on hourly (in-app billed) agreements. */
   supervisionMonths: number | null
   /** Decimal string, matching `monthlyAmount` on HireListItem. */
   monthlyAmount: string | null
   transactionFeePct: string | null
-  /** Weekly terms billed in-app; null on legacy monthly agreements. */
-  weeklyAmountCents: number | null
-  durationWeeks: number | null
+  /** Hourly terms billed in-app; null on monthly agreements. */
+  hourlyRateCents: number | null
+  /** Max supervision per billing week, in minutes (15-minute steps). */
+  weeklyCapMinutes: number | null
+  /** Hours the agreement covers; null = until ended. */
+  totalHours: number | null
   platformFeeBps: number | null
-  /** Weekly charge breakdown for weekly agreements. */
-  quote: WeeklyQuote | null
+  /** Weekly prepay/payout breakdown for hourly agreements. */
+  quote: HourlyQuote | null
   supervisorSignatureName: string
   supervisorSignedAt: string
   superviseeSignatureName: string | null
@@ -139,12 +142,13 @@ export interface ProposeAgreementInput {
   /** Required when source is UPLOADED; ignored for DEFAULT_TEMPLATE. */
   file: File | null
   startDate: string // ISO date string
-  /** Monthly terms while in-app payments are off… */
+  /** Monthly terms, paid outside the app… */
   supervisionMonths?: number
   monthlyAmount?: number
-  /** …weekly terms (dollars) once they are on. */
-  weeklyAmount?: number
-  durationWeeks?: number
+  /** …or hourly terms billed in-app (pilot supervisors): dollars and hours. */
+  hourlyRate?: number
+  maxHoursPerWeek?: number
+  totalHours?: number
   /** Typed full legal name — the supervisor's e-signature. */
   signatureName: string
 }
@@ -154,8 +158,9 @@ export interface PreviewAgreementInput {
   startDate: string // ISO date string
   supervisionMonths?: number
   monthlyAmount?: number
-  weeklyAmount?: number
-  durationWeeks?: number
+  hourlyRate?: number
+  maxHoursPerWeek?: number
+  totalHours?: number
   /** Optional at preview time — the signature block shows "pending" when absent. */
   signatureName?: string
 }
@@ -205,12 +210,8 @@ export interface HireListItem {
   supervisionMonths: number | null
   monthlyAmount: string | null
   transactionFeePct: string | null
-  /** Set when the supervisee signs a weekly agreement. */
-  weeklyAmountCents: number | null
-  durationWeeks: number | null
-  /** Set once weekly billing has been started. */
-  nextChargeAt: string | null
-  paymentIssueAt: string | null
+  /** Set once the supervisee saves the card for an hourly agreement's weekly prepays. */
+  paymentMethodSavedAt: string | null
   status: HireStatus
   agreedAt: string | null
   acceptedAt: string | null

@@ -15,6 +15,8 @@ export type PayoutAccountStatus =
   | 'ready'
 
 export interface PayoutStatus {
+  /** Pilot allowlist: only these supervisors propose hourly, in-app billed agreements. */
+  inAppPaymentsPilot: boolean
   status: PayoutAccountStatus
   payoutsEnabled: boolean
   detailsSubmitted: boolean
@@ -27,27 +29,28 @@ export interface StripeLink {
 }
 
 /**
- * Weekly charge breakdown (integer cents). The supervisee pays `totalCents`
- * (weekly rate + service fee); the supervisor receives `supervisorAmountCents`
- * (weekly rate − platform fee, ±1¢ from Stripe's percentage rounding).
+ * Hourly terms breakdown (integer cents). Each billing week the supervisee
+ * prepays `weeklyTotalCents` (weekly cap at the hourly rate + service fee);
+ * after the review the supervisor receives approved hours × rate minus the
+ * platform fee, and the unused prepay is refunded (the service fee is not).
  */
-export interface WeeklyQuote {
-  weeklyAmountCents: number
-  serviceFeeCents: number
-  totalCents: number
+export interface HourlyQuote {
+  hourlyRateCents: number
+  weeklyCapMinutes: number
   platformFeeBps: number
-  platformFeeCents: number
-  supervisorAmountCents: number
-  applicationFeePercent: number
+  weeklyPrepayCents: number
+  serviceFeeCents: number
+  weeklyTotalCents: number
+  hourlyPlatformFeeCents: number
+  supervisorHourlyCents: number
+  supervisorWeeklyMaxCents: number
 }
 
 export type HirePaymentStatus =
   | 'not_applicable'
   | 'awaiting_signature'
-  | 'awaiting_payment'
-  | 'processing'
-  | 'scheduled'
-  | 'active'
+  | 'awaiting_card'
+  | 'card_saved'
 
 export interface SavedCard {
   id: string
@@ -60,16 +63,12 @@ export interface SavedCard {
 /** GET /supervision/hires/:hireId/payment */
 export interface HirePaymentInfo {
   paymentStatus: HirePaymentStatus
-  quote: WeeklyQuote | null
-  schedule: {
-    billingStartsAt: string
-    /** Set when the first charge waits for a future start date. */
-    trialEndsAt: string | null
-    endsAt: string
-    durationWeeks: number
-  } | null
-  nextChargeAt: string | null
+  quote: HourlyQuote | null
+  /** When the first week's prepay is charged: the start date, or now if that has passed. */
+  firstPrepayAt: string | null
   supervisorPayoutsReady: boolean
+  /** The card the weekly prepays are charged to (supervisee only). */
+  card: SavedCard | null
   /** Only populated for the supervisee (payer). */
   savedCards: SavedCard[]
 }

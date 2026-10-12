@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 
+import { formatHours } from '@/components/HirePayment/HourlyQuoteSummary'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { useSuperviseeFormOptions } from '@/lib/hooks'
@@ -190,17 +191,21 @@ export function HireRequestDetailsDialog({
       : []),
     { label: 'Supervision start', value: displayText(hire.startDate, formatDate(hire.startDate)) },
     { label: 'Supervision end', value: displayText(hire.endDate, formatDate(hire.endDate)) },
-    // Weekly (in-app billed) hires show weekly terms; legacy hires keep the monthly ones.
-    ...(hire.weeklyAmountCents != null
+    // Hourly (in-app billed) hires show the agreement's hourly terms; others the monthly ones.
+    ...(hire.agreement?.hourlyRateCents != null && hire.agreement.weeklyCapMinutes != null
       ? [
+          { label: 'Hourly rate', value: formatUsdCents(hire.agreement.hourlyRateCents) },
+          { label: 'Max per week', value: formatHours(hire.agreement.weeklyCapMinutes) },
           {
-            label: 'Planned duration (weeks)',
-            value: hire.durationWeeks != null ? String(hire.durationWeeks) : UNSPECIFIED,
+            label: 'Total hours',
+            value:
+              hire.agreement.totalHours != null ? String(hire.agreement.totalHours) : 'Until ended',
           },
-          { label: 'Weekly amount', value: formatUsdCents(hire.weeklyAmountCents) },
           {
-            label: 'Next weekly charge',
-            value: hire.nextChargeAt ? formatDate(hire.nextChargeAt) : 'Not set up yet',
+            label: 'Payment card',
+            value: hire.paymentMethodSavedAt
+              ? `Saved ${formatDate(hire.paymentMethodSavedAt)}`
+              : 'Not set up yet',
           },
         ]
       : [

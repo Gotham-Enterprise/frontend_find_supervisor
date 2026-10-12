@@ -6,9 +6,9 @@ import {
   createPayoutDashboardLink,
   createPayoutOnboardingLink,
   getHirePayment,
+  getHourlyQuote,
   getPayoutStatus,
-  getWeeklyQuote,
-  startHirePayment,
+  saveHirePaymentMethod,
 } from '@/lib/api/supervision'
 
 import { hireKeys } from './useHires'
@@ -18,7 +18,8 @@ export const payoutKeys = {
   /** GET /supervision/payments/connect/status */
   status: () => [...payoutKeys.all, 'status'] as const,
   /** GET /supervision/payments/quote */
-  quote: (weeklyAmountCents: number) => [...payoutKeys.all, 'quote', weeklyAmountCents] as const,
+  quote: (hourlyRateCents: number, weeklyCapMinutes: number) =>
+    [...payoutKeys.all, 'quote', hourlyRateCents, weeklyCapMinutes] as const,
   /** GET /supervision/hires/:hireId/payment */
   hirePayment: (hireId: string) => [...payoutKeys.all, 'hire', hireId] as const,
 }
@@ -48,13 +49,22 @@ export function useCreatePayoutDashboardLink() {
   return useMutation({ mutationFn: createPayoutDashboardLink })
 }
 
-/** Weekly charge breakdown for a prospective weekly rate in dollars (agreement form preview). */
-export function useWeeklyQuote(weeklyAmount: number | null | undefined, enabled: boolean) {
-  const cents = weeklyAmount != null && weeklyAmount >= 1 ? Math.round(weeklyAmount * 100) : 0
+/** Weekly prepay/payout breakdown for prospective hourly terms (dollars, hours). */
+export function useHourlyQuote(
+  hourlyRate: number | null | undefined,
+  maxHoursPerWeek: number | null | undefined,
+  enabled: boolean,
+) {
+  const rateCents = hourlyRate != null && hourlyRate >= 1 ? Math.round(hourlyRate * 100) : 0
+  // Only whole 15-minute steps, matching the backend validation.
+  const capMinutes =
+    maxHoursPerWeek != null && Number.isInteger(maxHoursPerWeek * 4) && maxHoursPerWeek > 0
+      ? Math.round(maxHoursPerWeek * 60)
+      : 0
   return useQuery({
-    queryKey: payoutKeys.quote(cents),
-    queryFn: () => getWeeklyQuote(cents / 100),
-    enabled: enabled && cents > 0,
+    queryKey: payoutKeys.quote(rateCents, capMinutes),
+    queryFn: () => getHourlyQuote(rateCents / 100, capMinutes / 60),
+    enabled: enabled && rateCents > 0 && capMinutes > 0 && capMinutes <= 40 * 60,
     staleTime: Infinity,
     placeholderData: (previous) => previous,
   })
@@ -69,16 +79,16 @@ export function useHirePayment(hireId: string, enabled: boolean) {
   })
 }
 
-export function useStartHirePayment() {
+export function useSaveHirePaymentMethod() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ hireId, paymentMethodId }: { hireId: string; paymentMethodId: string }) =>
-      startHirePayment(hireId, paymentMethodId),
+      saveHirePaymentMethod(hireId, paymentMethodId),
     onSuccess: (data, { hireId }) => {
       queryClient.setQueryData(payoutKeys.hirePayment(hireId), data)
     },
-    // A new card is saved to the customer even when its first charge fails, so
-    // refresh the saved-card list for the retry.
+    // A card added through the SetupIntent is on the customer even when saving
+    // it to the hire fails, so refresh the saved-card list for the retry.
     onError: async (_error, { hireId }) => {
       await queryClient.invalidateQueries({ queryKey: payoutKeys.hirePayment(hireId) })
     },

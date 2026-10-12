@@ -1,10 +1,9 @@
 'use client'
 
-import { FileText } from 'lucide-react'
+import { CheckCircle2, CreditCard, FileText } from 'lucide-react'
 import { useState } from 'react'
 
-import { HirePaymentSetup } from '@/components/HirePayment/HirePaymentSetup'
-import { WeeklyQuoteSummary } from '@/components/HirePayment/WeeklyQuoteSummary'
+import { formatHours, HourlyQuoteSummary } from '@/components/HirePayment/HourlyQuoteSummary'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
@@ -37,9 +36,9 @@ function formatMoney(value: string | null): string {
   return Number.isFinite(n) ? `$${n.toFixed(2)}` : value
 }
 
-/** Weekly agreements are billed in-app; legacy ones carry monthly terms. */
-function isWeeklyAgreement(agreement: AgreementRecord): boolean {
-  return agreement.weeklyAmountCents != null && agreement.durationWeeks != null
+/** Hourly agreements are billed in-app; the others carry monthly terms paid outside the app. */
+function isHourlyAgreement(agreement: AgreementRecord): boolean {
+  return agreement.hourlyRateCents != null && agreement.weeklyCapMinutes != null
 }
 
 function plural(n: number, unit: string): string {
@@ -90,9 +89,11 @@ function SignatureBlock({
 function SignAgreementSection({
   hire,
   onOpenChange,
+  onSetUpPayment,
 }: {
   hire: HireListItem
   onOpenChange: (open: boolean) => void
+  onSetUpPayment?: () => void
 }) {
   const [signatureName, setSignatureName] = useState('')
   const [consent, setConsent] = useState(false)
@@ -102,9 +103,12 @@ function SignAgreementSection({
 
   const supervisorName = formatDisplayName(hire.supervisor)
   const isPending = signMutation.isPending
-  // Weekly agreements continue straight to the payment step in this dialog.
+  // Hourly agreements continue straight to the payment step (its own dialog).
   const paysInApp =
-    IN_APP_PAYMENTS_ENABLED && hire.agreement != null && isWeeklyAgreement(hire.agreement)
+    IN_APP_PAYMENTS_ENABLED &&
+    hire.agreement != null &&
+    isHourlyAgreement(hire.agreement) &&
+    onSetUpPayment != null
 
   function handleSign() {
     signMutation.mutate(
@@ -114,8 +118,10 @@ function SignAgreementSection({
           burst()
           if (paysInApp) {
             showSuccess('Agreement signed!', {
-              description: 'Set up your weekly payment to start your supervision.',
+              description: 'Next, add the card for your weekly prepays.',
             })
+            onOpenChange(false)
+            onSetUpPayment()
             return
           }
           showSuccess('Agreement signed!', {
@@ -186,6 +192,11 @@ interface AgreementDialogProps {
   onOpenChange: (open: boolean) => void
   /** True only for the supervisee while their signature is pending — shows the sign form. */
   canSign?: boolean
+  /**
+   * Supervisee only: opens the payment dialog (hourly agreements). `changeCard`
+   * opens it on the card picker when a card is already saved.
+   */
+  onSetUpPayment?: (options?: { changeCard?: boolean }) => void
 }
 
 export function AgreementDialog({
@@ -193,15 +204,16 @@ export function AgreementDialog({
   open,
   onOpenChange,
   canSign = false,
+  onSetUpPayment,
 }: AgreementDialogProps) {
   const { user } = useUser()
   const agreement = hire.agreement
   if (!agreement) return null
 
   const showSignForm = canSign && agreement.superviseeSignedAt == null
-  const weekly = isWeeklyAgreement(agreement)
+  const hourly = isHourlyAgreement(agreement)
   const viewerIsSupervisor = isSupervisorRole(user?.role)
-  const showPayment = IN_APP_PAYMENTS_ENABLED && weekly
+  const showPayment = IN_APP_PAYMENTS_ENABLED && hourly
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
@@ -215,12 +227,23 @@ export function AgreementDialog({
           <h3 className="mb-3 text-sm font-semibold text-foreground">Terms</h3>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
             <TermItem label="Start Date" value={formatDate(agreement.startDate)} />
-            {weekly ? (
+            {hourly ? (
               <>
-                <TermItem label="Duration" value={plural(agreement.durationWeeks ?? 0, 'week')} />
                 <TermItem
-                  label="Weekly Amount"
-                  value={formatUsdCents(agreement.weeklyAmountCents ?? 0)}
+                  label="Total Hours"
+                  value={
+                    agreement.totalHours != null
+                      ? plural(agreement.totalHours, 'hour')
+                      : 'Until ended'
+                  }
+                />
+                <TermItem
+                  label="Hourly Rate"
+                  value={formatUsdCents(agreement.hourlyRateCents ?? 0)}
+                />
+                <TermItem
+                  label="Max per Week"
+                  value={formatHours(agreement.weeklyCapMinutes ?? 0)}
                 />
               </>
             ) : (
@@ -289,34 +312,69 @@ export function AgreementDialog({
             <Separator className="my-5" />
             <section>
               <h3 className="mb-3 text-sm font-semibold text-foreground">Weekly Payment</h3>
-              <WeeklyQuoteSummary
+              <HourlyQuoteSummary
                 quote={agreement.quote}
                 perspective={viewerIsSupervisor ? 'supervisor' : 'supervisee'}
-                durationWeeks={agreement.durationWeeks}
               />
               {showSignForm && (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  You&apos;ll set up payment right after signing.
+                  You&apos;ll add the card for your weekly prepays right after signing.
                 </p>
               )}
             </section>
           </>
         )}
 
-        {showPayment && !viewerIsSupervisor && agreement.superviseeSignedAt != null && (
-          <>
-            <Separator className="my-5" />
-            <section>
-              <h3 className="mb-3 text-sm font-semibold text-foreground">Weekly Payment</h3>
-              <HirePaymentSetup
-                hireId={hire.id}
-                supervisorName={formatDisplayName(hire.supervisor)}
-              />
-            </section>
-          </>
-        )}
+        {showPayment &&
+          !viewerIsSupervisor &&
+          agreement.superviseeSignedAt != null &&
+          agreement.quote &&
+          onSetUpPayment && (
+            <>
+              <Separator className="my-5" />
+              <section>
+                <h3 className="mb-3 text-sm font-semibold text-foreground">Weekly Payment</h3>
+                <HourlyQuoteSummary quote={agreement.quote} perspective="supervisee" />
+                {hire.paymentMethodSavedAt ? (
+                  <div className="mt-3 flex items-center justify-between gap-4 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 className="size-4 shrink-0 text-primary" aria-hidden />
+                      Payment card saved
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        onOpenChange(false)
+                        onSetUpPayment({ changeCard: true })
+                      }}
+                    >
+                      Change card
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    className="mt-3 w-full"
+                    onClick={() => {
+                      onOpenChange(false)
+                      onSetUpPayment()
+                    }}
+                  >
+                    <CreditCard className="size-4" aria-hidden />
+                    Set up payment
+                  </Button>
+                )}
+              </section>
+            </>
+          )}
 
-        {showSignForm && <SignAgreementSection hire={hire} onOpenChange={onOpenChange} />}
+        {showSignForm && (
+          <SignAgreementSection
+            hire={hire}
+            onOpenChange={onOpenChange}
+            onSetUpPayment={onSetUpPayment ? () => onSetUpPayment() : undefined}
+          />
+        )}
       </DialogContent>
     </DialogRoot>
   )

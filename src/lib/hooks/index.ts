@@ -64,10 +64,10 @@ export {
   payoutKeys,
   useCreatePayoutDashboardLink,
   useHirePayment,
+  useHourlyQuote,
   usePayoutStatusQuery,
-  useStartHirePayment,
+  useSaveHirePaymentMethod,
   useStartPayoutOnboarding,
-  useWeeklyQuote,
 } from './usePayouts'
 export { recommendedSupervisorKeys, useRecommendedSupervisors } from './useRecommendedSupervisors'
 export { useResendVerificationEmail } from './useResendVerificationEmail'

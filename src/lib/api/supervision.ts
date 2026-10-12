@@ -16,7 +16,7 @@ import type {
   UpcomingSessionItem,
 } from '@/types/hire'
 import type { PastClientHire } from '@/types/past-clients'
-import type { HirePaymentInfo, PayoutStatus, StripeLink, WeeklyQuote } from '@/types/payouts'
+import type { HirePaymentInfo, HourlyQuote, PayoutStatus, StripeLink } from '@/types/payouts'
 import type {
   PurchaseSubscriptionResponse,
   Subscription,
@@ -97,15 +97,18 @@ export async function createPayoutDashboardLink(): Promise<StripeLink> {
   return data.data
 }
 
-/** GET /supervision/payments/quote — weekly charge breakdown for a prospective weekly rate (dollars). */
-export async function getWeeklyQuote(weeklyAmount: number): Promise<WeeklyQuote> {
-  const { data } = await apiClient.get<ApiResponse<WeeklyQuote>>('/supervision/payments/quote', {
-    params: { weeklyAmount },
+/** GET /supervision/payments/quote — weekly prepay/payout breakdown for prospective hourly terms. */
+export async function getHourlyQuote(
+  hourlyRate: number,
+  maxHoursPerWeek: number,
+): Promise<HourlyQuote> {
+  const { data } = await apiClient.get<ApiResponse<HourlyQuote>>('/supervision/payments/quote', {
+    params: { hourlyRate, maxHoursPerWeek },
   })
   return data.data
 }
 
-/** GET /supervision/hires/:hireId/payment — weekly billing summary (supervisor or supervisee). */
+/** GET /supervision/hires/:hireId/payment — hourly billing summary (supervisor or supervisee). */
 export async function getHirePayment(hireId: string): Promise<HirePaymentInfo> {
   const { data } = await apiClient.get<ApiResponse<HirePaymentInfo>>(
     `/supervision/hires/${hireId}/payment`,
@@ -124,15 +127,15 @@ export async function createHirePaymentSetupIntent(
 }
 
 /**
- * POST /supervision/hires/:hireId/payment/start — starts weekly billing with a
- * saved card. Charges the first week now when the start date is today or past.
+ * PUT /supervision/hires/:hireId/payment/card — saves (or replaces) the card
+ * the weekly prepays are charged to. Nothing is charged here.
  */
-export async function startHirePayment(
+export async function saveHirePaymentMethod(
   hireId: string,
   paymentMethodId: string,
 ): Promise<HirePaymentInfo> {
-  const { data } = await apiClient.post<ApiResponse<HirePaymentInfo>>(
-    `/supervision/hires/${hireId}/payment/start`,
+  const { data } = await apiClient.put<ApiResponse<HirePaymentInfo>>(
+    `/supervision/hires/${hireId}/payment/card`,
     { paymentMethodId },
   )
   return data.data
@@ -268,13 +271,16 @@ function buildAgreementFormData(input: ProposeAgreementInput): FormData {
   const formData = new FormData()
   formData.append('source', input.source)
   formData.append('startDate', input.startDate)
-  // Monthly or weekly terms, whichever the form collected (weekly once in-app payments are on).
+  // Monthly or hourly terms, whichever the form collected (hourly for in-app billed hires).
   if (input.supervisionMonths != null) {
     formData.append('supervisionMonths', String(input.supervisionMonths))
   }
   if (input.monthlyAmount != null) formData.append('monthlyAmount', String(input.monthlyAmount))
-  if (input.weeklyAmount != null) formData.append('weeklyAmount', String(input.weeklyAmount))
-  if (input.durationWeeks != null) formData.append('durationWeeks', String(input.durationWeeks))
+  if (input.hourlyRate != null) formData.append('hourlyRate', String(input.hourlyRate))
+  if (input.maxHoursPerWeek != null) {
+    formData.append('maxHoursPerWeek', String(input.maxHoursPerWeek))
+  }
+  if (input.totalHours != null) formData.append('totalHours', String(input.totalHours))
   formData.append('signatureName', input.signatureName.trim())
   if (input.source === 'UPLOADED' && input.file) {
     formData.append('file', input.file)
