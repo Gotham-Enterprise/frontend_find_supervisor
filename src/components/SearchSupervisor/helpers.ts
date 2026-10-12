@@ -3,7 +3,7 @@ import type { SelectOption, SupervisorTypeData } from '@/lib/api/options'
 import {
   getProfessionGroupForOccupation,
   type ProfessionGroup,
-} from '@/lib/constants/state-supervision-rules'
+} from '@/lib/constants/supervision-professions'
 import {
   isMedicalDirectorType,
   resolveSupervisorTypeCode,
