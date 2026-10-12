@@ -131,10 +131,15 @@ export function isUUID(str: string): boolean {
 
 /** Converts a slug like "new-york" to a display name like "New York". */
 export function stateSlugToDisplayName(slug: string): string {
-  return slug
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
+  return (
+    slug
+      .split('-')
+      // "district-of-columbia" → "District of Columbia"
+      .map((word, i) =>
+        i > 0 && word === 'of' ? word : word.charAt(0).toUpperCase() + word.slice(1),
+      )
+      .join(' ')
+  )
 }
 
 /** Converts a slug to its 2-letter abbreviation, or null if unknown. */
