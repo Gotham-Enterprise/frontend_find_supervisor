@@ -1,3 +1,4 @@
+import { identityPreferenceDefaultValues } from '@/lib/forms/identity-preferences'
 import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 
 import type {
@@ -27,6 +28,7 @@ export const emptyLicenseEntry: LicenseEntryValues = {
 
 export const supervisorDefaultValues: Partial<SupervisorFormValues> = {
   fullName: '',
+  ...identityPreferenceDefaultValues,
   professionalCredentials: '',
   email: '',
   password: '',
@@ -101,6 +103,7 @@ export const medicalDirectorDefaultValues: Partial<MedicalDirectorFormValues> = 
 
 export const superviseeDefaultValues: Partial<SuperviseeFormValues> = {
   fullName: '',
+  ...identityPreferenceDefaultValues,
   email: '',
   password: '',
   confirmPassword: '',

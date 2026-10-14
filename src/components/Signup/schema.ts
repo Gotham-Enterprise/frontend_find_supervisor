@@ -1,5 +1,10 @@
 import { z } from 'zod'
 
+import {
+  applyIdentityPreferenceRules,
+  IDENTITY_PREFERENCE_FIELD_NAMES,
+  identityPreferenceFieldsSchema,
+} from '@/lib/forms/identity-preferences'
 import { OTHER_CERTIFYING_BOARD_VALUE } from '@/lib/utils/board-certification'
 import { todayLocalISO } from '@/lib/utils/date'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
@@ -48,6 +53,8 @@ export const yearsOfExperienceOptions = [
 /** Shared account fields (supervisor + supervisee signup). `confirmPassword` is UI-only — strip before API. */
 export const accountSchemaBase = z.object({
   fullName: z.string().min(1, 'Full name is required').max(100),
+  // Optional pronouns / gender identity / languages + per-block visibility flags
+  ...identityPreferenceFieldsSchema,
   email: z.string().min(1, 'Email is required').email('Please enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters').max(128),
   confirmPassword: z.string().min(1, 'Please confirm your password').max(128),
@@ -71,6 +78,11 @@ function withPasswordConfirmation<S extends z.ZodObject<z.ZodRawShape>>(schema: 
     message: 'Passwords do not match',
     path: ['confirmPassword'],
   })
+}
+
+/** Account-step rules beyond the field shapes: password match + the self-describe text. */
+function withAccountRules<S extends z.ZodObject<z.ZodRawShape>>(schema: S) {
+  return withPasswordConfirmation(schema.superRefine(applyIdentityPreferenceRules))
 }
 
 export const supervisionFeeTypeOptions = [
@@ -231,7 +243,7 @@ export const supervisorSchemaObject = accountSchemaBase.extend({
     .refine((val) => val === true, 'You must agree to the Terms of Service'),
 })
 
-export const supervisorSchema = withPasswordConfirmation(
+export const supervisorSchema = withAccountRules(
   supervisorSchemaObject
     .superRefine(applySupervisorPhysicianRules)
     .superRefine(applySupervisorMonthlyOnlyFeeRule),
@@ -439,7 +451,7 @@ export function applyMedicalDirectorPracticeRules(
   }
 }
 
-export const medicalDirectorSchema = withPasswordConfirmation(
+export const medicalDirectorSchema = withAccountRules(
   medicalDirectorSchemaObject
     .superRefine(applySupervisorPhysicianRules)
     .superRefine(applySupervisorMonthlyOnlyFeeRule)
@@ -639,7 +651,7 @@ function applySuperviseeMdNeedRules(
   }
 }
 
-export const superviseeSchema = withPasswordConfirmation(
+export const superviseeSchema = withAccountRules(
   superviseeSchemaObject
     .superRefine(applySuperviseeSupervisionNeedRules)
     .superRefine(applySuperviseeBudgetRules)
@@ -651,10 +663,16 @@ export type SuperviseeFormValues = z.infer<typeof superviseeSchemaObject>
 
 // ─── Supervisor multi-step (same rules as supervisorSchema, split by step) ───
 
-export const supervisorStep1Schema = withPasswordConfirmation(
+/** `pick` mask for the shared identity block (step 1 of every signup variant). */
+const IDENTITY_PREFERENCE_PICK = Object.fromEntries(
+  IDENTITY_PREFERENCE_FIELD_NAMES.map((name) => [name, true as const]),
+) as Record<(typeof IDENTITY_PREFERENCE_FIELD_NAMES)[number], true>
+
+export const supervisorStep1Schema = withAccountRules(
   supervisorSchemaObject.pick({
     uploadProfilePhoto: true,
     fullName: true,
+    ...IDENTITY_PREFERENCE_PICK,
     professionalCredentials: true,
     email: true,
     password: true,
@@ -709,6 +727,7 @@ export const SUPERVISOR_SIGNUP_STEP_FIELDS = [
   [
     'uploadProfilePhoto',
     'fullName',
+    ...IDENTITY_PREFERENCE_FIELD_NAMES,
     'professionalCredentials',
     'email',
     'password',
@@ -819,10 +838,11 @@ export const MEDICAL_DIRECTOR_SIGNUP_STEP_FIELDS = [
 
 // ─── Supervisee multi-step (same rules as superviseeSchema, split by step) ─────
 
-export const superviseeStep1Schema = withPasswordConfirmation(
+export const superviseeStep1Schema = withAccountRules(
   superviseeSchemaObject.pick({
     uploadProfilePhoto: true,
     fullName: true,
+    ...IDENTITY_PREFERENCE_PICK,
     email: true,
     password: true,
     confirmPassword: true,
@@ -890,6 +910,7 @@ export const SUPERVISEE_SIGNUP_STEP_FIELDS = [
   [
     'uploadProfilePhoto',
     'fullName',
+    ...IDENTITY_PREFERENCE_FIELD_NAMES,
     'email',
     'password',
     'confirmPassword',

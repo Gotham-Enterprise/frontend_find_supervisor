@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import { useWatch } from 'react-hook-form'
 
+import { IdentityPreferenceFields } from '@/components/forms/IdentityPreferenceFields'
 import { ProfilePhotoField } from '@/components/profile-photo/ProfilePhotoField'
 import { Checkbox } from '@/components/ui/checkbox'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -226,7 +227,7 @@ export function SuperviseeProfileEditFields({
       <FormSelectField
         control={form.control}
         name="mdPreferredOccupation"
-        label="Preferred Occupation (optional)"
+        label="Preferred Occupation (Optional)"
         options={mdOccupationOptions}
         placeholder={
           mdOccupationOptions.length === 0 && !supervisorTypesLoading
@@ -243,7 +244,7 @@ export function SuperviseeProfileEditFields({
       <FormSelectField
         control={form.control}
         name="mdPreferredSpecialty"
-        label="Preferred Specialty (optional)"
+        label="Preferred Specialty (Optional)"
         options={mdSpecialtyOptions}
         sortOptions
         placeholder={
@@ -353,6 +354,9 @@ export function SuperviseeProfileEditFields({
             )}
           />
         </div>
+        {/* Optional pronouns / gender identity / languages, each with its own
+            public-visibility checkbox (same block as signup). */}
+        <IdentityPreferenceFields control={form.control} isSubmitting={isSubmitting} />
         <div className="grid gap-4 sm:grid-cols-3">
           <FormSelectField
             control={form.control}
@@ -793,7 +797,7 @@ export function SuperviseeProfileEditFields({
           name="introduction"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Introduce Yourself (optional)</FormLabel>
+              <FormLabel>Introduce Yourself (Optional)</FormLabel>
               <FormControl>
                 <Textarea
                   {...field}

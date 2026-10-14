@@ -154,7 +154,7 @@ export function MedicalDirectorStepLicenseCredentials({
           label="Specialty"
           options={specialtyOptions}
           sortOptions
-          placeholder="Select Specialty (optional)"
+          placeholder="Select Specialty (Optional)"
           loading={supervisorTypesLoading}
           disabled={supervisorTypesLoading || supervisorOccupationId.length === 0}
           isSubmitting={isSubmitting}
@@ -213,7 +213,7 @@ export function MedicalDirectorStepLicenseCredentials({
         name="licenseDoc"
         render={({ field: { value, onChange, onBlur, ref } }) => (
           <FormItem>
-            <FormLabel>License or Verification Document (optional)</FormLabel>
+            <FormLabel>License or Verification Document (Optional)</FormLabel>
             <FormControl>
               <UploadFile
                 inputRef={ref}

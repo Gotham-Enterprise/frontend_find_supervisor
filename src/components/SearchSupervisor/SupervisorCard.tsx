@@ -1,6 +1,6 @@
 'use client'
 
-import { ClockIcon, MapPinIcon } from 'lucide-react'
+import { ClockIcon, LanguagesIcon, MapPinIcon, UserRoundIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
@@ -44,6 +44,7 @@ export function SupervisorCard({
     initials,
     avatarColor,
     profilePhotoUrl,
+    identity,
   } = supervisor
 
   const photoUrl = profilePhotoUrl?.trim()
@@ -77,6 +78,14 @@ export function SupervisorCard({
           <div className="min-w-0">
             <h3 className="truncate text-base font-semibold text-foreground">
               {formatNameWithCredentials(fullName, credentials)}
+              {identity.pronouns && (
+                <span
+                  className="ml-1.5 text-sm font-normal text-muted-foreground"
+                  aria-label={`Pronouns: ${identity.pronouns}`}
+                >
+                  ({identity.pronouns})
+                </span>
+              )}
             </h3>
             <p className="mt-0.5 text-sm text-muted-foreground">
               {licenseType ? (
@@ -118,6 +127,21 @@ export function SupervisorCard({
               {FORMAT_LABELS[fmt]}
             </span>
           ))}
+          {/* Identity blocks the supervisor chose to display (gated by the API) */}
+          {identity.genderIdentity && (
+            <span className="flex items-center gap-1">
+              <UserRoundIcon className="size-3.5 shrink-0" aria-hidden />
+              <span className="sr-only">Gender identity: </span>
+              {identity.genderIdentity}
+            </span>
+          )}
+          {identity.languages.length > 0 && (
+            <span className="flex items-center gap-1">
+              <LanguagesIcon className="size-3.5 shrink-0" aria-hidden />
+              <span className="sr-only">Languages: </span>
+              {identity.languages.join(', ')}
+            </span>
+          )}
         </div>
 
         {/* Bio */}

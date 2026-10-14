@@ -11,6 +11,7 @@ import { DisabledWithTooltip } from '@/components/ui/tooltip'
 import { isSupervisorRole } from '@/lib/auth/roles'
 import { useConversations, useSupervisorProfile, useUser } from '@/lib/hooks'
 import { useCheckConnectionAvailability } from '@/lib/hooks/useConnections'
+import { formatPronouns, getVisiblePronounLabels } from '@/lib/utils/identity-display'
 import { getMakeConnectionAccess } from '@/lib/utils/make-connection-access'
 import {
   formatCredentialWithState,
@@ -132,6 +133,8 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
   const subline = [occupation, specialty].filter(Boolean).join(' · ')
   const roleBadgeLabel =
     formatCredentialWithState(profile.title, profile.licensureState) || 'Supervisee'
+  // Shown only when the supervisee opted in (the API strips it for other viewers anyway).
+  const pronouns = formatPronouns(getVisiblePronounLabels(user))
 
   const existingConversation = conversations?.find((c) => c.superviseeId === user.id)
   const isInMyHireList = profile.isInMyHireList ?? false
@@ -251,6 +254,11 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-xl font-bold text-[#181818]">{displayName}</h1>
+          {pronouns && (
+            <span className="text-sm text-[#6B7280]" aria-label={`Pronouns: ${pronouns}`}>
+              ({pronouns})
+            </span>
+          )}
           <span className="rounded-full bg-[#E2F0E8] px-2.5 py-0.5 text-xs font-medium text-[#006D36]">
             {roleBadgeLabel}
           </span>

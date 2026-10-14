@@ -18,6 +18,12 @@ import {
 import { buildBoardCertificationsPayload, buildOfferingsPayload } from '@/lib/api/signup'
 import type { UpdateSupervisorProfilePayload } from '@/lib/api/supervisor-profile'
 import {
+  applyIdentityPreferenceRules,
+  getIdentityPreferenceFormValues,
+  identityPreferenceFieldsSchema,
+  identityPreferencesToPayload,
+} from '@/lib/forms/identity-preferences'
+import {
   ABMS_CERTIFYING_BOARDS,
   OTHER_CERTIFYING_BOARD_VALUE,
 } from '@/lib/utils/board-certification'
@@ -55,6 +61,8 @@ function isEmptySelect(value: string | undefined): boolean {
  */
 const editSupervisorProfileFieldsSchema = z.object({
   fullName: z.string().min(1, 'Full name is required').max(100),
+  // Optional pronouns / gender identity / languages + visibility flags (account-level)
+  ...identityPreferenceFieldsSchema,
   professionalCredentials: professionalCredentialsSchema,
   contactNumber: z.string().min(1, 'Contact number is required'),
   city: z.string().min(1, 'City is required').max(100),
@@ -152,6 +160,8 @@ export type EditSupervisorProfileFormValues = z.infer<typeof editSupervisorProfi
  */
 export function createEditSupervisorProfileSchema(profile: SupervisorProfileData) {
   return editSupervisorProfileFieldsSchema.superRefine((data, ctx) => {
+    applyIdentityPreferenceRules(data, ctx)
+
     const hasNewPhoto = data.uploadProfilePhoto instanceof File
     const hasExisting = Boolean(profile.user.profilePhotoUrl?.trim())
     if (!hasNewPhoto && !hasExisting) {
@@ -386,6 +396,7 @@ export function getDefaultSupervisorProfileFormValues(
 
   return {
     fullName: profile.user.fullName ?? '',
+    ...getIdentityPreferenceFormValues(profile.user),
     licenseDoc: undefined,
     professionalCredentials: profile.professionalCredentials ?? '',
     contactNumber: formatUSPhoneForDisplay(profile.user.contactNumber ?? ''),
@@ -428,6 +439,7 @@ export function supervisorProfileFormValuesToPayload(
 ): UpdateSupervisorProfilePayload {
   return {
     fullName: values.fullName,
+    identity: identityPreferencesToPayload(values),
     // Always sent (empty string clears the stored value on the backend).
     professionalCredentials: values.professionalCredentials?.trim() ?? '',
     contactNumber: values.contactNumber
