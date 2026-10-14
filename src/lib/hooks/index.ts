@@ -42,6 +42,15 @@ export {
   useViewHire,
 } from './useHires'
 export {
+  hireSessionKeys,
+  useApproveBillingWeek,
+  useDeleteHireSession,
+  useDisputeBillingWeek,
+  useHireBillingWeeks,
+  useLogHireSession,
+  useUpdateHireSession,
+} from './useHireSessions'
+export {
   useCitiesOptions,
   useMultiStateCityOptions,
   useStateNameOptions,

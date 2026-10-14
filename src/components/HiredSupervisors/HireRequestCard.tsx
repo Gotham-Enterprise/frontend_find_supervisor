@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  CalendarClock,
   CalendarDays,
   CreditCard,
   DollarSign,
@@ -16,6 +17,7 @@ import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 
 import { HirePaymentDialog } from '@/components/HirePayment/HirePaymentDialog'
+import { HireSessionsDialog } from '@/components/HireSessions/HireSessionsDialog'
 import { LeaveReviewModal } from '@/components/reviews/LeaveReviewModal'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -118,6 +120,10 @@ export function HireRequestCard({
   })
   const openPayment = (options?: { changeCard?: boolean }) =>
     setPayment({ open: true, changeCard: options?.changeCard ?? false })
+  // Sessions deep link (?sessions=<id>, from session notifications) works like the agreement one.
+  const deepLinkedSessionsId = useSearchParams().get('sessions')
+  const [sessionsOpenManually, setSessionsOpenManually] = useState(false)
+  const [dismissedSessionsLinkId, setDismissedSessionsLinkId] = useState<string | null>(null)
   const [reasonOpen, setReasonOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [completeOpen, setCompleteOpen] = useState(false)
@@ -167,6 +173,18 @@ export function HireRequestCard({
     (hire.status === 'ACCEPTED' || hire.status === 'ACTIVE') &&
     hire.agreement?.hourlyRateCents != null &&
     hire.paymentMethodSavedAt == null
+
+  // Signed hourly agreement: sessions are logged and reviewed in the app.
+  const hasSessions =
+    IN_APP_PAYMENTS_ENABLED && isAgreementSigned && hire.agreement?.hourlyRateCents != null
+  const sessionsDeepLinkMatches = hasSessions && deepLinkedSessionsId === hire.id
+  const sessionsOpen =
+    sessionsOpenManually ||
+    (sessionsDeepLinkMatches && dismissedSessionsLinkId !== deepLinkedSessionsId)
+  const setSessionsOpen = (open: boolean) => {
+    setSessionsOpenManually(open)
+    if (!open && sessionsDeepLinkMatches) setDismissedSessionsLinkId(deepLinkedSessionsId)
+  }
 
   // Mark as Completed: only when ACCEPTED or ACTIVE, and the agreement is fully signed
   const canComplete = canMarkHireCompleted(hire)
@@ -350,6 +368,12 @@ export function HireRequestCard({
 
         {isAgreementSigned && (
           <div className="flex justify-end gap-2 border-t border-border/50 px-5 py-3">
+            {hasSessions && (
+              <Button variant="outline" size="sm" onClick={() => setSessionsOpen(true)}>
+                <CalendarClock className="size-3.5" aria-hidden />
+                Sessions
+              </Button>
+            )}
             {needsPaymentSetup && (
               <Button size="sm" onClick={() => openPayment()}>
                 <CreditCard className="size-3.5" aria-hidden />
@@ -385,6 +409,15 @@ export function HireRequestCard({
           onOpenChange={setAgreementOpen}
           canSign={canSignAgreement}
           onSetUpPayment={IN_APP_PAYMENTS_ENABLED ? openPayment : undefined}
+        />
+      )}
+
+      {hasSessions && (
+        <HireSessionsDialog
+          hireId={hire.id}
+          counterpartName={supervisorName}
+          open={sessionsOpen}
+          onOpenChange={setSessionsOpen}
         />
       )}
 

@@ -1,0 +1,416 @@
+'use client'
+
+import { AlertCircle, Pencil, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  useApproveBillingWeek,
+  useDeleteHireSession,
+  useDisputeBillingWeek,
+  useHireBillingWeeks,
+  useUserSnackbar,
+} from '@/lib/hooks'
+import {
+  formatCalendarDate,
+  formatDuration,
+  formatEasternDateTime,
+  formatWeekRange,
+} from '@/lib/utils/date'
+import { parseApiError } from '@/lib/utils/error-parser'
+import { formatUsdCents } from '@/lib/utils/money'
+import type {
+  BillingWeek,
+  BillingWeekStatus,
+  HireBillingWeeks,
+  HireSession,
+} from '@/types/sessions'
+
+import { SessionFormDialog } from './SessionFormDialog'
+
+const DISPUTE_REASON_MIN = 10
+
+const STATUS_BADGE: Record<
+  BillingWeekStatus,
+  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
+> = {
+  OPEN: { label: 'Open', variant: 'outline' },
+  IN_REVIEW: { label: 'In review', variant: 'secondary' },
+  DISPUTED: { label: 'Disputed', variant: 'destructive' },
+  APPROVED: { label: 'Approved', variant: 'default' },
+  SETTLED: { label: 'Paid', variant: 'default' },
+}
+
+function ProgressSummary({ data }: { data: HireBillingWeeks }) {
+  const { progress, terms } = data
+  const approvedHours = progress.approvedMinutes / 60
+  const pct =
+    progress.totalMinutes != null && progress.totalMinutes > 0
+      ? Math.min((progress.approvedMinutes / progress.totalMinutes) * 100, 100)
+      : null
+  return (
+    <div className="rounded-lg border bg-muted/30 px-4 py-3">
+      <p className="text-sm font-medium text-foreground">
+        {progress.totalMinutes != null
+          ? `${approvedHours} of ${progress.totalMinutes / 60} hours approved`
+          : `${approvedHours} hours approved`}
+      </p>
+      {pct != null && (
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+          <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+        </div>
+      )}
+      <p className="mt-2 text-xs text-muted-foreground">
+        {formatDuration(progress.loggedMinutes)} logged in total ·{' '}
+        {formatUsdCents(terms.hourlyRateCents)}/hour · up to{' '}
+        {formatDuration(terms.weeklyCapMinutes)} per week
+      </p>
+    </div>
+  )
+}
+
+/** What happens with this week next, from the viewer's side. */
+function weekStatusText(week: BillingWeek, role: HireBillingWeeks['role']): string {
+  switch (week.status) {
+    case 'OPEN':
+      return role === 'supervisor'
+        ? `Log this week's sessions by ${formatEasternDateTime(week.logDeadlineAt)}.`
+        : `Your supervisor can log sessions until ${formatEasternDateTime(week.logDeadlineAt)}; you'll review them after that.`
+    case 'IN_REVIEW':
+      return role === 'supervisee'
+        ? `Review by ${formatEasternDateTime(week.reviewEndsAt)}. If you don't, the week is approved automatically.`
+        : `Waiting for your supervisee's review until ${formatEasternDateTime(week.reviewEndsAt)}; approved automatically after that.`
+    case 'DISPUTED':
+      return 'Disputed — Gotham support will review this week and contact you both.'
+    case 'APPROVED':
+    case 'SETTLED': {
+      const by =
+        week.approvedBy === 'SUPERVISEE'
+          ? role === 'supervisee'
+            ? 'by you'
+            : 'by your supervisee'
+          : week.approvedBy === 'SUPPORT'
+            ? 'by Gotham support'
+            : 'automatically'
+      return week.approvedMinutes === 0
+        ? 'Closed with no sessions logged.'
+        : `${formatDuration(week.approvedMinutes ?? 0)} approved ${by}.`
+    }
+  }
+}
+
+function SessionRow({
+  session,
+  canEdit,
+  onEdit,
+  onDelete,
+}: {
+  session: HireSession
+  canEdit: boolean
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  return (
+    <li className="flex items-start gap-3 py-2.5">
+      <div className="w-24 shrink-0">
+        <p className="text-sm text-foreground">{formatCalendarDate(session.sessionDate)}</p>
+        <p className="text-xs tabular-nums text-muted-foreground">
+          {formatDuration(session.durationMinutes)}
+        </p>
+      </div>
+      <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm text-muted-foreground">
+        {session.notes}
+        {session.source === 'SUPPORT' && (
+          <span className="ml-1 text-xs italic">(added by Gotham support)</span>
+        )}
+      </p>
+      {canEdit && session.source === 'SUPERVISOR' && (
+        <div className="flex shrink-0 gap-1">
+          <Button variant="ghost" size="icon-sm" aria-label="Edit session" onClick={onEdit}>
+            <Pencil className="size-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon-sm" aria-label="Delete session" onClick={onDelete}>
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
+      )}
+    </li>
+  )
+}
+
+function WeekCard({
+  week,
+  role,
+  onEditSession,
+  onDeleteSession,
+  onApprove,
+  onDispute,
+}: {
+  week: BillingWeek
+  role: HireBillingWeeks['role']
+  onEditSession: (session: HireSession) => void
+  onDeleteSession: (session: HireSession) => void
+  onApprove: () => void
+  onDispute: () => void
+}) {
+  const badge = STATUS_BADGE[week.status]
+  return (
+    <section className="rounded-lg border px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <h4 className="text-sm font-semibold text-foreground">
+            {formatWeekRange(week.startDate, week.endDate)}
+          </h4>
+          <Badge variant={badge.variant}>{badge.label}</Badge>
+        </div>
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {formatDuration(week.loggedMinutes)} / {formatDuration(week.weeklyCapMinutes)}
+        </span>
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">{weekStatusText(week, role)}</p>
+      {week.status === 'DISPUTED' && week.disputeReason && (
+        <p className="mt-2 rounded-md bg-destructive/5 px-3 py-2 text-xs text-foreground">
+          <span className="font-medium">Reason:</span> {week.disputeReason}
+        </p>
+      )}
+
+      {week.sessions.length > 0 ? (
+        <ul className="mt-2 divide-y border-t">
+          {week.sessions.map((session) => (
+            <SessionRow
+              key={session.id}
+              session={session}
+              canEdit={week.canEditSessions}
+              onEdit={() => onEditSession(session)}
+              onDelete={() => onDeleteSession(session)}
+            />
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 border-t pt-2.5 text-sm text-muted-foreground">No sessions logged.</p>
+      )}
+
+      {week.canReview && (
+        <div className="mt-3 flex justify-end gap-2 border-t pt-3">
+          <Button variant="outline" size="sm" onClick={onDispute}>
+            Dispute
+          </Button>
+          <Button size="sm" onClick={onApprove}>
+            Approve {formatDuration(week.loggedMinutes)}
+          </Button>
+        </div>
+      )}
+    </section>
+  )
+}
+
+/**
+ * Sessions and weekly review for an hourly (in-app billed) hire. The supervisor
+ * logs sessions while a week is open; the supervisee approves or disputes it
+ * during the 3-day review.
+ */
+export function HireSessionsDialog({
+  hireId,
+  counterpartName,
+  open,
+  onOpenChange,
+}: {
+  hireId: string
+  /** The other party: the supervisee for supervisors, the supervisor for supervisees. */
+  counterpartName: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const { data, isLoading, isError, refetch } = useHireBillingWeeks(hireId, open)
+  const { showSuccess, showError } = useUserSnackbar()
+  const deleteMutation = useDeleteHireSession(hireId)
+  const approveMutation = useApproveBillingWeek(hireId)
+  const disputeMutation = useDisputeBillingWeek(hireId)
+
+  const [form, setForm] = useState<{ open: boolean; session?: HireSession }>({ open: false })
+  const [deleting, setDeleting] = useState<HireSession | null>(null)
+  const [approving, setApproving] = useState<BillingWeek | null>(null)
+  const [disputing, setDisputing] = useState<BillingWeek | null>(null)
+  const [disputeReason, setDisputeReason] = useState('')
+
+  function handleDelete() {
+    if (!deleting) return
+    deleteMutation.mutate(deleting.id, {
+      onSuccess: () => {
+        setDeleting(null)
+        showSuccess('Session deleted')
+      },
+      onError: (err) => showError(parseApiError(err)),
+    })
+  }
+
+  function handleApprove() {
+    if (!approving) return
+    approveMutation.mutate(approving.id, {
+      onSuccess: () => {
+        setApproving(null)
+        showSuccess('Week approved', {
+          description: `Thanks! ${counterpartName} will be paid for the approved hours.`,
+        })
+      },
+      onError: (err) => showError(parseApiError(err)),
+    })
+  }
+
+  function handleDispute() {
+    if (!disputing) return
+    disputeMutation.mutate(
+      { weekId: disputing.id, reason: disputeReason.trim() },
+      {
+        onSuccess: () => {
+          setDisputing(null)
+          setDisputeReason('')
+          showSuccess('Week disputed', {
+            description:
+              "Gotham support will review the week and contact you. It won't be paid until then.",
+          })
+        },
+        onError: (err) => showError(parseApiError(err)),
+      },
+    )
+  }
+
+  return (
+    <>
+      <DialogRoot open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-h-[min(90vh,820px)] max-w-2xl overflow-y-auto">
+          <div className="flex items-start justify-between gap-4 pr-8">
+            <div>
+              <DialogTitle>Supervision sessions</DialogTitle>
+              <p className="mt-1 text-sm text-muted-foreground">With {counterpartName}</p>
+            </div>
+            {data?.canLog && (
+              <Button size="sm" onClick={() => setForm({ open: true })}>
+                <Plus className="size-3.5" aria-hidden />
+                Log session
+              </Button>
+            )}
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {isLoading ? (
+              <>
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-32 w-full" />
+              </>
+            ) : isError || !data ? (
+              <div className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3">
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <AlertCircle className="size-4" aria-hidden />
+                  We couldn&apos;t load the sessions.
+                </p>
+                <Button variant="outline" size="sm" onClick={() => void refetch()}>
+                  Retry
+                </Button>
+              </div>
+            ) : (
+              <>
+                <ProgressSummary data={data} />
+                {data.weeks.length === 0 ? (
+                  <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
+                    {data.role === 'supervisor'
+                      ? `No sessions yet. Log each session with ${counterpartName} after it happens.`
+                      : `${counterpartName} hasn't logged any sessions yet. You'll review each week's sessions here.`}
+                  </p>
+                ) : (
+                  data.weeks.map((week) => (
+                    <WeekCard
+                      key={week.id}
+                      week={week}
+                      role={data.role}
+                      onEditSession={(session) => setForm({ open: true, session })}
+                      onDeleteSession={setDeleting}
+                      onApprove={() => setApproving(week)}
+                      onDispute={() => setDisputing(week)}
+                    />
+                  ))
+                )}
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </DialogRoot>
+
+      {data?.role === 'supervisor' && (
+        <SessionFormDialog
+          hireId={hireId}
+          data={data}
+          session={form.session}
+          open={form.open}
+          onOpenChange={(next) => setForm((prev) => ({ ...prev, open: next }))}
+        />
+      )}
+
+      <ConfirmDialog
+        open={deleting != null}
+        onOpenChange={(next) => !next && setDeleting(null)}
+        title="Delete this session?"
+        description={
+          deleting
+            ? `${formatCalendarDate(deleting.sessionDate)} · ${formatDuration(deleting.durationMinutes)} will be removed from this week.`
+            : ''
+        }
+        confirmLabel="Delete"
+        destructive
+        isPending={deleteMutation.isPending}
+        onConfirm={handleDelete}
+      />
+
+      <ConfirmDialog
+        open={approving != null}
+        onOpenChange={(next) => !next && setApproving(null)}
+        title={
+          approving
+            ? `Approve ${formatDuration(approving.loggedMinutes)} for ${formatWeekRange(approving.startDate, approving.endDate)}?`
+            : ''
+        }
+        description={`${counterpartName} is paid for the approved hours, and the unused part of your weekly prepay is refunded. This can't be undone.`}
+        confirmLabel="Approve"
+        isPending={approveMutation.isPending}
+        onConfirm={handleApprove}
+      />
+
+      <ConfirmDialog
+        open={disputing != null}
+        onOpenChange={(next) => {
+          if (!next) {
+            setDisputing(null)
+            setDisputeReason('')
+          }
+        }}
+        title={
+          disputing ? `Dispute ${formatWeekRange(disputing.startDate, disputing.endDate)}?` : ''
+        }
+        description="Tell us what's wrong with the logged sessions. The week isn't paid until Gotham support reviews it with you both."
+        confirmLabel="Dispute week"
+        destructive
+        isPending={disputeMutation.isPending}
+        confirmDisabled={disputeReason.trim().length < DISPUTE_REASON_MIN}
+        onConfirm={handleDispute}
+      >
+        <Textarea
+          rows={4}
+          maxLength={1000}
+          value={disputeReason}
+          onChange={(e) => setDisputeReason(e.target.value)}
+          placeholder="e.g. We only met for 30 minutes on Oct 14, not 1 hour."
+          aria-label="Reason for the dispute"
+          disabled={disputeMutation.isPending}
+        />
+        <p className="mt-1 text-xs text-muted-foreground">
+          At least {DISPUTE_REASON_MIN} characters.
+        </p>
+      </ConfirmDialog>
+    </>
+  )
+}

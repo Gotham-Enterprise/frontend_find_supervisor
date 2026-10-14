@@ -17,6 +17,7 @@ import type {
 } from '@/types/hire'
 import type { PastClientHire } from '@/types/past-clients'
 import type { HirePaymentInfo, HourlyQuote, PayoutStatus, StripeLink } from '@/types/payouts'
+import type { HireBillingWeeks, HireSessionInput } from '@/types/sessions'
 import type {
   PurchaseSubscriptionResponse,
   Subscription,
@@ -137,6 +138,74 @@ export async function saveHirePaymentMethod(
   const { data } = await apiClient.put<ApiResponse<HirePaymentInfo>>(
     `/supervision/hires/${hireId}/payment/card`,
     { paymentMethodId },
+  )
+  return data.data
+}
+
+/** GET /supervision/hires/:hireId/billing-weeks — sessions and weekly review state (both parties). */
+export async function getHireBillingWeeks(hireId: string): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.get<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/billing-weeks`,
+  )
+  return data.data
+}
+
+/** POST /supervision/hires/:hireId/sessions — supervisor logs a session. */
+export async function logHireSession(
+  hireId: string,
+  input: HireSessionInput,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/sessions`,
+    input,
+  )
+  return data.data
+}
+
+/** PUT /supervision/hires/:hireId/sessions/:sessionId — while its week is open. */
+export async function updateHireSession(
+  hireId: string,
+  sessionId: string,
+  input: HireSessionInput,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.put<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/sessions/${sessionId}`,
+    input,
+  )
+  return data.data
+}
+
+/** DELETE /supervision/hires/:hireId/sessions/:sessionId — while its week is open. */
+export async function deleteHireSession(
+  hireId: string,
+  sessionId: string,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.delete<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/sessions/${sessionId}`,
+  )
+  return data.data
+}
+
+/** POST /supervision/hires/:hireId/billing-weeks/:weekId/approve — supervisee approves a week. */
+export async function approveBillingWeek(
+  hireId: string,
+  weekId: string,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/billing-weeks/${weekId}/approve`,
+  )
+  return data.data
+}
+
+/** POST /supervision/hires/:hireId/billing-weeks/:weekId/dispute — supervisee disputes a week. */
+export async function disputeBillingWeek(
+  hireId: string,
+  weekId: string,
+  reason: string,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/billing-weeks/${weekId}/dispute`,
+    { reason },
   )
   return data.data
 }
