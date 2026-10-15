@@ -50,6 +50,7 @@ export {
   useHireBillingWeeks,
   useLogHireSession,
   usePayNowBillingWeek,
+  useRespondToLateSession,
   useUpdateHireSession,
 } from './useHireSessions'
 export {

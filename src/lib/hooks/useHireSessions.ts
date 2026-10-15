@@ -9,6 +9,7 @@ import {
   getHireBillingWeeks,
   logHireSession,
   payNowBillingWeek,
+  respondToLateSession,
   syncPayNowBillingWeek,
   updateHireSession,
 } from '@/lib/api/supervision'
@@ -59,6 +60,14 @@ export function useUpdateHireSession(hireId: string) {
 export function useDeleteHireSession(hireId: string) {
   return useBillingWeeksMutation(hireId, (sessionId: string) =>
     deleteHireSession(hireId, sessionId),
+  )
+}
+
+export function useRespondToLateSession(hireId: string) {
+  return useBillingWeeksMutation(
+    hireId,
+    ({ sessionId, approve }: { sessionId: string; approve: boolean }) =>
+      respondToLateSession(hireId, sessionId, approve),
   )
 }
 

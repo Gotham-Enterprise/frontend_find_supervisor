@@ -186,6 +186,22 @@ export async function deleteHireSession(
   return data.data
 }
 
+/**
+ * POST /supervision/hires/:hireId/sessions/:sessionId/approve | reject — the
+ * supervisee answers a late session added by Gotham support. Approving one on
+ * a settled week charges it (hours × rate + service fee) right away.
+ */
+export async function respondToLateSession(
+  hireId: string,
+  sessionId: string,
+  approve: boolean,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/sessions/${sessionId}/${approve ? 'approve' : 'reject'}`,
+  )
+  return data.data
+}
+
 /** POST /supervision/hires/:hireId/billing-weeks/:weekId/approve — supervisee approves a week. */
 export async function approveBillingWeek(
   hireId: string,

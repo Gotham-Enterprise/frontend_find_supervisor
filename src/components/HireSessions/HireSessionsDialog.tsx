@@ -16,6 +16,7 @@ import {
   useDisputeBillingWeek,
   useHireBillingWeeks,
   usePayNowBillingWeek,
+  useRespondToLateSession,
   useUserSnackbar,
 } from '@/lib/hooks'
 import {
@@ -108,31 +109,103 @@ function weekStatusText(week: BillingWeek, role: HireBillingWeeks['role']): stri
   }
 }
 
-function SessionRow({
+/** A late session added by Gotham support: its approval and, if charged on its own, the charge. */
+function LateSessionStatus({
   session,
-  canEdit,
-  onEdit,
-  onDelete,
+  role,
+  isResponding,
+  onRespond,
 }: {
   session: HireSession
+  role: HireBillingWeeks['role']
+  isResponding: boolean
+  onRespond: (approve: boolean) => void
+}) {
+  if (session.source !== 'SUPPORT') return null
+  if (session.canRespond) {
+    return (
+      <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        <p>
+          Gotham support added this session because it wasn&apos;t logged in time. Approve it if it
+          happened as described. If this week is already settled, approving charges your card for
+          these hours plus the service fee.
+        </p>
+        <div className="mt-2 flex justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isResponding}
+            onClick={() => onRespond(false)}
+          >
+            Reject
+          </Button>
+          <Button size="sm" disabled={isResponding} onClick={() => onRespond(true)}>
+            Approve
+          </Button>
+        </div>
+      </div>
+    )
+  }
+  let text = 'Late session added by Gotham support'
+  if (session.approvalStatus === 'PENDING') {
+    text += ' · waiting for your supervisee to approve it'
+  } else if (session.approvalStatus === 'REJECTED') {
+    text += ' · rejected'
+  } else if (session.chargeStatus === 'PAID' && session.lateChargeCents != null) {
+    text +=
+      role === 'supervisee'
+        ? ` · charged ${formatUsdCents(session.lateChargeCents)}`
+        : ` · you were paid ${formatUsdCents(session.lateChargeCents)}`
+  } else if (session.chargeStatus === 'FAILED') {
+    text +=
+      role === 'supervisee'
+        ? " · the charge didn't go through; update your card and Gotham support will retry"
+        : ' · approved; payment pending'
+  } else {
+    text += ' · approved'
+  }
+  return <p className="mt-1 text-xs italic text-muted-foreground">{text}</p>
+}
+
+function SessionRow({
+  session,
+  role,
+  canEdit,
+  isResponding,
+  onEdit,
+  onDelete,
+  onRespond,
+}: {
+  session: HireSession
+  role: HireBillingWeeks['role']
   canEdit: boolean
+  isResponding: boolean
   onEdit: () => void
   onDelete: () => void
+  onRespond: (approve: boolean) => void
 }) {
+  const rejected = session.approvalStatus === 'REJECTED'
   return (
     <li className="flex items-start gap-3 py-2.5">
       <div className="w-24 shrink-0">
         <p className="text-sm text-foreground">{formatCalendarDate(session.sessionDate)}</p>
-        <p className="text-xs tabular-nums text-muted-foreground">
+        <p
+          className={`text-xs tabular-nums text-muted-foreground ${rejected ? 'line-through' : ''}`}
+        >
           {formatDuration(session.durationMinutes)}
         </p>
       </div>
-      <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm text-muted-foreground">
-        {session.notes}
-        {session.source === 'SUPPORT' && (
-          <span className="ml-1 text-xs italic">(added by Gotham support)</span>
-        )}
-      </p>
+      <div className="min-w-0 flex-1">
+        <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
+          {session.notes}
+        </p>
+        <LateSessionStatus
+          session={session}
+          role={role}
+          isResponding={isResponding}
+          onRespond={onRespond}
+        />
+      </div>
       {canEdit && session.source === 'SUPERVISOR' && (
         <div className="flex shrink-0 gap-1">
           <Button variant="ghost" size="icon-sm" aria-label="Edit session" onClick={onEdit}>
@@ -243,16 +316,20 @@ function WeekCard({
   week,
   role,
   payment,
+  respondingSessionId,
   onEditSession,
   onDeleteSession,
+  onRespondToLate,
   onApprove,
   onDispute,
 }: {
   week: BillingWeek
   role: HireBillingWeeks['role']
   payment: React.ReactNode
+  respondingSessionId: string | null
   onEditSession: (session: HireSession) => void
   onDeleteSession: (session: HireSession) => void
+  onRespondToLate: (session: HireSession, approve: boolean) => void
   onApprove: () => void
   onDispute: () => void
 }) {
@@ -284,9 +361,12 @@ function WeekCard({
             <SessionRow
               key={session.id}
               session={session}
+              role={role}
               canEdit={week.canEditSessions}
+              isResponding={respondingSessionId === session.id}
               onEdit={() => onEditSession(session)}
               onDelete={() => onDeleteSession(session)}
+              onRespond={(approve) => onRespondToLate(session, approve)}
             />
           ))}
         </ul>
@@ -334,6 +414,10 @@ export function HireSessionsDialog({
   const approveMutation = useApproveBillingWeek(hireId)
   const disputeMutation = useDisputeBillingWeek(hireId)
   const payNowMutation = usePayNowBillingWeek(hireId)
+  const respondMutation = useRespondToLateSession(hireId)
+  const [responding, setResponding] = useState<{ session: HireSession; approve: boolean } | null>(
+    null,
+  )
   const [payingWeekId, setPayingWeekId] = useState<string | null>(null)
 
   const [form, setForm] = useState<{ open: boolean; session?: HireSession }>({ open: false })
@@ -353,6 +437,25 @@ export function HireSessionsDialog({
         showError(err instanceof CardPaymentError ? err.message : parseApiError(err)),
       onSettled: () => setPayingWeekId(null),
     })
+  }
+
+  function handleRespond() {
+    if (!responding) return
+    const { session, approve } = responding
+    respondMutation.mutate(
+      { sessionId: session.id, approve },
+      {
+        onSuccess: () => {
+          setResponding(null)
+          showSuccess(approve ? 'Late session approved' : 'Late session rejected', {
+            description: approve
+              ? `${counterpartName} will be paid for it.`
+              : 'Gotham support and your supervisor will be notified.',
+          })
+        },
+        onError: (err) => showError(parseApiError(err)),
+      },
+    )
   }
 
   function handleDelete() {
@@ -462,6 +565,10 @@ export function HireSessionsDialog({
                           }
                         />
                       }
+                      respondingSessionId={
+                        respondMutation.isPending ? (responding?.session.id ?? null) : null
+                      }
+                      onRespondToLate={(session, approve) => setResponding({ session, approve })}
                       onEditSession={(session) => setForm({ open: true, session })}
                       onDeleteSession={setDeleting}
                       onApprove={() => setApproving(week)}
@@ -484,6 +591,25 @@ export function HireSessionsDialog({
           onOpenChange={(next) => setForm((prev) => ({ ...prev, open: next }))}
         />
       )}
+
+      <ConfirmDialog
+        open={responding != null}
+        onOpenChange={(next) => !next && setResponding(null)}
+        title={
+          responding
+            ? `${responding.approve ? 'Approve' : 'Reject'} the ${formatDuration(responding.session.durationMinutes)} session on ${formatCalendarDate(responding.session.sessionDate)}?`
+            : ''
+        }
+        description={
+          responding?.approve
+            ? `${counterpartName} is paid for it. If this week is already settled, your card is charged for these hours plus the service fee.`
+            : `${counterpartName} isn't paid for it. Reject it only if the session didn't happen as described.`
+        }
+        confirmLabel={responding?.approve ? 'Approve' : 'Reject'}
+        destructive={responding?.approve === false}
+        isPending={respondMutation.isPending}
+        onConfirm={handleRespond}
+      />
 
       <ConfirmDialog
         open={deleting != null}

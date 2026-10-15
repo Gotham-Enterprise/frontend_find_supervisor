@@ -19,6 +19,13 @@ export interface HireSession {
   /** SUPPORT = late entry added by Gotham support */
   source: 'SUPERVISOR' | 'SUPPORT'
   createdAt: string
+  /** Late entries only: the supervisee approves or rejects them. */
+  approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | null
+  canRespond: boolean
+  /** Late entries on a settled week are charged on their own. */
+  chargeStatus: PrepayStatus | null
+  /** Supervisee: what that charge is; supervisor: what they're paid for it. */
+  lateChargeCents: number | null
 }
 
 export type PrepayStatus = 'PENDING' | 'PAID' | 'FAILED' | 'CANCELED'
