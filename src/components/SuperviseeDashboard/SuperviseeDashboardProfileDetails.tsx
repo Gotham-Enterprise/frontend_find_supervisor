@@ -1,10 +1,12 @@
 import { AlertCircle } from 'lucide-react'
 
+import { OwnIdentityDetails, OwnPronouns } from '@/components/Dashboard/IdentitySummary'
 import { ProfileDetailRow, ProfilePreviewCard, TagList } from '@/components/Dashboard/shared'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSuperviseeFormOptions } from '@/lib/hooks'
+import { getOwnIdentitySummary } from '@/lib/utils/identity-display'
 import { formatUSPhoneForDisplay } from '@/lib/utils/phone'
 import {
   formatCredentialWithState,
@@ -84,6 +86,7 @@ export function SuperviseeDashboardProfileDetails({
   const supervisorTypeOptions = supervisorTypes.data ?? []
 
   const displayName = formatDisplayName(profile.user)
+  const identitySummary = getOwnIdentitySummary(profile.user)
   const location = formatLocation(profile.user.city, profile.user.state, profile.user.zipcode)
   const occupation = profile.occupation?.name ?? profile.user.occupation?.name
   const specialty = profile.specialty?.name ?? profile.user.specialty?.name
@@ -138,9 +141,16 @@ export function SuperviseeDashboardProfileDetails({
       }
       avatar={{ fullName: displayName, photoUrl: profile.user.profilePhotoUrl, size: 'lg' }}
       identity={{
-        name: displayName,
+        name: (
+          <>
+            {displayName}
+            <OwnPronouns block={identitySummary.pronouns} />
+          </>
+        ),
         subline: subline || undefined,
         meta: location !== 'N/A' ? location : undefined,
+        // Own values (even while hidden) so the supervisee sees what they entered
+        details: <OwnIdentityDetails summary={identitySummary} />,
         badge: profile.user.emailVerified ? (
           <Badge className="bg-emerald-100 text-xs text-emerald-700 hover:bg-emerald-100">
             ✓ Email Verified

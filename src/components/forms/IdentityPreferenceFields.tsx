@@ -2,7 +2,7 @@
 
 import { useId } from 'react'
 import type { Control, FieldValues, RegisterOptions } from 'react-hook-form'
-import { useWatch } from 'react-hook-form'
+import { useFormContext, useWatch } from 'react-hook-form'
 import type { ZodTypeAny } from 'zod'
 
 import { Checkbox } from '@/components/ui/checkbox'
@@ -29,6 +29,7 @@ import {
   type IdentityPreferenceFormValues,
   validateCustomGenderIdentity,
 } from '@/lib/forms/identity-preferences'
+import { cn } from '@/lib/utils'
 
 type IdentityFieldName = keyof IdentityPreferenceFormValues
 
@@ -69,13 +70,17 @@ function VisibilityCheckboxField({
   name,
   label,
   disabled,
+  hasValue,
 }: {
   control: Control<IdentityPreferenceFormValues>
   name: 'showPronouns' | 'showGenderIdentity' | 'showLanguages'
   label: string
   disabled: boolean
+  /** The field this checkbox publishes has a value — nothing to display otherwise. */
+  hasValue: boolean
 }) {
   const checkboxId = useId()
+  const inactive = disabled || !hasValue
   return (
     <FormField
       control={control}
@@ -86,16 +91,21 @@ function VisibilityCheckboxField({
             <FormControl>
               <Checkbox
                 id={checkboxId}
-                checked={field.value ?? false}
+                checked={hasValue && (field.value ?? false)}
                 onCheckedChange={(checked) => field.onChange(checked === true)}
                 onBlur={field.onBlur}
-                disabled={disabled}
+                disabled={inactive}
                 className="mt-0.5 shrink-0"
               />
             </FormControl>
             <label
               htmlFor={checkboxId}
-              className="cursor-pointer text-sm leading-5 text-foreground select-none"
+              className={cn(
+                'text-sm leading-5 select-none',
+                inactive
+                  ? 'cursor-not-allowed text-muted-foreground'
+                  : 'cursor-pointer text-foreground',
+              )}
             >
               {label}
             </label>
@@ -125,8 +135,19 @@ export function IdentityPreferenceFields<TFieldValues extends FieldValues>({
   const rules = <N extends IdentityFieldName>(name: N) =>
     inlineValidation ? identityFieldRules(name) : undefined
 
+  const { setValue } = useFormContext<IdentityPreferenceFormValues>()
+  const pronouns = useWatch({ control: identityControl, name: 'pronouns' }) ?? []
+  const languages = useWatch({ control: identityControl, name: 'languages' }) ?? []
   const genderIdentity = useWatch({ control: identityControl, name: 'genderIdentity' }) ?? ''
   const isSelfDescribe = genderIdentity === GENDER_IDENTITY_SELF_DESCRIBE
+
+  /** A cleared field has nothing to display, so its visibility switches off with it. */
+  const syncVisibility = (
+    flag: 'showPronouns' | 'showGenderIdentity' | 'showLanguages',
+    hasValue: boolean,
+  ) => {
+    if (!hasValue) setValue(flag, false, { shouldDirty: true })
+  }
 
   return (
     <div className="space-y-4">
@@ -144,7 +165,10 @@ export function IdentityPreferenceFields<TFieldValues extends FieldValues>({
               <TagInput
                 options={PRONOUN_OPTIONS}
                 value={field.value ?? []}
-                onChange={field.onChange}
+                onChange={(next) => {
+                  field.onChange(next)
+                  syncVisibility('showPronouns', next.length > 0)
+                }}
                 onBlur={field.onBlur}
                 placeholder="Select your pronouns"
                 aria-label="Pronouns"
@@ -161,6 +185,7 @@ export function IdentityPreferenceFields<TFieldValues extends FieldValues>({
         name="showPronouns"
         label="Display my pronouns on my public profile"
         disabled={isSubmitting}
+        hasValue={pronouns.length > 0}
       />
 
       {/* ── Gender identity ──────────────────────────────────────────────── */}
@@ -176,6 +201,7 @@ export function IdentityPreferenceFields<TFieldValues extends FieldValues>({
         options={GENDER_IDENTITY_OPTIONS}
         placeholder="Select your gender identity"
         isSubmitting={isSubmitting}
+        onValueChange={(value) => syncVisibility('showGenderIdentity', value !== '')}
       />
       {isSelfDescribe && (
         <FormInputField
@@ -195,6 +221,7 @@ export function IdentityPreferenceFields<TFieldValues extends FieldValues>({
         name="showGenderIdentity"
         label="Display my gender identity on my public profile"
         disabled={isSubmitting}
+        hasValue={genderIdentity !== ''}
       />
 
       {/* ── Languages ────────────────────────────────────────────────────── */}
@@ -211,7 +238,10 @@ export function IdentityPreferenceFields<TFieldValues extends FieldValues>({
               <TagInput
                 options={LANGUAGE_OPTIONS}
                 value={field.value ?? []}
-                onChange={field.onChange}
+                onChange={(next) => {
+                  field.onChange(next)
+                  syncVisibility('showLanguages', next.length > 0)
+                }}
                 onBlur={field.onBlur}
                 placeholder="Select languages you speak"
                 searchable
@@ -229,6 +259,7 @@ export function IdentityPreferenceFields<TFieldValues extends FieldValues>({
         name="showLanguages"
         label="Display my languages on my public profile"
         disabled={isSubmitting}
+        hasValue={languages.length > 0}
       />
     </div>
   )

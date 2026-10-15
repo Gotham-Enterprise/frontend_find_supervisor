@@ -83,3 +83,49 @@ export function formatPublicIdentity(fields: PublicIdentityFields): PublicIdenti
     languages: getVisibleLanguageLabels(gated),
   }
 }
+
+/** One block of the owner's own identity, with whether the public profile shows it. */
+export interface OwnIdentityBlock {
+  text: string
+  isPublic: boolean
+}
+
+export interface OwnIdentitySummary {
+  pronouns: OwnIdentityBlock | null
+  genderIdentity: OwnIdentityBlock | null
+  languages: OwnIdentityBlock | null
+}
+
+/**
+ * The owner's own values for their dashboard: everything they entered, each
+ * tagged with its public visibility ("Prefer Not to Say" is never public).
+ */
+export function getOwnIdentitySummary(
+  user: UserIdentityPreferencesResponse | null | undefined,
+): OwnIdentitySummary {
+  const pronounLabels = (user?.pronouns ?? []).filter(Boolean).map(pronounLabel)
+  const genderValue = user?.genderIdentity?.trim() ?? ''
+  const genderText =
+    genderValue === GENDER_IDENTITY_SELF_DESCRIBE
+      ? (user?.customGenderIdentity?.trim() ?? '')
+      : genderValue
+        ? genderIdentityLabel(genderValue)
+        : ''
+  const languageLabels = (user?.languages ?? []).filter(Boolean).map(languageLabel)
+
+  return {
+    pronouns: pronounLabels.length
+      ? { text: formatPronouns(pronounLabels), isPublic: user?.showPronouns === true }
+      : null,
+    genderIdentity: genderText
+      ? {
+          text: genderText,
+          isPublic:
+            user?.showGenderIdentity === true && genderValue !== GENDER_IDENTITY_PREFER_NOT_TO_SAY,
+        }
+      : null,
+    languages: languageLabels.length
+      ? { text: languageLabels.join(', '), isPublic: user?.showLanguages === true }
+      : null,
+  }
+}
