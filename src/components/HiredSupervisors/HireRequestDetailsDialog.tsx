@@ -11,6 +11,7 @@ import {
   formatAvailability,
   formatBudgetRange,
   formatDate,
+  formatDateOnly,
   formatDisplayName,
   formatFeeAmount,
   formatSupervisionFormat,
@@ -120,7 +121,7 @@ export function HireRequestDetailsDialog({
     },
     {
       label: 'Preferred start date',
-      value: displayText(hire.preferredStartDate, formatDate(hire.preferredStartDate)),
+      value: displayText(hire.preferredStartDate, formatDateOnly(hire.preferredStartDate)),
     },
     ...(hire.supervisionHours != null
       ? [
@@ -189,8 +190,11 @@ export function HireRequestDetailsDialog({
           },
         ]
       : []),
-    { label: 'Supervision start', value: displayText(hire.startDate, formatDate(hire.startDate)) },
-    { label: 'Supervision end', value: displayText(hire.endDate, formatDate(hire.endDate)) },
+    {
+      label: 'Supervision start',
+      value: displayText(hire.startDate, formatDateOnly(hire.startDate)),
+    },
+    { label: 'Supervision end', value: displayText(hire.endDate, formatDateOnly(hire.endDate)) },
     // Hourly (in-app billed) hires show the agreement's hourly terms; others the monthly ones.
     ...(hire.agreement?.hourlyRateCents != null && hire.agreement.weeklyCapMinutes != null
       ? [

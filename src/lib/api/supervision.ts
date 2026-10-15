@@ -17,7 +17,7 @@ import type {
 } from '@/types/hire'
 import type { PastClientHire } from '@/types/past-clients'
 import type { HirePaymentInfo, HourlyQuote, PayoutStatus, StripeLink } from '@/types/payouts'
-import type { HireBillingWeeks, HireSessionInput } from '@/types/sessions'
+import type { HireBillingWeeks, HireSessionInput, PayNowIntent } from '@/types/sessions'
 import type {
   PurchaseSubscriptionResponse,
   Subscription,
@@ -206,6 +206,28 @@ export async function disputeBillingWeek(
   const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
     `/supervision/hires/${hireId}/billing-weeks/${weekId}/dispute`,
     { reason },
+  )
+  return data.data
+}
+
+/**
+ * POST /supervision/hires/:hireId/billing-weeks/:weekId/pay-now — starts paying
+ * an unpaid week with the saved card; Stripe.js confirms the returned intent.
+ */
+export async function payNowBillingWeek(hireId: string, weekId: string): Promise<PayNowIntent> {
+  const { data } = await apiClient.post<ApiResponse<PayNowIntent>>(
+    `/supervision/hires/${hireId}/billing-weeks/${weekId}/pay-now`,
+  )
+  return data.data
+}
+
+/** POST …/pay-now/sync — refreshes the week after Stripe.js confirmed the payment. */
+export async function syncPayNowBillingWeek(
+  hireId: string,
+  weekId: string,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/billing-weeks/${weekId}/pay-now/sync`,
   )
   return data.data
 }

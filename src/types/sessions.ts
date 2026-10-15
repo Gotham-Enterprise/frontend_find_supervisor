@@ -21,6 +21,33 @@ export interface HireSession {
   createdAt: string
 }
 
+export type PrepayStatus = 'PENDING' | 'PAID' | 'FAILED' | 'CANCELED'
+
+/** The week's money, as each side sees it. */
+interface BillingWeekPaymentBase {
+  prepayStatus: PrepayStatus
+  /** Eastern YYYY-MM-DD the prepay is charged: the week's Monday, or the agreement start if later. */
+  prepayDueDate: string
+  paidAt: string | null
+  settledAt: string | null
+  /** Due but not paid (declined, or no card yet) — sessions can still be logged. */
+  unpaid: boolean
+}
+
+export interface SuperviseeWeekPayment extends BillingWeekPaymentBase {
+  /** Weekly cap at the hourly rate + service fee */
+  totalCents: number
+  failureMessage: string | null
+  /** Unused prepay refunded after the review */
+  refundCents: number | null
+  canPayNow: boolean
+}
+
+export interface SupervisorWeekPayment extends BillingWeekPaymentBase {
+  /** Paid out for the approved hours, after the platform fee */
+  supervisorAmountCents: number | null
+}
+
 export interface BillingWeek {
   id: string
   /** Monday, YYYY-MM-DD (Eastern) */
@@ -40,12 +67,15 @@ export interface BillingWeek {
   disputeReason: string | null
   canEditSessions: boolean
   canReview: boolean
+  payment: SuperviseeWeekPayment | SupervisorWeekPayment | null
   sessions: HireSession[]
 }
 
 /** GET /supervision/hires/:hireId/billing-weeks */
 export interface HireBillingWeeks {
   role: 'supervisor' | 'supervisee'
+  /** Supervisee only: whether the weekly prepays have a card to charge. */
+  hasPaymentCard: boolean | null
   terms: {
     /** YYYY-MM-DD */
     startDate: string
@@ -69,4 +99,12 @@ export interface HireSessionInput {
   sessionDate: string
   durationMinutes: number
   notes: string
+}
+
+/** POST /supervision/hires/:hireId/billing-weeks/:weekId/pay-now */
+export interface PayNowIntent {
+  status: string
+  /** Absent when the week is already paid. */
+  clientSecret?: string
+  paymentMethodId?: string
 }

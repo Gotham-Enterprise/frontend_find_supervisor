@@ -11,7 +11,7 @@ import { useHirePayment, useSaveHirePaymentMethod, useUserSnackbar } from '@/lib
 import { stripePromise } from '@/lib/stripe/client'
 import { parseApiError } from '@/lib/utils/error-parser'
 import { formatUsdCents } from '@/lib/utils/money'
-import { formatDate } from '@/lib/utils/profile-formatters'
+import { formatDateOnly } from '@/lib/utils/profile-formatters'
 import type { HirePaymentInfo, SavedCard } from '@/types/payouts'
 
 import { formatHours } from './HourlyQuoteSummary'
@@ -48,8 +48,8 @@ function PrepaySummary({ info }: { info: HirePaymentInfo }) {
         Up to {formatHours(quote.weeklyCapMinutes)} at {formatUsdCents(quote.hourlyRateCents)}/hour
         ({formatUsdCents(quote.weeklyPrepayCents)}) + {formatUsdCents(quote.serviceFeeCents)}{' '}
         service fee.
-        {info.firstPrepayAt && <> First charge on {formatDate(info.firstPrepayAt)}.</>} Hours you
-        don&apos;t use are refunded after your weekly review.
+        {info.firstPrepayDate && <> First charge on {formatDateOnly(info.firstPrepayDate)}.</>}{' '}
+        Hours you don&apos;t use are refunded after your weekly review.
       </p>
     </div>
   )
@@ -149,8 +149,8 @@ export function HirePaymentSetup({
           setChangingCard(false)
           onSaved?.()
           showSuccess('Payment card saved!', {
-            description: updated.firstPrepayAt
-              ? `Your first weekly prepay is charged on ${formatDate(updated.firstPrepayAt)}.`
+            description: updated.firstPrepayDate
+              ? `Your first weekly prepay is charged on ${formatDateOnly(updated.firstPrepayDate)}.`
               : `Your supervision with ${supervisorName} is ready to begin.`,
           })
         },

@@ -64,8 +64,8 @@ export interface SavedCard {
 export interface HirePaymentInfo {
   paymentStatus: HirePaymentStatus
   quote: HourlyQuote | null
-  /** When the first week's prepay is charged: the start date, or now if that has passed. */
-  firstPrepayAt: string | null
+  /** Eastern YYYY-MM-DD the first prepay is charged: the start date, or today if that has passed. */
+  firstPrepayDate: string | null
   supervisorPayoutsReady: boolean
   /** The card the weekly prepays are charged to (supervisee only). */
   card: SavedCard | null

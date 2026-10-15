@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, Pencil, Plus, Trash2 } from 'lucide-react'
+import { AlertCircle, CreditCard, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -10,15 +10,18 @@ import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import {
+  CardPaymentError,
   useApproveBillingWeek,
   useDeleteHireSession,
   useDisputeBillingWeek,
   useHireBillingWeeks,
+  usePayNowBillingWeek,
   useUserSnackbar,
 } from '@/lib/hooks'
 import {
   formatCalendarDate,
   formatDuration,
+  formatEasternDate,
   formatEasternDateTime,
   formatWeekRange,
 } from '@/lib/utils/date'
@@ -29,6 +32,7 @@ import type {
   BillingWeekStatus,
   HireBillingWeeks,
   HireSession,
+  SuperviseeWeekPayment,
 } from '@/types/sessions'
 
 import { SessionFormDialog } from './SessionFormDialog'
@@ -143,9 +147,102 @@ function SessionRow({
   )
 }
 
+function isSuperviseePayment(payment: BillingWeek['payment']): payment is SuperviseeWeekPayment {
+  return payment != null && 'totalCents' in payment
+}
+
+/** The week's money from the viewer's side: prepay, failure + Pay now, payout or refund. */
+function PaymentLine({
+  week,
+  hasPaymentCard,
+  counterpartName,
+  isPaying,
+  onPayNow,
+  onChangeCard,
+}: {
+  week: BillingWeek
+  hasPaymentCard: boolean
+  counterpartName: string
+  isPaying: boolean
+  onPayNow: () => void
+  onChangeCard?: () => void
+}) {
+  const payment = week.payment
+  if (!payment) return null
+  const settled = week.status === 'SETTLED'
+
+  if (isSuperviseePayment(payment)) {
+    const total = formatUsdCents(payment.totalCents)
+    if (payment.unpaid) {
+      return (
+        <div className="mt-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+          <p className="text-sm font-medium text-foreground">
+            {payment.prepayStatus === 'FAILED'
+              ? "This week's payment didn't go through"
+              : 'This week isn’t paid yet'}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {payment.failureMessage ? `${payment.failureMessage} ` : ''}
+            {hasPaymentCard
+              ? `Pay the ${total} prepay so ${counterpartName} can be paid for this week.`
+              : `Add a payment card to pay the ${total} prepay for this week.`}
+          </p>
+          <div className="mt-2 flex flex-wrap justify-end gap-2">
+            {onChangeCard && (
+              <Button variant="outline" size="sm" disabled={isPaying} onClick={onChangeCard}>
+                <CreditCard className="size-3.5" aria-hidden />
+                {hasPaymentCard ? 'Change card' : 'Add card'}
+              </Button>
+            )}
+            {payment.canPayNow && (
+              <Button size="sm" disabled={isPaying} onClick={onPayNow}>
+                {isPaying ? 'Paying…' : `Pay now · ${total}`}
+              </Button>
+            )}
+          </div>
+        </div>
+      )
+    }
+    let text: string | null = null
+    if (settled && payment.prepayStatus === 'PAID') {
+      text = payment.refundCents
+        ? `Paid ${total} · ${formatUsdCents(payment.refundCents)} refunded for unused hours`
+        : `Paid ${total}`
+    } else if (payment.prepayStatus === 'PAID') {
+      text = `Prepaid ${total}${payment.paidAt ? ` on ${formatEasternDate(payment.paidAt)}` : ''}; unused hours are refunded after the review.`
+    } else if (payment.prepayStatus === 'PENDING') {
+      text = `${total} prepay is charged on ${formatCalendarDate(payment.prepayDueDate)}.`
+    } else if (payment.prepayStatus === 'CANCELED') {
+      text = 'Nothing was charged for this week.'
+    }
+    return text ? <p className="mt-1 text-xs text-muted-foreground">{text}</p> : null
+  }
+
+  if (payment.unpaid) {
+    return (
+      <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        Unpaid week — {counterpartName}&apos;s prepay hasn&apos;t gone through yet. You can keep
+        logging sessions; you&apos;re paid for approved hours once the week is paid.
+      </p>
+    )
+  }
+  if (settled && payment.supervisorAmountCents) {
+    return (
+      <p className="mt-1 text-xs text-muted-foreground">
+        You were paid {formatUsdCents(payment.supervisorAmountCents)} (after the platform fee).
+      </p>
+    )
+  }
+  if (!settled && payment.prepayStatus === 'PAID') {
+    return <p className="mt-1 text-xs text-muted-foreground">Prepaid by {counterpartName}.</p>
+  }
+  return null
+}
+
 function WeekCard({
   week,
   role,
+  payment,
   onEditSession,
   onDeleteSession,
   onApprove,
@@ -153,6 +250,7 @@ function WeekCard({
 }: {
   week: BillingWeek
   role: HireBillingWeeks['role']
+  payment: React.ReactNode
   onEditSession: (session: HireSession) => void
   onDeleteSession: (session: HireSession) => void
   onApprove: () => void
@@ -173,6 +271,7 @@ function WeekCard({
         </span>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">{weekStatusText(week, role)}</p>
+      {payment}
       {week.status === 'DISPUTED' && week.disputeReason && (
         <p className="mt-2 rounded-md bg-destructive/5 px-3 py-2 text-xs text-foreground">
           <span className="font-medium">Reason:</span> {week.disputeReason}
@@ -219,24 +318,42 @@ export function HireSessionsDialog({
   counterpartName,
   open,
   onOpenChange,
+  onChangeCard,
 }: {
   hireId: string
   /** The other party: the supervisee for supervisors, the supervisor for supervisees. */
   counterpartName: string
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Supervisee only: opens the payment dialog to add or change the prepay card. */
+  onChangeCard?: () => void
 }) {
   const { data, isLoading, isError, refetch } = useHireBillingWeeks(hireId, open)
   const { showSuccess, showError } = useUserSnackbar()
   const deleteMutation = useDeleteHireSession(hireId)
   const approveMutation = useApproveBillingWeek(hireId)
   const disputeMutation = useDisputeBillingWeek(hireId)
+  const payNowMutation = usePayNowBillingWeek(hireId)
+  const [payingWeekId, setPayingWeekId] = useState<string | null>(null)
 
   const [form, setForm] = useState<{ open: boolean; session?: HireSession }>({ open: false })
   const [deleting, setDeleting] = useState<HireSession | null>(null)
   const [approving, setApproving] = useState<BillingWeek | null>(null)
   const [disputing, setDisputing] = useState<BillingWeek | null>(null)
   const [disputeReason, setDisputeReason] = useState('')
+
+  function handlePayNow(week: BillingWeek) {
+    setPayingWeekId(week.id)
+    payNowMutation.mutate(week.id, {
+      onSuccess: () =>
+        showSuccess('Payment complete', {
+          description: `${formatWeekRange(week.startDate, week.endDate)} is paid.`,
+        }),
+      onError: (err) =>
+        showError(err instanceof CardPaymentError ? err.message : parseApiError(err)),
+      onSettled: () => setPayingWeekId(null),
+    })
+  }
 
   function handleDelete() {
     if (!deleting) return
@@ -328,6 +445,23 @@ export function HireSessionsDialog({
                       key={week.id}
                       week={week}
                       role={data.role}
+                      payment={
+                        <PaymentLine
+                          week={week}
+                          hasPaymentCard={data.hasPaymentCard ?? false}
+                          counterpartName={counterpartName}
+                          isPaying={payingWeekId === week.id}
+                          onPayNow={() => handlePayNow(week)}
+                          onChangeCard={
+                            onChangeCard
+                              ? () => {
+                                  onOpenChange(false)
+                                  onChangeCard()
+                                }
+                              : undefined
+                          }
+                        />
+                      }
                       onEditSession={(session) => setForm({ open: true, session })}
                       onDeleteSession={setDeleting}
                       onApprove={() => setApproving(week)}

@@ -418,6 +418,7 @@ export function HireRequestCard({
           counterpartName={supervisorName}
           open={sessionsOpen}
           onOpenChange={setSessionsOpen}
+          onChangeCard={() => openPayment({ changeCard: !needsPaymentSetup })}
         />
       )}
 

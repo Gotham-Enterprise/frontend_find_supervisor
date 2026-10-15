@@ -8,8 +8,11 @@ import {
   disputeBillingWeek,
   getHireBillingWeeks,
   logHireSession,
+  payNowBillingWeek,
+  syncPayNowBillingWeek,
   updateHireSession,
 } from '@/lib/api/supervision'
+import { stripePromise } from '@/lib/stripe/client'
 import type { HireBillingWeeks, HireSessionInput } from '@/types/sessions'
 
 export const hireSessionKeys = {
@@ -67,4 +70,31 @@ export function useDisputeBillingWeek(hireId: string) {
   return useBillingWeeksMutation(hireId, ({ weekId, reason }: { weekId: string; reason: string }) =>
     disputeBillingWeek(hireId, weekId, reason),
   )
+}
+
+/** A card error from Stripe.js (its message is safe to show as-is). */
+export class CardPaymentError extends Error {}
+
+/**
+ * Pays an unpaid week now with the saved card: the backend prepares the
+ * PaymentIntent, Stripe.js confirms it here (so 3-D Secure can prompt), and
+ * the backend re-reads the result.
+ */
+export function usePayNowBillingWeek(hireId: string) {
+  return useBillingWeeksMutation(hireId, async (weekId: string) => {
+    const intent = await payNowBillingWeek(hireId, weekId)
+    if (intent.status !== 'succeeded' && intent.clientSecret) {
+      const stripe = await stripePromise
+      if (!stripe) throw new CardPaymentError('Card payments are not configured.')
+      const result = await stripe.confirmCardPayment(intent.clientSecret, {
+        payment_method: intent.paymentMethodId,
+      })
+      if (result.error) {
+        // Record the failure on the week, then show Stripe's message.
+        await syncPayNowBillingWeek(hireId, weekId).catch(() => undefined)
+        throw new CardPaymentError(result.error.message ?? 'Your card was declined.')
+      }
+    }
+    return syncPayNowBillingWeek(hireId, weekId)
+  })
 }

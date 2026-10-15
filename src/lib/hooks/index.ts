@@ -42,12 +42,14 @@ export {
   useViewHire,
 } from './useHires'
 export {
+  CardPaymentError,
   hireSessionKeys,
   useApproveBillingWeek,
   useDeleteHireSession,
   useDisputeBillingWeek,
   useHireBillingWeeks,
   useLogHireSession,
+  usePayNowBillingWeek,
   useUpdateHireSession,
 } from './useHireSessions'
 export {

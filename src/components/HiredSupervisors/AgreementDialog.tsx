@@ -16,7 +16,7 @@ import { useConfetti } from '@/lib/hooks/useConfetti'
 import { useSignAgreement } from '@/lib/hooks/useHires'
 import { parseApiError } from '@/lib/utils/error-parser'
 import { formatUsdCents } from '@/lib/utils/money'
-import { formatDate, formatDisplayName } from '@/lib/utils/profile-formatters'
+import { formatDateOnly, formatDisplayName } from '@/lib/utils/profile-formatters'
 import type { AgreementRecord, HireListItem } from '@/types/hire'
 
 const UNSPECIFIED = 'Not specified'
@@ -226,7 +226,7 @@ export function AgreementDialog({
         <section className="mt-5">
           <h3 className="mb-3 text-sm font-semibold text-foreground">Terms</h3>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
-            <TermItem label="Start Date" value={formatDate(agreement.startDate)} />
+            <TermItem label="Start Date" value={formatDateOnly(agreement.startDate)} />
             {hourly ? (
               <>
                 <TermItem

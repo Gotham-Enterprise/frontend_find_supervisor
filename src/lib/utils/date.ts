@@ -57,6 +57,16 @@ export function formatWeekRange(startDate: string, endDate: string): string {
     : `${month(startDate)} ${day(startDate)} – ${month(endDate)} ${day(endDate)}`
 }
 
+/** The US Eastern calendar day of an instant: "Mon, Oct 12". */
+export function formatEasternDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'America/New_York',
+  })
+}
+
 /** An instant in US Eastern time: "Thu, Oct 22, 11:59 PM ET". */
 export function formatEasternDateTime(iso: string): string {
   const formatted = new Date(iso).toLocaleString('en-US', {

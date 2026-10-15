@@ -51,6 +51,7 @@ import {
   formatBudgetRange,
   formatContactNumber,
   formatDate,
+  formatDateOnly,
   formatDisplayName,
   formatLocation,
   formatSupervisionFormat,
@@ -347,7 +348,10 @@ function SuperviseeDetailsDialog({
               label="Requested Type"
               value={resolveSupervisorTypeLabel(hire.typeOfSupervisorNeeded, supervisorTypeOptions)}
             />
-            <DetailItem label="Preferred Start Date" value={formatDate(hire.preferredStartDate)} />
+            <DetailItem
+              label="Preferred Start Date"
+              value={formatDateOnly(hire.preferredStartDate)}
+            />
             {hire.supervisionHours != null && (
               <DetailItem
                 label="Supervision Hours Needed"

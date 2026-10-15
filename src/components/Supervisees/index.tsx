@@ -46,6 +46,7 @@ import {
   formatAvailability,
   formatContactNumber,
   formatDate,
+  formatDateOnly,
   formatDisplayName,
   formatLocation,
   formatSupervisionFormat,
@@ -334,7 +335,7 @@ function SuperviseeDetailsDialog({
             />
             <DetailItem
               label="Start Date"
-              value={formatDate(hire.startDate ?? hire.preferredStartDate)}
+              value={formatDateOnly(hire.startDate ?? hire.preferredStartDate)}
             />
             {hire.supervisionHours != null && (
               <DetailItem
@@ -518,7 +519,7 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
 
   const locationRaw = formatLocation(hire.supervisee.city, hire.supervisee.state)
   const formatRaw = formatSupervisionFormat(hire.preferredFormat)
-  const startDateRaw = formatDate(hire.startDate ?? hire.preferredStartDate)
+  const startDateRaw = formatDateOnly(hire.startDate ?? hire.preferredStartDate)
   const goalsRaw = hire.goals?.trim() || 'Not specified'
 
   return (
