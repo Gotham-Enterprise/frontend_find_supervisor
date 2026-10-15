@@ -7,6 +7,7 @@ import {
   deleteHireSession,
   disputeBillingWeek,
   getHireBillingWeeks,
+  getSupervisorEarnings,
   logHireSession,
   payNowBillingWeek,
   respondToLateSession,
@@ -20,6 +21,15 @@ export const hireSessionKeys = {
   all: ['supervision', 'hire-sessions'] as const,
   /** GET /supervision/hires/:hireId/billing-weeks */
   weeks: (hireId: string) => [...hireSessionKeys.all, hireId] as const,
+}
+
+export function useSupervisorEarnings(page: number, enabled: boolean) {
+  return useQuery({
+    queryKey: [...hireSessionKeys.all, 'earnings', page] as const,
+    queryFn: () => getSupervisorEarnings(page),
+    enabled,
+    placeholderData: (previous) => previous,
+  })
 }
 
 export function useHireBillingWeeks(hireId: string, enabled: boolean) {

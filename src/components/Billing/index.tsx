@@ -40,6 +40,7 @@ import {
 } from '@/lib/utils/subscription-status'
 import type { Subscription, SubscriptionStatus } from '@/types/supervisor-profile'
 
+import { EarningsCard } from './EarningsCard'
 import { PayoutsCard } from './PayoutsCard'
 
 // ─── Feature list shared with the dashboard upgrade cards ─────────────────────
@@ -569,6 +570,7 @@ function BillingContent() {
       )}
 
       {IN_APP_PAYMENTS_ENABLED && <PayoutsCard />}
+      {IN_APP_PAYMENTS_ENABLED && <EarningsCard />}
 
       {/* Cancel / resume confirmation dialogs — only rendered for paid subscribers */}
       {!isFreeTier && (

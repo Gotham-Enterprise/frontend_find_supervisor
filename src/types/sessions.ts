@@ -83,6 +83,10 @@ export interface HireBillingWeeks {
   role: 'supervisor' | 'supervisee'
   /** Supervisee only: whether the weekly prepays have a card to charge. */
   hasPaymentCard: boolean | null
+  /** Money so far: the supervisee's net payments, or the supervisor's payouts (cents). */
+  totals:
+    | { chargedCents: number; refundedCents: number; netPaidCents: number }
+    | { paidOutCents: number }
   terms: {
     /** YYYY-MM-DD */
     startDate: string
@@ -114,4 +118,30 @@ export interface PayNowIntent {
   /** Absent when the week is already paid. */
   clientSecret?: string
   paymentMethodId?: string
+}
+
+/** GET /supervision/payments/earnings — a supervisor's in-app earnings across hires. */
+export interface EarningsWeek {
+  id: string
+  hireId: string
+  superviseeName: string | null
+  startDate: string
+  endDate: string
+  status: BillingWeekStatus
+  prepayStatus: PrepayStatus
+  /** Logged (not rejected) minutes */
+  minutes: number
+  approvedMinutes: number | null
+  paidOutCents: number
+  /** Estimate for a prepaid week still in progress */
+  pendingCents: number
+  settledAt: string | null
+}
+
+export interface SupervisorEarnings {
+  totals: { paidOutCents: number; pendingCents: number }
+  totalCount: number
+  page: number
+  limit: number
+  items: EarningsWeek[]
 }

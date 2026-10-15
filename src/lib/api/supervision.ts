@@ -17,7 +17,12 @@ import type {
 } from '@/types/hire'
 import type { PastClientHire } from '@/types/past-clients'
 import type { HirePaymentInfo, HourlyQuote, PayoutStatus, StripeLink } from '@/types/payouts'
-import type { HireBillingWeeks, HireSessionInput, PayNowIntent } from '@/types/sessions'
+import type {
+  HireBillingWeeks,
+  HireSessionInput,
+  PayNowIntent,
+  SupervisorEarnings,
+} from '@/types/sessions'
 import type {
   PurchaseSubscriptionResponse,
   Subscription,
@@ -138,6 +143,15 @@ export async function saveHirePaymentMethod(
   const { data } = await apiClient.put<ApiResponse<HirePaymentInfo>>(
     `/supervision/hires/${hireId}/payment/card`,
     { paymentMethodId },
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/earnings — the supervisor's in-app earnings across hires. */
+export async function getSupervisorEarnings(page = 1, limit = 10): Promise<SupervisorEarnings> {
+  const { data } = await apiClient.get<ApiResponse<SupervisorEarnings>>(
+    '/supervision/payments/earnings',
+    { params: { page, limit } },
   )
   return data.data
 }

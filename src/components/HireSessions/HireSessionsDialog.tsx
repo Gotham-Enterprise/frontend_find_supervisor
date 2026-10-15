@@ -75,6 +75,18 @@ function ProgressSummary({ data }: { data: HireBillingWeeks }) {
         {formatUsdCents(terms.hourlyRateCents)}/hour · up to{' '}
         {formatDuration(terms.weeklyCapMinutes)} per week
       </p>
+      {'netPaidCents' in data.totals && data.totals.chargedCents > 0 && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Paid so far: {formatUsdCents(data.totals.netPaidCents)}
+          {data.totals.refundedCents > 0 &&
+            ` (${formatUsdCents(data.totals.chargedCents)} charged, ${formatUsdCents(data.totals.refundedCents)} refunded for unused hours)`}
+        </p>
+      )}
+      {'paidOutCents' in data.totals && data.totals.paidOutCents > 0 && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Paid out to you so far: {formatUsdCents(data.totals.paidOutCents)}
+        </p>
+      )}
     </div>
   )
 }
