@@ -95,7 +95,7 @@ export function OfferingCredentialsFields({
           label="Specialty"
           options={specialtyOptions}
           sortOptions
-          placeholder="Select Specialty (optional)"
+          placeholder="Select Specialty (Optional)"
           loading={supervisorTypesLoading}
           disabled={supervisorTypesLoading || !occupationValue}
           isSubmitting={isSubmitting}

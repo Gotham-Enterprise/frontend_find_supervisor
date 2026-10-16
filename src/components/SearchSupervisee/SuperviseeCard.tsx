@@ -1,6 +1,6 @@
 'use client'
 
-import { BadgeCheckIcon, ClockIcon, MapPinIcon } from 'lucide-react'
+import { BadgeCheckIcon, ClockIcon, LanguagesIcon, MapPinIcon, UserRoundIcon } from 'lucide-react'
 import Link from 'next/link'
 
 import { Badge } from '@/components/ui/badge'
@@ -35,6 +35,7 @@ export function SuperviseeCard({ supervisee }: SuperviseeCardProps) {
     avatarColor,
     profilePhotoUrl,
     isConnectedWithCurrentSupervisor,
+    identity,
   } = supervisee
 
   // The API already masks fullName to "Katie C" until the supervisor is connected
@@ -66,7 +67,17 @@ export function SuperviseeCard({ supervisee }: SuperviseeCardProps) {
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="truncate text-base font-semibold text-foreground">{fullName}</h3>
+              <h3 className="truncate text-base font-semibold text-foreground">
+                {fullName}
+                {identity.pronouns && (
+                  <span
+                    className="ml-1.5 text-sm font-normal text-muted-foreground"
+                    aria-label={`Pronouns: ${identity.pronouns}`}
+                  >
+                    ({identity.pronouns})
+                  </span>
+                )}
+              </h3>
               {isConnectedWithCurrentSupervisor && (
                 <Badge
                   variant="outline"
@@ -110,6 +121,21 @@ export function SuperviseeCard({ supervisee }: SuperviseeCardProps) {
               )}
             >
               {FORMAT_LABELS[preferredFormat]}
+            </span>
+          )}
+          {/* Identity blocks the supervisee chose to display (gated by the API) */}
+          {identity.genderIdentity && (
+            <span className="inline-flex items-center gap-1">
+              <UserRoundIcon className="size-3.5 shrink-0" aria-hidden />
+              <span className="sr-only">Gender identity: </span>
+              {identity.genderIdentity}
+            </span>
+          )}
+          {identity.languages.length > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <LanguagesIcon className="size-3.5 shrink-0" aria-hidden />
+              <span className="sr-only">Languages: </span>
+              {identity.languages.join(', ')}
             </span>
           )}
         </div>

@@ -1,5 +1,9 @@
 import type { SelectOption } from '@/lib/api/options'
 import {
+  getVisibleGenderIdentityLabel,
+  getVisibleLanguageLabels,
+} from '@/lib/utils/identity-display'
+import {
   formatDate,
   formatSupervisorTypeLabel,
   formatSupervisorTypeWithOfferings,
@@ -78,12 +82,21 @@ export function SupervisorProfileProfessional({
   // Medical Director extras — empty for other supervisor types.
   const offerings = profile.offerings ?? []
   const boardCertifications = profile.boardCertifications ?? []
+  // Each identity block honors its own visibility flag ("Prefer not to say" never shows).
+  const genderIdentity = getVisibleGenderIdentityLabel(profile.user)
+  const languages = getVisibleLanguageLabels(profile.user)
 
   return (
     <section className="border-b border-[#E5E7EB] py-8">
       <h2 className="mb-2 text-base font-semibold text-[#181818]">License &amp; Credentials</h2>
       <div>
         {credentialValue && <Row label={credentialLabel}>{credentialValue}</Row>}
+        {genderIdentity && <Row label="Gender Identity">{genderIdentity}</Row>}
+        {languages.length > 0 && (
+          <Row label="Languages">
+            <TagRow values={languages} />
+          </Row>
+        )}
         {profile.supervisorType && (
           <Row label="Supervisor Type">
             {formatSupervisorTypeWithOfferings(profile.supervisorType, offerings)}

@@ -1,6 +1,12 @@
 import { z } from 'zod'
 
 import type { UpdateSuperviseeProfilePayload } from '@/lib/api/supervisee-profile'
+import {
+  applyIdentityPreferenceRules,
+  getIdentityPreferenceFormValues,
+  identityPreferenceFieldsSchema,
+  identityPreferencesToPayload,
+} from '@/lib/forms/identity-preferences'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
 import { formatUSPhoneForDisplay, normalizeUSPhoneNumber } from '@/lib/utils/phone'
 import { coerceStringList } from '@/lib/utils/profile-formatters'
@@ -28,6 +34,8 @@ export const SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER = 'e.g. AMFT, LPC-Associate
 export const editSuperviseeProfileSchema = z
   .object({
     fullName: z.string().min(1, 'Full name is required').max(100),
+    // Optional pronouns / gender identity / languages + visibility flags (account-level)
+    ...identityPreferenceFieldsSchema,
     contactNumber: z.string().min(1, 'Contact number is required'),
     city: z.string().min(1, 'City is required'),
     state: z.string().min(1, 'State is required'),
@@ -76,6 +84,7 @@ export const editSuperviseeProfileSchema = z
     uploadProfilePhoto: z.any().optional(),
   })
   .superRefine((data, ctx) => {
+    applyIdentityPreferenceRules(data, ctx)
     if (data.howSoonLooking === 'CUSTOM_DATE' && !data.lookingDate) {
       ctx.addIssue({
         code: 'custom',
@@ -170,6 +179,7 @@ export function getDefaultSuperviseeProfileFormValues(
 
   return {
     fullName: profile.user.fullName ?? '',
+    ...getIdentityPreferenceFormValues(profile.user),
     contactNumber: formatUSPhoneForDisplay(profile.user.contactNumber ?? ''),
     city: profile.user.city ?? '',
     state: profile.user.state ?? '',
@@ -220,6 +230,7 @@ export function superviseeProfileFormValuesToPayload(
 
   return {
     fullName: values.fullName,
+    identity: identityPreferencesToPayload(values),
     contactNumber: values.contactNumber
       ? (normalizeUSPhoneNumber(values.contactNumber) ?? values.contactNumber)
       : undefined,

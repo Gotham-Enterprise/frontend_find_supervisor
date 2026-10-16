@@ -244,8 +244,8 @@ describe('SuperviseeStepSupervisionNeeds — need-medical-director variant', () 
   it('offers the Medical Director preference selects, unlocked and optional', () => {
     renderHarness('need-medical-director')
 
-    expect(screen.getByText('Preferred Occupation (optional)')).toBeInTheDocument()
-    expect(screen.getByText('Preferred Specialty (optional)')).toBeInTheDocument()
+    expect(screen.getByText('Preferred Occupation (Optional)')).toBeInTheDocument()
+    expect(screen.getByText('Preferred Specialty (Optional)')).toBeInTheDocument()
     expect(screen.getByText('Select Preferred Occupation')).toBeInTheDocument()
     expect(screen.queryByText('Select a type of supervision first')).not.toBeInTheDocument()
   })
@@ -286,7 +286,7 @@ describe('SuperviseeStepSupervisionNeeds — Medical Director section (regular f
     })
     expect(screen.getByText('Monthly Budget for Medical Director')).toBeInTheDocument()
     expect(screen.getByText('How Soon Needed?')).toBeInTheDocument()
-    expect(screen.getByText('Preferred Occupation (optional)')).toBeInTheDocument()
+    expect(screen.getByText('Preferred Occupation (Optional)')).toBeInTheDocument()
   })
 
   it('hides the supervision-only fields for an MD-only signup', async () => {

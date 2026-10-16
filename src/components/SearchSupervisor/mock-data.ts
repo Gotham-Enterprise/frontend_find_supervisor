@@ -1,4 +1,8 @@
 import type { SelectOption } from '@/lib/api/options'
+import type { PublicIdentityLabels } from '@/lib/utils/identity-display'
+
+/** Mock supervisors opted into nothing — the cards render exactly as before. */
+const NO_IDENTITY: PublicIdentityLabels = { pronouns: '', genderIdentity: null, languages: [] }
 
 import type { SupervisorSearchResult } from './types'
 
@@ -65,6 +69,7 @@ export const MOCK_SUPERVISORS: SupervisorSearchResult[] = [
     patientPopulation: ['Adults', 'Seniors'],
     initials: 'SC',
     avatarColor: 'bg-[#006d36]',
+    identity: NO_IDENTITY,
   },
   {
     id: '2',
@@ -85,6 +90,7 @@ export const MOCK_SUPERVISORS: SupervisorSearchResult[] = [
     patientPopulation: ['Adults'],
     initials: 'MW',
     avatarColor: 'bg-[#2563eb]',
+    identity: NO_IDENTITY,
   },
   {
     id: '3',
@@ -105,6 +111,7 @@ export const MOCK_SUPERVISORS: SupervisorSearchResult[] = [
     patientPopulation: ['Children', 'Adolescents'],
     initials: 'PN',
     avatarColor: 'bg-[#7c3aed]',
+    identity: NO_IDENTITY,
   },
   {
     id: '4',
@@ -125,6 +132,7 @@ export const MOCK_SUPERVISORS: SupervisorSearchResult[] = [
     patientPopulation: ['Adults', 'Families'],
     initials: 'JT',
     avatarColor: 'bg-[#d97706]',
+    identity: NO_IDENTITY,
   },
   {
     id: '5',
@@ -145,6 +153,7 @@ export const MOCK_SUPERVISORS: SupervisorSearchResult[] = [
     patientPopulation: ['Adults', 'Adolescents', 'Seniors'],
     initials: 'RO',
     avatarColor: 'bg-[#0891b2]',
+    identity: NO_IDENTITY,
   },
 ]
 

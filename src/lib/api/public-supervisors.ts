@@ -40,6 +40,13 @@ export interface PublicSupervisorSummary {
   supervisionFeeType: string | null
   /** Fee in whole dollars, e.g. 100 = $100. */
   supervisionFeeAmount: number | null
+  /** Pronoun codes — already filtered server-side to what the supervisor made public. */
+  pronouns: string[]
+  /** Gender identity code, or null when hidden / "Prefer not to say". */
+  genderIdentity: string | null
+  customGenderIdentity: string | null
+  /** ISO 639 language codes the supervisor chose to display. */
+  languages: string[]
   updatedAt?: string
 }
 
@@ -117,6 +124,10 @@ function parseRow(row: Record<string, unknown>): PublicSupervisorSummary {
     // public-profile endpoint flattens them to the top level — support both.
     supervisionFeeType: parseFeeType(row),
     supervisionFeeAmount: parseFeeAmount(row),
+    pronouns: Array.isArray(row.pronouns) ? (row.pronouns as string[]) : [],
+    genderIdentity: row.genderIdentity ? String(row.genderIdentity) : null,
+    customGenderIdentity: row.customGenderIdentity ? String(row.customGenderIdentity) : null,
+    languages: Array.isArray(row.languages) ? (row.languages as string[]) : [],
     updatedAt: row.updatedAt ? String(row.updatedAt) : undefined,
   }
 }

@@ -1,3 +1,7 @@
+import {
+  appendIdentityPreferencesToFormData,
+  type IdentityPreferencePayload,
+} from '@/lib/forms/identity-preferences'
 import type { ApiResponse } from '@/types'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
@@ -23,6 +27,8 @@ export interface LicenseEntryPayload {
 
 export interface UpdateSupervisorProfilePayload {
   fullName?: string
+  /** Pronouns / gender identity / languages + visibility flags — full replace when present. */
+  identity?: IdentityPreferencePayload
   contactNumber?: string
   city?: string
   state?: string
@@ -77,6 +83,7 @@ export async function updateSupervisorProfile(
     acceptingSupervisees,
     supervisionFeeAmount,
     professionalCredentials,
+    identity,
     ...rest
   } = payload
 
@@ -84,6 +91,11 @@ export async function updateSupervisorProfile(
     if (value !== undefined && value !== null && value !== '') {
       fd.append(key, String(value))
     }
+  }
+
+  // Lists are sent as JSON and the gender fields always present, so clearing persists.
+  if (identity) {
+    appendIdentityPreferencesToFormData(fd, identity)
   }
 
   // Sent even when empty so the backend can clear the optional value.

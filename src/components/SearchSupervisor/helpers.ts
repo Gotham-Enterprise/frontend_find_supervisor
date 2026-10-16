@@ -1,5 +1,6 @@
 import { yearsOfExperienceOptions } from '@/components/Signup/schema'
 import type { SelectOption, SupervisorTypeData } from '@/lib/api/options'
+import { genderIdentityLabel, languageLabel } from '@/lib/constants/identity-preferences'
 import {
   getProfessionGroupForOccupation,
   type ProfessionGroup,
@@ -30,6 +31,8 @@ export const DEFAULT_FILTERS: SupervisorSearchFilters = {
   patientPopulation: [],
   acceptingOnly: true,
   availability: [],
+  genderIdentities: [],
+  languages: [],
 }
 
 /** Page size for supervisor search results (must match API default limit). */
@@ -141,6 +144,14 @@ export function getActiveChips(
     chips.push({ key: `pop_${pop}`, label: pop })
   })
 
+  filters.genderIdentities.forEach((val) => {
+    chips.push({ key: `gi_${val}`, label: genderIdentityLabel(val) })
+  })
+
+  filters.languages.forEach((code) => {
+    chips.push({ key: `lang_${code}`, label: `Speaks ${languageLabel(code)}` })
+  })
+
   return chips
 }
 
@@ -160,6 +171,8 @@ export function removeChip(
     yearsExperience: [...filters.yearsExperience],
     patientPopulation: [...filters.patientPopulation],
     availability: [...filters.availability],
+    genderIdentities: [...filters.genderIdentities],
+    languages: [...filters.languages],
   }
 
   if (chipKey.startsWith('svo_')) {
@@ -197,6 +210,12 @@ export function removeChip(
   } else if (chipKey.startsWith('pop_')) {
     const pop = chipKey.slice(4)
     next.patientPopulation = next.patientPopulation.filter((p) => p !== pop)
+  } else if (chipKey.startsWith('gi_')) {
+    const val = chipKey.slice(3)
+    next.genderIdentities = next.genderIdentities.filter((x) => x !== val)
+  } else if (chipKey.startsWith('lang_')) {
+    const code = chipKey.slice(5)
+    next.languages = next.languages.filter((x) => x !== code)
   }
 
   return next
