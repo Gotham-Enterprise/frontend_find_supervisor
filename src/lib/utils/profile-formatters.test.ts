@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  formatDateOnly,
   formatNameWithCredentials,
   formatSupervisorTypeWithOfferings,
   getSupervisorTypeDisplayLabels,
@@ -63,5 +64,17 @@ describe('supervisor type labels with offerings', () => {
       ]),
     ).toBe('Medical Director · Supervising Physician')
     expect(formatSupervisorTypeWithOfferings('', [], [], '')).toBe('')
+  })
+})
+
+describe('formatDateOnly', () => {
+  it('shows the calendar date of a UTC-midnight date-only value, not the day before', () => {
+    // Regression: formatDate rendered this as "October 11, 2026" in US timezones
+    expect(formatDateOnly('2026-10-12T00:00:00.000Z')).toBe('October 12, 2026')
+    expect(formatDateOnly('2026-10-12')).toBe('October 12, 2026')
+  })
+
+  it('returns N/A for missing dates', () => {
+    expect(formatDateOnly(null)).toBe('N/A')
   })
 })

@@ -1,6 +1,6 @@
 import type { SelectOption } from '@/lib/api/options'
 import {
-  formatDate,
+  formatDateOnly,
   formatSupervisorTypeLabel,
   formatSupervisorTypeWithOfferings,
   resolveOptionLabels,
@@ -108,7 +108,7 @@ export function SupervisorProfileProfessional({
                     stateLabel(license.state as string),
                     license.licenseNumber ? `#${license.licenseNumber}` : null,
                     license.licenseExpiration
-                      ? `expires ${formatDate(license.licenseExpiration)}`
+                      ? `expires ${formatDateOnly(license.licenseExpiration)}`
                       : null,
                   ]
                     .filter(Boolean)
@@ -119,7 +119,7 @@ export function SupervisorProfileProfessional({
           </Row>
         ) : (
           profile.licenseExpiration && (
-            <Row label="License Expiration">{formatDate(profile.licenseExpiration)}</Row>
+            <Row label="License Expiration">{formatDateOnly(profile.licenseExpiration)}</Row>
           )
         )}
         {boardCertifications.length > 0 && (
@@ -141,7 +141,7 @@ export function SupervisorProfileProfessional({
                       ? `#${certification.certificationNumber}`
                       : null,
                     certification.expirationDate
-                      ? `valid through ${formatDate(certification.expirationDate)}`
+                      ? `valid through ${formatDateOnly(certification.expirationDate)}`
                       : null,
                   ]
                     .filter(Boolean)
@@ -172,7 +172,7 @@ export function SupervisorProfileProfessional({
                       stateLabel(license.state as string),
                       license.licenseNumber ? `#${license.licenseNumber}` : null,
                       license.licenseExpiration
-                        ? `expires ${formatDate(license.licenseExpiration)}`
+                        ? `expires ${formatDateOnly(license.licenseExpiration)}`
                         : null,
                     ]
                       .filter(Boolean)

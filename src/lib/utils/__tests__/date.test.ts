@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
-import { todayLocalISO, toLocalISODate } from '@/lib/utils/date'
+import {
+  formatCalendarDate,
+  formatDuration,
+  formatEasternDateTime,
+  formatWeekRange,
+  todayLocalISO,
+  toEasternISODate,
+  toLocalISODate,
+} from '@/lib/utils/date'
 
 describe('toLocalISODate', () => {
   it('formats using the local calendar date with zero-padding', () => {
@@ -19,5 +27,43 @@ describe('todayLocalISO', () => {
   it("matches today's local date parts", () => {
     const now = new Date()
     expect(todayLocalISO()).toBe(toLocalISODate(now))
+  })
+})
+
+describe('toEasternISODate', () => {
+  it('uses the US Eastern calendar date', () => {
+    // 03:30 UTC on Oct 13 is still 11:30 PM on Oct 12 in New York (EDT)
+    expect(toEasternISODate(new Date('2026-10-13T03:30:00Z'))).toBe('2026-10-12')
+    expect(toEasternISODate(new Date('2026-10-13T04:30:00Z'))).toBe('2026-10-13')
+    // EST (UTC-5) in winter
+    expect(toEasternISODate(new Date('2026-01-01T04:59:00Z'))).toBe('2025-12-31')
+  })
+})
+
+describe('formatCalendarDate', () => {
+  it('keeps the calendar date whatever the local timezone', () => {
+    expect(formatCalendarDate('2026-10-12')).toBe('Mon, Oct 12')
+  })
+})
+
+describe('formatWeekRange', () => {
+  it('collapses the month within a month and spells both across months', () => {
+    expect(formatWeekRange('2026-10-12', '2026-10-18')).toBe('Oct 12–18')
+    expect(formatWeekRange('2026-10-26', '2026-11-01')).toBe('Oct 26 – Nov 1')
+  })
+})
+
+describe('formatEasternDateTime', () => {
+  it('formats the instant in US Eastern', () => {
+    // Monday Oct 19, 11:59 PM EDT
+    expect(formatEasternDateTime('2026-10-20T03:59:59.999Z')).toBe('Mon, Oct 19, 11:59 PM ET')
+  })
+})
+
+describe('formatDuration', () => {
+  it('formats 15-minute units as hours and minutes', () => {
+    expect(formatDuration(45)).toBe('45 min')
+    expect(formatDuration(60)).toBe('1 h')
+    expect(formatDuration(90)).toBe('1 h 30 min')
   })
 })

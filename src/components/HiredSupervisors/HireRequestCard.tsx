@@ -1,7 +1,9 @@
 'use client'
 
 import {
+  CalendarClock,
   CalendarDays,
+  CreditCard,
   DollarSign,
   FileText,
   type LucideIcon,
@@ -14,6 +16,8 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 
+import { HirePaymentDialog } from '@/components/HirePayment/HirePaymentDialog'
+import { HireSessionsDialog } from '@/components/HireSessions/HireSessionsDialog'
 import { LeaveReviewModal } from '@/components/reviews/LeaveReviewModal'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -29,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import { useCancelHire, useMarkHireAsCompleted, useUserSnackbar } from '@/lib/hooks'
 import { useConfetti } from '@/lib/hooks/useConfetti'
 import { parseApiError } from '@/lib/utils/error-parser'
@@ -108,6 +113,17 @@ export function HireRequestCard({
     setAgreementOpenManually(open)
     if (!open && deepLinkMatches) setDismissedDeepLinkId(deepLinkedHireId)
   }
+  // Supervisee's payment step for hourly agreements (its own dialog, so the card form is in view).
+  const [payment, setPayment] = useState<{ open: boolean; changeCard: boolean }>({
+    open: false,
+    changeCard: false,
+  })
+  const openPayment = (options?: { changeCard?: boolean }) =>
+    setPayment({ open: true, changeCard: options?.changeCard ?? false })
+  // Sessions deep link (?sessions=<id>, from session notifications) works like the agreement one.
+  const deepLinkedSessionsId = useSearchParams().get('sessions')
+  const [sessionsOpenManually, setSessionsOpenManually] = useState(false)
+  const [dismissedSessionsLinkId, setDismissedSessionsLinkId] = useState<string | null>(null)
   const [reasonOpen, setReasonOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [completeOpen, setCompleteOpen] = useState(false)
@@ -150,6 +166,25 @@ export function HireRequestCard({
     agreementStage === 'AWAITING_SIGNATURE'
   const hasAgreement = hire.agreement != null
   const isAgreementSigned = hasAgreement && agreementStage === 'SIGNED'
+  // Signed hourly agreement whose card for the weekly prepays isn't saved yet.
+  const needsPaymentSetup =
+    IN_APP_PAYMENTS_ENABLED &&
+    isAgreementSigned &&
+    (hire.status === 'ACCEPTED' || hire.status === 'ACTIVE') &&
+    hire.agreement?.hourlyRateCents != null &&
+    hire.paymentMethodSavedAt == null
+
+  // Signed hourly agreement: sessions are logged and reviewed in the app.
+  const hasSessions =
+    IN_APP_PAYMENTS_ENABLED && isAgreementSigned && hire.agreement?.hourlyRateCents != null
+  const sessionsDeepLinkMatches = hasSessions && deepLinkedSessionsId === hire.id
+  const sessionsOpen =
+    sessionsOpenManually ||
+    (sessionsDeepLinkMatches && dismissedSessionsLinkId !== deepLinkedSessionsId)
+  const setSessionsOpen = (open: boolean) => {
+    setSessionsOpenManually(open)
+    if (!open && sessionsDeepLinkMatches) setDismissedSessionsLinkId(deepLinkedSessionsId)
+  }
 
   // Mark as Completed: only when ACCEPTED or ACTIVE, and the agreement is fully signed
   const canComplete = canMarkHireCompleted(hire)
@@ -332,7 +367,19 @@ export function HireRequestCard({
         </div>
 
         {isAgreementSigned && (
-          <div className="flex justify-end border-t border-border/50 px-5 py-3">
+          <div className="flex justify-end gap-2 border-t border-border/50 px-5 py-3">
+            {hasSessions && (
+              <Button variant="outline" size="sm" onClick={() => setSessionsOpen(true)}>
+                <CalendarClock className="size-3.5" aria-hidden />
+                Sessions
+              </Button>
+            )}
+            {needsPaymentSetup && (
+              <Button size="sm" onClick={() => openPayment()}>
+                <CreditCard className="size-3.5" aria-hidden />
+                Set up payment
+              </Button>
+            )}
             {hire.agreement?.fileUrl ? (
               <a
                 href={hire.agreement.fileUrl}
@@ -361,6 +408,26 @@ export function HireRequestCard({
           open={agreementOpen}
           onOpenChange={setAgreementOpen}
           canSign={canSignAgreement}
+          onSetUpPayment={IN_APP_PAYMENTS_ENABLED ? openPayment : undefined}
+        />
+      )}
+
+      {hasSessions && (
+        <HireSessionsDialog
+          hireId={hire.id}
+          counterpartName={supervisorName}
+          open={sessionsOpen}
+          onOpenChange={setSessionsOpen}
+          onChangeCard={() => openPayment({ changeCard: !needsPaymentSetup })}
+        />
+      )}
+
+      {hasAgreement && IN_APP_PAYMENTS_ENABLED && (
+        <HirePaymentDialog
+          hire={hire}
+          open={payment.open}
+          onOpenChange={(open) => setPayment((prev) => ({ ...prev, open }))}
+          changeCard={payment.changeCard}
         />
       )}
 

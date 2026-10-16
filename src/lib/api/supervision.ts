@@ -16,6 +16,13 @@ import type {
   UpcomingSessionItem,
 } from '@/types/hire'
 import type { PastClientHire } from '@/types/past-clients'
+import type { HirePaymentInfo, HourlyQuote, PayoutStatus, StripeLink } from '@/types/payouts'
+import type {
+  HireBillingWeeks,
+  HireSessionInput,
+  PayNowIntent,
+  SupervisorEarnings,
+} from '@/types/sessions'
 import type {
   PurchaseSubscriptionResponse,
   Subscription,
@@ -62,6 +69,195 @@ export async function cancelSubscription(): Promise<Subscription> {
 export async function reactivateSubscription(): Promise<Subscription> {
   const { data } = await apiClient.post<ApiResponse<Subscription>>(
     '/supervision/payments/reactivate-subscription',
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/connect/status — supervisor payout account status (auth: supervisor). */
+export async function getPayoutStatus(): Promise<PayoutStatus> {
+  const { data } = await apiClient.get<ApiResponse<PayoutStatus>>(
+    '/supervision/payments/connect/status',
+  )
+  return data.data
+}
+
+/**
+ * POST /supervision/payments/connect/onboarding-link
+ *
+ * Creates the supervisor's Stripe Express account on first use and returns a
+ * single-use Stripe-hosted onboarding URL. Stripe redirects back to
+ * /billing?payouts=return (done) or /billing?payouts=refresh (link expired).
+ */
+export async function createPayoutOnboardingLink(): Promise<StripeLink> {
+  const { data } = await apiClient.post<ApiResponse<StripeLink>>(
+    '/supervision/payments/connect/onboarding-link',
+  )
+  return data.data
+}
+
+/** POST /supervision/payments/connect/dashboard-link — Stripe Express dashboard login URL. */
+export async function createPayoutDashboardLink(): Promise<StripeLink> {
+  const { data } = await apiClient.post<ApiResponse<StripeLink>>(
+    '/supervision/payments/connect/dashboard-link',
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/quote — weekly prepay/payout breakdown for prospective hourly terms. */
+export async function getHourlyQuote(
+  hourlyRate: number,
+  maxHoursPerWeek: number,
+): Promise<HourlyQuote> {
+  const { data } = await apiClient.get<ApiResponse<HourlyQuote>>('/supervision/payments/quote', {
+    params: { hourlyRate, maxHoursPerWeek },
+  })
+  return data.data
+}
+
+/** GET /supervision/hires/:hireId/payment — hourly billing summary (supervisor or supervisee). */
+export async function getHirePayment(hireId: string): Promise<HirePaymentInfo> {
+  const { data } = await apiClient.get<ApiResponse<HirePaymentInfo>>(
+    `/supervision/hires/${hireId}/payment`,
+  )
+  return data.data
+}
+
+/** POST /supervision/hires/:hireId/payment/setup-intent — SetupIntent for saving a new card. */
+export async function createHirePaymentSetupIntent(
+  hireId: string,
+): Promise<{ clientSecret: string }> {
+  const { data } = await apiClient.post<ApiResponse<{ clientSecret: string }>>(
+    `/supervision/hires/${hireId}/payment/setup-intent`,
+  )
+  return data.data
+}
+
+/**
+ * PUT /supervision/hires/:hireId/payment/card — saves (or replaces) the card
+ * the weekly prepays are charged to. Nothing is charged here.
+ */
+export async function saveHirePaymentMethod(
+  hireId: string,
+  paymentMethodId: string,
+): Promise<HirePaymentInfo> {
+  const { data } = await apiClient.put<ApiResponse<HirePaymentInfo>>(
+    `/supervision/hires/${hireId}/payment/card`,
+    { paymentMethodId },
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/earnings — the supervisor's in-app earnings across hires. */
+export async function getSupervisorEarnings(page = 1, limit = 10): Promise<SupervisorEarnings> {
+  const { data } = await apiClient.get<ApiResponse<SupervisorEarnings>>(
+    '/supervision/payments/earnings',
+    { params: { page, limit } },
+  )
+  return data.data
+}
+
+/** GET /supervision/hires/:hireId/billing-weeks — sessions and weekly review state (both parties). */
+export async function getHireBillingWeeks(hireId: string): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.get<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/billing-weeks`,
+  )
+  return data.data
+}
+
+/** POST /supervision/hires/:hireId/sessions — supervisor logs a session. */
+export async function logHireSession(
+  hireId: string,
+  input: HireSessionInput,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/sessions`,
+    input,
+  )
+  return data.data
+}
+
+/** PUT /supervision/hires/:hireId/sessions/:sessionId — while its week is open. */
+export async function updateHireSession(
+  hireId: string,
+  sessionId: string,
+  input: HireSessionInput,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.put<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/sessions/${sessionId}`,
+    input,
+  )
+  return data.data
+}
+
+/** DELETE /supervision/hires/:hireId/sessions/:sessionId — while its week is open. */
+export async function deleteHireSession(
+  hireId: string,
+  sessionId: string,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.delete<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/sessions/${sessionId}`,
+  )
+  return data.data
+}
+
+/**
+ * POST /supervision/hires/:hireId/sessions/:sessionId/approve | reject — the
+ * supervisee answers a late session added by Gotham support. Approving one on
+ * a settled week charges it (hours × rate + service fee) right away.
+ */
+export async function respondToLateSession(
+  hireId: string,
+  sessionId: string,
+  approve: boolean,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/sessions/${sessionId}/${approve ? 'approve' : 'reject'}`,
+  )
+  return data.data
+}
+
+/** POST /supervision/hires/:hireId/billing-weeks/:weekId/approve — supervisee approves a week. */
+export async function approveBillingWeek(
+  hireId: string,
+  weekId: string,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/billing-weeks/${weekId}/approve`,
+  )
+  return data.data
+}
+
+/** POST /supervision/hires/:hireId/billing-weeks/:weekId/dispute — supervisee disputes a week. */
+export async function disputeBillingWeek(
+  hireId: string,
+  weekId: string,
+  reason: string,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/billing-weeks/${weekId}/dispute`,
+    { reason },
+  )
+  return data.data
+}
+
+/**
+ * POST /supervision/hires/:hireId/billing-weeks/:weekId/pay-now — starts paying
+ * an unpaid week with the saved card; Stripe.js confirms the returned intent.
+ */
+export async function payNowBillingWeek(hireId: string, weekId: string): Promise<PayNowIntent> {
+  const { data } = await apiClient.post<ApiResponse<PayNowIntent>>(
+    `/supervision/hires/${hireId}/billing-weeks/${weekId}/pay-now`,
+  )
+  return data.data
+}
+
+/** POST …/pay-now/sync — refreshes the week after Stripe.js confirmed the payment. */
+export async function syncPayNowBillingWeek(
+  hireId: string,
+  weekId: string,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/billing-weeks/${weekId}/pay-now/sync`,
   )
   return data.data
 }
@@ -196,8 +392,16 @@ function buildAgreementFormData(input: ProposeAgreementInput): FormData {
   const formData = new FormData()
   formData.append('source', input.source)
   formData.append('startDate', input.startDate)
-  formData.append('supervisionMonths', String(input.supervisionMonths))
-  formData.append('monthlyAmount', String(input.monthlyAmount))
+  // Monthly or hourly terms, whichever the form collected (hourly for in-app billed hires).
+  if (input.supervisionMonths != null) {
+    formData.append('supervisionMonths', String(input.supervisionMonths))
+  }
+  if (input.monthlyAmount != null) formData.append('monthlyAmount', String(input.monthlyAmount))
+  if (input.hourlyRate != null) formData.append('hourlyRate', String(input.hourlyRate))
+  if (input.maxHoursPerWeek != null) {
+    formData.append('maxHoursPerWeek', String(input.maxHoursPerWeek))
+  }
+  if (input.totalHours != null) formData.append('totalHours', String(input.totalHours))
   formData.append('signatureName', input.signatureName.trim())
   if (input.source === 'UPLOADED' && input.file) {
     formData.append('file', input.file)

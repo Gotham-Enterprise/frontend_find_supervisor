@@ -24,6 +24,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { isSupervisorRole } from '@/lib/auth/roles'
+import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import { isSupervisionFreeTierSubscription } from '@/lib/constants/supervision-dashboard-plans'
 import {
   useCancelSubscription,
@@ -38,6 +39,9 @@ import {
   isSubscriptionScheduledForCancellation,
 } from '@/lib/utils/subscription-status'
 import type { Subscription, SubscriptionStatus } from '@/types/supervisor-profile'
+
+import { EarningsCard } from './EarningsCard'
+import { PayoutsCard } from './PayoutsCard'
 
 // ─── Feature list shared with the dashboard upgrade cards ─────────────────────
 
@@ -564,6 +568,9 @@ function BillingContent() {
           <InvoicesCard />
         </>
       )}
+
+      {IN_APP_PAYMENTS_ENABLED && <PayoutsCard />}
+      {IN_APP_PAYMENTS_ENABLED && <EarningsCard />}
 
       {/* Cancel / resume confirmation dialogs — only rendered for paid subscribers */}
       {!isFreeTier && (

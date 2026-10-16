@@ -1,18 +1,22 @@
 'use client'
 
-import { FileText } from 'lucide-react'
+import { CheckCircle2, CreditCard, FileText } from 'lucide-react'
 import { useState } from 'react'
 
+import { formatHours, HourlyQuoteSummary } from '@/components/HirePayment/HourlyQuoteSummary'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { useUserSnackbar } from '@/lib/hooks'
+import { isSupervisorRole } from '@/lib/auth/roles'
+import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
+import { useUser, useUserSnackbar } from '@/lib/hooks'
 import { useConfetti } from '@/lib/hooks/useConfetti'
 import { useSignAgreement } from '@/lib/hooks/useHires'
 import { parseApiError } from '@/lib/utils/error-parser'
-import { formatDate, formatDisplayName } from '@/lib/utils/profile-formatters'
+import { formatUsdCents } from '@/lib/utils/money'
+import { formatDateOnly, formatDisplayName } from '@/lib/utils/profile-formatters'
 import type { AgreementRecord, HireListItem } from '@/types/hire'
 
 const UNSPECIFIED = 'Not specified'
@@ -26,9 +30,19 @@ function formatDateTime(iso: string | null | undefined): string {
   }
 }
 
-function formatMoney(value: string): string {
+function formatMoney(value: string | null): string {
+  if (value == null) return UNSPECIFIED
   const n = Number(value)
   return Number.isFinite(n) ? `$${n.toFixed(2)}` : value
+}
+
+/** Hourly agreements are billed in-app; the others carry monthly terms paid outside the app. */
+function isHourlyAgreement(agreement: AgreementRecord): boolean {
+  return agreement.hourlyRateCents != null && agreement.weeklyCapMinutes != null
+}
+
+function plural(n: number, unit: string): string {
+  return `${n} ${unit}${n === 1 ? '' : 's'}`
 }
 
 function sourceLabel(agreement: AgreementRecord): string {
@@ -75,9 +89,11 @@ function SignatureBlock({
 function SignAgreementSection({
   hire,
   onOpenChange,
+  onSetUpPayment,
 }: {
   hire: HireListItem
   onOpenChange: (open: boolean) => void
+  onSetUpPayment?: () => void
 }) {
   const [signatureName, setSignatureName] = useState('')
   const [consent, setConsent] = useState(false)
@@ -87,6 +103,12 @@ function SignAgreementSection({
 
   const supervisorName = formatDisplayName(hire.supervisor)
   const isPending = signMutation.isPending
+  // Hourly agreements continue straight to the payment step (its own dialog).
+  const paysInApp =
+    IN_APP_PAYMENTS_ENABLED &&
+    hire.agreement != null &&
+    isHourlyAgreement(hire.agreement) &&
+    onSetUpPayment != null
 
   function handleSign() {
     signMutation.mutate(
@@ -94,6 +116,14 @@ function SignAgreementSection({
       {
         onSuccess: () => {
           burst()
+          if (paysInApp) {
+            showSuccess('Agreement signed!', {
+              description: 'Next, add the card for your weekly prepays.',
+            })
+            onOpenChange(false)
+            onSetUpPayment()
+            return
+          }
           showSuccess('Agreement signed!', {
             description: `Your supervision with ${supervisorName} is ready to begin.`,
           })
@@ -162,6 +192,11 @@ interface AgreementDialogProps {
   onOpenChange: (open: boolean) => void
   /** True only for the supervisee while their signature is pending — shows the sign form. */
   canSign?: boolean
+  /**
+   * Supervisee only: opens the payment dialog (hourly agreements). `changeCard`
+   * opens it on the card picker when a card is already saved.
+   */
+  onSetUpPayment?: (options?: { changeCard?: boolean }) => void
 }
 
 export function AgreementDialog({
@@ -169,11 +204,16 @@ export function AgreementDialog({
   open,
   onOpenChange,
   canSign = false,
+  onSetUpPayment,
 }: AgreementDialogProps) {
+  const { user } = useUser()
   const agreement = hire.agreement
   if (!agreement) return null
 
   const showSignForm = canSign && agreement.superviseeSignedAt == null
+  const hourly = isHourlyAgreement(agreement)
+  const viewerIsSupervisor = isSupervisorRole(user?.role)
+  const showPayment = IN_APP_PAYMENTS_ENABLED && hourly
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
@@ -186,12 +226,39 @@ export function AgreementDialog({
         <section className="mt-5">
           <h3 className="mb-3 text-sm font-semibold text-foreground">Terms</h3>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
-            <TermItem label="Start Date" value={formatDate(agreement.startDate)} />
-            <TermItem
-              label="Duration"
-              value={`${agreement.supervisionMonths} month${agreement.supervisionMonths === 1 ? '' : 's'}`}
-            />
-            <TermItem label="Monthly Amount" value={formatMoney(agreement.monthlyAmount)} />
+            <TermItem label="Start Date" value={formatDateOnly(agreement.startDate)} />
+            {hourly ? (
+              <>
+                <TermItem
+                  label="Total Hours"
+                  value={
+                    agreement.totalHours != null
+                      ? plural(agreement.totalHours, 'hour')
+                      : 'Until ended'
+                  }
+                />
+                <TermItem
+                  label="Hourly Rate"
+                  value={formatUsdCents(agreement.hourlyRateCents ?? 0)}
+                />
+                <TermItem
+                  label="Max per Week"
+                  value={formatHours(agreement.weeklyCapMinutes ?? 0)}
+                />
+              </>
+            ) : (
+              <>
+                <TermItem
+                  label="Duration"
+                  value={
+                    agreement.supervisionMonths != null
+                      ? plural(agreement.supervisionMonths, 'month')
+                      : UNSPECIFIED
+                  }
+                />
+                <TermItem label="Monthly Amount" value={formatMoney(agreement.monthlyAmount)} />
+              </>
+            )}
             {agreement.transactionFeePct != null && (
               <TermItem
                 label="Platform Transaction Fee"
@@ -240,7 +307,74 @@ export function AgreementDialog({
           </div>
         </section>
 
-        {showSignForm && <SignAgreementSection hire={hire} onOpenChange={onOpenChange} />}
+        {showPayment && agreement.quote && (viewerIsSupervisor || showSignForm) && (
+          <>
+            <Separator className="my-5" />
+            <section>
+              <h3 className="mb-3 text-sm font-semibold text-foreground">Weekly Payment</h3>
+              <HourlyQuoteSummary
+                quote={agreement.quote}
+                perspective={viewerIsSupervisor ? 'supervisor' : 'supervisee'}
+              />
+              {showSignForm && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  You&apos;ll add the card for your weekly prepays right after signing.
+                </p>
+              )}
+            </section>
+          </>
+        )}
+
+        {showPayment &&
+          !viewerIsSupervisor &&
+          agreement.superviseeSignedAt != null &&
+          agreement.quote &&
+          onSetUpPayment && (
+            <>
+              <Separator className="my-5" />
+              <section>
+                <h3 className="mb-3 text-sm font-semibold text-foreground">Weekly Payment</h3>
+                <HourlyQuoteSummary quote={agreement.quote} perspective="supervisee" />
+                {hire.paymentMethodSavedAt ? (
+                  <div className="mt-3 flex items-center justify-between gap-4 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 className="size-4 shrink-0 text-primary" aria-hidden />
+                      Payment card saved
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        onOpenChange(false)
+                        onSetUpPayment({ changeCard: true })
+                      }}
+                    >
+                      Change card
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    className="mt-3 w-full"
+                    onClick={() => {
+                      onOpenChange(false)
+                      onSetUpPayment()
+                    }}
+                  >
+                    <CreditCard className="size-4" aria-hidden />
+                    Set up payment
+                  </Button>
+                )}
+              </section>
+            </>
+          )}
+
+        {showSignForm && (
+          <SignAgreementSection
+            hire={hire}
+            onOpenChange={onOpenChange}
+            onSetUpPayment={onSetUpPayment ? () => onSetUpPayment() : undefined}
+          />
+        )}
       </DialogContent>
     </DialogRoot>
   )

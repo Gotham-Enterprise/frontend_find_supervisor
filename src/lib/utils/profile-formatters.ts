@@ -127,6 +127,22 @@ export function formatDate(iso: string | null | undefined): string {
   })
 }
 
+/**
+ * Formats a calendar date (a start date, an expiration date — anything picked
+ * with a date input) to "April 13, 2026". The API returns those as UTC
+ * midnight, which {@link formatDate} would show a day early in US timezones,
+ * so this formats the date part as-is. Returns "N/A" for nullish.
+ */
+export function formatDateOnly(iso: string | null | undefined): string {
+  if (!iso) return 'N/A'
+  return new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+}
+
 // ─── Fee ──────────────────────────────────────────────────────────────────────
 
 const FEE_TYPE_SUFFIX: Record<string, string> = {

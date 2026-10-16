@@ -2,6 +2,7 @@
 
 import {
   AlertCircle,
+  CalendarClock,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -18,6 +19,7 @@ import { useMemo, useState } from 'react'
 import { AgreementDialog } from '@/components/HiredSupervisors/AgreementDialog'
 import { AgreementStageBadge } from '@/components/HiredSupervisors/AgreementStageBadge'
 import { HireStatusBadge } from '@/components/HiredSupervisors/HireStatusBadge'
+import { HireSessionsDialog } from '@/components/HireSessions/HireSessionsDialog'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
@@ -31,6 +33,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import {
   useHiresList,
   useMyReviews,
@@ -43,6 +46,7 @@ import {
   formatAvailability,
   formatContactNumber,
   formatDate,
+  formatDateOnly,
   formatDisplayName,
   formatLocation,
   formatSupervisionFormat,
@@ -331,7 +335,7 @@ function SuperviseeDetailsDialog({
             />
             <DetailItem
               label="Start Date"
-              value={formatDate(hire.startDate ?? hire.preferredStartDate)}
+              value={formatDateOnly(hire.startDate ?? hire.preferredStartDate)}
             />
             {hire.supervisionHours != null && (
               <DetailItem
@@ -496,6 +500,16 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
   const superviseeName = formatDisplayName(hire.supervisee)
   const hasAgreement = hire.agreement != null
   const isAgreementSigned = hasAgreement && getAgreementStage(hire) === 'SIGNED'
+  // Signed hourly agreement: the supervisor logs sessions in the app.
+  const hasSessions =
+    IN_APP_PAYMENTS_ENABLED && isAgreementSigned && hire.agreement?.hourlyRateCents != null
+  // Deep link: session notifications point to /supervisees?sessions=<id> (lazy init, as above).
+  const [sessionsOpen, setSessionsOpen] = useState(
+    () =>
+      hasSessions &&
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('sessions') === hire.id,
+  )
   const occupation = hire.supervisee.occupation?.name?.trim()
   const specialty = hire.supervisee.specialty?.name?.trim()
   const occupationDisplay =
@@ -505,7 +519,7 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
 
   const locationRaw = formatLocation(hire.supervisee.city, hire.supervisee.state)
   const formatRaw = formatSupervisionFormat(hire.preferredFormat)
-  const startDateRaw = formatDate(hire.startDate ?? hire.preferredStartDate)
+  const startDateRaw = formatDateOnly(hire.startDate ?? hire.preferredStartDate)
   const goalsRaw = hire.goals?.trim() || 'Not specified'
 
   return (
@@ -556,7 +570,13 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
         </div>
 
         {isAgreementSigned && (
-          <div className="flex justify-end border-t border-border/50 px-5 py-3">
+          <div className="flex justify-end gap-2 border-t border-border/50 px-5 py-3">
+            {hasSessions && (
+              <Button size="sm" onClick={() => setSessionsOpen(true)}>
+                <CalendarClock className="size-3.5" aria-hidden />
+                Sessions
+              </Button>
+            )}
             {hire.agreement?.fileUrl ? (
               <a
                 href={hire.agreement.fileUrl}
@@ -579,6 +599,15 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
 
       {hasAgreement && (
         <AgreementDialog hire={hire} open={viewAgreementOpen} onOpenChange={setViewAgreementOpen} />
+      )}
+
+      {hasSessions && (
+        <HireSessionsDialog
+          hireId={hire.id}
+          counterpartName={superviseeName}
+          open={sessionsOpen}
+          onOpenChange={setSessionsOpen}
+        />
       )}
     </>
   )

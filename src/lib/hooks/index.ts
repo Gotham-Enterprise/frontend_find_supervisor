@@ -42,6 +42,19 @@ export {
   useViewHire,
 } from './useHires'
 export {
+  CardPaymentError,
+  hireSessionKeys,
+  useApproveBillingWeek,
+  useDeleteHireSession,
+  useDisputeBillingWeek,
+  useHireBillingWeeks,
+  useLogHireSession,
+  usePayNowBillingWeek,
+  useRespondToLateSession,
+  useSupervisorEarnings,
+  useUpdateHireSession,
+} from './useHireSessions'
+export {
   useCitiesOptions,
   useMultiStateCityOptions,
   useStateNameOptions,
@@ -60,6 +73,15 @@ export {
   useMarkNotificationRead,
   useNotifications,
 } from './useNotifications'
+export {
+  payoutKeys,
+  useCreatePayoutDashboardLink,
+  useHirePayment,
+  useHourlyQuote,
+  usePayoutStatusQuery,
+  useSaveHirePaymentMethod,
+  useStartPayoutOnboarding,
+} from './usePayouts'
 export { recommendedSupervisorKeys, useRecommendedSupervisors } from './useRecommendedSupervisors'
 export { useResendVerificationEmail } from './useResendVerificationEmail'
 export {

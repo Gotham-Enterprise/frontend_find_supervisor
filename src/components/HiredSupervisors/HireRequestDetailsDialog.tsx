@@ -2,13 +2,16 @@
 
 import type { ReactNode } from 'react'
 
+import { formatHours } from '@/components/HirePayment/HourlyQuoteSummary'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { useSuperviseeFormOptions } from '@/lib/hooks'
+import { formatUsdCents } from '@/lib/utils/money'
 import {
   formatAvailability,
   formatBudgetRange,
   formatDate,
+  formatDateOnly,
   formatDisplayName,
   formatFeeAmount,
   formatSupervisionFormat,
@@ -118,7 +121,7 @@ export function HireRequestDetailsDialog({
     },
     {
       label: 'Preferred start date',
-      value: displayText(hire.preferredStartDate, formatDate(hire.preferredStartDate)),
+      value: displayText(hire.preferredStartDate, formatDateOnly(hire.preferredStartDate)),
     },
     ...(hire.supervisionHours != null
       ? [
@@ -187,16 +190,38 @@ export function HireRequestDetailsDialog({
           },
         ]
       : []),
-    { label: 'Supervision start', value: displayText(hire.startDate, formatDate(hire.startDate)) },
-    { label: 'Supervision end', value: displayText(hire.endDate, formatDate(hire.endDate)) },
     {
-      label: 'Planned duration (months)',
-      value: hire.supervisionMonths != null ? String(hire.supervisionMonths) : UNSPECIFIED,
+      label: 'Supervision start',
+      value: displayText(hire.startDate, formatDateOnly(hire.startDate)),
     },
-    {
-      label: 'Monthly amount',
-      value: displayText(hire.monthlyAmount, hire.monthlyAmount ?? undefined),
-    },
+    { label: 'Supervision end', value: displayText(hire.endDate, formatDateOnly(hire.endDate)) },
+    // Hourly (in-app billed) hires show the agreement's hourly terms; others the monthly ones.
+    ...(hire.agreement?.hourlyRateCents != null && hire.agreement.weeklyCapMinutes != null
+      ? [
+          { label: 'Hourly rate', value: formatUsdCents(hire.agreement.hourlyRateCents) },
+          { label: 'Max per week', value: formatHours(hire.agreement.weeklyCapMinutes) },
+          {
+            label: 'Total hours',
+            value:
+              hire.agreement.totalHours != null ? String(hire.agreement.totalHours) : 'Until ended',
+          },
+          {
+            label: 'Payment card',
+            value: hire.paymentMethodSavedAt
+              ? `Saved ${formatDate(hire.paymentMethodSavedAt)}`
+              : 'Not set up yet',
+          },
+        ]
+      : [
+          {
+            label: 'Planned duration (months)',
+            value: hire.supervisionMonths != null ? String(hire.supervisionMonths) : UNSPECIFIED,
+          },
+          {
+            label: 'Monthly amount',
+            value: displayText(hire.monthlyAmount, hire.monthlyAmount ?? undefined),
+          },
+        ]),
     {
       label: 'Transaction fee',
       value: displayText(hire.transactionFeePct, hire.transactionFeePct ?? undefined),

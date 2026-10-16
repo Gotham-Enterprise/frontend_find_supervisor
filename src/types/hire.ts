@@ -1,3 +1,5 @@
+import type { HourlyQuote } from './payouts'
+
 export type PreferredFormat = 'IN_PERSON' | 'VIRTUAL' | 'HYBRID'
 export type PreferredAvailability =
   | 'FLEXIBLE'
@@ -110,10 +112,20 @@ export interface AgreementRecord {
   /** Incremented on each supervisor edit before the supervisee signs. */
   version: number
   startDate: string
-  supervisionMonths: number
+  /** Monthly terms paid outside the app — null on hourly (in-app billed) agreements. */
+  supervisionMonths: number | null
   /** Decimal string, matching `monthlyAmount` on HireListItem. */
-  monthlyAmount: string
+  monthlyAmount: string | null
   transactionFeePct: string | null
+  /** Hourly terms billed in-app; null on monthly agreements. */
+  hourlyRateCents: number | null
+  /** Max supervision per billing week, in minutes (15-minute steps). */
+  weeklyCapMinutes: number | null
+  /** Hours the agreement covers; null = until ended. */
+  totalHours: number | null
+  platformFeeBps: number | null
+  /** Weekly prepay/payout breakdown for hourly agreements. */
+  quote: HourlyQuote | null
   supervisorSignatureName: string
   supervisorSignedAt: string
   superviseeSignatureName: string | null
@@ -130,8 +142,13 @@ export interface ProposeAgreementInput {
   /** Required when source is UPLOADED; ignored for DEFAULT_TEMPLATE. */
   file: File | null
   startDate: string // ISO date string
-  supervisionMonths: number
-  monthlyAmount: number
+  /** Monthly terms, paid outside the app… */
+  supervisionMonths?: number
+  monthlyAmount?: number
+  /** …or hourly terms billed in-app (pilot supervisors): dollars and hours. */
+  hourlyRate?: number
+  maxHoursPerWeek?: number
+  totalHours?: number
   /** Typed full legal name — the supervisor's e-signature. */
   signatureName: string
 }
@@ -139,8 +156,11 @@ export interface ProposeAgreementInput {
 /** POST /supervision/hires/:hireId/agreement/preview — render the default template PDF without saving. */
 export interface PreviewAgreementInput {
   startDate: string // ISO date string
-  supervisionMonths: number
-  monthlyAmount: number
+  supervisionMonths?: number
+  monthlyAmount?: number
+  hourlyRate?: number
+  maxHoursPerWeek?: number
+  totalHours?: number
   /** Optional at preview time — the signature block shows "pending" when absent. */
   signatureName?: string
 }
@@ -190,6 +210,8 @@ export interface HireListItem {
   supervisionMonths: number | null
   monthlyAmount: string | null
   transactionFeePct: string | null
+  /** Set once the supervisee saves the card for an hourly agreement's weekly prepays. */
+  paymentMethodSavedAt: string | null
   status: HireStatus
   agreedAt: string | null
   acceptedAt: string | null
