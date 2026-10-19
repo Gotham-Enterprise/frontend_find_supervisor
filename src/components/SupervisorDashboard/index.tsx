@@ -23,6 +23,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 
+import { OwnIdentityDetails, OwnPronouns } from '@/components/Dashboard/IdentitySummary'
 import { ProfilePreviewCard } from '@/components/Dashboard/shared'
 import {
   SubscriptionModal,
@@ -42,6 +43,7 @@ import {
 } from '@/lib/hooks'
 import { mergeSupervisorProfileDisplayName } from '@/lib/profile/supervisor-profile-display'
 import { cn } from '@/lib/utils'
+import { getOwnIdentitySummary } from '@/lib/utils/identity-display'
 import {
   formatNameWithCredentials,
   formatSupervisorTypeWithOfferings,
@@ -688,6 +690,8 @@ function ProfilePreview({
       .slice(0, 5)
   }, [profile, certificationOptions, patientPopulationOptions])
 
+  const identitySummary = getOwnIdentitySummary(profile.user)
+
   return (
     <ProfilePreviewCard
       title="My Profile"
@@ -703,7 +707,12 @@ function ProfilePreview({
       }
       avatar={{ fullName: name, photoUrl: profile.user.profilePhotoUrl, size: 'lg' }}
       identity={{
-        name: formatNameWithCredentials(name, profile.professionalCredentials),
+        name: (
+          <>
+            {formatNameWithCredentials(name, profile.professionalCredentials)}
+            <OwnPronouns block={identitySummary.pronouns} />
+          </>
+        ),
         subline:
           [
             profile.licenseType,
@@ -719,6 +728,8 @@ function ProfilePreview({
             .filter((part) => Boolean(part?.trim()))
             .join(' · ') || '—',
         meta: metaLine,
+        // Own values (even while hidden) so the supervisor sees what they entered
+        details: <OwnIdentityDetails summary={identitySummary} />,
       }}
       stats={[
         { value: profile.yearsOfExperience ?? '—', label: 'Yrs Exp.' },

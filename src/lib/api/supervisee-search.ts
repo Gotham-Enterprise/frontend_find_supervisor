@@ -5,6 +5,7 @@ import type {
   SuperviseeSearchResult,
   SupervisionFormat,
 } from '@/components/SearchSupervisee/types'
+import { formatPublicIdentity } from '@/lib/utils/identity-display'
 
 import { apiClient } from './client'
 
@@ -32,6 +33,11 @@ export interface SuperviseeSearchApiRow {
   mdMonthlyBudget?: number | null
   hireStatusWithCurrentSupervisor?: string
   isConnectedWithCurrentSupervisor?: boolean
+  /** Identity blocks the supervisee made public (already gated server-side). */
+  pronouns?: string[]
+  genderIdentity?: string | null
+  customGenderIdentity?: string | null
+  languages?: string[]
 }
 
 export interface SuperviseeSearchMetaData {
@@ -100,6 +106,9 @@ export function buildSuperviseeSearchParams(
   appendCommaSeparated(params, 'state', filters.states)
   appendCommaSeparated(params, 'occupation', filters.occupations)
   appendCommaSeparated(params, 'specialty', filters.specialties)
+  // Identity filters — the API only matches profiles that made the block public
+  appendCommaSeparated(params, 'genderIdentity', filters.genderIdentities)
+  appendCommaSeparated(params, 'languages', filters.languages)
 
   return params
 }
@@ -147,6 +156,7 @@ export function mapApiRowToSuperviseeSearchResult(
     avatarColor: getAvatarColor(index),
     hireStatusWithCurrentSupervisor: row.hireStatusWithCurrentSupervisor ?? 'NOT_HIRED',
     isConnectedWithCurrentSupervisor: row.isConnectedWithCurrentSupervisor ?? false,
+    identity: formatPublicIdentity(row),
   }
 }
 

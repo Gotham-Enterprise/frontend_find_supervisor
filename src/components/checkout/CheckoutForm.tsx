@@ -119,7 +119,7 @@ function BillingFields({
 
       {/* Address line 2 */}
       <div>
-        <label className={labelCls}>Apt, suite, etc. (optional)</label>
+        <label className={labelCls}>Apt, suite, etc. (Optional)</label>
         <input
           type="text"
           autoComplete="address-line2"

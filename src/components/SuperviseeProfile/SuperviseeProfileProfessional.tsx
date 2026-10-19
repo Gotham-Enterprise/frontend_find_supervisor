@@ -1,5 +1,9 @@
 import type { SelectOption } from '@/lib/api/options'
 import {
+  getVisibleGenderIdentityLabel,
+  getVisibleLanguageLabels,
+} from '@/lib/utils/identity-display'
+import {
   formatCredentialWithState,
   formatLocation,
   resolveOptionLabels,
@@ -63,10 +67,16 @@ export function SuperviseeProfileProfessional({
     supervisorTypeOptions,
   )
 
+  // Each identity block honors its own visibility flag ("Prefer not to say" never shows).
+  const genderIdentity = getVisibleGenderIdentityLabel(user)
+  const languages = getVisibleLanguageLabels(user)
+
   const hasContent =
     profile.title ||
     occupation ||
     specialty ||
+    genderIdentity ||
+    languages.length > 0 ||
     statesOfLicensure.length > 0 ||
     location !== 'N/A' ||
     (profile.typeOfSupervisorNeeded?.length ?? 0) > 0
@@ -84,6 +94,12 @@ export function SuperviseeProfileProfessional({
         )}
         {occupation && <Row label="Occupation">{occupation}</Row>}
         {specialty && <Row label="Specialty">{specialty}</Row>}
+        {genderIdentity && <Row label="Gender Identity">{genderIdentity}</Row>}
+        {languages.length > 0 && (
+          <Row label="Languages">
+            <TagRow values={languages} />
+          </Row>
+        )}
         {supervisorTypes !== 'N/A' && (
           <Row label="Type of Supervisor Needed">{supervisorTypes}</Row>
         )}

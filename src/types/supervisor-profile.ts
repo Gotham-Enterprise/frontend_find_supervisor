@@ -1,4 +1,5 @@
 import type { HireStatus } from '@/types/hire'
+import type { UserIdentityPreferencesResponse } from '@/types/identity-preferences'
 
 export type VerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 export type VisibilityStatus = 'HIDDEN' | 'VISIBLE'
@@ -114,7 +115,11 @@ export interface SupervisorProfileHiredInfo {
   }
 }
 
-export interface SupervisorProfileUser {
+/**
+ * Pronouns / gender identity / languages + visibility flags. The owner gets
+ * every field; other viewers only get the blocks flagged public.
+ */
+export interface SupervisorProfileUser extends UserIdentityPreferencesResponse {
   id: string
   email: string
   userName?: string

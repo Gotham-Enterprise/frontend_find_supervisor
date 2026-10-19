@@ -50,6 +50,7 @@ import {
   TOP_LICENSE_SLUGS_FOR_STATE,
   US_STATES,
 } from '@/lib/seo/routes'
+import { formatPublicIdentity } from '@/lib/utils/identity-display'
 import {
   formatFeeAmount,
   formatFeeType,
@@ -658,6 +659,8 @@ function SupervisorPublicProfile({
     supervisor.supervisorType,
     supervisor.supervisionFormat,
   ].filter(Boolean)
+  // The public endpoint already strips the blocks the supervisor kept private.
+  const { pronouns, genderIdentity, languages } = formatPublicIdentity(supervisor)
 
   return (
     <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
@@ -684,6 +687,9 @@ function SupervisorPublicProfile({
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-foreground">
             {formatNameWithCredentials(supervisor.fullName, supervisor.professionalCredentials)}
+            {pronouns && (
+              <span className="ml-2 text-base font-normal text-muted-foreground">({pronouns})</span>
+            )}
           </h1>
           {location && <p className="mt-0.5 text-sm text-muted-foreground">{location}</p>}
 
@@ -720,6 +726,8 @@ function SupervisorPublicProfile({
           />
         )}
         {supervisor.specialty && <ProfileDetail label="Specialty" value={supervisor.specialty} />}
+        {genderIdentity && <ProfileDetail label="Gender Identity" value={genderIdentity} />}
+        {languages.length > 0 && <ProfileDetail label="Languages" value={languages.join(', ')} />}
       </div>
 
       {/* Bio — professionalSummary if set, otherwise describeYourself */}

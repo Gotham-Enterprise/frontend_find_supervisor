@@ -15,6 +15,7 @@ import {
   useSupervisorTypeOptions,
 } from '@/lib/hooks'
 import { useCheckConnectionAvailability } from '@/lib/hooks/useConnections'
+import { formatPronouns, getVisiblePronounLabels } from '@/lib/utils/identity-display'
 import {
   formatDisplayName,
   formatNameWithCredentials,
@@ -165,6 +166,8 @@ export function SupervisorProfileHero({
     displayName,
     profile.professionalCredentials,
   )
+  // Shown only when the supervisor opted in (the API strips it for other viewers anyway).
+  const pronouns = formatPronouns(getVisiblePronounLabels(profile.user))
   // Profile strings only — the account-level user.occupation/specialty
   // relations are jobseeker-side leftovers that can hold unrelated values
   // (e.g. "Accountant" on a physician), so they are deliberately ignored.
@@ -192,6 +195,11 @@ export function SupervisorProfileHero({
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-bold text-[#181818]">{displayNameWithCredentials}</h1>
+            {pronouns && (
+              <span className="text-sm text-[#6B7280]" aria-label={`Pronouns: ${pronouns}`}>
+                ({pronouns})
+              </span>
+            )}
             {roleBadgeLabels.map((label) => (
               <span
                 key={label}

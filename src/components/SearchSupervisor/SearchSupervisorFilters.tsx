@@ -16,6 +16,10 @@ import { TagInput } from '@/components/ui/tag-input'
 import type { SelectOption } from '@/lib/api/options'
 import type { SupervisorSearchMode } from '@/lib/api/supervisor-search'
 import {
+  GENDER_IDENTITY_FILTER_OPTIONS,
+  LANGUAGE_OPTIONS,
+} from '@/lib/constants/identity-preferences'
+import {
   useAvailabilityOptions,
   useCitiesOptions,
   useStatesOptions,
@@ -478,6 +482,31 @@ export function SearchSupervisorFilters({
             )}
           </div>
         )}
+
+        <div>
+          <FilterLabel>Gender Identity</FilterLabel>
+          <TagInput
+            options={GENDER_IDENTITY_FILTER_OPTIONS}
+            value={filters.genderIdentities}
+            onChange={(v) => set('genderIdentities', v)}
+            placeholder="Select gender identities…"
+          />
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Matches supervisors who chose to display this on their profile.
+          </p>
+        </div>
+
+        <div>
+          <FilterLabel>Languages</FilterLabel>
+          <TagInput
+            options={LANGUAGE_OPTIONS}
+            value={filters.languages}
+            onChange={(v) => set('languages', v)}
+            placeholder="Select languages…"
+            searchable
+            searchPlaceholder="Search languages…"
+          />
+        </div>
 
         <div>
           <FilterLabel>Availability</FilterLabel>

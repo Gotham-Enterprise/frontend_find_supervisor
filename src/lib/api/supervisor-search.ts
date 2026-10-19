@@ -4,6 +4,7 @@ import type {
   SupervisorSearchFilters,
   SupervisorSearchResult,
 } from '@/components/SearchSupervisor/types'
+import { formatPublicIdentity } from '@/lib/utils/identity-display'
 import { formatSupervisorTypeWithOfferings } from '@/lib/utils/profile-formatters'
 import { getSupervisorDisplayCredential } from '@/lib/utils/supervisor-type'
 
@@ -43,6 +44,11 @@ export interface SupervisorSearchApiRow {
   profilePhotoUrl?: string
   /** Medical Director secondary offerings (Supervising/Collaborating Physician). */
   offerings?: { supervisorType?: string }[]
+  /** Identity blocks the supervisor made public (already gated server-side). */
+  pronouns?: string[]
+  genderIdentity?: string | null
+  customGenderIdentity?: string | null
+  languages?: string[]
 }
 
 export interface SupervisorSearchMetaData {
@@ -156,6 +162,9 @@ export function buildSupervisorSearchParams(
   appendCommaSeparated(params, 'yearsOfExperience', filters.yearsExperience)
   appendCommaSeparated(params, 'patientPopulation', filters.patientPopulation)
   appendCommaSeparated(params, 'availability', filters.availability)
+  // Identity filters — the API only matches profiles that made the block public
+  appendCommaSeparated(params, 'genderIdentity', filters.genderIdentities)
+  appendCommaSeparated(params, 'languages', filters.languages)
 
   params.acceptingSupervisees = filters.acceptingOnly
 
@@ -241,6 +250,7 @@ export function mapApiRowToSupervisorSearchResult(
     profilePhotoUrl: row.profilePhotoUrl,
     initials: initialsFromName(fullName),
     avatarColor: AVATAR_COLORS[index % AVATAR_COLORS.length] ?? AVATAR_COLORS[0],
+    identity: formatPublicIdentity(row),
   }
 }
 

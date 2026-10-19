@@ -26,8 +26,10 @@ export interface UserPermissions {
   canAcceptRequest: boolean
 }
 
+import type { UserIdentityPreferencesResponse } from './identity-preferences'
+
 // Matches the SupervisionUser shape returned by the backend
-export interface User {
+export interface User extends UserIdentityPreferencesResponse {
   id: string
   email: string
   /** Backend returns fullName; name is kept for compatibility */

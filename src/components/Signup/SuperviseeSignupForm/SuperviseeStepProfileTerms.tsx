@@ -32,7 +32,7 @@ export function SuperviseeStepProfileTerms({
         rules={superviseeFieldRules('introduction')}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Introduce Yourself (optional)</FormLabel>
+            <FormLabel>Introduce Yourself (Optional)</FormLabel>
             <FormControl>
               <Textarea
                 rows={4}

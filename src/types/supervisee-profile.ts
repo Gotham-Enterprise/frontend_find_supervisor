@@ -1,3 +1,4 @@
+import type { UserIdentityPreferencesResponse } from './identity-preferences'
 import type { Subscription, SupervisorOccupation, SupervisorSpecialty } from './supervisor-profile'
 
 export type { Subscription }
@@ -14,7 +15,8 @@ export type LookingTimeline =
 
 export type BudgetRangeType = 'HOURLY' | 'MONTHLY'
 
-export interface SuperviseeProfileUser {
+/** Identity fields follow the same owner/public visibility rules as the supervisor user. */
+export interface SuperviseeProfileUser extends UserIdentityPreferencesResponse {
   id: string
   /** null when the viewing supervisor isn't yet allowed to see contact details */
   email: string | null
