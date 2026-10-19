@@ -10,6 +10,7 @@ import {
   getSupervisorEarnings,
   logHireSession,
   payNowBillingWeek,
+  requestLateEntry,
   respondToLateSession,
   syncPayNowBillingWeek,
   updateHireSession,
@@ -52,6 +53,13 @@ function useBillingWeeksMutation<TVariables>(
     onSuccess: (data) => queryClient.setQueryData(hireSessionKeys.weeks(hireId), data),
     // A rejected change (e.g. the week just closed) means the cached state is stale.
     onError: () => queryClient.invalidateQueries({ queryKey: hireSessionKeys.weeks(hireId) }),
+  })
+}
+
+/** Sends a late-entry request to support; nothing changes on the week until support adds it. */
+export function useRequestLateEntry(hireId: string) {
+  return useMutation({
+    mutationFn: (input: HireSessionInput) => requestLateEntry(hireId, input),
   })
 }
 

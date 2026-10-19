@@ -119,7 +119,7 @@ export interface AgreementRecord {
   transactionFeePct: string | null
   /** Hourly terms billed in-app; null on monthly agreements. */
   hourlyRateCents: number | null
-  /** Max supervision per billing week, in minutes (15-minute steps). */
+  /** Max supervision per billing week, in minutes (whole hours, stored as minutes). */
   weeklyCapMinutes: number | null
   /** Hours the agreement covers; null = until ended. */
   totalHours: number | null
@@ -145,7 +145,7 @@ export interface ProposeAgreementInput {
   /** Monthly terms, paid outside the app… */
   supervisionMonths?: number
   monthlyAmount?: number
-  /** …or hourly terms billed in-app (pilot supervisors): dollars and hours. */
+  /** …or hourly terms billed in-app (non-monthly hires while the flag is on): dollars and hours. */
   hourlyRate?: number
   maxHoursPerWeek?: number
   totalHours?: number

@@ -341,7 +341,16 @@ function NewCardFields({
   const busy = isConfirming || isSaving
   return (
     <div className="space-y-3">
-      <PaymentElement options={{ layout: 'tabs' }} />
+      <PaymentElement
+        options={{
+          layout: 'tabs',
+          // Card only, saved once per hire: Link's "save my information" signup
+          // (email + mobile number, with a geo-guessed country code) just adds
+          // noise. Supervision is US-based, so default the billing country too.
+          wallets: { link: 'never' },
+          defaultValues: { billingDetails: { address: { country: 'US' } } },
+        }}
+      />
       {error && <p className="text-sm text-destructive">{error}</p>}
       <p className="text-xs leading-relaxed text-muted-foreground">{authorization}</p>
       <Button

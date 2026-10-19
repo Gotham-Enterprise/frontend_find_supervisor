@@ -16,7 +16,14 @@ import type {
   UpcomingSessionItem,
 } from '@/types/hire'
 import type { PastClientHire } from '@/types/past-clients'
-import type { HirePaymentInfo, HourlyQuote, PayoutStatus, StripeLink } from '@/types/payouts'
+import type {
+  HirePaymentInfo,
+  HourlyQuote,
+  PayoutStatus,
+  StripeLink,
+  SuperviseeCards,
+  SuperviseePayments,
+} from '@/types/payouts'
 import type {
   HireBillingWeeks,
   HireSessionInput,
@@ -156,6 +163,37 @@ export async function getSupervisorEarnings(page = 1, limit = 10): Promise<Super
   return data.data
 }
 
+/** GET /supervision/payments/cards — the supervisee's saved cards and which hires use them. */
+export async function getSuperviseeCards(): Promise<SuperviseeCards> {
+  const { data } = await apiClient.get<ApiResponse<SuperviseeCards>>('/supervision/payments/cards')
+  return data.data
+}
+
+/** POST /supervision/payments/cards/setup-intent — SetupIntent for adding an account-level card. */
+export async function createSuperviseeCardSetupIntent(): Promise<{ clientSecret: string }> {
+  const { data } = await apiClient.post<ApiResponse<{ clientSecret: string }>>(
+    '/supervision/payments/cards/setup-intent',
+  )
+  return data.data
+}
+
+/** DELETE /supervision/payments/cards/:paymentMethodId — detach a card no active hire uses. */
+export async function removeSuperviseeCard(paymentMethodId: string): Promise<SuperviseeCards> {
+  const { data } = await apiClient.delete<ApiResponse<SuperviseeCards>>(
+    `/supervision/payments/cards/${encodeURIComponent(paymentMethodId)}`,
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/history — the supervisee's weekly charges and refunds across hires. */
+export async function getSuperviseePayments(page = 1, limit = 10): Promise<SuperviseePayments> {
+  const { data } = await apiClient.get<ApiResponse<SuperviseePayments>>(
+    '/supervision/payments/history',
+    { params: { page, limit } },
+  )
+  return data.data
+}
+
 /** GET /supervision/hires/:hireId/billing-weeks — sessions and weekly review state (both parties). */
 export async function getHireBillingWeeks(hireId: string): Promise<HireBillingWeeks> {
   const { data } = await apiClient.get<ApiResponse<HireBillingWeeks>>(
@@ -165,6 +203,18 @@ export async function getHireBillingWeeks(hireId: string): Promise<HireBillingWe
 }
 
 /** POST /supervision/hires/:hireId/sessions — supervisor logs a session. */
+/** POST /supervision/hires/:hireId/late-entry-requests — ask support to add a session to a closed week. */
+export async function requestLateEntry(
+  hireId: string,
+  input: HireSessionInput,
+): Promise<{ requested: boolean; weekId: string }> {
+  const { data } = await apiClient.post<ApiResponse<{ requested: boolean; weekId: string }>>(
+    `/supervision/hires/${hireId}/late-entry-requests`,
+    input,
+  )
+  return data.data
+}
+
 export async function logHireSession(
   hireId: string,
   input: HireSessionInput,

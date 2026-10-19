@@ -14,14 +14,45 @@ export type PayoutAccountStatus =
   | 'pending'
   | 'ready'
 
+/** Where payouts land; read live from Stripe, never stored by the platform. */
+export interface PayoutBankAccount {
+  bankName: string | null
+  last4: string | null
+  currency: string
+}
+
+export interface PayoutSchedule {
+  interval: 'manual' | 'daily' | 'weekly' | 'monthly'
+  delayDays: number | null
+  weeklyAnchor: string | null
+  monthlyAnchor: number | null
+}
+
+export interface PayoutBalance {
+  availableCents: number
+  pendingCents: number
+}
+
+export interface StripePayout {
+  id: string
+  amountCents: number
+  status: 'paid' | 'pending' | 'in_transit' | 'canceled' | 'failed'
+  arrivalDate: string
+  createdAt: string
+}
+
 export interface PayoutStatus {
-  /** Pilot allowlist: only these supervisors propose hourly, in-app billed agreements. */
-  inAppPaymentsPilot: boolean
   status: PayoutAccountStatus
   payoutsEnabled: boolean
   detailsSubmitted: boolean
   requirementsDueCount: number
   disabledReason: string | null
+  /** The following are populated only when status is 'ready'; each is null on a Stripe lookup failure. */
+  bankAccount: PayoutBankAccount | null
+  payoutSchedule: PayoutSchedule | null
+  balance: PayoutBalance | null
+  nextPayout: StripePayout | null
+  lastPayout: StripePayout | null
 }
 
 export interface StripeLink {
@@ -46,11 +77,8 @@ export interface HourlyQuote {
   supervisorWeeklyMaxCents: number
 }
 
-export type HirePaymentStatus =
-  | 'not_applicable'
-  | 'awaiting_signature'
-  | 'awaiting_card'
-  | 'card_saved'
+/** Hourly agreements: the card is saved before signing, so there is no "awaiting signature" state. */
+export type HirePaymentStatus = 'not_applicable' | 'awaiting_card' | 'card_saved'
 
 export interface SavedCard {
   id: string
@@ -58,6 +86,44 @@ export interface SavedCard {
   last4: string | null
   expMonth: number | null
   expYear: number | null
+}
+
+/** GET /supervision/payments/cards — the supervisee's saved cards (Billing page). */
+export interface SuperviseeSavedCard extends SavedCard {
+  /** Active hires whose weekly prepays are charged to this card; non-empty = can't remove. */
+  inUseBy: { hireId: string; supervisorName: string | null }[]
+}
+
+export interface SuperviseeCards {
+  cards: SuperviseeSavedCard[]
+}
+
+/** One billing week as the supervisee paid for it (integer cents). */
+export interface SuperviseePaymentWeek {
+  id: string
+  hireId: string
+  supervisorName: string | null
+  startDate: string
+  endDate: string
+  status: 'OPEN' | 'IN_REVIEW' | 'DISPUTED' | 'APPROVED' | 'SETTLED'
+  prepayStatus: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELED'
+  /** Prepay (cap + service fee) plus any charged late sessions. */
+  chargedCents: number
+  serviceFeeCents: number
+  refundCents: number | null
+  approvedMinutes: number | null
+  failureMessage: string | null
+  paidAt: string | null
+  settledAt: string | null
+}
+
+/** GET /supervision/payments/history */
+export interface SuperviseePayments {
+  totals: { chargedCents: number; refundedCents: number; netPaidCents: number }
+  totalCount: number
+  page: number
+  limit: number
+  items: SuperviseePaymentWeek[]
 }
 
 /** GET /supervision/hires/:hireId/payment */

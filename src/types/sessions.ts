@@ -81,7 +81,10 @@ export interface BillingWeek {
 /** GET /supervision/hires/:hireId/billing-weeks */
 export interface HireBillingWeeks {
   role: 'supervisor' | 'supervisee'
-  /** Supervisee only: whether the weekly prepays have a card to charge. */
+  /**
+   * Whether the weekly prepays have a card to charge. Until the supervisee saves
+   * one, no billing weeks are created and the supervisor can't log sessions.
+   */
   hasPaymentCard: boolean | null
   /** Money so far: the supervisee's net payments, or the supervisor's payouts (cents). */
   totals:

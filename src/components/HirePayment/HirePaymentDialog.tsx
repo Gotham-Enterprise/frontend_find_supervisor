@@ -16,18 +16,21 @@ export function HirePaymentDialog({
   open,
   onOpenChange,
   changeCard = false,
+  onSaved,
 }: {
   hire: HireListItem
   open: boolean
   onOpenChange: (open: boolean) => void
   /** Open on the card picker even when a card is already saved. */
   changeCard?: boolean
+  /** Called after the card is saved and the dialog closes (e.g. to return to signing). */
+  onSaved?: () => void
 }) {
   const supervisorName = formatDisplayName(hire.supervisor)
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[min(90vh,760px)] max-w-lg overflow-y-auto">
+      <DialogContent className="max-h-[min(92vh,1000px)] max-w-2xl overflow-y-auto">
         <DialogTitle>{changeCard ? 'Change payment card' : 'Set up weekly payment'}</DialogTitle>
         <p className="mb-4 mt-1 text-sm text-muted-foreground">
           Save the card for your weekly prepays with {supervisorName}. Nothing is charged when you
@@ -38,7 +41,10 @@ export function HirePaymentDialog({
           hireId={hire.id}
           supervisorName={supervisorName}
           startChangingCard={changeCard}
-          onSaved={() => onOpenChange(false)}
+          onSaved={() => {
+            onOpenChange(false)
+            onSaved?.()
+          }}
         />
       </DialogContent>
     </DialogRoot>

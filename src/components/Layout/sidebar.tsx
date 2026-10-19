@@ -93,6 +93,7 @@ const navItems = [
   { label: 'Messages', href: '/messages', icon: MessageCircle },
   { label: 'Reviews', href: '/reviews', icon: Star, supervisorOnly: true },
   { label: 'Billing & Invoices', href: '/billing', icon: CreditCard, supervisorOnly: true },
+  { label: 'Billing', href: '/billing', icon: CreditCard, superviseeOnly: true },
   { label: 'Settings', href: '/settings', icon: Settings },
 ] as const
 

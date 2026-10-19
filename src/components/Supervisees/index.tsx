@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  FileSignature,
   FileText,
   MapPin,
   Monitor,
@@ -20,6 +21,7 @@ import { AgreementDialog } from '@/components/HiredSupervisors/AgreementDialog'
 import { AgreementStageBadge } from '@/components/HiredSupervisors/AgreementStageBadge'
 import { HireStatusBadge } from '@/components/HiredSupervisors/HireStatusBadge'
 import { HireSessionsDialog } from '@/components/HireSessions/HireSessionsDialog'
+import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
@@ -67,7 +69,9 @@ type TabStatus = 'ALL' | 'ACCEPTED' | 'COMPLETED'
 
 const TABS: { id: TabStatus; label: string }[] = [
   { id: 'ALL', label: 'All' },
-  { id: 'ACCEPTED', label: 'Accepted' },
+  // Accepted hires become ACTIVE once the first weekly prepay is paid; both are
+  // "current" from the supervisor's point of view, so one tab covers them.
+  { id: 'ACCEPTED', label: 'Active' },
   { id: 'COMPLETED', label: 'Completed' },
 ]
 
@@ -142,8 +146,8 @@ function SuperviseesEmpty({ tab, isMdClients }: { tab: TabStatus; isMdClients: b
           body: 'Once someone hires you as their Medical Director and you accept, they will appear here.',
         },
         ACCEPTED: {
-          title: 'No accepted clients',
-          body: 'Clients whose requests you have accepted will appear here.',
+          title: 'No active clients',
+          body: 'Clients whose requests you have accepted, including engagements in progress, will appear here.',
         },
         COMPLETED: {
           title: 'No completed engagements',
@@ -156,8 +160,8 @@ function SuperviseesEmpty({ tab, isMdClients }: { tab: TabStatus; isMdClients: b
           body: 'Once supervisees request your supervision and you accept, they will appear here.',
         },
         ACCEPTED: {
-          title: 'No accepted supervisees',
-          body: 'Supervisees whose requests you have accepted will appear here.',
+          title: 'No active supervisees',
+          body: 'Supervisees whose requests you have accepted, including supervision in progress, will appear here.',
         },
         COMPLETED: {
           title: 'No completed supervisions',
@@ -407,13 +411,14 @@ function RowActions({
   hire,
   review,
   onViewAgreement,
+  onSendAgreement,
 }: {
   hire: HireListItem
   review?: Review
   onViewAgreement: () => void
+  onSendAgreement: () => void
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
-  const [sendAgreementOpen, setSendAgreementOpen] = useState(false)
   const { showSuccess, showError } = useUserSnackbar()
   const remindMutation = useRemindAgreement()
 
@@ -447,14 +452,10 @@ function RowActions({
             <DropdownMenuPopup>
               <DropdownMenuItem onClick={() => setDetailsOpen(true)}>View Details</DropdownMenuItem>
               {canSendAgreement && (
-                <DropdownMenuItem onClick={() => setSendAgreementOpen(true)}>
-                  Send Agreement
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onSendAgreement}>Send Agreement</DropdownMenuItem>
               )}
               {canEditAgreement && (
-                <DropdownMenuItem onClick={() => setSendAgreementOpen(true)}>
-                  Edit Agreement
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onSendAgreement}>Edit Agreement</DropdownMenuItem>
               )}
               {canEditAgreement && (
                 <DropdownMenuItem onClick={handleRemind}>Send Sign Reminder</DropdownMenuItem>
@@ -473,16 +474,28 @@ function RowActions({
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
       />
-
-      {(canSendAgreement || canEditAgreement) && (
-        <SendAgreementModal
-          open={sendAgreementOpen}
-          onOpenChange={setSendAgreementOpen}
-          hire={hire}
-        />
-      )}
     </>
   )
+}
+
+/** Deep link from the post-accept dialog: /supervisees?hire=<id>&agreement=send */
+const SEND_AGREEMENT_PARAM = 'agreement'
+const SEND_AGREEMENT_VALUE = 'send'
+
+function isSendAgreementDeepLink(hireId: string): boolean {
+  if (typeof window === 'undefined') return false
+  const params = new URLSearchParams(window.location.search)
+  return params.get('hire') === hireId && params.get(SEND_AGREEMENT_PARAM) === SEND_AGREEMENT_VALUE
+}
+
+/** Drop the one-shot deep-link params so a refresh doesn't reopen the form. */
+function clearSendAgreementDeepLink() {
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  if (url.searchParams.get(SEND_AGREEMENT_PARAM) !== SEND_AGREEMENT_VALUE) return
+  url.searchParams.delete(SEND_AGREEMENT_PARAM)
+  url.searchParams.delete('hire')
+  window.history.replaceState(window.history.state, '', url.toString())
 }
 
 // ─── Supervisee card ──────────────────────────────────────────────────────────
@@ -499,10 +512,25 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
   )
   const superviseeName = formatDisplayName(hire.supervisee)
   const hasAgreement = hire.agreement != null
-  const isAgreementSigned = hasAgreement && getAgreementStage(hire) === 'SIGNED'
+  const agreementStage = getAgreementStage(hire)
+  const isAgreementSigned = hasAgreement && agreementStage === 'SIGNED'
+  const canSendAgreement = hire.status === 'ACCEPTED' && agreementStage === 'NOT_SENT'
+  const canEditAgreement = hire.status === 'ACCEPTED' && agreementStage === 'AWAITING_SIGNATURE'
+  // Deep link from the post-accept dialog (?hire=<id>&agreement=send) opens the
+  // Send Agreement form straight away. Lazy init only, like the dialogs above.
+  const [sendAgreementOpen, setSendAgreementOpen] = useState(
+    () => canSendAgreement && isSendAgreementDeepLink(hire.id),
+  )
+
+  function handleSendAgreementOpenChange(open: boolean) {
+    setSendAgreementOpen(open)
+    if (!open) clearSendAgreementDeepLink()
+  }
   // Signed hourly agreement: the supervisor logs sessions in the app.
   const hasSessions =
     IN_APP_PAYMENTS_ENABLED && isAgreementSigned && hire.agreement?.hourlyRateCents != null
+  // Signed, but the supervisee hasn't saved a card: no billing weeks until they do.
+  const awaitingPaymentSetup = hasSessions && hire.paymentMethodSavedAt == null
   // Deep link: session notifications point to /supervisees?sessions=<id> (lazy init, as above).
   const [sessionsOpen, setSessionsOpen] = useState(
     () =>
@@ -544,6 +572,14 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
                 <AgreementStageBadge hire={hire} />
+                {awaitingPaymentSetup && (
+                  <Badge
+                    variant="outline"
+                    className="border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-50"
+                  >
+                    Payment not set up
+                  </Badge>
+                )}
                 {review && (
                   <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
                     <Star className="size-2.5 fill-amber-500 text-amber-500" aria-hidden />
@@ -558,6 +594,7 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
               hire={hire}
               review={review}
               onViewAgreement={() => setViewAgreementOpen(true)}
+              onSendAgreement={() => setSendAgreementOpen(true)}
             />
           </div>
         </div>
@@ -568,6 +605,26 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
           <DetailCell label="Location" value={locationRaw} icon={MapPin} />
           <DetailCell label="Goals" value={goalsRaw} icon={Target} />
         </div>
+
+        {canSendAgreement && (
+          <div className="flex flex-col gap-3 border-t border-amber-200 bg-amber-50 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2">
+              <FileSignature className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden />
+              <p className="text-sm text-amber-900">
+                <span className="font-semibold">Send an agreement to start supervision.</span>{' '}
+                Supervision doesn&apos;t begin until {superviseeName} signs.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              className="shrink-0 self-stretch sm:self-center"
+              onClick={() => setSendAgreementOpen(true)}
+            >
+              <FileSignature className="size-3.5" aria-hidden />
+              Send Agreement
+            </Button>
+          </div>
+        )}
 
         {isAgreementSigned && (
           <div className="flex justify-end gap-2 border-t border-border/50 px-5 py-3">
@@ -601,6 +658,14 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
         <AgreementDialog hire={hire} open={viewAgreementOpen} onOpenChange={setViewAgreementOpen} />
       )}
 
+      {(canSendAgreement || canEditAgreement) && (
+        <SendAgreementModal
+          open={sendAgreementOpen}
+          onOpenChange={handleSendAgreementOpenChange}
+          hire={hire}
+        />
+      )}
+
       {hasSessions && (
         <HireSessionsDialog
           hireId={hire.id}
@@ -626,7 +691,8 @@ export function SuperviseesPage({ mode = 'supervisors' }: { mode?: SuperviseesPa
   /** Completed tab loads all hires and filters/paginates on the client; other tabs use API filters. */
   const apiPage = isCompletedTab ? 1 : page
   const apiLimit = isCompletedTab ? 0 : PAGE_SIZE
-  const apiStatus = activeTab === 'ACCEPTED' ? ('ACCEPTED' satisfies HireStatus) : undefined
+  const apiStatus =
+    activeTab === 'ACCEPTED' ? (['ACCEPTED', 'ACTIVE'] satisfies HireStatus[]) : undefined
 
   const { data, isLoading, isError } = useHiresList(
     apiPage,

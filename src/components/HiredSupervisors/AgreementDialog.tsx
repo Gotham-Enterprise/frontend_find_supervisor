@@ -89,11 +89,12 @@ function SignatureBlock({
 function SignAgreementSection({
   hire,
   onOpenChange,
-  onSetUpPayment,
+  cardRequired,
 }: {
   hire: HireListItem
   onOpenChange: (open: boolean) => void
-  onSetUpPayment?: () => void
+  /** Hourly agreements: the weekly-prepay card must be saved before signing. */
+  cardRequired: boolean
 }) {
   const [signatureName, setSignatureName] = useState('')
   const [consent, setConsent] = useState(false)
@@ -103,12 +104,7 @@ function SignAgreementSection({
 
   const supervisorName = formatDisplayName(hire.supervisor)
   const isPending = signMutation.isPending
-  // Hourly agreements continue straight to the payment step (its own dialog).
-  const paysInApp =
-    IN_APP_PAYMENTS_ENABLED &&
-    hire.agreement != null &&
-    isHourlyAgreement(hire.agreement) &&
-    onSetUpPayment != null
+  const cardMissing = cardRequired && hire.paymentMethodSavedAt == null
 
   function handleSign() {
     signMutation.mutate(
@@ -116,14 +112,6 @@ function SignAgreementSection({
       {
         onSuccess: () => {
           burst()
-          if (paysInApp) {
-            showSuccess('Agreement signed!', {
-              description: 'Next, add the card for your weekly prepays.',
-            })
-            onOpenChange(false)
-            onSetUpPayment()
-            return
-          }
           showSuccess('Agreement signed!', {
             description: `Your supervision with ${supervisorName} is ready to begin.`,
           })
@@ -138,9 +126,13 @@ function SignAgreementSection({
     <>
       <Separator className="my-5" />
       <section>
-        <h3 className="text-sm font-semibold text-foreground">Sign this agreement</h3>
+        <h3 className="text-sm font-semibold text-foreground">
+          {cardRequired ? 'Step 2: Sign this agreement' : 'Sign this agreement'}
+        </h3>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          Type your full legal name to sign electronically.
+          {cardMissing
+            ? 'Save your payment card above first, then type your full legal name to sign.'
+            : 'Type your full legal name to sign electronically.'}
         </p>
         <div className="mt-3 space-y-3">
           <div>
@@ -157,14 +149,14 @@ function SignAgreementSection({
               onChange={(e) => setSignatureName(e.target.value)}
               placeholder="e.g. Jane M. Doe"
               autoComplete="name"
-              disabled={isPending}
+              disabled={isPending || cardMissing}
             />
           </div>
           <label className="flex items-start gap-2 text-sm leading-relaxed text-foreground">
             <Checkbox
               checked={consent}
               onCheckedChange={setConsent}
-              disabled={isPending}
+              disabled={isPending || cardMissing}
               className="mt-0.5"
             />
             <span>
@@ -176,7 +168,10 @@ function SignAgreementSection({
             <Button variant="outline" disabled={isPending} onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button disabled={isPending || !signatureName.trim() || !consent} onClick={handleSign}>
+            <Button
+              disabled={isPending || cardMissing || !signatureName.trim() || !consent}
+              onClick={handleSign}
+            >
               {isPending ? 'Signing…' : 'Sign Agreement'}
             </Button>
           </div>
@@ -307,7 +302,7 @@ export function AgreementDialog({
           </div>
         </section>
 
-        {showPayment && agreement.quote && (viewerIsSupervisor || showSignForm) && (
+        {showPayment && agreement.quote && viewerIsSupervisor && (
           <>
             <Separator className="my-5" />
             <section>
@@ -316,25 +311,28 @@ export function AgreementDialog({
                 quote={agreement.quote}
                 perspective={viewerIsSupervisor ? 'supervisor' : 'supervisee'}
               />
-              {showSignForm && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  You&apos;ll add the card for your weekly prepays right after signing.
-                </p>
-              )}
             </section>
           </>
         )}
 
         {showPayment &&
           !viewerIsSupervisor &&
-          agreement.superviseeSignedAt != null &&
+          (agreement.superviseeSignedAt != null || showSignForm) &&
           agreement.quote &&
           onSetUpPayment && (
             <>
               <Separator className="my-5" />
               <section>
-                <h3 className="mb-3 text-sm font-semibold text-foreground">Weekly Payment</h3>
+                <h3 className="mb-3 text-sm font-semibold text-foreground">
+                  {showSignForm ? 'Step 1: Set up weekly payment' : 'Weekly Payment'}
+                </h3>
                 <HourlyQuoteSummary quote={agreement.quote} perspective="supervisee" />
+                {showSignForm && hire.paymentMethodSavedAt == null && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Save the card for your weekly prepays first. Nothing is charged until the
+                    agreement is signed and the first week starts.
+                  </p>
+                )}
                 {hire.paymentMethodSavedAt ? (
                   <div className="mt-3 flex items-center justify-between gap-4 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
                     <span className="flex items-center gap-2">
@@ -372,7 +370,7 @@ export function AgreementDialog({
           <SignAgreementSection
             hire={hire}
             onOpenChange={onOpenChange}
-            onSetUpPayment={onSetUpPayment ? () => onSetUpPayment() : undefined}
+            cardRequired={showPayment && onSetUpPayment != null}
           />
         )}
       </DialogContent>

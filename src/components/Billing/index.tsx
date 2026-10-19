@@ -136,7 +136,7 @@ function BillingSkeleton() {
         <Skeleton className="h-7 w-48" />
         <Skeleton className="h-4 w-80 mt-2" />
       </div>
-      <Card className="max-w-2xl">
+      <Card className="lg:max-w-[60%]">
         <CardHeader>
           <Skeleton className="h-5 w-40" />
           <Skeleton className="h-4 w-56 mt-1" />
@@ -160,7 +160,7 @@ function BillingSkeleton() {
 
 function BillingError({ onRetry }: { onRetry: () => void }) {
   return (
-    <Card className="max-w-2xl border-destructive/40 bg-destructive/5">
+    <Card className="lg:max-w-[60%] border-destructive/40 bg-destructive/5">
       <CardContent className="flex flex-col items-center gap-4 py-8 text-center">
         <AlertCircle className="h-8 w-8 text-destructive" />
         <div>
@@ -379,7 +379,7 @@ function SubscriptionCard({
   const canResume = canResumeSubscription(subscription)
 
   return (
-    <Card className="max-w-2xl">
+    <Card>
       <CardHeader className="border-b">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -396,7 +396,7 @@ function SubscriptionCard({
       </CardHeader>
 
       <CardContent className="pt-4">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-5 xl:grid-cols-4">
           <InfoRow label="Plan" value={subscription.plan.name} />
           <InfoRow
             label="Price"
@@ -457,7 +457,7 @@ function SubscriptionCard({
 
 function InvoicesCard() {
   return (
-    <Card className="max-w-2xl">
+    <Card>
       <CardHeader className="border-b">
         <CardTitle>Invoices</CardTitle>
         <CardDescription>Download or view your past billing invoices.</CardDescription>
@@ -551,26 +551,44 @@ function BillingContent() {
       ) : isError ? (
         <BillingError onRetry={() => void refetch()} />
       ) : isFreeTier ? (
-        // Free or no subscription — show upgrade prompt only, no invoices
-        subscription ? (
-          <FreePlanUpgradeCard planName={subscription.plan.name || 'Find a Supervisor Free Plan'} />
-        ) : (
-          <NoSubscriptionUpgradeCard />
-        )
-      ) : (
-        // Paid subscription — show subscription card + invoices
+        // Free or no subscription — upgrade prompt spans the page (its own 3-col
+        // layout needs the width); payouts/earnings follow in the grid below.
         <>
-          <SubscriptionCard
-            subscription={subscription!}
-            onCancelClick={() => setConfirmOpen(true)}
-            onResumeClick={() => setResumeConfirmOpen(true)}
-          />
-          <InvoicesCard />
+          {subscription ? (
+            <FreePlanUpgradeCard
+              planName={subscription.plan.name || 'Find a Supervisor Free Plan'}
+            />
+          ) : (
+            <NoSubscriptionUpgradeCard />
+          )}
+          {IN_APP_PAYMENTS_ENABLED && (
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+              <div className="flex flex-col gap-6 lg:col-span-3">
+                <EarningsCard />
+              </div>
+              <div className="flex flex-col gap-6 lg:col-span-2">
+                <PayoutsCard />
+              </div>
+            </div>
+          )}
         </>
+      ) : (
+        // Paid subscription — main column: plan + earnings; side column: payouts + invoices.
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+          <div className="flex flex-col gap-6 lg:col-span-3">
+            <SubscriptionCard
+              subscription={subscription!}
+              onCancelClick={() => setConfirmOpen(true)}
+              onResumeClick={() => setResumeConfirmOpen(true)}
+            />
+            {IN_APP_PAYMENTS_ENABLED && <EarningsCard />}
+          </div>
+          <div className="flex flex-col gap-6 lg:col-span-2">
+            {IN_APP_PAYMENTS_ENABLED && <PayoutsCard />}
+            <InvoicesCard />
+          </div>
+        </div>
       )}
-
-      {IN_APP_PAYMENTS_ENABLED && <PayoutsCard />}
-      {IN_APP_PAYMENTS_ENABLED && <EarningsCard />}
 
       {/* Cancel / resume confirmation dialogs — only rendered for paid subscribers */}
       {!isFreeTier && (

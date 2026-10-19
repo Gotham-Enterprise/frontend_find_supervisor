@@ -7,7 +7,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 
-import { HourlyQuoteSummary } from '@/components/HirePayment/HourlyQuoteSummary'
+import {
+  HourlyQuoteSummary,
+  HourlyQuoteSummarySkeleton,
+} from '@/components/HirePayment/HourlyQuoteSummary'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
@@ -37,8 +40,30 @@ import type { AgreementSource, HireListItem, ProposeAgreementInput } from '@/typ
 export const MAX_AGREEMENT_DOC_SIZE_BYTES = 5 * 1024 * 1024
 const MAX_AGREEMENT_DOC_SIZE_LABEL = '5 MB'
 
+// Weekly cap bounds. Our own product ceiling, not a Stripe limit: the cap is
+// prepaid as a real charge each week, so it bounds the supervisee's exposure.
+// Mirrored by the backend validator and the quote hook.
+const MIN_HOURS_PER_WEEK = 1
+const MAX_HOURS_PER_WEEK = 40
+const MIN_HOURLY_RATE = 1
+const MAX_HOURLY_RATE = 10000
+
+/** Whole hours within the weekly cap bounds (sessions are still logged in 15-minute units). */
+function isValidWeeklyCap(hours: number | null | undefined): hours is number {
+  return (
+    hours != null &&
+    Number.isInteger(hours) &&
+    hours >= MIN_HOURS_PER_WEEK &&
+    hours <= MAX_HOURS_PER_WEEK
+  )
+}
+
+function isValidHourlyRate(rate: number | null | undefined): rate is number {
+  return rate != null && rate >= MIN_HOURLY_RATE && rate <= MAX_HOURLY_RATE
+}
+
 /**
- * Terms are hourly when the hire is billed in-app (pilot supervisors, non-monthly
+ * Terms are hourly when the hire is billed in-app (flag on, non-monthly
  * fee) — that's what the supervisee's weekly prepays are based on — and monthly
  * (paid outside the app) otherwise.
  */
@@ -60,14 +85,17 @@ function buildSendAgreementSchema(hasExistingUploadedFile: boolean, hourly: bool
         ? z.number().nullish()
         : z.number(required).min(1, 'Must be at least $1'),
       hourlyRate: hourly
-        ? z.number(required).min(1, 'Must be at least $1').max(10000, 'Must be $10,000 or less')
+        ? z
+            .number(required)
+            .min(MIN_HOURLY_RATE, 'Must be at least $1')
+            .max(MAX_HOURLY_RATE, 'Must be $10,000 or less')
         : z.number().nullish(),
       maxHoursPerWeek: hourly
         ? z
             .number(required)
-            .min(0.25, 'Must be at least 0.25 hours')
-            .max(40, 'Must be 40 hours or less')
-            .refine((v) => Number.isInteger(v * 4), 'Use 15-minute steps, e.g. 1.5')
+            .int('Use whole hours, e.g. 2')
+            .min(MIN_HOURS_PER_WEEK, 'Must be at least 1 hour')
+            .max(MAX_HOURS_PER_WEEK, 'Must be 40 hours or less')
         : z.number().nullish(),
       totalHours: hourly
         ? z
@@ -243,15 +271,12 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
   const hasExistingUploadedFile =
     hire.agreement?.source === 'UPLOADED' && hire.agreement.fileUrl != null
 
-  // In-app (hourly) billing applies to pilot supervisors' non-monthly hires; the
-  // backend makes the same call. Monthly retainers stay on monthly terms for now.
-  const canBillInApp =
-    IN_APP_PAYMENTS_ENABLED && hire.supervisorFeeType?.toUpperCase() !== 'MONTHLY'
-  const payoutStatus = usePayoutStatusQuery(open && canBillInApp)
-  const hourly =
-    canBillInApp &&
-    (payoutStatus.data?.inAppPaymentsPilot ?? hire.agreement?.hourlyRateCents != null)
-  const termsLoading = canBillInApp && payoutStatus.isLoading
+  // In-app (hourly) billing applies to every supervisor's non-monthly hires while
+  // the flag is on; the backend makes the same call. Monthly retainers stay on
+  // monthly terms for now.
+  const hourly = IN_APP_PAYMENTS_ENABLED && hire.supervisorFeeType?.toUpperCase() !== 'MONTHLY'
+  const payoutStatus = usePayoutStatusQuery(open && hourly)
+  const termsLoading = hourly && payoutStatus.isLoading
   // Billed agreements need the supervisor's payout account (the backend enforces it too).
   const payoutsReady = !hourly || payoutStatus.data?.status === 'ready'
 
@@ -288,6 +313,21 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
     return () => clearTimeout(id)
   }, [hourlyRate, maxHoursPerWeek])
   const { data: quote } = useHourlyQuote(quoteTerms.rate, quoteTerms.cap, open && hourly)
+  // The quote only refetches for valid terms, so without this the breakdown would
+  // keep showing the last valid cap (e.g. 20 h) after the user types 50.
+  const termsValid = isValidHourlyRate(hourlyRate) && isValidWeeklyCap(maxHoursPerWeek)
+  const quoteMatchesTerms =
+    termsValid && quoteTerms.rate === hourlyRate && quoteTerms.cap === maxHoursPerWeek
+  const capHint =
+    maxHoursPerWeek == null
+      ? null
+      : maxHoursPerWeek > MAX_HOURS_PER_WEEK
+        ? `Max is ${MAX_HOURS_PER_WEEK} hours per week. The supervisee prepays this cap every week, so it's capped to limit their weekly charge.`
+        : maxHoursPerWeek < MIN_HOURS_PER_WEEK
+          ? `Must be at least ${MIN_HOURS_PER_WEEK} hour.`
+          : !Number.isInteger(maxHoursPerWeek)
+            ? 'Use whole hours, e.g. 2 or 3. Sessions are still logged in 15-minute units.'
+            : null
 
   useEffect(() => {
     if (source !== 'UPLOADED') {
@@ -523,9 +563,9 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                         type="number"
                         numberValue
                         clearErrorsOnChange
-                        min={0.25}
-                        max={40}
-                        step={0.25}
+                        min={MIN_HOURS_PER_WEEK}
+                        max={MAX_HOURS_PER_WEEK}
+                        step={1}
                         isSubmitting={isSubmitting}
                         placeholder="e.g. 2"
                       />
@@ -542,9 +582,24 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                         placeholder="e.g. 200"
                       />
                     </div>
-                    {quote && hourlyRate != null && maxHoursPerWeek != null && (
-                      <HourlyQuoteSummary quote={quote} perspective="supervisor" />
-                    )}
+                    {/* Fixed-height slot: summary, skeleton while (re)quoting, or the
+                        cap hint — so editing the terms never shifts the form. */}
+                    <div className="min-h-[11.5rem]">
+                      {capHint ? (
+                        <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                          <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                          {capHint}
+                        </p>
+                      ) : !termsValid ? (
+                        <p className="flex min-h-[11.5rem] items-center justify-center rounded-lg border border-dashed px-4 text-center text-xs text-muted-foreground">
+                          Enter an hourly rate and max hours per week to see your breakdown.
+                        </p>
+                      ) : quote && quoteMatchesTerms ? (
+                        <HourlyQuoteSummary quote={quote} perspective="supervisor" />
+                      ) : (
+                        <HourlyQuoteSummarySkeleton perspective="supervisor" />
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       You log each session in the app (in 15-minute units) and are paid for the
                       hours {superviseeName} approves, up to the weekly max. Leave Total Hours empty

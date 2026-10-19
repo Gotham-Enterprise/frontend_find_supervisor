@@ -3,10 +3,12 @@
 import {
   AlertCircle,
   CalendarDays,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
   DollarSign,
+  FileSignature,
   Info,
   Lock,
   type LucideIcon,
@@ -14,8 +16,9 @@ import {
   Monitor,
   MoreVertical,
 } from 'lucide-react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import * as React from 'react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { SubscriptionModal } from '@/components/Dashboard/subscription/SubscriptionModal'
 import { Button } from '@/components/ui/button'
@@ -79,6 +82,13 @@ function hasActivePaidSupervisionSubscription(profile: SupervisorProfileData): b
 }
 
 /** Actions available to the supervisor. Only supervisees can cancel. */
+/**
+ * URL param set by the plan-picker checkout redirect (?accept=<hireId>). On return
+ * from a successful upgrade, the Accept confirm dialog for that hire reopens so the
+ * supervisor can finish what they started with a single click.
+ */
+const RESUME_ACCEPT_PARAM = 'accept'
+
 const ALLOWED_ACTIONS: Record<HireStatus, ReadonlyArray<'accept' | 'reject'>> = {
   PENDING: ['accept', 'reject'],
   ACCEPTED: [],
@@ -391,19 +401,38 @@ type PendingAction = 'accept' | 'reject' | null
 interface RowActionsProps {
   hire: HireListItem
   showHireDecisions: boolean
+  /** Opens the plan picker when a free-plan supervisor tries to accept. */
+  onRequireUpgrade: (hireId: string) => void
+  /** True when returning from checkout for this hire: auto-opens the Accept dialog. */
+  resumeAccept: boolean
+  /** Called once the auto-opened Accept dialog is confirmed or dismissed. */
+  onResumeAcceptHandled: () => void
+  /** Fires after a successful accept; the page shows the "what's next" dialog. */
+  onAccepted: (hire: HireListItem) => void
 }
 
-function RowActions({ hire, showHireDecisions }: RowActionsProps) {
+function RowActions({
+  hire,
+  showHireDecisions,
+  onRequireUpgrade,
+  resumeAccept,
+  onResumeAcceptHandled,
+  onAccepted,
+}: RowActionsProps) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState<PendingAction>(null)
   const [rejectionReason, setRejectionReason] = useState('')
+  // Derived from the URL rather than synced into state (react-hooks/set-state-in-effect);
+  // the dismissed flag keeps the dialog closed between closing it and the URL update.
+  const [resumeDismissed, setResumeDismissed] = useState(false)
+  const acceptDialogOpen = pendingAction === 'accept' || (resumeAccept && !resumeDismissed)
   const { showSuccess, showError } = useUserSnackbar()
   const { burst } = useConfetti()
 
-  const allowedActions = ALLOWED_ACTIONS[hire.status] ?? []
-  const visibleActions = showHireDecisions
-    ? allowedActions
-    : allowedActions.filter((a) => a !== 'accept' && a !== 'reject')
+  // Both actions stay visible on the free plan: declining is always allowed
+  // (the backend only gates accept), and a visible Accept routes the supervisor
+  // to the plan picker instead of hiding the next step from them.
+  const visibleActions = ALLOWED_ACTIONS[hire.status] ?? []
 
   const acceptMutation = useAcceptHire()
   const rejectMutation = useRejectHire()
@@ -416,19 +445,33 @@ function RowActions({ hire, showHireDecisions }: RowActionsProps) {
     }
   }
 
+  function handleAcceptClick() {
+    if (showHireDecisions) {
+      setPendingAction('accept')
+    } else {
+      onRequireUpgrade(hire.id)
+    }
+  }
+
   const isMutating = acceptMutation.isPending || rejectMutation.isPending
 
   function closeDialog() {
     setPendingAction(null)
     setRejectionReason('')
+    if (resumeAccept && !resumeDismissed) {
+      setResumeDismissed(true)
+      onResumeAcceptHandled()
+    }
   }
 
   function handleAcceptConfirm() {
     acceptMutation.mutate(hire.id, {
       onSuccess: () => {
         burst()
-        showSuccess('Supervision request accepted.')
         closeDialog()
+        // The card leaves this list once queries refetch, so the follow-up
+        // dialog is owned by the page rather than this row.
+        onAccepted(hire)
       },
       onError: (err) => {
         showError(parseApiError(err))
@@ -442,7 +485,7 @@ function RowActions({ hire, showHireDecisions }: RowActionsProps) {
       { hireId: hire.id, reason: rejectionReason },
       {
         onSuccess: () => {
-          showSuccess('Supervision request rejected.')
+          showSuccess('Supervision request declined.')
           closeDialog()
         },
         onError: (err) => {
@@ -471,15 +514,19 @@ function RowActions({ hire, showHireDecisions }: RowActionsProps) {
               {visibleActions.length > 0 && <DropdownMenuSeparator />}
 
               {visibleActions.includes('accept') && (
-                <DropdownMenuItem onClick={() => setPendingAction('accept')}>
-                  Accept
+                <DropdownMenuItem onClick={handleAcceptClick} className="gap-2">
+                  {!showHireDecisions && <Lock className="size-3.5 shrink-0" aria-hidden />}
+                  <span>Accept</span>
+                  {!showHireDecisions && (
+                    <span className="ml-auto pl-3 text-xs text-muted-foreground">Upgrade</span>
+                  )}
                 </DropdownMenuItem>
               )}
               {visibleActions.includes('reject') && (
                 <>
                   {visibleActions.includes('accept') && <DropdownMenuSeparator />}
                   <DropdownMenuItem destructive onClick={() => setPendingAction('reject')}>
-                    Reject
+                    Decline
                   </DropdownMenuItem>
                 </>
               )}
@@ -496,10 +543,10 @@ function RowActions({ hire, showHireDecisions }: RowActionsProps) {
       />
 
       <ConfirmDialog
-        open={pendingAction === 'accept'}
+        open={acceptDialogOpen}
         onOpenChange={(open) => !open && closeDialog()}
         title="Accept supervision request?"
-        description={`You are about to accept the supervision request from ${formatDisplayName(hire.supervisee)}. This will notify the supervisee that you've accepted the request.`}
+        description={`You are about to accept the supervision request from ${formatDisplayName(hire.supervisee)}. This will notify the supervisee that you've accepted the request. After accepting, you'll send them a supervision agreement to formally start supervision.`}
         confirmLabel="Accept"
         isPending={acceptMutation.isPending}
         onConfirm={handleAcceptConfirm}
@@ -508,9 +555,9 @@ function RowActions({ hire, showHireDecisions }: RowActionsProps) {
       <ConfirmDialog
         open={pendingAction === 'reject'}
         onOpenChange={(open) => !open && closeDialog()}
-        title="Reject supervision request?"
-        description={`You are about to reject the supervision request from ${formatDisplayName(hire.supervisee)}.`}
-        confirmLabel="Reject"
+        title="Decline supervision request?"
+        description={`You are about to decline the supervision request from ${formatDisplayName(hire.supervisee)}.`}
+        confirmLabel="Decline"
         destructive
         isPending={rejectMutation.isPending}
         confirmDisabled={!rejectionReason.trim()}
@@ -523,7 +570,7 @@ function RowActions({ hire, showHireDecisions }: RowActionsProps) {
             style={textareaWrapStyle}
             rows={3}
             maxLength={500}
-            placeholder="Explain why you are rejecting this request…"
+            placeholder="Explain why you are declining this request…"
             value={rejectionReason}
             onChange={(e) => setRejectionReason(e.target.value)}
             disabled={rejectMutation.isPending}
@@ -542,9 +589,17 @@ function RowActions({ hire, showHireDecisions }: RowActionsProps) {
 function SupervisionRequestCard({
   hire,
   showHireDecisions,
+  onRequireUpgrade,
+  resumeAccept,
+  onResumeAcceptHandled,
+  onAccepted,
 }: {
   hire: HireListItem
   showHireDecisions: boolean
+  onRequireUpgrade: (hireId: string) => void
+  resumeAccept: boolean
+  onResumeAcceptHandled: () => void
+  onAccepted: (hire: HireListItem) => void
 }) {
   const superviseeName = formatDisplayName(hire.supervisee)
   const occupation = hire.supervisee.occupation?.name?.trim()
@@ -588,7 +643,14 @@ function SupervisionRequestCard({
           </div>
         </div>
         <div className="flex shrink-0 self-start">
-          <RowActions hire={hire} showHireDecisions={showHireDecisions} />
+          <RowActions
+            hire={hire}
+            showHireDecisions={showHireDecisions}
+            onRequireUpgrade={onRequireUpgrade}
+            resumeAccept={resumeAccept}
+            onResumeAcceptHandled={onResumeAcceptHandled}
+            onAccepted={onAccepted}
+          />
         </div>
       </div>
 
@@ -603,11 +665,91 @@ function SupervisionRequestCard({
   )
 }
 
+// ─── Post-accept next step ────────────────────────────────────────────────────
+
+/**
+ * Shown right after a request is accepted. Accepting alone doesn't start
+ * supervision: the supervisor still has to send (and the supervisee sign) an
+ * agreement, which lives on the My Supervisees page. Deep link opens the
+ * Send Agreement form for this hire directly.
+ */
+function AcceptedNextStepDialog({
+  hire,
+  open,
+  onOpenChange,
+}: {
+  hire: HireListItem | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const router = useRouter()
+  const superviseeName = hire ? formatDisplayName(hire.supervisee) : 'the supervisee'
+
+  function handleSendAgreement() {
+    if (!hire) return
+    onOpenChange(false)
+    router.push(`/supervisees?hire=${encodeURIComponent(hire.id)}&agreement=send`)
+  }
+
+  return (
+    <DialogRoot open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="flex size-14 items-center justify-center rounded-full bg-primary/10">
+            <CheckCircle2 className="size-7 text-primary" aria-hidden />
+          </div>
+          <div className="space-y-1.5">
+            <DialogTitle className="text-xl">Request accepted</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              {superviseeName} has been notified that you accepted their request.
+            </p>
+          </div>
+
+          <div className="w-full rounded-lg border border-amber-200 bg-amber-50 p-4 text-left">
+            <div className="flex items-start gap-3">
+              <FileSignature className="mt-0.5 size-5 shrink-0 text-amber-600" aria-hidden />
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-amber-950">
+                  Next step: send a supervision agreement
+                </p>
+                <p className="text-sm leading-relaxed text-amber-900">
+                  Supervision doesn&apos;t formally begin until {superviseeName} signs an agreement.
+                  You can send one now from My Supervisees, or come back to it later.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-center">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Later
+            </Button>
+            <Button type="button" onClick={handleSendAgreement}>
+              <FileSignature className="size-4" aria-hidden />
+              Send agreement now
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </DialogRoot>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function SupervisionRequestsPage() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const { showSuccess } = useUserSnackbar()
   const [page, setPage] = useState(1)
   const [planModalOpen, setPlanModalOpen] = useState(false)
+  // Hire the supervisor tried to accept before upgrading; threads into the checkout
+  // redirect so the Accept dialog can resume after payment.
+  const [upgradeHireId, setUpgradeHireId] = useState<string | null>(null)
+  // Hire just accepted; drives the "what's next" dialog after the card leaves the list.
+  const [acceptedHire, setAcceptedHire] = useState<HireListItem | null>(null)
+  const [acceptedDialogOpen, setAcceptedDialogOpen] = useState(false)
   const { data, isLoading, isError } = useHiresList(page, PAGE_SIZE, SUPERVISION_REQUEST_STATUS)
   const { data: profile, isLoading: profileLoading, isError: profileError } = useSupervisorProfile()
 
@@ -627,6 +769,38 @@ export function SupervisionRequestsPage() {
   const totalCount = data?.totalCount ?? 0
   const totalPages = data?.totalPages ?? 1
 
+  function openPlanModal(hireId: string | null) {
+    setUpgradeHireId(hireId)
+    setPlanModalOpen(true)
+  }
+
+  function clearResumeAcceptParam() {
+    router.replace(pathname, { scroll: false })
+  }
+
+  function handleAccepted(hire: HireListItem) {
+    setAcceptedHire(hire)
+    setAcceptedDialogOpen(true)
+  }
+
+  // ?accept=<hireId> only resumes once the upgraded plan is confirmed; a free-plan
+  // return (payment still processing, or cancelled) just lands on the normal page.
+  const resumeAcceptHireId = showHireDecisions ? searchParams.get(RESUME_ACCEPT_PARAM) : null
+  const resumeTargetOnPage =
+    resumeAcceptHireId != null && items.some((hire) => hire.id === resumeAcceptHireId)
+
+  // The hire may have left the pending list while the supervisor was paying (e.g. the
+  // supervisee cancelled) or sit on another page: confirm the upgrade and clear the param.
+  const resumeFallbackShown = useRef(false)
+  useEffect(() => {
+    if (resumeAcceptHireId == null || isLoading || isError || resumeTargetOnPage) return
+    if (resumeFallbackShown.current) return
+    resumeFallbackShown.current = true
+    showSuccess('Your plan is active. You can now accept supervision requests.')
+    clearResumeAcceptParam()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires once per return from checkout
+  }, [resumeAcceptHireId, isLoading, isError, resumeTargetOnPage])
+
   return (
     <>
       <div className="space-y-8">
@@ -636,7 +810,7 @@ export function SupervisionRequestsPage() {
           </h2>
           <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
             Pending requests appear below (accepted, active, and completed hires are on other
-            pages). Use the menu on any card to view full details, accept, or reject when allowed.
+            pages). Use the menu on any card to view full details, accept, or decline.
           </p>
           {showUpgradeCallout && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
@@ -645,15 +819,15 @@ export function SupervisionRequestsPage() {
                   <Info className="mt-0.5 size-5 shrink-0 text-amber-600 sm:mt-0" aria-hidden />
                   <p className="text-base font-medium text-amber-950">
                     Accepting supervisees and viewing their full names and contact details are only
-                    available for upgraded plans. You can still receive and view requests — they
-                    stay pending until you upgrade.
+                    available for upgraded plans. You can still receive, view, and decline requests
+                    — they stay pending until you accept or decline.
                   </p>
                 </div>
                 <Button
                   type="button"
                   size="sm"
                   className="shrink-0 self-stretch sm:self-center"
-                  onClick={() => setPlanModalOpen(true)}
+                  onClick={() => openPlanModal(null)}
                 >
                   Upgrade Plan
                 </Button>
@@ -676,6 +850,10 @@ export function SupervisionRequestsPage() {
                   key={hire.id}
                   hire={hire}
                   showHireDecisions={showHireDecisions}
+                  onRequireUpgrade={openPlanModal}
+                  resumeAccept={hire.id === resumeAcceptHireId}
+                  onResumeAcceptHandled={clearResumeAcceptParam}
+                  onAccepted={handleAccepted}
                 />
               ))}
             </div>
@@ -693,7 +871,24 @@ export function SupervisionRequestsPage() {
         )}
       </div>
 
-      <SubscriptionModal open={planModalOpen} onOpenChange={setPlanModalOpen} />
+      <AcceptedNextStepDialog
+        hire={acceptedHire}
+        open={acceptedDialogOpen}
+        onOpenChange={setAcceptedDialogOpen}
+      />
+
+      <SubscriptionModal
+        open={planModalOpen}
+        onOpenChange={setPlanModalOpen}
+        checkoutRedirect={
+          upgradeHireId ? `${pathname}?${RESUME_ACCEPT_PARAM}=${upgradeHireId}` : pathname
+        }
+        notice={{
+          title: 'Accepting supervisees requires an upgraded plan.',
+          description:
+            'Upgrade to accept this request and view the supervisee’s full name and contact details.',
+        }}
+      />
     </>
   )
 }

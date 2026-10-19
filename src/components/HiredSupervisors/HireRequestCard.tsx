@@ -166,10 +166,11 @@ export function HireRequestCard({
     agreementStage === 'AWAITING_SIGNATURE'
   const hasAgreement = hire.agreement != null
   const isAgreementSigned = hasAgreement && agreementStage === 'SIGNED'
-  // Signed hourly agreement whose card for the weekly prepays isn't saved yet.
+  // Hourly agreement whose card for the weekly prepays isn't saved yet. The
+  // card comes before the signature, so this covers the pending-signature stage too.
   const needsPaymentSetup =
     IN_APP_PAYMENTS_ENABLED &&
-    isAgreementSigned &&
+    (isAgreementSigned || canSignAgreement) &&
     (hire.status === 'ACCEPTED' || hire.status === 'ACTIVE') &&
     hire.agreement?.hourlyRateCents != null &&
     hire.paymentMethodSavedAt == null
@@ -428,6 +429,8 @@ export function HireRequestCard({
           open={payment.open}
           onOpenChange={(open) => setPayment((prev) => ({ ...prev, open }))}
           changeCard={payment.changeCard}
+          // Card saved while the signature is still pending: bring them back to sign.
+          onSaved={canSignAgreement ? () => setAgreementOpen(true) : undefined}
         />
       )}
 

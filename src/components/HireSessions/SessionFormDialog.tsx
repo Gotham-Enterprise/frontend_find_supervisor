@@ -25,6 +25,10 @@ import type { BillingWeek, HireBillingWeeks, HireSession } from '@/types/session
 
 const NOTES_MAX = 1000
 const UNIT_MINUTES = 15
+/** Longest single session; a longer day is logged as two entries. Mirrored by the backend validator. */
+const MAX_SESSION_MINUTES = 8 * 60
+/** Preselected duration: the typical supervision session. */
+const DEFAULT_SESSION_MINUTES = 60
 
 const sessionSchema = z.object({
   sessionDate: z.string().min(1, 'Session date is required'),
@@ -72,14 +76,14 @@ export function SessionFormDialog({
 
   const form = useForm<SessionFormValues>({
     resolver: zodResolver(sessionSchema),
-    defaultValues: { sessionDate: '', durationMinutes: '', notes: '' },
+    defaultValues: { sessionDate: '', durationMinutes: String(DEFAULT_SESSION_MINUTES), notes: '' },
   })
 
   useEffect(() => {
     if (!open) return
     form.reset({
       sessionDate: session?.sessionDate ?? loggable?.to ?? '',
-      durationMinutes: session ? String(session.durationMinutes) : '',
+      durationMinutes: session ? String(session.durationMinutes) : String(DEFAULT_SESSION_MINUTES),
       notes: session?.notes ?? '',
     })
   }, [open, session, loggable?.to, form])
@@ -93,13 +97,16 @@ export function SessionFormDialog({
     session && week?.sessions.some((s) => s.id === session.id) ? session.durationMinutes : 0
   const leftMinutes = Math.max(cap - (week?.loggedMinutes ?? 0) + ownMinutes, 0)
 
+  // One session is capped at MAX_SESSION_MINUTES (and at what's left in the
+  // week) so the list stays short; a longer day is logged as two entries.
+  const maxSessionMinutes = Math.min(MAX_SESSION_MINUTES, cap, Math.max(leftMinutes, UNIT_MINUTES))
   const durationOptions = useMemo(
     () =>
-      Array.from({ length: cap / UNIT_MINUTES }, (_, i) => {
+      Array.from({ length: maxSessionMinutes / UNIT_MINUTES }, (_, i) => {
         const minutes = (i + 1) * UNIT_MINUTES
         return { value: String(minutes), label: formatDuration(minutes) }
       }),
-    [cap],
+    [maxSessionMinutes],
   )
 
   async function onSubmit(values: SessionFormValues) {
@@ -127,10 +134,11 @@ export function SessionFormDialog({
   return (
     <DialogRoot open={open} onOpenChange={(next) => !isPending && onOpenChange(next)}>
       <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
-        <DialogTitle>{isEdit ? 'Edit session' : 'Log a session'}</DialogTitle>
+        <DialogTitle>{isEdit ? 'Edit Session' : 'Log a Session'}</DialogTitle>
         <p className="mb-4 mt-1 text-sm text-muted-foreground">
-          Log sessions in 15-minute units, up to {formatDuration(cap)} per week. Each week&apos;s
-          sessions can be logged until Monday 11:59 PM ET.
+          Log each session in 15-minute units (up to {formatDuration(MAX_SESSION_MINUTES)} per
+          session, {formatDuration(cap)} per week). Each week&apos;s sessions can be logged until
+          Monday 11:59 PM ET.
         </p>
 
         <Form {...form}>
@@ -206,7 +214,7 @@ export function SessionFormDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? 'Saving…' : isEdit ? 'Save changes' : 'Log session'}
+                {isPending ? 'Saving…' : isEdit ? 'Save Changes' : 'Log Session'}
               </Button>
             </div>
           </form>

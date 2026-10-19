@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, CreditCard, Pencil, Plus, Trash2 } from 'lucide-react'
+import { AlertCircle, CalendarClock, CreditCard, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +25,7 @@ import {
   formatEasternDate,
   formatEasternDateTime,
   formatWeekRange,
+  toEasternISODate,
 } from '@/lib/utils/date'
 import { parseApiError } from '@/lib/utils/error-parser'
 import { formatUsdCents } from '@/lib/utils/money'
@@ -36,19 +37,41 @@ import type {
   SuperviseeWeekPayment,
 } from '@/types/sessions'
 
+import { LateEntryRequestDialog } from './LateEntryRequestDialog'
 import { SessionFormDialog } from './SessionFormDialog'
 
 const DISPUTE_REASON_MIN = 10
 
-const STATUS_BADGE: Record<
-  BillingWeekStatus,
-  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
-> = {
-  OPEN: { label: 'Open', variant: 'outline' },
-  IN_REVIEW: { label: 'In review', variant: 'secondary' },
-  DISPUTED: { label: 'Disputed', variant: 'destructive' },
-  APPROVED: { label: 'Approved', variant: 'default' },
-  SETTLED: { label: 'Paid', variant: 'default' },
+/** "2026-10-25" → "2026-10-26" (calendar math, no timezone shift). */
+function nextCalendarDay(isoDate: string): string {
+  return addCalendarDays(isoDate, 1)
+}
+
+function addCalendarDays(isoDate: string, days: number): string {
+  const d = new Date(`${isoDate}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+const LATE_ENTRY_WINDOW_DAYS = 14
+
+/** A closed week the supervisor can still ask support to add a session to. */
+function canRequestLateEntry(week: BillingWeek, role: HireBillingWeeks['role']): boolean {
+  return (
+    role === 'supervisor' &&
+    week.status !== 'OPEN' &&
+    toEasternISODate() <= addCalendarDays(week.endDate, LATE_ENTRY_WINDOW_DAYS)
+  )
+}
+
+// Light tinted badges (same palette as the agreement-stage badges) instead of
+// the solid default/secondary variants, which read too heavy inside the card.
+const STATUS_BADGE: Record<BillingWeekStatus, { label: string; className: string }> = {
+  OPEN: { label: 'Open', className: 'border-border bg-muted/40 text-muted-foreground' },
+  IN_REVIEW: { label: 'In Review', className: 'border-amber-200 bg-amber-50 text-amber-800' },
+  DISPUTED: { label: 'Disputed', className: 'border-red-200 bg-red-50 text-red-800' },
+  APPROVED: { label: 'Approved', className: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
+  SETTLED: { label: 'Paid', className: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
 }
 
 function ProgressSummary({ data }: { data: HireBillingWeeks }) {
@@ -327,6 +350,7 @@ function PaymentLine({
 function WeekCard({
   week,
   role,
+  hourlyRateCents,
   payment,
   respondingSessionId,
   onEditSession,
@@ -334,9 +358,11 @@ function WeekCard({
   onRespondToLate,
   onApprove,
   onDispute,
+  onRequestLateEntry,
 }: {
   week: BillingWeek
   role: HireBillingWeeks['role']
+  hourlyRateCents: number
   payment: React.ReactNode
   respondingSessionId: string | null
   onEditSession: (session: HireSession) => void
@@ -344,6 +370,7 @@ function WeekCard({
   onRespondToLate: (session: HireSession, approve: boolean) => void
   onApprove: () => void
   onDispute: () => void
+  onRequestLateEntry?: () => void
 }) {
   const badge = STATUS_BADGE[week.status]
   return (
@@ -353,7 +380,9 @@ function WeekCard({
           <h4 className="text-sm font-semibold text-foreground">
             {formatWeekRange(week.startDate, week.endDate)}
           </h4>
-          <Badge variant={badge.variant}>{badge.label}</Badge>
+          <Badge variant="outline" className={`${badge.className} hover:bg-[inherit]`}>
+            {badge.label}
+          </Badge>
         </div>
         <span className="text-xs tabular-nums text-muted-foreground">
           {formatDuration(week.loggedMinutes)} / {formatDuration(week.weeklyCapMinutes)}
@@ -386,13 +415,38 @@ function WeekCard({
         <p className="mt-2 border-t pt-2.5 text-sm text-muted-foreground">No sessions logged.</p>
       )}
 
+      {week.sessions.length > 0 && (
+        <div className="mt-2 flex items-center justify-between gap-4 border-t pt-2.5 text-sm">
+          <span className="font-medium text-foreground">Total this week</span>
+          <span className="tabular-nums text-foreground">
+            {formatDuration(week.loggedMinutes)}
+            <span className="text-muted-foreground">
+              {' '}
+              · {formatUsdCents(Math.round((week.loggedMinutes / 60) * hourlyRateCents))}
+            </span>
+          </span>
+        </div>
+      )}
+
+      {onRequestLateEntry && canRequestLateEntry(week, role) && (
+        <div className="mt-2 flex justify-end border-t pt-2.5">
+          <button
+            type="button"
+            onClick={onRequestLateEntry}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Forgot a session? Request a late entry
+          </button>
+        </div>
+      )}
+
       {week.canReview && (
         <div className="mt-3 flex justify-end gap-2 border-t pt-3">
           <Button variant="outline" size="sm" onClick={onDispute}>
             Dispute
           </Button>
           <Button size="sm" onClick={onApprove}>
-            Approve {formatDuration(week.loggedMinutes)}
+            Approve
           </Button>
         </div>
       )}
@@ -435,6 +489,7 @@ export function HireSessionsDialog({
   const [form, setForm] = useState<{ open: boolean; session?: HireSession }>({ open: false })
   const [deleting, setDeleting] = useState<HireSession | null>(null)
   const [approving, setApproving] = useState<BillingWeek | null>(null)
+  const [lateEntryWeek, setLateEntryWeek] = useState<BillingWeek | null>(null)
   const [disputing, setDisputing] = useState<BillingWeek | null>(null)
   const [disputeReason, setDisputeReason] = useState('')
 
@@ -518,13 +573,13 @@ export function HireSessionsDialog({
         <DialogContent className="max-h-[min(90vh,820px)] max-w-2xl overflow-y-auto">
           <div className="flex items-start justify-between gap-4 pr-8">
             <div>
-              <DialogTitle>Supervision sessions</DialogTitle>
+              <DialogTitle>Supervision Sessions</DialogTitle>
               <p className="mt-1 text-sm text-muted-foreground">With {counterpartName}</p>
             </div>
             {data?.canLog && (
               <Button size="sm" onClick={() => setForm({ open: true })}>
                 <Plus className="size-3.5" aria-hidden />
-                Log session
+                Log Session
               </Button>
             )}
           </div>
@@ -547,6 +602,81 @@ export function HireSessionsDialog({
               </div>
             ) : (
               <>
+                {data.role === 'supervisor' &&
+                  !data.canLog &&
+                  data.hasPaymentCard !== false &&
+                  toEasternISODate() < data.terms.startDate && (
+                    <div className="flex items-start gap-2 rounded-lg border bg-muted/30 px-4 py-3 text-sm text-foreground">
+                      <CalendarClock
+                        className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                        aria-hidden
+                      />
+                      <p>
+                        <span className="font-semibold">
+                          Session logging opens on {formatCalendarDate(data.terms.startDate)}
+                        </span>
+                        , the agreement start date. The first weekly prepay is charged that day; you
+                        can log sessions from then on.
+                      </p>
+                    </div>
+                  )}
+                {data.role === 'supervisor' &&
+                  !data.canLog &&
+                  data.hasPaymentCard !== false &&
+                  toEasternISODate() >= data.terms.startDate &&
+                  data.weeks[0] &&
+                  data.weeks[0].status !== 'OPEN' && (
+                    <div className="flex items-start gap-2 rounded-lg border bg-muted/30 px-4 py-3 text-sm text-foreground">
+                      <CalendarClock
+                        className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                        aria-hidden
+                      />
+                      <p>
+                        <span className="font-semibold">This week is closed for logging.</span>{' '}
+                        Sessions for the next week can be logged starting{' '}
+                        {formatCalendarDate(nextCalendarDay(data.weeks[0].endDate))}.
+                        {canRequestLateEntry(data.weeks[0], data.role) && (
+                          <>
+                            {' '}
+                            Forgot one?{' '}
+                            <button
+                              type="button"
+                              onClick={() => setLateEntryWeek(data.weeks[0])}
+                              className="font-medium text-primary hover:underline"
+                            >
+                              Request a late entry
+                            </button>
+                            .
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                {data.hasPaymentCard === false && (
+                  <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <CreditCard className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden />
+                    <p>
+                      {data.role === 'supervisor' ? (
+                        <>
+                          <span className="font-semibold">
+                            {counterpartName} hasn&apos;t set up payment yet.
+                          </span>{' '}
+                          Billing weeks and session logging start once they save a card for the
+                          weekly prepays. We&apos;ve reminded them.
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-semibold">
+                            Set up payment to start supervision.
+                          </span>{' '}
+                          Billing weeks and session logging with {counterpartName} start once you
+                          save a card. Use &ldquo;Set up payment&rdquo; on this supervisor&apos;s
+                          card.
+                        </>
+                      )}
+                    </p>
+                  </div>
+                )}
                 <ProgressSummary data={data} />
                 {data.weeks.length === 0 ? (
                   <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
@@ -560,6 +690,8 @@ export function HireSessionsDialog({
                       key={week.id}
                       week={week}
                       role={data.role}
+                      hourlyRateCents={data.terms.hourlyRateCents}
+                      onRequestLateEntry={() => setLateEntryWeek(week)}
                       payment={
                         <PaymentLine
                           week={week}
@@ -601,6 +733,16 @@ export function HireSessionsDialog({
           session={form.session}
           open={form.open}
           onOpenChange={(next) => setForm((prev) => ({ ...prev, open: next }))}
+        />
+      )}
+
+      {lateEntryWeek && (
+        <LateEntryRequestDialog
+          hireId={hireId}
+          week={lateEntryWeek}
+          counterpartName={counterpartName}
+          open
+          onOpenChange={(next) => !next && setLateEntryWeek(null)}
         />
       )}
 

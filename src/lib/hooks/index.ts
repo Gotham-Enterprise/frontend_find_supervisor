@@ -50,6 +50,7 @@ export {
   useHireBillingWeeks,
   useLogHireSession,
   usePayNowBillingWeek,
+  useRequestLateEntry,
   useRespondToLateSession,
   useSupervisorEarnings,
   useUpdateHireSession,
@@ -76,11 +77,16 @@ export {
 export {
   payoutKeys,
   useCreatePayoutDashboardLink,
+  useCreateSuperviseeCardSetupIntent,
   useHirePayment,
   useHourlyQuote,
   usePayoutStatusQuery,
+  useRefreshSuperviseeCards,
+  useRemoveSuperviseeCard,
   useSaveHirePaymentMethod,
   useStartPayoutOnboarding,
+  useSuperviseeCards,
+  useSuperviseePayments,
 } from './usePayouts'
 export { recommendedSupervisorKeys, useRecommendedSupervisors } from './useRecommendedSupervisors'
 export { useResendVerificationEmail } from './useResendVerificationEmail'

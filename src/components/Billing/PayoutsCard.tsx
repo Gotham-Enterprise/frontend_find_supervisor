@@ -14,8 +14,10 @@ import {
   useStartPayoutOnboarding,
   useUserSnackbar,
 } from '@/lib/hooks'
+import { formatEasternDate } from '@/lib/utils/date'
 import { parseApiError } from '@/lib/utils/error-parser'
-import type { PayoutAccountStatus } from '@/types/payouts'
+import { formatUsdCents } from '@/lib/utils/money'
+import type { PayoutAccountStatus, PayoutStatus } from '@/types/payouts'
 
 const STATUS_CONFIG: Record<
   PayoutAccountStatus,
@@ -81,11 +83,8 @@ export function PayoutsCard() {
   const status = data?.status
   const config = status ? STATUS_CONFIG[status] : null
 
-  // In-app payments are a pilot: only allowlisted supervisors set up payouts.
-  if (data && !data.inAppPaymentsPilot) return null
-
   return (
-    <Card className="max-w-2xl">
+    <Card>
       <Suspense fallback={null}>
         <PayoutsReturnHandler onRefreshLink={handleStartOnboarding} />
       </Suspense>
@@ -130,6 +129,7 @@ export function PayoutsCard() {
         ) : (
           <div className="flex flex-col gap-4">
             <PayoutStatusMessage status={status} requirementsDueCount={data.requirementsDueCount} />
+            {status === 'ready' && <PayoutDetails data={data} />}
 
             <div className="flex flex-wrap justify-end gap-2">
               {status === 'ready' ? (
@@ -174,6 +174,101 @@ const ONBOARDING_CTA: Record<Exclude<PayoutAccountStatus, 'ready' | 'pending'>, 
   not_started: 'Set up payouts',
   incomplete: 'Continue setup',
   action_required: 'Update details',
+}
+
+function describeSchedule(schedule: PayoutStatus['payoutSchedule']): string | null {
+  if (!schedule) return null
+  const delay =
+    schedule.delayDays != null && schedule.delayDays > 0
+      ? ` (${schedule.delayDays} business day${schedule.delayDays === 1 ? '' : 's'} after each payment)`
+      : ''
+  switch (schedule.interval) {
+    case 'daily':
+      return `paid out daily${delay}`
+    case 'weekly':
+      return `paid out weekly${schedule.weeklyAnchor ? ` on ${capitalize(schedule.weeklyAnchor)}` : ''}${delay}`
+    case 'monthly':
+      return `paid out monthly${schedule.monthlyAnchor ? ` on day ${schedule.monthlyAnchor}` : ''}${delay}`
+    case 'manual':
+      return 'paid out when you request it from Stripe'
+    default:
+      return null
+  }
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+/**
+ * Ready-state extras: where payouts go, how often, and what's in flight.
+ * Everything here is read live from Stripe; each piece is optional so a
+ * failed lookup just hides its line.
+ */
+function PayoutDetails({ data }: { data: PayoutStatus }) {
+  const { bankAccount, payoutSchedule, balance, nextPayout, lastPayout } = data
+  const bankLabel = bankAccount
+    ? `${bankAccount.bankName ?? 'Bank account'}${bankAccount.last4 ? ` •••• ${bankAccount.last4}` : ''}`
+    : null
+  const schedule = describeSchedule(payoutSchedule)
+  const inFlightCents = (balance?.availableCents ?? 0) + (balance?.pendingCents ?? 0)
+
+  if (!bankLabel && !schedule && !nextPayout && !lastPayout && !balance) return null
+
+  return (
+    <dl className="grid gap-x-6 gap-y-3 rounded-lg border bg-muted/30 px-4 py-3 text-sm sm:grid-cols-2">
+      {(bankLabel || schedule) && (
+        <div className="sm:col-span-2">
+          <dt className="text-xs text-muted-foreground">Paying out to</dt>
+          <dd className="mt-0.5 font-medium text-foreground">
+            {bankLabel ?? 'Your bank account'}
+            {schedule && <span className="font-normal text-muted-foreground">, {schedule}</span>}
+          </dd>
+        </div>
+      )}
+      <div>
+        <dt className="text-xs text-muted-foreground">Next payout</dt>
+        <dd className="mt-0.5 font-medium tabular-nums text-foreground">
+          {nextPayout ? (
+            <>
+              {formatUsdCents(nextPayout.amountCents)}
+              <span className="font-normal text-muted-foreground">
+                {' '}
+                {nextPayout.status === 'in_transit' ? 'arriving' : 'expected'}{' '}
+                {formatEasternDate(nextPayout.arrivalDate)}
+              </span>
+            </>
+          ) : inFlightCents > 0 ? (
+            <>
+              {formatUsdCents(inFlightCents)}
+              <span className="font-normal text-muted-foreground">
+                {' '}
+                pending with Stripe, paid out automatically
+              </span>
+            </>
+          ) : (
+            <span className="font-normal text-muted-foreground">No pending payouts</span>
+          )}
+        </dd>
+      </div>
+      <div>
+        <dt className="text-xs text-muted-foreground">Last payout</dt>
+        <dd className="mt-0.5 font-medium tabular-nums text-foreground">
+          {lastPayout ? (
+            <>
+              {formatUsdCents(lastPayout.amountCents)}
+              <span className="font-normal text-muted-foreground">
+                {' '}
+                on {formatEasternDate(lastPayout.arrivalDate)}
+              </span>
+            </>
+          ) : (
+            <span className="font-normal text-muted-foreground">None yet</span>
+          )}
+        </dd>
+      </div>
+    </dl>
+  )
 }
 
 function PayoutStatusMessage({

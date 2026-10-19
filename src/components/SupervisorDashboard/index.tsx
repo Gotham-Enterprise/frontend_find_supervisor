@@ -10,6 +10,7 @@ import {
   CreditCard,
   Eye,
   EyeOff,
+  FileSignature,
   HelpCircle,
   LayoutDashboard,
   Mail,
@@ -32,10 +33,13 @@ import { EditSupervisorProfileModal } from '@/components/EditSupervisorProfileMo
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import { isFreePlan } from '@/lib/constants/subscription-plans'
 import {
   useCertificateOptions,
+  useHiresList,
   usePatientPopulationOptions,
+  usePayoutStatusQuery,
   useSupervisorProfile,
   useSupervisorTypeOptions,
   useUser,
@@ -47,6 +51,8 @@ import {
   formatSupervisorTypeWithOfferings,
   resolveOptionLabels,
 } from '@/lib/utils/profile-formatters'
+import { getAgreementStage } from '@/lib/utils/supervision-status'
+import type { PayoutAccountStatus } from '@/types/payouts'
 import type {
   Subscription,
   SupervisorProfileData,
@@ -133,6 +139,19 @@ interface ChecklistStep {
   choosePlanAction?: boolean
   /** When current, no Start link — show admin review label instead */
   adminReviewStep?: boolean
+  /** When current, link to Billing → Payouts (Stripe onboarding) */
+  payoutsAction?: { status: PayoutAccountStatus }
+}
+
+/**
+ * Payout onboarding as seen by the checklist. `undefined` = not applicable
+ * (flag off, monthly-retainer supervisor, or status unavailable), so the
+ * step is omitted rather than blocking setup on something we can't read.
+ */
+type ChecklistPayoutStatus = PayoutAccountStatus | undefined
+
+function payoutStepApplies(profile: SupervisorProfileData): boolean {
+  return IN_APP_PAYMENTS_ENABLED && profile.supervisionFeeType?.toUpperCase() !== 'MONTHLY'
 }
 
 function hasActiveSubscription(profile: SupervisorProfileData): boolean {
@@ -188,7 +207,10 @@ function getPrimaryDashboardSubscription(profile: SupervisorProfileData): Subscr
   )
 }
 
-function getChecklist(profile: SupervisorProfileData): ChecklistStep[] {
+function getChecklist(
+  profile: SupervisorProfileData,
+  payoutStatus: ChecklistPayoutStatus,
+): ChecklistStep[] {
   const detailsDone = !!(
     profile.availability &&
     profile.supervisionFeeAmount &&
@@ -205,7 +227,7 @@ function getChecklist(profile: SupervisorProfileData): ChecklistStep[] {
       ? 'current'
       : 'upcoming'
 
-  return [
+  const steps: ChecklistStep[] = [
     {
       label: 'Create your account',
       description: 'Account registered successfully',
@@ -234,11 +256,36 @@ function getChecklist(profile: SupervisorProfileData): ChecklistStep[] {
       adminReviewStep: true,
     },
   ]
+
+  // Sending an in-app billed agreement requires a payout account, so surface it
+  // here instead of letting the supervisor discover it on "Sign & Send". It is
+  // last on purpose: it never gates admin review or accepting requests.
+  if (payoutStepApplies(profile) && payoutStatus !== undefined) {
+    steps.push({
+      label: 'Set up payouts',
+      description: 'Connect your bank account to get paid for in-app supervision sessions',
+      status: payoutStatus === 'ready' ? 'done' : subscribed ? 'current' : 'upcoming',
+      payoutsAction: { status: payoutStatus },
+    })
+  }
+
+  return steps
 }
 
-/** True when every setup checklist step is `done` (matches 5/5 in Setup Checklist). */
-function isSupervisorSetupFullyComplete(profile: SupervisorProfileData): boolean {
-  return getChecklist(profile).every((step) => step.status === 'done')
+/** True when every setup checklist step is `done` (matches the n/n count in Setup Checklist). */
+function isSupervisorSetupFullyComplete(
+  profile: SupervisorProfileData,
+  payoutStatus: ChecklistPayoutStatus,
+): boolean {
+  return getChecklist(profile, payoutStatus).every((step) => step.status === 'done')
+}
+
+const PAYOUT_STEP_CTA: Record<PayoutAccountStatus, string> = {
+  not_started: 'Set up →',
+  incomplete: 'Continue →',
+  action_required: 'Update details →',
+  pending: 'Verifying',
+  ready: 'Done',
 }
 
 function formatFee(amount: number | null | undefined, type: string | null | undefined): string {
@@ -364,15 +411,20 @@ function SupervisorDashboardSkeleton() {
 function WelcomeBanner({
   profile,
   completion,
+  payoutStatus,
 }: {
   profile: SupervisorProfileData
   completion: number
+  payoutStatus: ChecklistPayoutStatus
 }) {
   const composedName = `${profile.user.firstName ?? ''} ${profile.user.lastName ?? ''}`.trim()
   const name = profile.user.fullName ?? (composedName || profile.user.email)
   const isPending = profile.verificationStatus === 'PENDING'
 
-  const setupComplete = useMemo(() => isSupervisorSetupFullyComplete(profile), [profile])
+  const setupComplete = useMemo(
+    () => isSupervisorSetupFullyComplete(profile, payoutStatus),
+    [profile, payoutStatus],
+  )
 
   const isNewUser = useMemo(() => {
     if (!profile.user.createdAt) return false
@@ -456,6 +508,59 @@ function LicenseReviewBanner({
       >
         Review licenses
       </button>
+    </div>
+  )
+}
+
+/**
+ * Action item: accepted supervisees still waiting for an agreement. Accepting a
+ * request doesn't start supervision — the supervisor must send an agreement and
+ * the supervisee must sign it — so surface the count until it reaches zero.
+ */
+function AgreementActionBanner() {
+  // limit 0 = all accepted hires (same convention as the My Supervisees page).
+  const { data } = useHiresList(1, 0, 'ACCEPTED', 'supervisors')
+  const items = data?.items ?? []
+  const notSent = items.filter((hire) => getAgreementStage(hire) === 'NOT_SENT')
+  const awaitingSignature = items.filter((hire) => getAgreementStage(hire) === 'AWAITING_SIGNATURE')
+
+  if (notSent.length === 0) return null
+
+  const names = notSent
+    .slice(0, 2)
+    .map((hire) => hire.supervisee.fullName?.trim().split(/\s+/)[0] ?? 'A supervisee')
+  const count = notSent.length
+  const who =
+    count === 1
+      ? names[0]
+      : count === 2
+        ? `${names[0]} and ${names[1]}`
+        : `${names[0]}, ${names[1]}, and ${count - 2} more`
+
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-start gap-3">
+        <FileSignature className="mt-0.5 size-5 shrink-0 text-amber-600" aria-hidden />
+        <div>
+          <p className="text-sm font-medium text-amber-900">
+            {count === 1
+              ? '1 accepted supervisee is waiting for an agreement'
+              : `${count} accepted supervisees are waiting for an agreement`}
+          </p>
+          <p className="text-sm text-amber-800">
+            {who} accepted your supervision, but it doesn&apos;t formally start until you send an
+            agreement and they sign it.
+            {awaitingSignature.length > 0 &&
+              ` ${awaitingSignature.length} more ${awaitingSignature.length === 1 ? 'is' : 'are'} awaiting signature.`}
+          </p>
+        </div>
+      </div>
+      <Link
+        href="/supervisees"
+        className="shrink-0 rounded-lg border border-amber-300 bg-white px-4 py-2 text-center text-sm font-medium text-amber-900 hover:bg-amber-100"
+      >
+        {count === 1 ? 'Send agreement' : 'Send agreements'}
+      </Link>
     </div>
   )
 }
@@ -582,12 +687,14 @@ function StatusCards({
 
 function SetupChecklist({
   profile,
+  payoutStatus,
   onOpenChoosePlanModal,
 }: {
   profile: SupervisorProfileData
+  payoutStatus: ChecklistPayoutStatus
   onOpenChoosePlanModal: () => void
 }) {
-  const steps = getChecklist(profile)
+  const steps = getChecklist(profile, payoutStatus)
   const doneCount = steps.filter((s) => s.status === 'done').length
 
   function adminReviewTrailingLabel(): string {
@@ -638,14 +745,36 @@ function SetupChecklist({
                       {adminReviewTrailingLabel()}
                     </span>
                   )}
-                  {step.status === 'current' && !step.choosePlanAction && !step.adminReviewStep && (
-                    <Link
-                      href="/dashboard"
-                      className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground"
-                    >
-                      Start →
-                    </Link>
-                  )}
+                  {step.status === 'current' &&
+                    step.payoutsAction &&
+                    (step.payoutsAction.status === 'pending' ? (
+                      <span className="shrink-0 text-xs font-medium text-amber-700">
+                        {PAYOUT_STEP_CTA.pending}
+                      </span>
+                    ) : (
+                      <Link
+                        href="/billing"
+                        className={cn(
+                          'shrink-0 rounded-md px-2 py-0.5 text-xs font-medium',
+                          step.payoutsAction.status === 'action_required'
+                            ? 'bg-amber-100 text-amber-900 hover:bg-amber-200'
+                            : 'bg-primary text-primary-foreground hover:opacity-90',
+                        )}
+                      >
+                        {PAYOUT_STEP_CTA[step.payoutsAction.status]}
+                      </Link>
+                    ))}
+                  {step.status === 'current' &&
+                    !step.choosePlanAction &&
+                    !step.adminReviewStep &&
+                    !step.payoutsAction && (
+                      <Link
+                        href="/dashboard"
+                        className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground"
+                      >
+                        Start →
+                      </Link>
+                    )}
                   {step.status === 'upcoming' && (
                     <span className="shrink-0 text-xs text-muted-foreground">Upcoming</span>
                   )}
@@ -1056,6 +1185,11 @@ export function SupervisorDashboard() {
   const { data: profile, isLoading, isError } = useSupervisorProfile()
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [choosePlanModalOpen, setChoosePlanModalOpen] = useState(false)
+  // Checklist "Set up payouts" step; skipped (not failed) when the status can't be read.
+  const payoutQuery = usePayoutStatusQuery(
+    IN_APP_PAYMENTS_ENABLED && profile != null && payoutStepApplies(profile),
+  )
+  const payoutStatus: ChecklistPayoutStatus = payoutQuery.data?.status
 
   if (isLoading) return <SupervisorDashboardSkeleton />
 
@@ -1079,19 +1213,25 @@ export function SupervisorDashboard() {
   return (
     <>
       <div className="space-y-6">
-        <WelcomeBanner profile={enrichedProfile} completion={completion} />
+        <WelcomeBanner
+          profile={enrichedProfile}
+          completion={completion}
+          payoutStatus={payoutStatus}
+        />
         {profile.licenseReviewNeeded ? (
           <LicenseReviewBanner
             profile={enrichedProfile}
             onEditClick={() => setEditModalOpen(true)}
           />
         ) : null}
+        <AgreementActionBanner />
         <StatusCards profile={enrichedProfile} completion={completion} />
 
         <div className="grid gap-4 lg:grid-cols-5">
           <div className="lg:col-span-3">
             <SetupChecklist
               profile={enrichedProfile}
+              payoutStatus={payoutStatus}
               onOpenChoosePlanModal={() => setChoosePlanModalOpen(true)}
             />
           </div>

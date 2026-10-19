@@ -3,6 +3,7 @@ import type { User } from '@/types'
 import type { HireListItem, UpcomingSessionItem } from '@/types/hire'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
+import { SuperviseeDashboardActionNeeded } from './SuperviseeDashboardActionNeeded'
 import { SuperviseeDashboardActiveRequests } from './SuperviseeDashboardActiveRequests'
 import { SuperviseeDashboardActivityCard } from './SuperviseeDashboardActivityCard'
 import { SuperviseeDashboardGoalsProgressCard } from './SuperviseeDashboardGoalsProgressCard'
@@ -86,6 +87,8 @@ export function SuperviseeDashboardContent({
           emailVerified={superviseeProfile?.user.emailVerified ?? user.emailVerified ?? false}
         />
       )}
+
+      <SuperviseeDashboardActionNeeded hires={allHires} />
 
       <SuperviseeDashboardSummaryCards
         pendingCount={pendingHires.length}

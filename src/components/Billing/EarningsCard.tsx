@@ -6,7 +6,8 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { usePayoutStatusQuery, useSupervisorEarnings } from '@/lib/hooks'
+import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
+import { useSupervisorEarnings } from '@/lib/hooks'
 import { formatDuration, formatWeekRange } from '@/lib/utils/date'
 import { formatUsdCents } from '@/lib/utils/money'
 import type { EarningsWeek } from '@/types/sessions'
@@ -32,16 +33,14 @@ function weekState(week: EarningsWeek): { text: string; className: string } {
  * (after the platform fee) and an estimate for prepaid weeks still in progress.
  */
 export function EarningsCard() {
-  const { data: payoutStatus } = usePayoutStatusQuery(true)
   const [page, setPage] = useState(1)
-  const enabled = Boolean(payoutStatus?.inAppPaymentsPilot)
-  const { data, isLoading, isError } = useSupervisorEarnings(page, enabled)
+  const { data, isLoading, isError } = useSupervisorEarnings(page, IN_APP_PAYMENTS_ENABLED)
 
-  if (!enabled) return null
+  if (!IN_APP_PAYMENTS_ENABLED) return null
   const totalPages = data ? Math.max(Math.ceil(data.totalCount / PAGE_SIZE), 1) : 1
 
   return (
-    <Card className="max-w-2xl">
+    <Card>
       <CardHeader className="border-b">
         <div className="flex items-start gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">

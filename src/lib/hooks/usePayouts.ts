@@ -5,9 +5,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createPayoutDashboardLink,
   createPayoutOnboardingLink,
+  createSuperviseeCardSetupIntent,
   getHirePayment,
   getHourlyQuote,
   getPayoutStatus,
+  getSuperviseeCards,
+  getSuperviseePayments,
+  removeSuperviseeCard,
   saveHirePaymentMethod,
 } from '@/lib/api/supervision'
 
@@ -22,6 +26,50 @@ export const payoutKeys = {
     [...payoutKeys.all, 'quote', hourlyRateCents, weeklyCapMinutes] as const,
   /** GET /supervision/hires/:hireId/payment */
   hirePayment: (hireId: string) => [...payoutKeys.all, 'hire', hireId] as const,
+  /** GET /supervision/payments/cards */
+  superviseeCards: () => [...payoutKeys.all, 'supervisee-cards'] as const,
+  /** GET /supervision/payments/history */
+  superviseePayments: (page: number) => [...payoutKeys.all, 'supervisee-payments', page] as const,
+}
+
+// ─── Supervisee Billing page ──────────────────────────────────────────────────
+
+export function useSuperviseeCards(enabled = true) {
+  return useQuery({
+    queryKey: payoutKeys.superviseeCards(),
+    queryFn: getSuperviseeCards,
+    enabled,
+    staleTime: 60 * 1000,
+  })
+}
+
+export function useCreateSuperviseeCardSetupIntent() {
+  return useMutation({ mutationFn: createSuperviseeCardSetupIntent })
+}
+
+/** After a SetupIntent succeeds the card is already on the customer: just refetch the list. */
+export function useRefreshSuperviseeCards() {
+  const queryClient = useQueryClient()
+  return () => queryClient.invalidateQueries({ queryKey: payoutKeys.superviseeCards() })
+}
+
+export function useRemoveSuperviseeCard() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (paymentMethodId: string) => removeSuperviseeCard(paymentMethodId),
+    onSuccess: (data) => {
+      queryClient.setQueryData(payoutKeys.superviseeCards(), data)
+    },
+  })
+}
+
+export function useSuperviseePayments(page: number, enabled = true) {
+  return useQuery({
+    queryKey: payoutKeys.superviseePayments(page),
+    queryFn: () => getSuperviseePayments(page, 10),
+    enabled,
+    staleTime: 60 * 1000,
+  })
 }
 
 export function usePayoutStatusQuery(enabled: boolean) {
@@ -56,10 +104,10 @@ export function useHourlyQuote(
   enabled: boolean,
 ) {
   const rateCents = hourlyRate != null && hourlyRate >= 1 ? Math.round(hourlyRate * 100) : 0
-  // Only whole 15-minute steps, matching the backend validation.
+  // Whole hours only, matching the backend validation.
   const capMinutes =
-    maxHoursPerWeek != null && Number.isInteger(maxHoursPerWeek * 4) && maxHoursPerWeek > 0
-      ? Math.round(maxHoursPerWeek * 60)
+    maxHoursPerWeek != null && Number.isInteger(maxHoursPerWeek) && maxHoursPerWeek > 0
+      ? maxHoursPerWeek * 60
       : 0
   return useQuery({
     queryKey: payoutKeys.quote(rateCents, capMinutes),

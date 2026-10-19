@@ -1,3 +1,4 @@
+import { Skeleton } from '@/components/ui/skeleton'
 import { formatUsdCents } from '@/lib/utils/money'
 import type { HourlyQuote } from '@/types/payouts'
 
@@ -83,6 +84,33 @@ export function HourlyQuoteSummary({
           </p>
         </>
       )}
+    </dl>
+  )
+}
+
+/**
+ * Same box, rows and note as the summary, so swapping between the two while a
+ * quote is (re)fetched doesn't shift the form around.
+ */
+export function HourlyQuoteSummarySkeleton({
+  perspective,
+}: {
+  perspective: 'supervisor' | 'supervisee'
+}) {
+  const rows = perspective === 'supervisor' ? 4 : 5
+  return (
+    <dl className="space-y-1.5 rounded-lg border bg-muted/30 px-4 py-3" aria-busy="true">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-baseline justify-between gap-4 py-0.5">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+      ))}
+      <div className="space-y-1.5 pt-1.5">
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-11/12" />
+        <Skeleton className="h-3 w-2/3" />
+      </div>
     </dl>
   )
 }
