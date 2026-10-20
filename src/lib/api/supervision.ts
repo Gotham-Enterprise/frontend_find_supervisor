@@ -23,12 +23,14 @@ import type {
   StripeLink,
   SuperviseeCards,
   SuperviseePayments,
+  SuperviseeWeekSummary,
 } from '@/types/payouts'
 import type {
   HireBillingWeeks,
   HireSessionInput,
   PayNowIntent,
   SupervisorEarnings,
+  SupervisorWeekSummary,
 } from '@/types/sessions'
 import type {
   PurchaseSubscriptionResponse,
@@ -155,12 +157,35 @@ export async function saveHirePaymentMethod(
 }
 
 /** GET /supervision/payments/earnings — the supervisor's in-app earnings across hires. */
-export async function getSupervisorEarnings(page = 1, limit = 10): Promise<SupervisorEarnings> {
+export async function getSupervisorEarnings(
+  page = 1,
+  limit = 10,
+  hireId?: string | null,
+): Promise<SupervisorEarnings> {
   const { data } = await apiClient.get<ApiResponse<SupervisorEarnings>>(
     '/supervision/payments/earnings',
-    { params: { page, limit } },
+    { params: { page, limit, ...(hireId ? { hireId } : {}) } },
   )
   return data.data
+}
+
+/** GET /supervision/payments/earnings/week — hours per day per supervisee for one week. */
+export async function getSupervisorWeekSummary(
+  start?: string | null,
+): Promise<SupervisorWeekSummary> {
+  const { data } = await apiClient.get<ApiResponse<SupervisorWeekSummary>>(
+    '/supervision/payments/earnings/week',
+    { params: start ? { start } : {} },
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/earnings/export — the same earnings as a CSV file. */
+export async function exportSupervisorEarnings(): Promise<Blob> {
+  const { data } = await apiClient.get<Blob>('/supervision/payments/earnings/export', {
+    responseType: 'blob',
+  })
+  return data
 }
 
 /** GET /supervision/payments/cards — the supervisee's saved cards and which hires use them. */
@@ -194,6 +219,33 @@ export async function getSuperviseePayments(page = 1, limit = 10): Promise<Super
   return data.data
 }
 
+/** GET /supervision/payments/history/week — hours per day per supervisor for one week. */
+export async function getSuperviseeWeekSummary(
+  start?: string | null,
+): Promise<SuperviseeWeekSummary> {
+  const { data } = await apiClient.get<ApiResponse<SuperviseeWeekSummary>>(
+    '/supervision/payments/history/week',
+    { params: start ? { start } : {} },
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/history/:weekId/receipt — Stripe's receipt page for the prepay. */
+export async function getSuperviseeReceiptUrl(weekId: string): Promise<string> {
+  const { data } = await apiClient.get<ApiResponse<{ url: string }>>(
+    `/supervision/payments/history/${weekId}/receipt`,
+  )
+  return data.data.url
+}
+
+/** GET /supervision/payments/history/export — the same payments as a CSV file. */
+export async function exportSuperviseePayments(): Promise<Blob> {
+  const { data } = await apiClient.get<Blob>('/supervision/payments/history/export', {
+    responseType: 'blob',
+  })
+  return data
+}
+
 /** GET /supervision/hires/:hireId/billing-weeks — sessions and weekly review state (both parties). */
 export async function getHireBillingWeeks(hireId: string): Promise<HireBillingWeeks> {
   const { data } = await apiClient.get<ApiResponse<HireBillingWeeks>>(
@@ -203,12 +255,16 @@ export async function getHireBillingWeeks(hireId: string): Promise<HireBillingWe
 }
 
 /** POST /supervision/hires/:hireId/sessions — supervisor logs a session. */
-/** POST /supervision/hires/:hireId/late-entry-requests — ask support to add a session to a closed week. */
+/**
+ * POST /supervision/hires/:hireId/late-entry-requests — ask support to add a
+ * session to a closed week. Returns the refreshed billing weeks, with the
+ * request listed under its week.
+ */
 export async function requestLateEntry(
   hireId: string,
   input: HireSessionInput,
-): Promise<{ requested: boolean; weekId: string }> {
-  const { data } = await apiClient.post<ApiResponse<{ requested: boolean; weekId: string }>>(
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
     `/supervision/hires/${hireId}/late-entry-requests`,
     input,
   )
@@ -282,10 +338,18 @@ export async function disputeBillingWeek(
   hireId: string,
   weekId: string,
   reason: string,
+  attachments: File[] = [],
 ): Promise<HireBillingWeeks> {
+  // multipart: the reason plus up to 3 evidence images
+  const form = new FormData()
+  form.append('reason', reason)
+  attachments.forEach((file) => form.append('attachments', file))
+  // Unset the client's JSON default so axios sends real multipart/form-data
+  // (with the JSON content type it would serialise the FormData and drop the files).
   const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
     `/supervision/hires/${hireId}/billing-weeks/${weekId}/dispute`,
-    { reason },
+    form,
+    { headers: { 'Content-Type': undefined } },
   )
   return data.data
 }

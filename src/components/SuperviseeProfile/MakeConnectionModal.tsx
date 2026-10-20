@@ -201,7 +201,7 @@ export function MakeConnectionModal({
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-lg">
         <DialogTitle className="mb-1">Make a Connection</DialogTitle>
         <p className="mb-5 text-sm text-muted-foreground">
           Send a short introduction so {superviseeName} can review your connection request.

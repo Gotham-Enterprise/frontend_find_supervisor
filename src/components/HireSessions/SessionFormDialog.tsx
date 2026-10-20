@@ -133,7 +133,7 @@ export function SessionFormDialog({
 
   return (
     <DialogRoot open={open} onOpenChange={(next) => !isPending && onOpenChange(next)}>
-      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-md">
         <DialogTitle>{isEdit ? 'Edit Session' : 'Log a Session'}</DialogTitle>
         <p className="mb-4 mt-1 text-sm text-muted-foreground">
           Log each session in 15-minute units (up to {formatDuration(MAX_SESSION_MINUTES)} per

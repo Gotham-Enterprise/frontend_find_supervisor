@@ -34,7 +34,7 @@ const PAGE_TITLES: Array<{ prefix: string; title: string }> = [
   { prefix: '/supervision-requests', title: 'Supervision Requests' },
   { prefix: '/connections/received', title: 'Connection Requests' },
   { prefix: '/connections/sent', title: 'Sent Connections' },
-  { prefix: '/billing', title: 'Billing & Invoices' },
+  { prefix: '/billing', title: 'Billing' },
   { prefix: '/messages', title: 'Messages' },
   { prefix: '/settings', title: 'Settings' },
   { prefix: '/user', title: 'User Profile' },

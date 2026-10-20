@@ -53,6 +53,7 @@ export {
   useRequestLateEntry,
   useRespondToLateSession,
   useSupervisorEarnings,
+  useSupervisorWeekSummary,
   useUpdateHireSession,
 } from './useHireSessions'
 export {
@@ -87,6 +88,7 @@ export {
   useStartPayoutOnboarding,
   useSuperviseeCards,
   useSuperviseePayments,
+  useSuperviseeWeekSummary,
 } from './usePayouts'
 export { recommendedSupervisorKeys, useRecommendedSupervisors } from './useRecommendedSupervisors'
 export { useResendVerificationEmail } from './useResendVerificationEmail'

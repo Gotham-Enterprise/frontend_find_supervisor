@@ -98,11 +98,24 @@ export interface SuperviseeCards {
   cards: SuperviseeSavedCard[]
 }
 
+/** A late session on a settled week, charged to the supervisee on its own. */
+export interface SuperviseeLateCharge {
+  id: string
+  /** YYYY-MM-DD */
+  sessionDate: string
+  durationMinutes: number
+  totalCents: number
+  chargeStatus: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELED'
+  paidAt: string | null
+}
+
 /** One billing week as the supervisee paid for it (integer cents). */
 export interface SuperviseePaymentWeek {
   id: string
   hireId: string
   supervisorName: string | null
+  /** Supervisee's list page with this hire's sessions modal open */
+  sessionsPath: string
   startDate: string
   endDate: string
   status: 'OPEN' | 'IN_REVIEW' | 'DISPUTED' | 'APPROVED' | 'SETTLED'
@@ -112,18 +125,80 @@ export interface SuperviseePaymentWeek {
   serviceFeeCents: number
   refundCents: number | null
   approvedMinutes: number | null
+  approvedBy: 'SUPERVISEE' | 'AUTO' | 'SUPPORT' | null
   failureMessage: string | null
   paidAt: string | null
   settledAt: string | null
+  // Breakdown: the prepay, what the (approved or, until then, logged) hours cost, the refund
+  hourlyRateCents: number
+  weeklyCapMinutes: number
+  loggedMinutes: number
+  billedMinutes: number
+  prepayAmountCents: number
+  totalCents: number
+  hoursChargeCents: number
+  /** Actual once settled, otherwise what the logged hours would leave unused */
+  expectedRefundCents: number
+  /** Hours + service fee + late sessions: what the week costs in the end */
+  costCents: number
+  /** True until the week settles */
+  estimated: boolean
+  lateEntries: SuperviseeLateCharge[]
+  // Timeline + actions
+  prepayDueDate: string
+  logDeadlineAt: string
+  reviewEndsAt: string
+  approvedAt: string | null
+  disputedAt: string | null
+  failedAt: string | null
+  hasReceipt: boolean
+  canReview: boolean
+  canPayNow: boolean
 }
 
 /** GET /supervision/payments/history */
 export interface SuperviseePayments {
-  totals: { chargedCents: number; refundedCents: number; netPaidCents: number }
+  totals: {
+    chargedCents: number
+    refundedCents: number
+    netPaidCents: number
+    chargedThisMonthCents: number
+    refundedThisMonthCents: number
+  }
   totalCount: number
   page: number
   limit: number
   items: SuperviseePaymentWeek[]
+}
+
+/** GET /supervision/payments/history/week — one week across the supervisee's hires. */
+export interface SuperviseeWeekRow extends SuperviseePaymentWeek {
+  weekId: string
+  /** Monday … Sunday */
+  days: { minutes: number; lateMinutes: number }[]
+  minutes: number
+  sessions: number
+}
+
+export interface SuperviseeWeekSummary {
+  startDate: string
+  endDate: string
+  isCurrentWeek: boolean
+  hasPrevious: boolean
+  hasNext: boolean
+  totals: {
+    minutes: number
+    sessions: number
+    supervisors: number
+    prepaidCents: number
+    hoursChargeCents: number
+    expectedRefundCents: number
+    costCents: number
+    estimated: boolean
+    needsReview: number
+    unpaid: number
+  }
+  rows: SuperviseeWeekRow[]
 }
 
 /** GET /supervision/hires/:hireId/payment */

@@ -420,7 +420,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
   return (
     <>
       <DialogRoot open={open} onOpenChange={(next) => !isSubmitting && onOpenChange(next)}>
-        <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-xl">
           <DialogTitle className="mb-1">{isEdit ? 'Edit Agreement' : 'Send Agreement'}</DialogTitle>
           <p className="mb-5 text-sm text-muted-foreground">
             {isEdit
@@ -730,18 +730,25 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
       </DialogRoot>
 
       <DialogRoot open={previewOpen} onOpenChange={handlePreviewOpenChange}>
-        <DialogContent className="flex h-[85vh] max-w-3xl flex-col">
-          <DialogTitle>Agreement Preview</DialogTitle>
-          <p className="mt-1 text-sm text-muted-foreground">
-            This is exactly what {superviseeName} will receive.
-          </p>
+        <DialogContent
+          className="h-[85vh] max-w-3xl"
+          bodyClassName="flex flex-col"
+          header={
+            <>
+              <DialogTitle>Agreement Preview</DialogTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                This is exactly what {superviseeName} will receive.
+              </p>
+            </>
+          }
+        >
           {previewUrl && (
             /* Fragment fits the whole page on open (Chrome: view=Fit, Firefox: zoom=page-fit)
                so older users see the full document without fiddling with zoom. */
             <iframe
               src={`${previewUrl}#view=Fit&zoom=page-fit`}
               title="Agreement preview"
-              className="mt-3 min-h-0 w-full flex-1 rounded-md border bg-muted/30"
+              className="min-h-0 w-full flex-1 rounded-md border bg-muted/30"
             />
           )}
         </DialogContent>

@@ -8,6 +8,7 @@ import {
   disputeBillingWeek,
   getHireBillingWeeks,
   getSupervisorEarnings,
+  getSupervisorWeekSummary,
   logHireSession,
   payNowBillingWeek,
   requestLateEntry,
@@ -24,10 +25,24 @@ export const hireSessionKeys = {
   weeks: (hireId: string) => [...hireSessionKeys.all, hireId] as const,
 }
 
-export function useSupervisorEarnings(page: number, enabled: boolean) {
+export function useSupervisorEarnings(
+  page: number,
+  enabled: boolean,
+  hireId: string | null = null,
+) {
   return useQuery({
-    queryKey: [...hireSessionKeys.all, 'earnings', page] as const,
-    queryFn: () => getSupervisorEarnings(page),
+    queryKey: [...hireSessionKeys.all, 'earnings', page, hireId] as const,
+    queryFn: () => getSupervisorEarnings(page, 10, hireId),
+    enabled,
+    placeholderData: (previous) => previous,
+  })
+}
+
+/** One week of earnings across hires; `start` is any date in that week (null = current). */
+export function useSupervisorWeekSummary(start: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: [...hireSessionKeys.all, 'earnings', 'week', start] as const,
+    queryFn: () => getSupervisorWeekSummary(start),
     enabled,
     placeholderData: (previous) => previous,
   })
@@ -56,11 +71,11 @@ function useBillingWeeksMutation<TVariables>(
   })
 }
 
-/** Sends a late-entry request to support; nothing changes on the week until support adds it. */
+/** Sends a late-entry request to support; it's listed under the week until support adds it. */
 export function useRequestLateEntry(hireId: string) {
-  return useMutation({
-    mutationFn: (input: HireSessionInput) => requestLateEntry(hireId, input),
-  })
+  return useBillingWeeksMutation(hireId, (input: HireSessionInput) =>
+    requestLateEntry(hireId, input),
+  )
 }
 
 export function useLogHireSession(hireId: string) {
@@ -94,8 +109,10 @@ export function useApproveBillingWeek(hireId: string) {
 }
 
 export function useDisputeBillingWeek(hireId: string) {
-  return useBillingWeeksMutation(hireId, ({ weekId, reason }: { weekId: string; reason: string }) =>
-    disputeBillingWeek(hireId, weekId, reason),
+  return useBillingWeeksMutation(
+    hireId,
+    ({ weekId, reason, attachments }: { weekId: string; reason: string; attachments?: File[] }) =>
+      disputeBillingWeek(hireId, weekId, reason, attachments),
   )
 }
 

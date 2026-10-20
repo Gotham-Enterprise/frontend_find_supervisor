@@ -105,7 +105,7 @@ export function SubscriptionModal({
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl p-10" aria-describedby={undefined}>
+      <DialogContent className="max-w-4xl" bodyClassName="p-10" aria-describedby={undefined}>
         <div className="mb-7 text-center">
           <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">
             Choose your plan

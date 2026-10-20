@@ -247,15 +247,19 @@ export function HireRequestDetailsDialog({
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[min(85vh,780px)] max-w-2xl overflow-y-auto p-0 sm:max-w-2xl">
-        <div className="border-b border-border px-6 pb-4 pr-12 pt-6">
-          <DialogTitle className="pr-10 text-lg">Request details</DialogTitle>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Full information for this hire request
-          </p>
-          <p className="mt-3 text-sm font-medium text-foreground">{supervisorName}</p>
-        </div>
-
+      <DialogContent
+        className="max-h-[min(85vh,780px)] max-w-2xl sm:max-w-2xl"
+        bodyClassName="p-0"
+        header={
+          <>
+            <DialogTitle className="text-lg">Request details</DialogTitle>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Full information for this hire request
+            </p>
+            <p className="mt-3 text-sm font-medium text-foreground">{supervisorName}</p>
+          </>
+        }
+      >
         <div className="space-y-6 px-6 py-5">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-muted-foreground">Status</span>

@@ -30,6 +30,24 @@ export interface HireSession {
 
 export type PrepayStatus = 'PENDING' | 'PAID' | 'FAILED' | 'CANCELED'
 
+/**
+ * A supervisor's request to add a session to a closed week. Listed under the
+ * week until Gotham support adds it (it then appears as a SUPPORT session) or
+ * dismisses it. Never counts toward hours or money.
+ */
+export interface LateEntryRequest {
+  id: string
+  /** Eastern calendar date, YYYY-MM-DD */
+  sessionDate: string
+  durationMinutes: number
+  notes: string
+  status: 'REQUESTED' | 'DISMISSED'
+  createdAt: string
+  resolvedAt: string | null
+  /** Why support didn't add it */
+  resolutionNote: string | null
+}
+
 /** The week's money, as each side sees it. */
 interface BillingWeekPaymentBase {
   prepayStatus: PrepayStatus
@@ -55,6 +73,15 @@ export interface SupervisorWeekPayment extends BillingWeekPaymentBase {
   supervisorAmountCents: number | null
 }
 
+/** An image the supervisee attached as evidence when disputing the week. */
+export interface DisputeAttachment {
+  id: string
+  url: string
+  fileName: string
+  contentType: string
+  sizeBytes: number
+}
+
 export interface BillingWeek {
   id: string
   /** Monday, YYYY-MM-DD (Eastern) */
@@ -72,10 +99,13 @@ export interface BillingWeek {
   approvedBy: BillingWeekApprovedBy | null
   disputedAt: string | null
   disputeReason: string | null
+  disputeAttachments: DisputeAttachment[]
   canEditSessions: boolean
   canReview: boolean
   payment: SuperviseeWeekPayment | SupervisorWeekPayment | null
   sessions: HireSession[]
+  /** Supervisor only; empty for the supervisee */
+  lateEntryRequests: LateEntryRequest[]
 }
 
 /** GET /supervision/hires/:hireId/billing-weeks */
@@ -109,6 +139,53 @@ export interface HireBillingWeeks {
   weeks: BillingWeek[]
 }
 
+/** GET /supervision/payments/earnings/week — one week across the supervisor's hires. */
+export interface WeekSummaryDay {
+  minutes: number
+  /** Part of `minutes` that support added as late entries */
+  lateMinutes: number
+}
+
+export interface WeekSummaryRow {
+  weekId: string
+  hireId: string
+  superviseeName: string | null
+  /** Supervisor's list page with this hire's sessions modal open */
+  sessionsPath: string
+  status: BillingWeekStatus
+  prepayStatus: PrepayStatus
+  /** Monday … Sunday */
+  days: WeekSummaryDay[]
+  minutes: number
+  billedMinutes: number
+  weeklyCapMinutes: number
+  sessions: number
+  grossCents: number
+  platformFeeCents: number
+  netCents: number
+  estimated: boolean
+}
+
+export interface SupervisorWeekSummary {
+  /** Monday, YYYY-MM-DD (Eastern) */
+  startDate: string
+  /** Sunday, YYYY-MM-DD (Eastern) */
+  endDate: string
+  isCurrentWeek: boolean
+  hasPrevious: boolean
+  hasNext: boolean
+  totals: {
+    minutes: number
+    sessions: number
+    supervisees: number
+    grossCents: number
+    platformFeeCents: number
+    netCents: number
+    estimated: boolean
+  }
+  rows: WeekSummaryRow[]
+}
+
 export interface HireSessionInput {
   sessionDate: string
   durationMinutes: number
@@ -123,6 +200,20 @@ export interface PayNowIntent {
   paymentMethodId?: string
 }
 
+/** A late entry on a settled week, charged and paid out on its own. */
+export interface EarningsLateEntry {
+  id: string
+  /** YYYY-MM-DD */
+  sessionDate: string
+  durationMinutes: number
+  grossCents: number
+  platformFeeCents: number
+  netCents: number
+  chargeStatus: PrepayStatus
+  paidAt: string | null
+  stripeTransferId: string | null
+}
+
 /** GET /supervision/payments/earnings — a supervisor's in-app earnings across hires. */
 export interface EarningsWeek {
   id: string
@@ -135,16 +226,57 @@ export interface EarningsWeek {
   /** Logged (not rejected) minutes */
   minutes: number
   approvedMinutes: number | null
+  approvedBy: BillingWeekApprovedBy | null
   paidOutCents: number
   /** Estimate for a prepaid week still in progress */
   pendingCents: number
   settledAt: string | null
+  // Breakdown: the paid (or, until settled, logged) hours at the rate, less the platform fee
+  hourlyRateCents: number
+  platformFeeBps: number
+  billedMinutes: number
+  grossCents: number
+  platformFeeCents: number
+  netCents: number
+  /** True until the week settles */
+  estimated: boolean
+  lateEntries: EarningsLateEntry[]
+  // Timeline
+  prepaidAt: string | null
+  prepayFailureMessage: string | null
+  logDeadlineAt: string
+  reviewEndsAt: string
+  approvedAt: string | null
+  disputedAt: string | null
+  stripeTransferId: string | null
+}
+
+export interface EarningsSuperviseeSummary {
+  hireId: string
+  superviseeName: string | null
+  paidOutCents: number
+  pendingCents: number
+  weeks: number
+  /** Paid (or logged, until settled) minutes across the weeks */
+  minutes: number
+}
+
+export interface EarningsMonth {
+  /** YYYY-MM (US Eastern) */
+  month: string
+  paidOutCents: number
+  minutes: number
+  weeks: number
 }
 
 export interface SupervisorEarnings {
-  totals: { paidOutCents: number; pendingCents: number }
+  totals: { paidOutCents: number; pendingCents: number; paidOutThisMonthCents: number }
   totalCount: number
   page: number
   limit: number
+  /** Across all hires, regardless of the hire filter */
+  bySupervisee: EarningsSuperviseeSummary[]
+  /** Newest month first */
+  monthly: EarningsMonth[]
   items: EarningsWeek[]
 }

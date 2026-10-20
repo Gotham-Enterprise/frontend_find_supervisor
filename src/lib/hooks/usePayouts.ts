@@ -11,6 +11,7 @@ import {
   getPayoutStatus,
   getSuperviseeCards,
   getSuperviseePayments,
+  getSuperviseeWeekSummary,
   removeSuperviseeCard,
   saveHirePaymentMethod,
 } from '@/lib/api/supervision'
@@ -60,6 +61,16 @@ export function useRemoveSuperviseeCard() {
     onSuccess: (data) => {
       queryClient.setQueryData(payoutKeys.superviseeCards(), data)
     },
+  })
+}
+
+/** One week of the supervisee's payments; `start` is any date in that week (null = current). */
+export function useSuperviseeWeekSummary(start: string | null, enabled = true) {
+  return useQuery({
+    queryKey: [...payoutKeys.all, 'supervisee-week', start] as const,
+    queryFn: () => getSuperviseeWeekSummary(start),
+    enabled,
+    placeholderData: (previous) => previous,
   })
 }
 

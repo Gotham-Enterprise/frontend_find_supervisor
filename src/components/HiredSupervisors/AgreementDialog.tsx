@@ -212,7 +212,7 @@ export function AgreementDialog({
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[min(85vh,720px)] max-w-lg overflow-y-auto">
+      <DialogContent className="max-h-[min(85vh,720px)] max-w-lg">
         <DialogTitle>Supervision Agreement</DialogTitle>
         <p className="mt-1 text-sm text-muted-foreground">
           Version {agreement.version} · {sourceLabel(agreement)}

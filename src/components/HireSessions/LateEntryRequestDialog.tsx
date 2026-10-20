@@ -47,8 +47,8 @@ const DURATION_OPTIONS = Array.from({ length: MAX_SESSION_MINUTES / UNIT_MINUTES
 
 /**
  * Supervisor's request to add a session to a week that already closed. Goes
- * to Gotham support (who add it in the admin panel); the supervisee then
- * approves it before it is charged. Nothing on the week changes here.
+ * to Gotham support (who add it in the admin panel) and is listed under the
+ * week until then; the supervisee approves it before it is charged.
  */
 export function LateEntryRequestDialog({
   hireId,
@@ -98,7 +98,7 @@ export function LateEntryRequestDialog({
       {
         onSuccess: () => {
           showSuccess('Request sent to support.', {
-            description: `Once added, ${counterpartName} will be asked to approve it before it's charged.`,
+            description: `It's listed under the week until support adds it; then ${counterpartName} will be asked to approve it.`,
           })
           onOpenChange(false)
         },
@@ -109,7 +109,7 @@ export function LateEntryRequestDialog({
 
   return (
     <DialogRoot open={open} onOpenChange={(next) => !isPending && onOpenChange(next)}>
-      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-md">
         <DialogTitle>Request a Late Entry</DialogTitle>
         <p className="mb-4 mt-1 text-sm text-muted-foreground">
           The week of {weekLabel} is closed. Support will add this session for you, and{' '}

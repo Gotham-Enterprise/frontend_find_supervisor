@@ -1,6 +1,14 @@
 'use client'
 
-import { AlertCircle, CalendarClock, CreditCard, Pencil, Plus, Trash2 } from 'lucide-react'
+import {
+  AlertCircle,
+  CalendarClock,
+  ChevronDown,
+  CreditCard,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react'
 import { useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -34,9 +42,11 @@ import type {
   BillingWeekStatus,
   HireBillingWeeks,
   HireSession,
+  LateEntryRequest,
   SuperviseeWeekPayment,
 } from '@/types/sessions'
 
+import { DisputeAttachmentsField, DisputeAttachmentThumbs } from './DisputeAttachmentsField'
 import { LateEntryRequestDialog } from './LateEntryRequestDialog'
 import { SessionFormDialog } from './SessionFormDialog'
 
@@ -54,6 +64,8 @@ function addCalendarDays(isoDate: string, days: number): string {
 }
 
 const LATE_ENTRY_WINDOW_DAYS = 14
+/** Weeks shown in full; earlier ones collapse to one line until opened. */
+const EXPANDED_WEEKS = 4
 
 /** A closed week the supervisor can still ask support to add a session to. */
 function canRequestLateEntry(week: BillingWeek, role: HireBillingWeeks['role']): boolean {
@@ -255,6 +267,74 @@ function SessionRow({
   )
 }
 
+/** A session the supervisor asked support to add to this closed week. */
+function LateEntryRequestRow({ request }: { request: LateEntryRequest }) {
+  const dismissed = request.status === 'DISMISSED'
+  return (
+    <li className="flex items-start gap-3 py-2.5">
+      <div className="w-24 shrink-0">
+        <p className="text-sm text-foreground">{formatCalendarDate(request.sessionDate)}</p>
+        <p
+          className={`text-xs tabular-nums text-muted-foreground ${dismissed ? 'line-through' : ''}`}
+        >
+          {formatDuration(request.durationMinutes)}
+        </p>
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
+          {request.notes}
+        </p>
+        <p className="mt-1 text-xs italic text-muted-foreground">
+          {dismissed
+            ? `Not added by Gotham support${request.resolutionNote ? ` · ${request.resolutionNote}` : ''}`
+            : 'Sent to Gotham support · waiting to be added'}
+        </p>
+      </div>
+    </li>
+  )
+}
+
+/** One-line summary of an earlier week; click to open it in full. */
+function CollapsedWeekRow({
+  week,
+  expanded,
+  onToggle,
+}: {
+  week: BillingWeek
+  expanded: boolean
+  onToggle: () => void
+}) {
+  const badge = STATUS_BADGE[week.status]
+  const hours =
+    week.approvedMinutes != null && week.approvedMinutes !== week.loggedMinutes
+      ? `${formatDuration(week.loggedMinutes)} logged · ${formatDuration(week.approvedMinutes)} approved`
+      : formatDuration(week.loggedMinutes)
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={expanded}
+      className="flex w-full items-center justify-between gap-3 rounded-lg border px-4 py-2.5 text-left transition-colors hover:bg-muted/40"
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        <span className="truncate text-sm font-medium text-foreground">
+          {formatWeekRange(week.startDate, week.endDate)}
+        </span>
+        <Badge variant="outline" className={`${badge.className} hover:bg-[inherit]`}>
+          {badge.label}
+        </Badge>
+      </span>
+      <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums text-muted-foreground">
+        {hours}
+        <ChevronDown
+          className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
+          aria-hidden
+        />
+      </span>
+    </button>
+  )
+}
+
 function isSuperviseePayment(payment: BillingWeek['payment']): payment is SuperviseeWeekPayment {
   return payment != null && 'totalCents' in payment
 }
@@ -358,7 +438,6 @@ function WeekCard({
   onRespondToLate,
   onApprove,
   onDispute,
-  onRequestLateEntry,
 }: {
   week: BillingWeek
   role: HireBillingWeeks['role']
@@ -370,7 +449,6 @@ function WeekCard({
   onRespondToLate: (session: HireSession, approve: boolean) => void
   onApprove: () => void
   onDispute: () => void
-  onRequestLateEntry?: () => void
 }) {
   const badge = STATUS_BADGE[week.status]
   return (
@@ -391,9 +469,12 @@ function WeekCard({
       <p className="mt-1 text-xs text-muted-foreground">{weekStatusText(week, role)}</p>
       {payment}
       {week.status === 'DISPUTED' && week.disputeReason && (
-        <p className="mt-2 rounded-md bg-destructive/5 px-3 py-2 text-xs text-foreground">
-          <span className="font-medium">Reason:</span> {week.disputeReason}
-        </p>
+        <div className="mt-2 rounded-md bg-destructive/5 px-3 py-2 text-xs text-foreground">
+          <p>
+            <span className="font-medium">Reason:</span> {week.disputeReason}
+          </p>
+          <DisputeAttachmentThumbs attachments={week.disputeAttachments} />
+        </div>
       )}
 
       {week.sessions.length > 0 ? (
@@ -428,15 +509,14 @@ function WeekCard({
         </div>
       )}
 
-      {onRequestLateEntry && canRequestLateEntry(week, role) && (
-        <div className="mt-2 flex justify-end border-t pt-2.5">
-          <button
-            type="button"
-            onClick={onRequestLateEntry}
-            className="text-xs font-medium text-primary hover:underline"
-          >
-            Forgot a session? Request a late entry
-          </button>
+      {week.lateEntryRequests.length > 0 && (
+        <div className="mt-2 border-t pt-2.5">
+          <p className="text-xs font-medium text-foreground">Late entry requests</p>
+          <ul className="divide-y">
+            {week.lateEntryRequests.map((request) => (
+              <LateEntryRequestRow key={request.id} request={request} />
+            ))}
+          </ul>
         </div>
       )}
 
@@ -489,9 +569,12 @@ export function HireSessionsDialog({
   const [form, setForm] = useState<{ open: boolean; session?: HireSession }>({ open: false })
   const [deleting, setDeleting] = useState<HireSession | null>(null)
   const [approving, setApproving] = useState<BillingWeek | null>(null)
+  const [showEarlier, setShowEarlier] = useState(false)
+  const [openOlderIds, setOpenOlderIds] = useState<string[]>([])
   const [lateEntryWeek, setLateEntryWeek] = useState<BillingWeek | null>(null)
   const [disputing, setDisputing] = useState<BillingWeek | null>(null)
   const [disputeReason, setDisputeReason] = useState('')
+  const [disputeFiles, setDisputeFiles] = useState<File[]>([])
 
   function handlePayNow(week: BillingWeek) {
     setPayingWeekId(week.id)
@@ -552,11 +635,12 @@ export function HireSessionsDialog({
   function handleDispute() {
     if (!disputing) return
     disputeMutation.mutate(
-      { weekId: disputing.id, reason: disputeReason.trim() },
+      { weekId: disputing.id, reason: disputeReason.trim(), attachments: disputeFiles },
       {
         onSuccess: () => {
           setDisputing(null)
           setDisputeReason('')
+          setDisputeFiles([])
           showSuccess('Week disputed', {
             description:
               "Gotham support will review the week and contact you. It won't be paid until then.",
@@ -567,24 +651,64 @@ export function HireSessionsDialog({
     )
   }
 
+  const olderWeeks = data?.weeks.slice(EXPANDED_WEEKS) ?? []
+
+  const renderWeekCard = (week: BillingWeek) =>
+    data ? (
+      <WeekCard
+        key={week.id}
+        week={week}
+        role={data.role}
+        hourlyRateCents={data.terms.hourlyRateCents}
+        payment={
+          <PaymentLine
+            week={week}
+            hasPaymentCard={data.hasPaymentCard ?? false}
+            counterpartName={counterpartName}
+            isPaying={payingWeekId === week.id}
+            onPayNow={() => handlePayNow(week)}
+            onChangeCard={
+              onChangeCard
+                ? () => {
+                    onOpenChange(false)
+                    onChangeCard()
+                  }
+                : undefined
+            }
+          />
+        }
+        respondingSessionId={respondMutation.isPending ? (responding?.session.id ?? null) : null}
+        onRespondToLate={(session, approve) => setResponding({ session, approve })}
+        onEditSession={(session) => setForm({ open: true, session })}
+        onDeleteSession={setDeleting}
+        onApprove={() => setApproving(week)}
+        onDispute={() => setDisputing(week)}
+      />
+    ) : null
+
   return (
     <>
       <DialogRoot open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[min(90vh,820px)] max-w-2xl overflow-y-auto">
-          <div className="flex items-start justify-between gap-4 pr-8">
-            <div>
-              <DialogTitle>Supervision Sessions</DialogTitle>
-              <p className="mt-1 text-sm text-muted-foreground">With {counterpartName}</p>
+        <DialogContent
+          className="max-h-[min(90vh,820px)] max-w-2xl"
+          header={
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <DialogTitle>Supervision Sessions</DialogTitle>
+                <p className="mt-1 truncate text-sm text-muted-foreground">
+                  With {counterpartName}
+                </p>
+              </div>
+              {data?.canLog && (
+                <Button size="sm" className="shrink-0" onClick={() => setForm({ open: true })}>
+                  <Plus className="size-3.5" aria-hidden />
+                  Log Session
+                </Button>
+              )}
             </div>
-            {data?.canLog && (
-              <Button size="sm" onClick={() => setForm({ open: true })}>
-                <Plus className="size-3.5" aria-hidden />
-                Log Session
-              </Button>
-            )}
-          </div>
-
-          <div className="mt-4 space-y-3">
+          }
+        >
+          <div className="space-y-3">
             {isLoading ? (
               <>
                 <Skeleton className="h-20 w-full" />
@@ -685,40 +809,44 @@ export function HireSessionsDialog({
                       : `${counterpartName} hasn't logged any sessions yet. You'll review each week's sessions here.`}
                   </p>
                 ) : (
-                  data.weeks.map((week) => (
-                    <WeekCard
-                      key={week.id}
-                      week={week}
-                      role={data.role}
-                      hourlyRateCents={data.terms.hourlyRateCents}
-                      onRequestLateEntry={() => setLateEntryWeek(week)}
-                      payment={
-                        <PaymentLine
-                          week={week}
-                          hasPaymentCard={data.hasPaymentCard ?? false}
-                          counterpartName={counterpartName}
-                          isPaying={payingWeekId === week.id}
-                          onPayNow={() => handlePayNow(week)}
-                          onChangeCard={
-                            onChangeCard
-                              ? () => {
-                                  onOpenChange(false)
-                                  onChangeCard()
-                                }
-                              : undefined
-                          }
-                        />
-                      }
-                      respondingSessionId={
-                        respondMutation.isPending ? (responding?.session.id ?? null) : null
-                      }
-                      onRespondToLate={(session, approve) => setResponding({ session, approve })}
-                      onEditSession={(session) => setForm({ open: true, session })}
-                      onDeleteSession={setDeleting}
-                      onApprove={() => setApproving(week)}
-                      onDispute={() => setDisputing(week)}
-                    />
-                  ))
+                  <>
+                    {data.weeks.slice(0, EXPANDED_WEEKS).map(renderWeekCard)}
+                    {olderWeeks.length > 0 && (
+                      <div className="space-y-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => setShowEarlier((v) => !v)}
+                        >
+                          {showEarlier
+                            ? 'Hide earlier weeks'
+                            : `Show earlier weeks (${olderWeeks.length})`}
+                        </Button>
+                        {showEarlier &&
+                          olderWeeks.map((week) => {
+                            const expanded = openOlderIds.includes(week.id)
+                            return (
+                              <div key={week.id} className="space-y-2">
+                                <CollapsedWeekRow
+                                  week={week}
+                                  expanded={expanded}
+                                  onToggle={() =>
+                                    setOpenOlderIds((ids) =>
+                                      expanded
+                                        ? ids.filter((id) => id !== week.id)
+                                        : [...ids, week.id],
+                                    )
+                                  }
+                                />
+                                {expanded && renderWeekCard(week)}
+                              </div>
+                            )
+                          })}
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -800,6 +928,7 @@ export function HireSessionsDialog({
           if (!next) {
             setDisputing(null)
             setDisputeReason('')
+            setDisputeFiles([])
           }
         }}
         title={
@@ -824,6 +953,11 @@ export function HireSessionsDialog({
         <p className="mt-1 text-xs text-muted-foreground">
           At least {DISPUTE_REASON_MIN} characters.
         </p>
+        <DisputeAttachmentsField
+          files={disputeFiles}
+          onChange={setDisputeFiles}
+          disabled={disputeMutation.isPending}
+        />
       </ConfirmDialog>
     </>
   )

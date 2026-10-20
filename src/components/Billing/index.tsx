@@ -9,7 +9,8 @@ import {
   Star,
   XCircle,
 } from 'lucide-react'
-import { useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useState } from 'react'
 
 import {
   FreeFeatureRow,
@@ -29,11 +30,14 @@ import { isSupervisionFreeTierSubscription } from '@/lib/constants/supervision-d
 import {
   useCancelSubscription,
   useCurrentSubscriptionQuery,
+  usePayoutStatusQuery,
   useReactivateSubscription,
+  useSupervisorEarnings,
   useUser,
   useUserSnackbar,
 } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
+import { formatUsdCents } from '@/lib/utils/money'
 import {
   canResumeSubscription,
   isSubscriptionScheduledForCancellation,
@@ -42,6 +46,7 @@ import type { Subscription, SubscriptionStatus } from '@/types/supervisor-profil
 
 import { EarningsCard } from './EarningsCard'
 import { PayoutsCard } from './PayoutsCard'
+import { WeekSummaryCard } from './WeekSummaryCard'
 
 // ─── Feature list shared with the dashboard upgrade cards ─────────────────────
 
@@ -477,6 +482,26 @@ function InvoicesCard() {
   )
 }
 
+// ─── Tabs ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Money going out (the supervisor's subscription) and money coming in (in-app
+ * supervision earnings and payouts) live on separate tabs. `?tab=earnings`
+ * deep-links to the second one; Stripe's `?payouts=` return also lands there.
+ */
+type BillingTab = 'subscription' | 'earnings'
+
+const BILLING_TABS: { id: BillingTab; label: string }[] = [
+  { id: 'subscription', label: 'Subscription' },
+  { id: 'earnings', label: 'Earnings' },
+]
+
+function tabFromParams(tab: string | null, payouts: string | null): BillingTab | null {
+  if (tab === 'earnings' || payouts) return 'earnings'
+  if (tab === 'subscription') return 'subscription'
+  return null
+}
+
 // ─── Main component ────────────────────────────────────────────────────────────
 
 function BillingContent() {
@@ -496,6 +521,35 @@ function BillingContent() {
 
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [resumeConfirmOpen, setResumeConfirmOpen] = useState(false)
+
+  // Tabs: the URL wins, then the user's click, then a default — Earnings once
+  // the payout account is ready (that's what they come back for), else Subscription.
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const urlTab = tabFromParams(searchParams.get('tab'), searchParams.get('payouts'))
+  const [chosenTab, setChosenTab] = useState<BillingTab | null>(urlTab)
+  // A new ?tab= in the URL (e.g. a notification link) takes over from the last click.
+  const [seenUrlTab, setSeenUrlTab] = useState(urlTab)
+  if (urlTab !== seenUrlTab) {
+    setSeenUrlTab(urlTab)
+    if (urlTab) setChosenTab(urlTab)
+  }
+  const { data: payoutStatus, isLoading: isPayoutLoading } =
+    usePayoutStatusQuery(IN_APP_PAYMENTS_ENABLED)
+  // Same query the Earnings card uses, so this costs no extra request.
+  const { data: earnings } = useSupervisorEarnings(1, IN_APP_PAYMENTS_ENABLED)
+  const activeTab: BillingTab = !IN_APP_PAYMENTS_ENABLED
+    ? 'subscription'
+    : (chosenTab ?? (payoutStatus?.status === 'ready' ? 'earnings' : 'subscription'))
+  // Hold the skeleton until we know which tab to open by default.
+  const isDecidingTab = IN_APP_PAYMENTS_ENABLED && chosenTab == null && isPayoutLoading
+  const paidThisMonth = earnings?.totals.paidOutThisMonthCents ?? 0
+
+  function handleTabChange(tab: BillingTab) {
+    setChosenTab(tab)
+    router.replace(`${pathname}?tab=${tab}`, { scroll: false })
+  }
 
   async function handleConfirmCancel() {
     try {
@@ -540,40 +594,77 @@ function BillingContent() {
     <div className="flex flex-col gap-8">
       {/* Page header */}
       <div>
-        <h1 className="text-xl font-semibold text-foreground">Billing &amp; Invoices</h1>
+        <h1 className="text-xl font-semibold text-foreground">
+          {IN_APP_PAYMENTS_ENABLED ? 'Billing' : 'Billing & Invoices'}
+        </h1>
         <p className="mt-1 text-base text-muted-foreground">
-          Manage your subscription, billing details, and invoices.
+          {IN_APP_PAYMENTS_ENABLED
+            ? 'Your subscription and invoices, and what you earn from in-app supervision.'
+            : 'Manage your subscription, billing details, and invoices.'}
         </p>
       </div>
 
-      {isLoading ? (
+      {IN_APP_PAYMENTS_ENABLED && (
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Billing sections">
+          {BILLING_TABS.map((tab) => {
+            const selected = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => handleTabChange(tab.id)}
+                className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                  selected
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-background text-foreground hover:bg-muted'
+                }`}
+              >
+                {tab.label}
+                {tab.id === 'earnings' && paidThisMonth > 0 && (
+                  <span
+                    className={`ml-2 rounded-full px-1.5 py-0.5 text-xs tabular-nums ${
+                      selected ? 'bg-primary-foreground/20' : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {formatUsdCents(paidThisMonth)} this month
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {isLoading || isDecidingTab ? (
         <BillingSkeleton />
       ) : isError ? (
         <BillingError onRetry={() => void refetch()} />
-      ) : isFreeTier ? (
-        // Free or no subscription — upgrade prompt spans the page (its own 3-col
-        // layout needs the width); payouts/earnings follow in the grid below.
-        <>
-          {subscription ? (
-            <FreePlanUpgradeCard
-              planName={subscription.plan.name || 'Find a Supervisor Free Plan'}
-            />
-          ) : (
-            <NoSubscriptionUpgradeCard />
-          )}
-          {IN_APP_PAYMENTS_ENABLED && (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-              <div className="flex flex-col gap-6 lg:col-span-3">
-                <EarningsCard />
-              </div>
-              <div className="flex flex-col gap-6 lg:col-span-2">
-                <PayoutsCard />
-              </div>
+      ) : activeTab === 'earnings' ? (
+        // Earnings — one week at a glance, then the main column: weekly
+        // earnings; side column: Stripe payout account.
+        <div className="flex flex-col gap-6">
+          <WeekSummaryCard />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+            <div className="flex flex-col gap-6 lg:col-span-3">
+              <EarningsCard />
             </div>
-          )}
-        </>
+            <div className="flex flex-col gap-6 lg:col-span-2">
+              <PayoutsCard />
+            </div>
+          </div>
+        </div>
+      ) : isFreeTier ? (
+        // Free or no subscription — the upgrade prompt spans the page (its own
+        // 3-col layout needs the width).
+        subscription ? (
+          <FreePlanUpgradeCard planName={subscription.plan.name || 'Find a Supervisor Free Plan'} />
+        ) : (
+          <NoSubscriptionUpgradeCard />
+        )
       ) : (
-        // Paid subscription — main column: plan + earnings; side column: payouts + invoices.
+        // Paid subscription — main column: plan; side column: invoices.
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
           <div className="flex flex-col gap-6 lg:col-span-3">
             <SubscriptionCard
@@ -581,10 +672,8 @@ function BillingContent() {
               onCancelClick={() => setConfirmOpen(true)}
               onResumeClick={() => setResumeConfirmOpen(true)}
             />
-            {IN_APP_PAYMENTS_ENABLED && <EarningsCard />}
           </div>
           <div className="flex flex-col gap-6 lg:col-span-2">
-            {IN_APP_PAYMENTS_ENABLED && <PayoutsCard />}
             <InvoicesCard />
           </div>
         </div>
@@ -627,7 +716,10 @@ function BillingContent() {
 export function BillingPanel() {
   return (
     <SupervisorRouteGuard>
-      <BillingContent />
+      {/* useSearchParams (tab deep links) needs a Suspense boundary */}
+      <Suspense fallback={<BillingSkeleton />}>
+        <BillingContent />
+      </Suspense>
     </SupervisorRouteGuard>
   )
 }

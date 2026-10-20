@@ -30,7 +30,7 @@ export function HirePaymentDialog({
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[min(92vh,1000px)] max-w-2xl overflow-y-auto">
+      <DialogContent className="max-h-[min(92vh,1000px)] max-w-2xl">
         <DialogTitle>{changeCard ? 'Change payment card' : 'Set up weekly payment'}</DialogTitle>
         <p className="mb-4 mt-1 text-sm text-muted-foreground">
           Save the card for your weekly prepays with {supervisorName}. Nothing is charged when you

@@ -305,7 +305,7 @@ function SuperviseeDetailsDialog({
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogTitle>Supervisee Details</DialogTitle>
 
         <section className="mt-5">
