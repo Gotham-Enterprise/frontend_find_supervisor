@@ -30,12 +30,20 @@ export function HirePaymentDialog({
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[min(92vh,1000px)] max-w-2xl">
-        <DialogTitle>{changeCard ? 'Change payment card' : 'Set up weekly payment'}</DialogTitle>
-        <p className="mb-4 mt-1 text-sm text-muted-foreground">
-          Save the card for your weekly prepays with {supervisorName}. Nothing is charged when you
-          save it.
-        </p>
+      <DialogContent
+        className="max-h-[min(92vh,1000px)] max-w-2xl"
+        header={
+          <>
+            <DialogTitle>
+              {changeCard ? 'Change payment card' : 'Set up weekly payment'}
+            </DialogTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Save the card for your weekly prepays with {supervisorName}. Nothing is charged when
+              you save it.
+            </p>
+          </>
+        }
+      >
         {/* A child of DialogContent, so its picker state resets whenever the dialog closes. */}
         <HirePaymentSetup
           hireId={hire.id}

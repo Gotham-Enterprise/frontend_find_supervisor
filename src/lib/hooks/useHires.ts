@@ -1,12 +1,13 @@
 'use client'
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
   acceptHire,
   cancelHire,
   getAgreement,
   getSuperviseeUpcomingSessions,
+  type HireListFilters,
   type HiresListMode,
   hireSupervisor,
   listHires,
@@ -70,11 +71,16 @@ export function useHiresList(
   limit = 10,
   status?: HireStatus | HireStatus[],
   mode?: HiresListMode,
+  filters: HireListFilters = {},
 ) {
+  const search = filters.search?.trim() ?? ''
+  const group = filters.group ?? ''
   return useQuery({
-    queryKey: [...hireKeys.list(page, limit, status), mode ?? 'all'],
-    queryFn: () => listHires(page, limit, status, mode),
+    queryKey: [...hireKeys.list(page, limit, status), mode ?? 'all', search, group],
+    queryFn: () => listHires(page, limit, status, mode, filters),
     staleTime: 2 * 60 * 1000,
+    // Keep the current rows on screen while a new search/filter loads.
+    placeholderData: keepPreviousData,
   })
 }
 

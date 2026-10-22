@@ -429,11 +429,21 @@ export async function hireSupervisor(payload: HireSupervisorRequestInput): Promi
 /** GET /api/supervision/hires — paginated hire list for the authenticated user (supervisor or supervisee). */
 export type HiresListMode = 'supervisors' | 'medicalDirectors'
 
+/** Status groups behind the hire list filters (server-side). */
+export type HireListGroup = 'needs_action' | 'pending' | 'active' | 'completed' | 'closed'
+
+export interface HireListFilters {
+  /** Name search on the other party. */
+  search?: string
+  group?: HireListGroup
+}
+
 export async function listHires(
   page = 1,
   limit = 10,
   status?: HireStatus | HireStatus[],
   mode?: HiresListMode,
+  filters: HireListFilters = {},
 ): Promise<HireListResponse> {
   const statusParam =
     status === undefined
@@ -442,8 +452,13 @@ export async function listHires(
           status: Array.isArray(status) ? status.join(',') : status,
         }
   const modeParam = mode ? { mode } : {}
+  const search = filters.search?.trim()
+  const filterParams = {
+    ...(search ? { search } : {}),
+    ...(filters.group ? { group: filters.group } : {}),
+  }
   const { data } = await apiClient.get<ApiResponse<HireListResponse>>('/supervision/hires', {
-    params: { page, limit, ...statusParam, ...modeParam },
+    params: { page, limit, ...statusParam, ...modeParam, ...filterParams },
   })
   return data.data
 }

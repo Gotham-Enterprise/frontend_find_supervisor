@@ -5,6 +5,7 @@ import {
   CalendarDays,
   CreditCard,
   DollarSign,
+  FileSignature,
   FileText,
   type LucideIcon,
   MapPin,
@@ -16,6 +17,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 
+import { HIRE_LIST_GRID } from '@/components/HireList/HireListToolbar'
 import { HirePaymentDialog } from '@/components/HirePayment/HirePaymentDialog'
 import { HireSessionsDialog } from '@/components/HireSessions/HireSessionsDialog'
 import { LeaveReviewModal } from '@/components/reviews/LeaveReviewModal'
@@ -36,6 +38,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar'
 import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import { useCancelHire, useMarkHireAsCompleted, useUserSnackbar } from '@/lib/hooks'
 import { useConfetti } from '@/lib/hooks/useConfetti'
+import { cn } from '@/lib/utils'
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
   formatDate,
@@ -88,12 +91,15 @@ interface HireRequestCardProps {
   existingReview?: Review
   /** Rendered on Hired Medical Directors — profile links + back links target the MD routes. */
   isMedicalDirectors?: boolean
+  /** 'list' renders a compact row (inside a list container) instead of a card. */
+  layout?: 'card' | 'list'
 }
 
 export function HireRequestCard({
   hire,
   existingReview,
   isMedicalDirectors = false,
+  layout = 'card',
 }: HireRequestCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   // Deep link: agreement notifications/emails point to the hired list with
@@ -232,174 +238,275 @@ export function HireRequestCard({
     })
   }
 
+  const actionsMenu = (
+    <DropdownMenuRoot>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="ghost" size="icon-sm" aria-label="Request actions">
+            <MoreVertical className="size-4" />
+          </Button>
+        }
+      />
+      <DropdownMenuPortal>
+        <DropdownMenuPositioner>
+          <DropdownMenuPopup>
+            <DropdownMenuItem>
+              <Link href={profileHref} className="w-full">
+                View Profile
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setDetailsOpen(true)}>
+              Request Details
+            </DropdownMenuItem>
+            {hasAgreement && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setAgreementOpen(true)}>
+                  {canSignAgreement ? 'Review & Sign Agreement' : 'View Agreement'}
+                </DropdownMenuItem>
+              </>
+            )}
+            {hasRejectionReason && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem destructive onClick={() => setReasonOpen(true)}>
+                  View Reason
+                </DropdownMenuItem>
+              </>
+            )}
+            {canComplete && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setCompleteOpen(true)}>
+                  Mark as Completed
+                </DropdownMenuItem>
+              </>
+            )}
+            {canReview && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => {
+                    setPostCompleteReviewFlow(false)
+                    setReviewOpen(true)
+                  }}
+                >
+                  Leave Review
+                </DropdownMenuItem>
+              </>
+            )}
+            {hasReview && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => {
+                    setPostCompleteReviewFlow(false)
+                    setReviewOpen(true)
+                  }}
+                >
+                  Edit Review
+                </DropdownMenuItem>
+              </>
+            )}
+            {canCancel && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem destructive onClick={() => setCancelOpen(true)}>
+                  Cancel Request
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuPopup>
+        </DropdownMenuPositioner>
+      </DropdownMenuPortal>
+    </DropdownMenuRoot>
+  )
+
+  const badges = (
+    <>
+      <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
+      <AgreementStageBadge hire={hire} />
+      {hire.hasReviewed && (
+        <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+          <Star className="size-2.5 fill-amber-500 text-amber-500" aria-hidden />
+          Reviewed
+        </span>
+      )}
+    </>
+  )
+
+  // List rows show the one action that matters most right now; the rest stay in the menu.
+  const rowAction = canSignAgreement ? (
+    <Button size="sm" onClick={() => setAgreementOpen(true)}>
+      <FileSignature className="size-3.5" aria-hidden />
+      Review &amp; Sign
+    </Button>
+  ) : needsPaymentSetup ? (
+    <Button size="sm" onClick={() => openPayment()}>
+      <CreditCard className="size-3.5" aria-hidden />
+      Set up payment
+    </Button>
+  ) : hasSessions ? (
+    <Button variant="outline" size="sm" onClick={() => setSessionsOpen(true)}>
+      <CalendarClock className="size-3.5" aria-hidden />
+      Sessions
+    </Button>
+  ) : null
+
   return (
     <>
-      <Card className="gap-0 overflow-hidden rounded-xl py-0 shadow-sm">
-        {/* ── Header ─────────────────────────────────────────────────── */}
-        <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
-          <div className="flex min-w-0 flex-1 gap-3">
-            <Link
-              href={profileHref}
-              className="mt-0.5 shrink-0 rounded-lg outline-none ring-offset-background transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <UserAvatar
-                src={hire.supervisor.profilePhotoUrl}
-                name={supervisorName}
-                alt={`Profile photo of ${supervisorName}`}
-                size="lg"
-              />
-            </Link>
-            <div className="min-w-0 flex-1">
+      {layout === 'list' ? (
+        <div
+          className={cn(
+            'flex flex-col gap-3 px-4 py-3',
+            HIRE_LIST_GRID,
+            canSignAgreement && 'bg-amber-50/60',
+          )}
+        >
+          <Link
+            href={profileHref}
+            className="flex min-w-0 items-center gap-3 rounded-lg outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <UserAvatar
+              src={hire.supervisor.profilePhotoUrl}
+              name={supervisorName}
+              alt={`Profile photo of ${supervisorName}`}
+              size="md"
+              className="shrink-0"
+            />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-foreground hover:underline">
+                {supervisorName}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">{occupationDisplay}</p>
+              <p className="truncate text-xs text-muted-foreground lg:hidden">
+                {formatHireDetailDisplay(feeRaw)} · Requested{' '}
+                {formatHireDetailDisplay(requestedRaw)}
+              </p>
+            </div>
+          </Link>
+          <div className="flex flex-wrap items-center gap-1.5">{badges}</div>
+          <p className="hidden truncate text-sm text-foreground lg:block">
+            {formatHireDetailDisplay(feeRaw)}
+          </p>
+          <p className="hidden truncate text-sm text-foreground lg:block">
+            {formatHireDetailDisplay(requestedRaw)}
+          </p>
+          <div className="flex items-center justify-end gap-2">
+            {rowAction}
+            {actionsMenu}
+          </div>
+        </div>
+      ) : (
+        <Card
+          className={cn(
+            'gap-0 overflow-hidden rounded-xl py-0 shadow-sm',
+            hire.status === 'ACTIVE' && 'border-emerald-300',
+          )}
+        >
+          {/* Active supervision gets a green accent so it stands out from accepted-but-not-started. */}
+          {hire.status === 'ACTIVE' && (
+            <div className="h-1 bg-gradient-to-r from-emerald-600 to-emerald-400" aria-hidden />
+          )}
+          {/* ── Header ─────────────────────────────────────────────────── */}
+          <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
+            <div className="flex min-w-0 flex-1 gap-3">
               <Link
                 href={profileHref}
-                className="block rounded-lg py-0.5 outline-none ring-offset-background transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
+                className="mt-0.5 shrink-0 rounded-lg outline-none ring-offset-background transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <h3 className="truncate text-sm font-semibold leading-tight tracking-tight text-foreground">
-                  {supervisorName}
-                </h3>
-                <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                  {occupationDisplay}
-                </p>
+                <UserAvatar
+                  src={hire.supervisor.profilePhotoUrl}
+                  name={supervisorName}
+                  alt={`Profile photo of ${supervisorName}`}
+                  size="lg"
+                />
               </Link>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
-                <AgreementStageBadge hire={hire} />
-                {hire.hasReviewed && (
-                  <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-                    <Star className="size-2.5 fill-amber-500 text-amber-500" aria-hidden />
-                    Reviewed
-                  </span>
-                )}
+              <div className="min-w-0 flex-1">
+                <Link
+                  href={profileHref}
+                  className="block rounded-lg py-0.5 outline-none ring-offset-background transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <h3 className="truncate text-sm font-semibold leading-tight tracking-tight text-foreground">
+                    {supervisorName}
+                  </h3>
+                  <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                    {occupationDisplay}
+                  </p>
+                </Link>
+                <div className="mt-2 flex flex-wrap items-center gap-2">{badges}</div>
               </div>
             </div>
+
+            <div className="flex shrink-0 self-start">{actionsMenu}</div>
           </div>
 
-          <div className="flex shrink-0 self-start">
-            <DropdownMenuRoot>
-              <DropdownMenuTrigger
-                render={
-                  <Button variant="ghost" size="icon-sm" aria-label="Request actions">
-                    <MoreVertical className="size-4" />
-                  </Button>
-                }
-              />
-              <DropdownMenuPortal>
-                <DropdownMenuPositioner>
-                  <DropdownMenuPopup>
-                    <DropdownMenuItem>
-                      <Link href={profileHref} className="w-full">
-                        View Profile
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setDetailsOpen(true)}>
-                      Request Details
-                    </DropdownMenuItem>
-                    {hasAgreement && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setAgreementOpen(true)}>
-                          {canSignAgreement ? 'Review & Sign Agreement' : 'View Agreement'}
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {hasRejectionReason && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem destructive onClick={() => setReasonOpen(true)}>
-                          View Reason
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {canComplete && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setCompleteOpen(true)}>
-                          Mark as Completed
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {canReview && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setPostCompleteReviewFlow(false)
-                            setReviewOpen(true)
-                          }}
-                        >
-                          Leave Review
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {hasReview && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setPostCompleteReviewFlow(false)
-                            setReviewOpen(true)
-                          }}
-                        >
-                          Edit Review
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {canCancel && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem destructive onClick={() => setCancelOpen(true)}>
-                          Cancel Request
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuPopup>
-                </DropdownMenuPositioner>
-              </DropdownMenuPortal>
-            </DropdownMenuRoot>
+          {/* ── Details ────────────────────────────────────────────────── */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/50 px-5 py-4">
+            <DetailCell label="Location" value={locationRaw} icon={MapPin} />
+            <DetailCell label="Format" value={formatRaw} icon={Monitor} />
+            <DetailCell label="Fee" value={feeRaw} icon={DollarSign} />
+            <DetailCell label="Requested" value={requestedRaw} icon={CalendarDays} />
           </div>
-        </div>
 
-        {/* ── Details ────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/50 px-5 py-4">
-          <DetailCell label="Location" value={locationRaw} icon={MapPin} />
-          <DetailCell label="Format" value={formatRaw} icon={Monitor} />
-          <DetailCell label="Fee" value={feeRaw} icon={DollarSign} />
-          <DetailCell label="Requested" value={requestedRaw} icon={CalendarDays} />
-        </div>
-
-        {isAgreementSigned && (
-          <div className="flex justify-end gap-2 border-t border-border/50 px-5 py-3">
-            {hasSessions && (
-              <Button variant="outline" size="sm" onClick={() => setSessionsOpen(true)}>
-                <CalendarClock className="size-3.5" aria-hidden />
-                Sessions
-              </Button>
-            )}
-            {needsPaymentSetup && (
-              <Button size="sm" onClick={() => openPayment()}>
-                <CreditCard className="size-3.5" aria-hidden />
-                Set up payment
-              </Button>
-            )}
-            {hire.agreement?.fileUrl ? (
-              <a
-                href={hire.agreement.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          {canSignAgreement && (
+            <div className="flex flex-col gap-3 border-t border-amber-200 bg-amber-50 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-2">
+                <FileSignature className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden />
+                <p className="text-sm text-amber-900">
+                  <span className="font-semibold">
+                    {supervisorName} sent you an agreement to sign.
+                  </span>{' '}
+                  {needsPaymentSetup
+                    ? 'Set up your payment card, then sign to start supervision.'
+                    : "Supervision doesn't begin until you sign."}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                className="shrink-0 self-stretch sm:self-center"
+                onClick={() => setAgreementOpen(true)}
               >
-                <FileText className="size-3.5" aria-hidden />
-                View Signed Agreement
-              </a>
-            ) : (
-              <Button variant="outline" size="sm" onClick={() => setAgreementOpen(true)}>
-                <FileText className="size-3.5" aria-hidden />
-                View Signed Agreement
+                <FileSignature className="size-3.5" aria-hidden />
+                Review &amp; Sign
               </Button>
-            )}
-          </div>
-        )}
-      </Card>
+            </div>
+          )}
+
+          {isAgreementSigned && (
+            <div className="flex justify-end gap-2 border-t border-border/50 px-5 py-3">
+              {hasSessions && (
+                <Button variant="outline" size="sm" onClick={() => setSessionsOpen(true)}>
+                  <CalendarClock className="size-3.5" aria-hidden />
+                  Sessions
+                </Button>
+              )}
+              {needsPaymentSetup && (
+                <Button size="sm" onClick={() => openPayment()}>
+                  <CreditCard className="size-3.5" aria-hidden />
+                  Set up payment
+                </Button>
+              )}
+              {hire.agreement?.fileUrl ? (
+                <a
+                  href={hire.agreement.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                >
+                  <FileText className="size-3.5" aria-hidden />
+                  View Signed Agreement
+                </a>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => setAgreementOpen(true)}>
+                  <FileText className="size-3.5" aria-hidden />
+                  View Signed Agreement
+                </Button>
+              )}
+            </div>
+          )}
+        </Card>
+      )}
 
       <HireRequestDetailsDialog hire={hire} open={detailsOpen} onOpenChange={setDetailsOpen} />
 

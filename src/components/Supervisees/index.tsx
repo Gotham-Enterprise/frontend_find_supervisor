@@ -20,6 +20,15 @@ import { useMemo, useState } from 'react'
 import { AgreementDialog } from '@/components/HiredSupervisors/AgreementDialog'
 import { AgreementStageBadge } from '@/components/HiredSupervisors/AgreementStageBadge'
 import { HireStatusBadge } from '@/components/HiredSupervisors/HireStatusBadge'
+import {
+  HIRE_LIST_GRID,
+  type HireListGroupFilter,
+  HireListHeader,
+  HireListNoResults,
+  HireListToolbar,
+  useDebouncedValue,
+  useHireListView,
+} from '@/components/HireList/HireListToolbar'
 import { HireSessionsDialog } from '@/components/HireSessions/HireSessionsDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -43,6 +52,7 @@ import {
   useSuperviseeFormOptions,
   useUserSnackbar,
 } from '@/lib/hooks'
+import { cn } from '@/lib/utils'
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
   formatAvailability,
@@ -56,7 +66,7 @@ import {
   resolveSupervisorTypeLabel,
 } from '@/lib/utils/profile-formatters'
 import { getAgreementStage, getAgreementStageLabel } from '@/lib/utils/supervision-status'
-import type { HireListItem, HireStatus } from '@/types/hire'
+import type { HireListItem } from '@/types/hire'
 import type { Review } from '@/types/review'
 
 import { SendAgreementModal } from './SendAgreementModal'
@@ -65,19 +75,17 @@ import { SendAgreementModal } from './SendAgreementModal'
 
 const PAGE_SIZE = 10
 
-type TabStatus = 'ALL' | 'ACCEPTED' | 'COMPLETED'
+// Pending requests are handled (accepted/declined) on Supervision Requests, so
+// this page doesn't offer a Pending filter.
+type SuperviseeListGroup = Exclude<HireListGroupFilter, 'pending'>
 
-const TABS: { id: TabStatus; label: string }[] = [
-  { id: 'ALL', label: 'All' },
-  // Accepted hires become ACTIVE once the first weekly prepay is paid; both are
-  // "current" from the supervisor's point of view, so one tab covers them.
-  { id: 'ACCEPTED', label: 'Active' },
-  { id: 'COMPLETED', label: 'Completed' },
+const SUPERVISEE_LIST_GROUPS: readonly SuperviseeListGroup[] = [
+  'all',
+  'needs_action',
+  'active',
+  'completed',
+  'closed',
 ]
-
-function isCompletedTabHire(hire: HireListItem): boolean {
-  return hire.status === 'COMPLETED' || (hire.status === 'REVIEWED' && hire.completedAt != null)
-}
 
 // ─── Detail cell ──────────────────────────────────────────────────────────────
 
@@ -138,37 +146,59 @@ function SuperviseesSkeleton() {
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
-function SuperviseesEmpty({ tab, isMdClients }: { tab: TabStatus; isMdClients: boolean }) {
-  const messages: Record<TabStatus, { title: string; body: string }> = isMdClients
+function SuperviseesEmpty({
+  group,
+  isMdClients,
+}: {
+  group: SuperviseeListGroup
+  isMdClients: boolean
+}) {
+  const messages: Record<SuperviseeListGroup, { title: string; body: string }> = isMdClients
     ? {
-        ALL: {
+        all: {
           title: 'No medical director clients yet',
           body: 'Once someone hires you as their Medical Director and you accept, they will appear here.',
         },
-        ACCEPTED: {
+        needs_action: {
+          title: "You're all caught up",
+          body: 'Accepted clients still waiting for an agreement from you will appear here.',
+        },
+        active: {
           title: 'No active clients',
           body: 'Clients whose requests you have accepted, including engagements in progress, will appear here.',
         },
-        COMPLETED: {
+        completed: {
           title: 'No completed engagements',
           body: 'Engagements that have been marked as completed will appear here.',
         },
+        closed: {
+          title: 'No closed requests',
+          body: 'Requests that were declined or canceled will appear here.',
+        },
       }
     : {
-        ALL: {
+        all: {
           title: 'No supervisees yet',
           body: 'Once supervisees request your supervision and you accept, they will appear here.',
         },
-        ACCEPTED: {
+        needs_action: {
+          title: "You're all caught up",
+          body: 'Accepted supervisees still waiting for an agreement from you will appear here.',
+        },
+        active: {
           title: 'No active supervisees',
           body: 'Supervisees whose requests you have accepted, including supervision in progress, will appear here.',
         },
-        COMPLETED: {
+        completed: {
           title: 'No completed supervisions',
           body: 'Supervisions that have been marked as completed will appear here.',
         },
+        closed: {
+          title: 'No closed requests',
+          body: 'Requests that were declined or canceled will appear here.',
+        },
       }
-  const { title, body } = messages[tab]
+  const { title, body } = messages[group]
 
   return (
     <Card className="border-dashed shadow-sm">
@@ -500,7 +530,16 @@ function clearSendAgreementDeepLink() {
 
 // ─── Supervisee card ──────────────────────────────────────────────────────────
 
-function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review }) {
+function SuperviseeCard({
+  hire,
+  review,
+  layout = 'card',
+}: {
+  hire: HireListItem
+  review?: Review
+  /** 'list' renders a compact row (inside a list container) instead of a card. */
+  layout?: 'card' | 'list'
+}) {
   // Deep link: agreement notifications/emails point to /supervisees?hire=<id>,
   // which auto-opens this card's agreement dialog. Lazy init only (no effect); the
   // dialog renders in a portal, so SSR/hydration output is unaffected.
@@ -550,109 +589,171 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
   const startDateRaw = formatDateOnly(hire.startDate ?? hire.preferredStartDate)
   const goalsRaw = hire.goals?.trim() || 'Not specified'
 
+  const actionsMenu = (
+    <RowActions
+      hire={hire}
+      review={review}
+      onViewAgreement={() => setViewAgreementOpen(true)}
+      onSendAgreement={() => setSendAgreementOpen(true)}
+    />
+  )
+
+  const badges = (
+    <>
+      <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
+      <AgreementStageBadge hire={hire} />
+      {awaitingPaymentSetup && (
+        <Badge
+          variant="outline"
+          className="border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-50"
+        >
+          Payment not set up
+        </Badge>
+      )}
+      {review && (
+        <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+          <Star className="size-2.5 fill-amber-500 text-amber-500" aria-hidden />
+          {review.rating}/5
+        </span>
+      )}
+    </>
+  )
+
+  // List rows show the one action that matters most right now; the rest stay in the menu.
+  const rowAction = canSendAgreement ? (
+    <Button size="sm" onClick={() => setSendAgreementOpen(true)}>
+      <FileSignature className="size-3.5" aria-hidden />
+      Send Agreement
+    </Button>
+  ) : hasSessions ? (
+    <Button variant="outline" size="sm" onClick={() => setSessionsOpen(true)}>
+      <CalendarClock className="size-3.5" aria-hidden />
+      Sessions
+    </Button>
+  ) : null
+
   return (
     <>
-      <Card className="gap-0 overflow-hidden rounded-xl py-0 shadow-sm">
-        <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
-          <div className="flex min-w-0 flex-1 gap-3">
+      {layout === 'list' ? (
+        <div
+          className={cn(
+            'flex flex-col gap-3 px-4 py-3',
+            HIRE_LIST_GRID,
+            canSendAgreement && 'bg-amber-50/60',
+          )}
+        >
+          <div className="flex min-w-0 items-center gap-3">
             <UserAvatar
               src={hire.supervisee.profilePhotoUrl}
               name={superviseeName}
               alt={`Profile photo of ${superviseeName}`}
-              size="lg"
-              className="mt-0.5 shrink-0"
+              size="md"
+              className="shrink-0"
             />
-            <div className="min-w-0 flex-1">
-              <h3 className="truncate text-sm font-semibold leading-tight tracking-tight text-foreground">
-                {superviseeName}
-              </h3>
-              <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                {occupationDisplay}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-foreground">{superviseeName}</p>
+              <p className="truncate text-xs text-muted-foreground">{occupationDisplay}</p>
+              <p className="truncate text-xs text-muted-foreground lg:hidden">
+                {formatRaw} · Starts {startDateRaw}
               </p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
-                <AgreementStageBadge hire={hire} />
-                {awaitingPaymentSetup && (
-                  <Badge
-                    variant="outline"
-                    className="border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-50"
-                  >
-                    Payment not set up
-                  </Badge>
-                )}
-                {review && (
-                  <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-                    <Star className="size-2.5 fill-amber-500 text-amber-500" aria-hidden />
-                    {review.rating}/5
-                  </span>
-                )}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">{badges}</div>
+          <p className="hidden truncate text-sm text-foreground lg:block">{formatRaw}</p>
+          <p className="hidden truncate text-sm text-foreground lg:block">{startDateRaw}</p>
+          <div className="flex items-center justify-end gap-2">
+            {rowAction}
+            {actionsMenu}
+          </div>
+        </div>
+      ) : (
+        <Card
+          className={cn(
+            'gap-0 overflow-hidden rounded-xl py-0 shadow-sm',
+            hire.status === 'ACTIVE' && 'border-emerald-300',
+          )}
+        >
+          {/* Active supervision gets a green accent so it stands out from accepted-but-not-started. */}
+          {hire.status === 'ACTIVE' && (
+            <div className="h-1 bg-gradient-to-r from-emerald-600 to-emerald-400" aria-hidden />
+          )}
+          <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
+            <div className="flex min-w-0 flex-1 gap-3">
+              <UserAvatar
+                src={hire.supervisee.profilePhotoUrl}
+                name={superviseeName}
+                alt={`Profile photo of ${superviseeName}`}
+                size="lg"
+                className="mt-0.5 shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate text-sm font-semibold leading-tight tracking-tight text-foreground">
+                  {superviseeName}
+                </h3>
+                <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                  {occupationDisplay}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">{badges}</div>
               </div>
             </div>
+            <div className="flex shrink-0 self-start">{actionsMenu}</div>
           </div>
-          <div className="flex shrink-0 self-start">
-            <RowActions
-              hire={hire}
-              review={review}
-              onViewAgreement={() => setViewAgreementOpen(true)}
-              onSendAgreement={() => setSendAgreementOpen(true)}
-            />
+
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/50 px-5 py-4">
+            <DetailCell label="Format" value={formatRaw} icon={Monitor} />
+            <DetailCell label="Start Date" value={startDateRaw} icon={CalendarDays} />
+            <DetailCell label="Location" value={locationRaw} icon={MapPin} />
+            <DetailCell label="Goals" value={goalsRaw} icon={Target} />
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/50 px-5 py-4">
-          <DetailCell label="Format" value={formatRaw} icon={Monitor} />
-          <DetailCell label="Start Date" value={startDateRaw} icon={CalendarDays} />
-          <DetailCell label="Location" value={locationRaw} icon={MapPin} />
-          <DetailCell label="Goals" value={goalsRaw} icon={Target} />
-        </div>
-
-        {canSendAgreement && (
-          <div className="flex flex-col gap-3 border-t border-amber-200 bg-amber-50 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-2">
-              <FileSignature className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden />
-              <p className="text-sm text-amber-900">
-                <span className="font-semibold">Send an agreement to start supervision.</span>{' '}
-                Supervision doesn&apos;t begin until {superviseeName} signs.
-              </p>
-            </div>
-            <Button
-              size="sm"
-              className="shrink-0 self-stretch sm:self-center"
-              onClick={() => setSendAgreementOpen(true)}
-            >
-              <FileSignature className="size-3.5" aria-hidden />
-              Send Agreement
-            </Button>
-          </div>
-        )}
-
-        {isAgreementSigned && (
-          <div className="flex justify-end gap-2 border-t border-border/50 px-5 py-3">
-            {hasSessions && (
-              <Button size="sm" onClick={() => setSessionsOpen(true)}>
-                <CalendarClock className="size-3.5" aria-hidden />
-                Sessions
-              </Button>
-            )}
-            {hire.agreement?.fileUrl ? (
-              <a
-                href={hire.agreement.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          {canSendAgreement && (
+            <div className="flex flex-col gap-3 border-t border-amber-200 bg-amber-50 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-2">
+                <FileSignature className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden />
+                <p className="text-sm text-amber-900">
+                  <span className="font-semibold">Send an agreement to start supervision.</span>{' '}
+                  Supervision doesn&apos;t begin until {superviseeName} signs.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                className="shrink-0 self-stretch sm:self-center"
+                onClick={() => setSendAgreementOpen(true)}
               >
-                <FileText className="size-3.5" aria-hidden />
-                View Signed Agreement
-              </a>
-            ) : (
-              <Button variant="outline" size="sm" onClick={() => setViewAgreementOpen(true)}>
-                <FileText className="size-3.5" aria-hidden />
-                View Signed Agreement
+                <FileSignature className="size-3.5" aria-hidden />
+                Send Agreement
               </Button>
-            )}
-          </div>
-        )}
-      </Card>
+            </div>
+          )}
+
+          {isAgreementSigned && (
+            <div className="flex justify-end gap-2 border-t border-border/50 px-5 py-3">
+              {hasSessions && (
+                <Button size="sm" onClick={() => setSessionsOpen(true)}>
+                  <CalendarClock className="size-3.5" aria-hidden />
+                  Sessions
+                </Button>
+              )}
+              {hire.agreement?.fileUrl ? (
+                <a
+                  href={hire.agreement.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                >
+                  <FileText className="size-3.5" aria-hidden />
+                  View Signed Agreement
+                </a>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => setViewAgreementOpen(true)}>
+                  <FileText className="size-3.5" aria-hidden />
+                  View Signed Agreement
+                </Button>
+              )}
+            </div>
+          )}
+        </Card>
+      )}
 
       {hasAgreement && (
         <AgreementDialog hire={hire} open={viewAgreementOpen} onOpenChange={setViewAgreementOpen} />
@@ -684,22 +785,22 @@ export type SuperviseesPageMode = 'supervisors' | 'medical-directors'
 
 export function SuperviseesPage({ mode = 'supervisors' }: { mode?: SuperviseesPageMode }) {
   const isMdClients = mode === 'medical-directors'
-  const [activeTab, setActiveTab] = useState<TabStatus>('ACCEPTED')
+  // Opens on Active, as before the filters existed: the current supervision work.
+  const [group, setGroup] = useState<SuperviseeListGroup>('active')
   const [page, setPage] = useState(1)
-
-  const isCompletedTab = activeTab === 'COMPLETED'
-  /** Completed tab loads all hires and filters/paginates on the client; other tabs use API filters. */
-  const apiPage = isCompletedTab ? 1 : page
-  const apiLimit = isCompletedTab ? 0 : PAGE_SIZE
-  const apiStatus =
-    activeTab === 'ACCEPTED' ? (['ACCEPTED', 'ACTIVE'] satisfies HireStatus[]) : undefined
+  const [search, setSearch] = useState('')
+  const [view, setView] = useHireListView(
+    isMdClients ? 'medical-director-clients:view' : 'supervisees:view',
+  )
+  const debouncedSearch = useDebouncedValue(search)
 
   const { data, isLoading, isError } = useHiresList(
-    apiPage,
-    apiLimit,
-    apiStatus,
+    page,
+    PAGE_SIZE,
+    undefined,
     // Scoped by the role they hired this supervisor for (hire snapshot)
     isMdClients ? 'medicalDirectors' : 'supervisors',
+    { search: debouncedSearch, group: group === 'all' ? undefined : group },
   )
   // Reviews received by the authenticated supervisor (role-scoped on the backend),
   // joined to hires client-side — same pattern as the supervisee's /hired-supervisors page.
@@ -715,23 +816,24 @@ export function SuperviseesPage({ mode = 'supervisors' }: { mode?: SuperviseesPa
     [reviewsData?.items],
   )
 
-  const rawItems = useMemo(() => data?.items ?? [], [data?.items])
+  const items = data?.items ?? []
+  const totalCount = data?.totalCount ?? 0
+  const totalPages = Math.max(1, data?.totalPages ?? 1)
+  const isSearching = debouncedSearch.trim() !== ''
 
-  const completedMatches = useMemo(() => rawItems.filter(isCompletedTabHire), [rawItems])
+  function handleGroupChange(next: SuperviseeListGroup) {
+    setGroup(next)
+    setPage(1)
+  }
 
-  const items = useMemo(() => {
-    if (!isCompletedTab) {
-      return rawItems
-    }
-    const start = (page - 1) * PAGE_SIZE
-    return completedMatches.slice(start, start + PAGE_SIZE)
-  }, [isCompletedTab, rawItems, completedMatches, page])
+  function handleSearchChange(value: string) {
+    setSearch(value)
+    setPage(1)
+  }
 
-  const totalCount = isCompletedTab ? completedMatches.length : (data?.totalCount ?? 0)
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
-
-  function handleTabChange(tab: TabStatus) {
-    setActiveTab(tab)
+  function clearFilters() {
+    setSearch('')
+    setGroup('all')
     setPage(1)
   }
 
@@ -743,34 +845,22 @@ export function SuperviseesPage({ mode = 'supervisors' }: { mode?: SuperviseesPa
         </h2>
         <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
           {isMdClients
-            ? 'Everyone who has hired you as their Medical Director is listed here. Use the tabs to filter by status, and open the menu on any card to view full profile and engagement details.'
-            : 'Everyone who has requested your supervision is listed here. Use the tabs to filter by status, and open the menu on any card to view full profile and supervision details.'}
+            ? 'Everyone who has hired you as their Medical Director is listed here. Search by name or filter by status, and open the menu on any client to view full profile and engagement details.'
+            : 'Everyone who has requested your supervision is listed here. Search by name or filter by status, and open the menu on any supervisee to view full profile and supervision details.'}
         </p>
       </div>
 
-      {/* Status filter tabs */}
-      <div
-        className="flex flex-wrap gap-2"
-        role="tablist"
-        aria-label="Filter supervisees by status"
-      >
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            onClick={() => handleTabChange(tab.id)}
-            className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-border bg-background text-foreground hover:bg-muted'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <HireListToolbar
+        search={search}
+        onSearchChange={handleSearchChange}
+        searchPlaceholder={isMdClients ? 'Search clients by name' : 'Search supervisees by name'}
+        group={group}
+        onGroupChange={(next) => handleGroupChange(next as SuperviseeListGroup)}
+        groups={SUPERVISEE_LIST_GROUPS}
+        view={view}
+        onViewChange={setView}
+        groupLabel={isMdClients ? 'Filter clients by status' : 'Filter supervisees by status'}
+      />
 
       {/* ── Content ──────────────────────────────────────────────────── */}
       {isLoading ? (
@@ -778,14 +868,32 @@ export function SuperviseesPage({ mode = 'supervisors' }: { mode?: SuperviseesPa
       ) : isError ? (
         <SuperviseesError />
       ) : items.length === 0 ? (
-        <SuperviseesEmpty tab={activeTab} isMdClients={isMdClients} />
+        isSearching ? (
+          <HireListNoResults onClear={clearFilters} />
+        ) : (
+          <SuperviseesEmpty group={group} isMdClients={isMdClients} />
+        )
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {items.map((hire) => (
-              <SuperviseeCard key={hire.id} hire={hire} review={reviewsByHireId.get(hire.id)} />
-            ))}
-          </div>
+          {view === 'list' ? (
+            <Card className="gap-0 divide-y divide-border/60 overflow-hidden rounded-xl py-0 shadow-sm">
+              <HireListHeader detailLabel="Format" dateLabel="Start date" />
+              {items.map((hire) => (
+                <SuperviseeCard
+                  key={hire.id}
+                  hire={hire}
+                  review={reviewsByHireId.get(hire.id)}
+                  layout="list"
+                />
+              ))}
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {items.map((hire) => (
+                <SuperviseeCard key={hire.id} hire={hire} review={reviewsByHireId.get(hire.id)} />
+              ))}
+            </div>
+          )}
 
           {totalPages > 1 && (
             <Pagination

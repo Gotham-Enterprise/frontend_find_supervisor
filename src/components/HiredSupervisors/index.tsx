@@ -4,6 +4,14 @@ import { AlertCircle, Briefcase, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
+import {
+  type HireListGroupFilter,
+  HireListHeader,
+  HireListNoResults,
+  HireListToolbar,
+  useDebouncedValue,
+  useHireListView,
+} from '@/components/HireList/HireListToolbar'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -158,12 +166,36 @@ interface HiredSupervisorsPageProps {
 export function HiredSupervisorsPage({ mode = 'supervisors' }: HiredSupervisorsPageProps) {
   const isMedicalDirectors = mode === 'medical-directors'
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [group, setGroup] = useState<HireListGroupFilter>('all')
+  const [view, setView] = useHireListView(
+    isMedicalDirectors ? 'hired-medical-directors:view' : 'hired-supervisors:view',
+  )
+  const debouncedSearch = useDebouncedValue(search)
   const { data, isLoading, isError } = useHiresList(
     page,
     PAGE_SIZE,
     undefined,
     isMedicalDirectors ? 'medicalDirectors' : 'supervisors',
+    { search: debouncedSearch, group: group === 'all' ? undefined : group },
   )
+  const hasFilters = debouncedSearch.trim() !== '' || group !== 'all'
+
+  function handleSearchChange(value: string) {
+    setSearch(value)
+    setPage(1)
+  }
+
+  function handleGroupChange(next: HireListGroupFilter) {
+    setGroup(next)
+    setPage(1)
+  }
+
+  function clearFilters() {
+    setSearch('')
+    setGroup('all')
+    setPage(1)
+  }
   const { data: reviewsData } = useMyReviews(0)
 
   const items = data?.items ?? []
@@ -180,32 +212,66 @@ export function HiredSupervisorsPage({ mode = 'supervisors' }: HiredSupervisorsP
   return (
     <div className="space-y-8">
       <div className="space-y-2">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">Your hire requests</h2>
-        <p className="mt-2 max-w-2xl text-base leading-relaxed text-muted-foreground">
+        <h2 className="text-xl font-semibold tracking-tight text-foreground">Your Hire Requests</h2>
+        <p className="mt-2 text-base leading-relaxed text-muted-foreground">
           Everyone you&apos;ve asked to supervise you is listed here. Each card shows format, fee,
           and current status. Open the menu to view a supervisor&apos;s profile, see full request
           details, or take other actions.
         </p>
       </div>
 
+      <HireListToolbar
+        search={search}
+        onSearchChange={handleSearchChange}
+        searchPlaceholder={
+          isMedicalDirectors ? 'Search medical directors by name' : 'Search supervisors by name'
+        }
+        group={group}
+        onGroupChange={handleGroupChange}
+        view={view}
+        onViewChange={setView}
+        groupLabel={
+          isMedicalDirectors ? 'Filter medical directors by status' : 'Filter supervisors by status'
+        }
+      />
+
       {isLoading ? (
         <HiredSupervisorsCardsSkeleton />
       ) : isError ? (
         <HiredSupervisorsError />
       ) : items.length === 0 ? (
-        <HiredSupervisorsEmpty isMedicalDirectors={isMedicalDirectors} />
+        hasFilters ? (
+          <HireListNoResults onClear={clearFilters} />
+        ) : (
+          <HiredSupervisorsEmpty isMedicalDirectors={isMedicalDirectors} />
+        )
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {items.map((hire) => (
-              <HireRequestCard
-                key={hire.id}
-                hire={hire}
-                existingReview={reviewsByHireId.get(hire.id)}
-                isMedicalDirectors={isMedicalDirectors}
-              />
-            ))}
-          </div>
+          {view === 'list' ? (
+            <Card className="gap-0 divide-y divide-border/60 overflow-hidden rounded-xl py-0 shadow-sm">
+              <HireListHeader detailLabel="Fee" dateLabel="Requested" />
+              {items.map((hire) => (
+                <HireRequestCard
+                  key={hire.id}
+                  hire={hire}
+                  existingReview={reviewsByHireId.get(hire.id)}
+                  isMedicalDirectors={isMedicalDirectors}
+                  layout="list"
+                />
+              ))}
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {items.map((hire) => (
+                <HireRequestCard
+                  key={hire.id}
+                  hire={hire}
+                  existingReview={reviewsByHireId.get(hire.id)}
+                  isMedicalDirectors={isMedicalDirectors}
+                />
+              ))}
+            </div>
+          )}
 
           {totalPages > 1 && (
             <Pagination

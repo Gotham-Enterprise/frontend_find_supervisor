@@ -3,6 +3,7 @@
 import { CheckCircle2, CreditCard, FileText } from 'lucide-react'
 import { useState } from 'react'
 
+import { cardLabel } from '@/components/HirePayment/HirePaymentSetup'
 import { formatHours, HourlyQuoteSummary } from '@/components/HirePayment/HourlyQuoteSummary'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -11,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { isSupervisorRole } from '@/lib/auth/roles'
 import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
-import { useUser, useUserSnackbar } from '@/lib/hooks'
+import { useHirePayment, useUser, useUserSnackbar } from '@/lib/hooks'
 import { useConfetti } from '@/lib/hooks/useConfetti'
 import { useSignAgreement } from '@/lib/hooks/useHires'
 import { parseApiError } from '@/lib/utils/error-parser'
@@ -90,11 +91,14 @@ function SignAgreementSection({
   hire,
   onOpenChange,
   cardRequired,
+  hasSavedCards,
 }: {
   hire: HireListItem
   onOpenChange: (open: boolean) => void
   /** Hourly agreements: the weekly-prepay card must be saved before signing. */
   cardRequired: boolean
+  /** The supervisee already has cards on file, so step 1 is picking one, not adding one. */
+  hasSavedCards: boolean
 }) {
   const [signatureName, setSignatureName] = useState('')
   const [consent, setConsent] = useState(false)
@@ -106,20 +110,22 @@ function SignAgreementSection({
   const isPending = signMutation.isPending
   const cardMissing = cardRequired && hire.paymentMethodSavedAt == null
 
-  function handleSign() {
-    signMutation.mutate(
-      { hireId: hire.id, payload: { signatureName } },
-      {
-        onSuccess: () => {
-          burst()
-          showSuccess('Agreement signed!', {
-            description: `Your supervision with ${supervisorName} is ready to begin.`,
-          })
-          onOpenChange(false)
-        },
-        onError: (err) => showError(parseApiError(err)),
-      },
-    )
+  // mutateAsync, not mutate(…, { onSuccess }): the hook refetches the hire before
+  // settling, which marks it signed and unmounts this form — React Query drops
+  // mutate()'s per-call callbacks once the caller unmounts, so the confetti,
+  // toast and close would never run.
+  async function handleSign() {
+    try {
+      await signMutation.mutateAsync({ hireId: hire.id, payload: { signatureName } })
+    } catch (err) {
+      showError(parseApiError(err))
+      return
+    }
+    burst()
+    showSuccess('Agreement signed!', {
+      description: `Your supervision with ${supervisorName} is ready to begin.`,
+    })
+    onOpenChange(false)
   }
 
   return (
@@ -131,7 +137,7 @@ function SignAgreementSection({
         </h3>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
           {cardMissing
-            ? 'Save your payment card above first, then type your full legal name to sign.'
+            ? `${hasSavedCards ? 'Choose' : 'Save'} your payment card above first, then type your full legal name to sign.`
             : 'Type your full legal name to sign electronically.'}
         </p>
         <div className="mt-3 space-y-3">
@@ -203,6 +209,16 @@ export function AgreementDialog({
 }: AgreementDialogProps) {
   const { user } = useUser()
   const agreement = hire.agreement
+  // Cards are linked per hire, so a supervisee with cards on file still has to
+  // pick one for this agreement — the copy should say "choose", not "save".
+  // onSetUpPayment is only passed on the supervisee's side.
+  const showsSuperviseePayment =
+    IN_APP_PAYMENTS_ENABLED &&
+    onSetUpPayment != null &&
+    agreement != null &&
+    isHourlyAgreement(agreement)
+  const { data: paymentInfo } = useHirePayment(hire.id, open && showsSuperviseePayment)
+  const hasSavedCards = (paymentInfo?.savedCards.length ?? 0) > 0
   if (!agreement) return null
 
   const showSignForm = canSign && agreement.superviseeSignedAt == null
@@ -212,13 +228,18 @@ export function AgreementDialog({
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[min(85vh,720px)] max-w-lg">
-        <DialogTitle>Supervision Agreement</DialogTitle>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Version {agreement.version} · {sourceLabel(agreement)}
-        </p>
-
-        <section className="mt-5">
+      <DialogContent
+        className="max-h-[min(85vh,720px)] max-w-lg"
+        header={
+          <>
+            <DialogTitle>Supervision Agreement</DialogTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Version {agreement.version} · {sourceLabel(agreement)}
+            </p>
+          </>
+        }
+      >
+        <section>
           <h3 className="mb-3 text-sm font-semibold text-foreground">Terms</h3>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
             <TermItem label="Start Date" value={formatDateOnly(agreement.startDate)} />
@@ -329,25 +350,40 @@ export function AgreementDialog({
                 <HourlyQuoteSummary quote={agreement.quote} perspective="supervisee" />
                 {showSignForm && hire.paymentMethodSavedAt == null && (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Save the card for your weekly prepays first. Nothing is charged until the
-                    agreement is signed and the first week starts.
+                    {hasSavedCards
+                      ? `Choose which saved card pays for your weekly prepays with ${formatDisplayName(hire.supervisor)}.`
+                      : 'Save the card for your weekly prepays first.'}{' '}
+                    Nothing is charged until the agreement is signed and the first week starts.
                   </p>
                 )}
                 {hire.paymentMethodSavedAt ? (
-                  <div className="mt-3 flex items-center justify-between gap-4 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
-                    <span className="flex items-center gap-2">
-                      <CheckCircle2 className="size-4 shrink-0 text-primary" aria-hidden />
-                      Payment card saved
-                    </span>
+                  <div className="mt-3 flex items-center justify-between gap-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        <CreditCard className="size-4" aria-hidden />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="flex items-center gap-1.5 text-sm font-semibold text-emerald-900">
+                          <CheckCircle2 className="size-4 shrink-0 text-primary" aria-hidden />
+                          Payment card saved
+                        </p>
+                        {paymentInfo?.card && (
+                          <p className="mt-0.5 truncate text-xs text-emerald-800">
+                            {cardLabel(paymentInfo.card)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"
+                      className="shrink-0 border-emerald-300 bg-white hover:bg-emerald-100"
                       onClick={() => {
                         onOpenChange(false)
                         onSetUpPayment({ changeCard: true })
                       }}
                     >
-                      Change card
+                      Change Card
                     </Button>
                   </div>
                 ) : (
@@ -359,7 +395,7 @@ export function AgreementDialog({
                     }}
                   >
                     <CreditCard className="size-4" aria-hidden />
-                    Set up payment
+                    {hasSavedCards ? 'Choose card' : 'Set up payment'}
                   </Button>
                 )}
               </section>
@@ -371,6 +407,7 @@ export function AgreementDialog({
             hire={hire}
             onOpenChange={onOpenChange}
             cardRequired={showPayment && onSetUpPayment != null}
+            hasSavedCards={hasSavedCards}
           />
         )}
       </DialogContent>

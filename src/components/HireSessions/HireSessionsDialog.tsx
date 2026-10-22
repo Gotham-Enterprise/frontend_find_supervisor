@@ -379,7 +379,7 @@ function PaymentLine({
             {onChangeCard && (
               <Button variant="outline" size="sm" disabled={isPaying} onClick={onChangeCard}>
                 <CreditCard className="size-3.5" aria-hidden />
-                {hasPaymentCard ? 'Change card' : 'Add card'}
+                {hasPaymentCard ? 'Change Card' : 'Add Card'}
               </Button>
             )}
             {payment.canPayNow && (

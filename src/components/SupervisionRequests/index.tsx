@@ -464,36 +464,34 @@ function RowActions({
     }
   }
 
-  function handleAcceptConfirm() {
-    acceptMutation.mutate(hire.id, {
-      onSuccess: () => {
-        burst()
-        closeDialog()
-        // The card leaves this list once queries refetch, so the follow-up
-        // dialog is owned by the page rather than this row.
-        onAccepted(hire)
-      },
-      onError: (err) => {
-        showError(parseApiError(err))
-        closeDialog()
-      },
-    })
+  // mutateAsync, not mutate(…, { onSuccess }): the hooks refetch the list before
+  // settling, and this row leaves the pending list — React Query drops
+  // mutate()'s per-call callbacks once the caller unmounts.
+  async function handleAcceptConfirm() {
+    try {
+      await acceptMutation.mutateAsync(hire.id)
+    } catch (err) {
+      showError(parseApiError(err))
+      closeDialog()
+      return
+    }
+    burst()
+    closeDialog()
+    // The card has left this list by now, so the follow-up dialog is owned by
+    // the page rather than this row.
+    onAccepted(hire)
   }
 
-  function handleRejectConfirm() {
-    rejectMutation.mutate(
-      { hireId: hire.id, reason: rejectionReason },
-      {
-        onSuccess: () => {
-          showSuccess('Supervision request declined.')
-          closeDialog()
-        },
-        onError: (err) => {
-          showError(parseApiError(err))
-          closeDialog()
-        },
-      },
-    )
+  async function handleRejectConfirm() {
+    try {
+      await rejectMutation.mutateAsync({ hireId: hire.id, reason: rejectionReason })
+    } catch (err) {
+      showError(parseApiError(err))
+      closeDialog()
+      return
+    }
+    showSuccess('Supervision request declined.')
+    closeDialog()
   }
 
   return (

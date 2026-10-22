@@ -18,7 +18,7 @@ import { formatHours } from './HourlyQuoteSummary'
 
 const NEW_CARD = 'new'
 
-function cardLabel(card: SavedCard): string {
+export function cardLabel(card: SavedCard): string {
   const brand = card.brand ? card.brand[0].toUpperCase() + card.brand.slice(1) : 'Card'
   const expiry =
     card.expMonth && card.expYear
@@ -131,7 +131,7 @@ export function HirePaymentSetup({
             </span>
           </div>
           <Button variant="outline" size="sm" onClick={() => setChangingCard(true)}>
-            Change card
+            Change Card
           </Button>
         </div>
       </div>
@@ -237,10 +237,13 @@ function PaymentChoice({
       disabled={disabled}
       onClick={onSelect}
       className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors ${
-        checked ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted'
+        checked
+          ? 'border-primary bg-primary font-medium text-primary-foreground [&_svg]:text-primary-foreground'
+          : 'border-border hover:bg-muted'
       }`}
     >
       {children}
+      {checked && <CheckCircle2 className="ml-auto size-4 shrink-0" aria-hidden />}
     </button>
   )
 }
