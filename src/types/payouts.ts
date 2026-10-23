@@ -41,6 +41,16 @@ export interface StripePayout {
   createdAt: string
 }
 
+/** Why the payout account can't be removed yet (GET /connect/removal-check). */
+export type PayoutRemovalBlocker =
+  | { code: 'active_hourly_hires' | 'unsettled_weeks' | 'unpaid_late_sessions'; count: number }
+  | { code: 'stripe_balance'; amountCents: number }
+
+export interface PayoutRemovalCheck {
+  canRemove: boolean
+  blockers: PayoutRemovalBlocker[]
+}
+
 export interface PayoutStatus {
   status: PayoutAccountStatus
   payoutsEnabled: boolean

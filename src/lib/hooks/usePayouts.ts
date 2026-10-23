@@ -3,15 +3,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
-  createPayoutDashboardLink,
   createPayoutOnboardingLink,
   createSuperviseeCardSetupIntent,
   getHirePayment,
   getHourlyQuote,
+  getPayoutRemovalCheck,
   getPayoutStatus,
   getSuperviseeCards,
   getSuperviseePayments,
   getSuperviseeWeekSummary,
+  removePayoutAccount,
   removeSuperviseeCard,
   saveHirePaymentMethod,
 } from '@/lib/api/supervision'
@@ -22,6 +23,8 @@ export const payoutKeys = {
   all: ['supervision', 'payouts'] as const,
   /** GET /supervision/payments/connect/status */
   status: () => [...payoutKeys.all, 'status'] as const,
+  /** GET /supervision/payments/connect/removal-check */
+  removalCheck: () => [...payoutKeys.all, 'removal-check'] as const,
   /** GET /supervision/payments/quote */
   quote: (hourlyRateCents: number, weeklyCapMinutes: number) =>
     [...payoutKeys.all, 'quote', hourlyRateCents, weeklyCapMinutes] as const,
@@ -90,6 +93,9 @@ export function usePayoutStatusQuery(enabled: boolean) {
     enabled,
     // Status changes on Stripe's side; always re-read when the page is revisited.
     staleTime: 0,
+    // Stripe-side changes (verification, an account closed from Stripe) don't
+    // reach this tab on their own, so re-read when the supervisor returns to it.
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -103,9 +109,25 @@ export function useStartPayoutOnboarding() {
   })
 }
 
-/** Creates a Stripe Express dashboard login link (single use). */
-export function useCreatePayoutDashboardLink() {
-  return useMutation({ mutationFn: createPayoutDashboardLink })
+/** What still depends on the payout account; re-read each time the remove dialog opens. */
+export function usePayoutRemovalCheck(enabled: boolean) {
+  return useQuery({
+    queryKey: payoutKeys.removalCheck(),
+    queryFn: getPayoutRemovalCheck,
+    enabled,
+    staleTime: 0,
+  })
+}
+
+export function useRemovePayoutAccount() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: removePayoutAccount,
+    // Not awaited: the remove dialog closes on success and shouldn't wait on refetches.
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: payoutKeys.all })
+    },
+  })
 }
 
 /** Weekly prepay/payout breakdown for prospective hourly terms (dollars, hours). */

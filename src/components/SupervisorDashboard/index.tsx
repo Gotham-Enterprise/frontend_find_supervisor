@@ -753,7 +753,7 @@ function SetupChecklist({
                       </span>
                     ) : (
                       <Link
-                        href="/billing"
+                        href="/billing?tab=earnings"
                         className={cn(
                           'shrink-0 rounded-md px-2 py-0.5 text-xs font-medium',
                           step.payoutsAction.status === 'action_required'

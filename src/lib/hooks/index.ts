@@ -77,12 +77,13 @@ export {
 } from './useNotifications'
 export {
   payoutKeys,
-  useCreatePayoutDashboardLink,
   useCreateSuperviseeCardSetupIntent,
   useHirePayment,
   useHourlyQuote,
+  usePayoutRemovalCheck,
   usePayoutStatusQuery,
   useRefreshSuperviseeCards,
+  useRemovePayoutAccount,
   useRemoveSuperviseeCard,
   useSaveHirePaymentMethod,
   useStartPayoutOnboarding,

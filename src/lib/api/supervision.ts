@@ -19,6 +19,7 @@ import type { PastClientHire } from '@/types/past-clients'
 import type {
   HirePaymentInfo,
   HourlyQuote,
+  PayoutRemovalCheck,
   PayoutStatus,
   StripeLink,
   SuperviseeCards,
@@ -104,10 +105,29 @@ export async function createPayoutOnboardingLink(): Promise<StripeLink> {
   return data.data
 }
 
-/** POST /supervision/payments/connect/dashboard-link — Stripe Express dashboard login URL. */
-export async function createPayoutDashboardLink(): Promise<StripeLink> {
-  const { data } = await apiClient.post<ApiResponse<StripeLink>>(
-    '/supervision/payments/connect/dashboard-link',
+/**
+ * POST /supervision/payments/connect/account-session — client secret for the
+ * embedded account management component (bank account, personal details).
+ */
+export async function createPayoutAccountSession(): Promise<{ clientSecret: string }> {
+  const { data } = await apiClient.post<ApiResponse<{ clientSecret: string }>>(
+    '/supervision/payments/connect/account-session',
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/connect/removal-check — what still depends on the payout account. */
+export async function getPayoutRemovalCheck(): Promise<PayoutRemovalCheck> {
+  const { data } = await apiClient.get<ApiResponse<PayoutRemovalCheck>>(
+    '/supervision/payments/connect/removal-check',
+  )
+  return data.data
+}
+
+/** DELETE /supervision/payments/connect/account — deletes the payout account (409 while in use). */
+export async function removePayoutAccount(): Promise<{ removed: boolean }> {
+  const { data } = await apiClient.delete<ApiResponse<{ removed: boolean }>>(
+    '/supervision/payments/connect/account',
   )
   return data.data
 }

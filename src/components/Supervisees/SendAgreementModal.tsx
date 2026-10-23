@@ -689,7 +689,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                   <span>
                     Set up payouts before sending an agreement, so {superviseeName} can pay you
                     through the platform.{' '}
-                    <Link href="/billing" className="font-medium underline">
+                    <Link href="/billing?tab=earnings" className="font-medium underline">
                       Go to Billing &amp; Invoices
                     </Link>
                   </span>

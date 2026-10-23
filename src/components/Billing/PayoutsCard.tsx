@@ -1,23 +1,21 @@
 'use client'
 
-import { AlertCircle, CheckCircle2, Clock, ExternalLink, Landmark, RefreshCw } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Clock, Landmark, RefreshCw, Settings } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Suspense, useEffect, useRef } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  useCreatePayoutDashboardLink,
-  usePayoutStatusQuery,
-  useStartPayoutOnboarding,
-  useUserSnackbar,
-} from '@/lib/hooks'
+import { usePayoutStatusQuery, useStartPayoutOnboarding, useUserSnackbar } from '@/lib/hooks'
 import { formatEasternDate } from '@/lib/utils/date'
 import { parseApiError } from '@/lib/utils/error-parser'
 import { formatUsdCents } from '@/lib/utils/money'
 import type { PayoutAccountStatus, PayoutStatus } from '@/types/payouts'
+
+import { ManagePayoutAccountDialog } from './ManagePayoutAccountDialog'
+import { RemovePayoutAccountDialog } from './RemovePayoutAccountDialog'
 
 const STATUS_CONFIG: Record<
   PayoutAccountStatus,
@@ -58,29 +56,17 @@ function PayoutsReturnHandler({ onRefreshLink }: { onRefreshLink: () => void }) 
 export function PayoutsCard() {
   const { data, isLoading, isError, refetch } = usePayoutStatusQuery(true)
   const { mutate: startOnboarding, isPending: isStarting } = useStartPayoutOnboarding()
-  const { mutateAsync: createDashboardLink, isPending: isOpeningDashboard } =
-    useCreatePayoutDashboardLink()
   const { showError } = useUserSnackbar()
+  const [manageOpen, setManageOpen] = useState(false)
+  const [removeOpen, setRemoveOpen] = useState(false)
 
   function handleStartOnboarding() {
     startOnboarding(undefined, { onError: (error) => showError(parseApiError(error)) })
   }
 
-  async function handleOpenDashboard() {
-    // Open the tab synchronously (inside the click) so popup blockers allow it,
-    // then point it at the single-use login link once it's created.
-    const tab = window.open('', '_blank')
-    try {
-      const { url } = await createDashboardLink()
-      if (tab) tab.location.href = url
-      else window.location.assign(url)
-    } catch (error) {
-      tab?.close()
-      showError(parseApiError(error))
-    }
-  }
-
   const status = data?.status
+  // Any account Stripe has (even unfinished) can be removed; not_started has none.
+  const hasAccount = status != null && status !== 'not_started'
   const config = status ? STATUS_CONFIG[status] : null
 
   return (
@@ -131,23 +117,28 @@ export function PayoutsCard() {
             <PayoutStatusMessage status={status} requirementsDueCount={data.requirementsDueCount} />
             {status === 'ready' && <PayoutDetails data={data} />}
 
-            <div className="flex flex-wrap justify-end gap-2">
-              {status === 'ready' ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={isOpeningDashboard}
-                  onClick={() => void handleOpenDashboard()}
+            <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+              {/* Destructive and rarely needed: a text link, left of the main action. */}
+              {hasAccount && (
+                <button
+                  type="button"
+                  onClick={() => setRemoveOpen(true)}
+                  className="mr-auto text-sm font-medium text-destructive underline-offset-4 hover:underline"
                 >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  {isOpeningDashboard ? 'Opening…' : 'View payouts'}
+                  Remove Payout Account
+                </button>
+              )}
+              {status === 'ready' ? (
+                <Button variant="outline" size="sm" onClick={() => setManageOpen(true)}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Manage Account
                 </Button>
               ) : (
                 <>
                   {status === 'pending' && (
                     <Button variant="outline" size="sm" onClick={() => void refetch()}>
                       <RefreshCw className="mr-2 h-4 w-4" />
-                      Check status
+                      Check Status
                     </Button>
                   )}
                   {status !== 'pending' && (
@@ -166,14 +157,17 @@ export function PayoutsCard() {
           </div>
         )}
       </CardContent>
+
+      <ManagePayoutAccountDialog open={manageOpen} onOpenChange={setManageOpen} />
+      <RemovePayoutAccountDialog open={removeOpen} onOpenChange={setRemoveOpen} />
     </Card>
   )
 }
 
 const ONBOARDING_CTA: Record<Exclude<PayoutAccountStatus, 'ready' | 'pending'>, string> = {
-  not_started: 'Set up payouts',
-  incomplete: 'Continue setup',
-  action_required: 'Update details',
+  not_started: 'Set Up Payouts',
+  incomplete: 'Continue Setup',
+  action_required: 'Update Details',
 }
 
 function describeSchedule(schedule: PayoutStatus['payoutSchedule']): string | null {
