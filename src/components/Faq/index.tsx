@@ -26,7 +26,7 @@ const supervisorFaqs: FaqCategory[] = [
     title: 'Account & Verification',
     items: [
       {
-        question: 'Why is my profile not showing up in supervisee searches?',
+        question: 'Why is my profile not showing up in Supervisee searches?',
         answer:
           'Your profile is hidden from search results until our admin team completes their review and approves your account. This is to ensure the quality and credibility of all Supervisors on the platform. Once approved, your profile becomes publicly visible immediately. Review typically takes 2–3 business days.',
       },
@@ -58,17 +58,17 @@ const supervisorFaqs: FaqCategory[] = [
       {
         question: 'What is the difference between the Free Plan and Platform Access?',
         answer:
-          'Every Supervisor starts on the Find a Supervisor Free Plan. It lets you receive and view supervisee requests, see which supervisees are interested in you, appear in search results with a basic profile listing, and get platform notifications for new activity. Upgrading to Find a Supervisor Platform Access unlocks accepting supervisee requests, full messaging with supervisees, viewing supervisee contact details where applicable, improved discoverability and profile exposure, and the full set of Supervisor platform tools.',
+          'Every Supervisor starts on the Find a Supervisor Free Plan. It lets you receive and view Supervisee requests, see which Supervisees are interested in you, appear in search results with a basic profile listing, and get platform notifications for new activity. Upgrading to Find a Supervisor Platform Access unlocks accepting Supervisee requests, full messaging with Supervisees, viewing Supervisee contact details where applicable, improved discoverability and profile exposure, and the full set of Supervisor platform tools.',
       },
       {
         question: 'What happens to supervision requests while I am on the Free Plan?',
         answer:
-          'You still receive and can view every request, but accepting supervisees is only available on the Platform Access plan. Incoming requests stay pending until you upgrade — nothing is lost, and you can accept them as soon as you move to a paid plan.',
+          'You still receive and can view every request, but accepting Supervisees is only available on the Platform Access plan. Incoming requests stay pending until you upgrade — nothing is lost, and you can accept them as soon as you move to a paid plan.',
       },
       {
-        question: 'Why are supervisee names and contact details partially hidden?',
+        question: 'Why are Supervisee names and contact details partially hidden?',
         answer:
-          'To protect supervisee privacy, names are masked to a first name and last initial (e.g. "Katie C") until a supervision connection is accepted. Once you are connected, the full name is shown. Supervisee contact details are available on the Platform Access plan where applicable.',
+          'To protect Supervisee privacy, names are masked to a first name and last initial (e.g. "Katie C") until a supervision connection is accepted. Once you are connected, the full name is shown. Supervisee contact details are available on the Platform Access plan where applicable.',
       },
       {
         question: 'How do I upgrade to Platform Access?',
@@ -78,7 +78,7 @@ const supervisorFaqs: FaqCategory[] = [
       {
         question: 'Can I stay on the Free Plan indefinitely?',
         answer:
-          'Yes. The Free Plan does not expire — your profile stays listed in search and you keep receiving requests and notifications. Many Supervisors start on the Free Plan to gauge supervisee interest, then upgrade when they are ready to accept supervisees and start messaging.',
+          'Yes. The Free Plan does not expire — your profile stays listed in search and you keep receiving requests and notifications. Many Supervisors start on the Free Plan to gauge Supervisee interest, then upgrade when they are ready to accept Supervisees and start messaging.',
       },
     ],
   },
@@ -113,6 +113,86 @@ const supervisorFaqs: FaqCategory[] = [
     ],
   },
   {
+    title: 'Supervision Payments',
+    items: [
+      {
+        question: 'How do Supervisees pay me through the app?',
+        answer:
+          "If your fee type is hourly, the agreements you send are billed in the app. You set your hourly rate, the maximum hours per week (1–40), and optionally the total hours the agreement covers. Your Supervisee saves a card and signs. Each billing week (Monday–Sunday, US Eastern) they prepay the weekly maximum up front. You log your sessions, they review them after the week, and you're paid for the approved hours — any unused prepay is refunded to them.",
+      },
+      {
+        question: 'What do I need before I can send an hourly agreement?',
+        answer:
+          'A payout account. Go to Billing → Earnings and click Set Up Payouts — Stripe verifies your identity and connects your bank account (US bank accounts only). Once your payouts show as Ready, you can send hourly agreements. The agreement start date can’t be in the past.',
+      },
+      {
+        question: 'How do I log sessions?',
+        answer:
+          "Open Sessions on your Supervisee's card under My Supervisees. Log each session in 15-minute increments — you can't go over the weekly maximum or the agreement's total hours. You can log during the week and until Monday 11:59 PM (US Eastern) after it ends, and edit or delete sessions while the week is still open. We remind you on Friday and again on Monday if nothing is logged.",
+      },
+      {
+        question: 'When do I get paid?',
+        answer:
+          "Right after your Supervisee approves the week's sessions — or automatically when their 3-day review ends (Thursday 11:59 PM US Eastern). You receive the approved hours × your hourly rate, minus the platform fee, and get a \"You've Been Paid\" notification and email. Stripe then deposits it to your bank on your payout schedule, usually within 2 business days, and we notify you when it's deposited.",
+      },
+      {
+        question: 'What fees do I pay?',
+        answer:
+          'A platform fee (currently 10% of what you earn) is deducted from each payout. The exact rate is locked in when you send the agreement. You don’t pay card processing — Supervisees pay a separate service fee for that. Your Platform Access subscription is billed separately.',
+      },
+      {
+        question: 'What happens if my Supervisee disputes a week?',
+        answer:
+          "The week is put on hold and Gotham support reviews your logged sessions and the Supervisee's reason and evidence. Support decides how many hours are paid; both of you are notified, and the week is then paid out to you for those hours.",
+      },
+      {
+        question: "What if my Supervisee's weekly payment fails?",
+        answer:
+          'You\'ll get an "Unpaid Week" notification and email. Keep logging your sessions as usual — your Supervisee is asked to update their card and tap Pay now, and you\'re paid for the approved hours once the week is paid.',
+      },
+      {
+        question: 'I forgot to log a session before the deadline. What can I do?',
+        answer:
+          "Request a late entry from the Supervisee's Sessions, within 14 days after that week ended. Gotham support adds it, and your Supervisee approves or rejects it. If that week was already paid out, the approved session is charged and paid to you on its own.",
+      },
+      {
+        question: 'How do monthly-fee agreements work?',
+        answer:
+          'If your fee type is monthly — including all Medical Directors — your agreement records the monthly amount and duration, and payment is arranged directly between you and your client outside the app. In-app weekly billing applies to hourly agreements only.',
+      },
+      {
+        question: 'What happens if a supervision ends mid-week?',
+        answer:
+          "If that week's prepay was already charged, you can still log the week's sessions until its deadline, and the week is reviewed and paid out as usual. If it hadn't been charged yet, it's canceled. No new weeks are billed after a supervision ends.",
+      },
+    ],
+  },
+  {
+    title: 'Payouts & Earnings',
+    items: [
+      {
+        question: 'Where can I see what I’ve earned?',
+        answer:
+          'Go to Billing → Earnings. The Weekly Summary shows hours and pay for any week, Supervision Earnings shows totals paid out and in progress by Supervisee (with a CSV export), and the Payouts card shows where your money goes and your next and last payouts.',
+      },
+      {
+        question: 'How do I change the bank account my payouts go to?',
+        answer:
+          'In Billing → Earnings, click Manage Account on the Payouts card. You can update your bank account and account details there — Stripe may ask you to verify it’s you first with a code. A payout already on its way still goes to your previous bank.',
+      },
+      {
+        question: 'Can I remove my payout account?',
+        answer:
+          'Yes — use Remove Payout Account on the Payouts card. You can remove it once nothing depends on it: no active hourly supervisions, no weeks still waiting to be paid out to you, and a $0 Stripe balance. The dialog tells you what’s still in the way. Removing it deletes your Stripe payout account; your earnings history stays, and you can set up payouts again anytime.',
+      },
+      {
+        question: 'What if a payout to my bank fails?',
+        answer:
+          'We notify you and email you. The money goes back to your Stripe balance and is sent with your next payout once you update your bank details in Billing → Earnings → Manage Account.',
+      },
+    ],
+  },
+  {
     title: 'Profile & Availability',
     items: [
       {
@@ -121,7 +201,7 @@ const supervisorFaqs: FaqCategory[] = [
           'Click "Edit Profile" from your dashboard or visit My Profile. You can update your availability, fee amount, and fee type at any time. Changes are reflected on your profile immediately — no re-verification is required for these updates.',
       },
       {
-        question: 'Can I pause accepting new supervisees?',
+        question: 'Can I pause accepting new Supervisees?',
         answer:
           'Yes. In your profile editor, toggle the "Accepting Supervisees" switch to off. This updates your profile status to "Not accepting" without affecting your visibility or verified status.',
       },
@@ -138,17 +218,17 @@ const supervisorFaqs: FaqCategory[] = [
       {
         question: 'I signed up as a Medical Director — how is my account different?',
         answer:
-          'Medical Director accounts use a dedicated signup with physician credentials (MD/DO), optional board certifications, and monthly-only fees. Instead of appearing in the regular supervisor search, your profile is listed on the Find Medical Directors page for people looking for medical direction. Everything else — verification, plans, messaging, and reviews — works the same as for Supervisors.',
+          'Medical Director accounts use a dedicated signup with physician credentials (MD/DO), optional board certifications, and monthly-only fees. Instead of appearing in the regular Supervisor search, your profile is listed on the Find Medical Directors page for people looking for medical direction. Everything else — verification, plans, messaging, and reviews — works the same as for Supervisors.',
       },
       {
         question: 'What are "Additional Physician Offerings"?',
         answer:
-          'As a Medical Director you can also offer Supervising Physician and/or Collaborating Physician services for PAs and NPs. Each offering has its own credentials and license entries. With an offering enabled, your profile also appears in the regular supervisor search under that role — your card shows every role you hold (e.g. "Medical Director · Supervising Physician"). You can manage offerings from Edit Profile.',
+          'As a Medical Director you can also offer Supervising Physician and/or Collaborating Physician services for PAs and NPs. Each offering has its own credentials and license entries. With an offering enabled, your profile also appears in the regular Supervisor search under that role — your card shows every role you hold (e.g. "Medical Director · Supervising Physician"). You can manage offerings from Edit Profile.',
       },
       {
         question: 'Where do I see clients who hired me as a Medical Director?',
         answer:
-          'They are listed on the Medical Director Clients page in the sidebar. If you also provide supervision through a physician offering, those supervisees appear separately under My Supervisees — each hire is filed by the role you were hired for.',
+          'They are listed on the Medical Director Clients page in the sidebar. If you also provide supervision through a physician offering, those Supervisees appear separately under My Supervisees — each hire is filed by the role you were hired for.',
       },
       {
         question: 'How do board certifications work?',
@@ -166,19 +246,19 @@ const supervisorFaqs: FaqCategory[] = [
     title: 'Supervisees & Messaging',
     items: [
       {
-        question: 'How do supervisees contact me?',
+        question: 'How do Supervisees contact me?',
         answer:
-          'Once your profile is approved and visible, supervisees can send you a supervision request or a direct message through the platform. You will receive a notification for each new request or message. Manage incoming requests under the Supervision Requests page.',
+          'Once your profile is approved and visible, Supervisees can send you a supervision request or a direct message through the platform. You will receive a notification for each new request or message. Manage incoming requests under the Supervision Requests page.',
       },
       {
         question: 'How do I accept or decline a supervision request?',
         answer:
-          "Go to Supervision Requests in the sidebar. Each request shows the supervisee's details and what they are looking for. You can accept or decline directly from that page. Accepted requests move the supervisee into your active Supervisees list. Note that accepting requests requires the Platform Access plan — on the Free Plan, requests remain pending until you upgrade.",
+          "Go to Supervision Requests in the sidebar. Each request shows the Supervisee's details and what they are looking for. You can accept or decline directly from that page. Accepted requests move the Supervisee into your active Supervisees list. Note that accepting requests requires the Platform Access plan — on the Free Plan, requests remain pending until you upgrade.",
       },
       {
         question: 'How do I leave or view reviews?',
         answer:
-          'Go to Reviews in the sidebar to see all reviews supervisees have left for you. Reviews are displayed publicly on your profile and help build trust with future supervisees.',
+          'Go to Reviews in the sidebar to see all reviews Supervisees have left for you. Reviews are displayed publicly on your profile and help build trust with future Supervisees.',
       },
     ],
   },
@@ -216,7 +296,7 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'How do I find a Medical Director?',
         answer:
-          'If your profile includes a Medical Director need, a Find Medical Directors page appears in your sidebar. It works like the supervisor search — filter by specialty, state, and format — and every listed Medical Director is verified. Open a profile and use "Hire as Medical Director" to send a request.',
+          'If your profile includes a Medical Director need, a Find Medical Directors page appears in your sidebar. It works like the Supervisor search — filter by specialty, state, and format — and every listed Medical Director is verified. Open a profile and use "Hire as Medical Director" to send a request.',
       },
       {
         question: 'Why don’t I see the Find Medical Directors page?',
@@ -257,7 +337,7 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'What do the different hire request statuses mean?',
         answer:
-          "Pending — your request has been sent and is awaiting the Supervisor's response. Approved — the Supervisor accepted your request and the supervision relationship is active. Declined — the Supervisor is unable to take you on at this time. You can send a new request to a different Supervisor.",
+          "Pending — your request has been sent and is awaiting the Supervisor's response. Accepted — the Supervisor accepted your request; next they send you an agreement to review and sign. Active — supervision is underway (for hourly agreements, once your first weekly payment goes through). Completed — the supervision has ended. Rejected — the Supervisor is unable to take you on at this time; you can send a new request to a different Supervisor.",
       },
       {
         question: 'Can I cancel a pending hire request?',
@@ -268,6 +348,66 @@ const superviseeFaqs: FaqCategory[] = [
         question: 'How do I end a supervision relationship?',
         answer:
           'Go to Hired Supervisors and open the request details for your active Supervisor. From there you can end the relationship. We recommend messaging the Supervisor first to discuss the transition.',
+      },
+    ],
+  },
+  {
+    title: 'Supervision Payments',
+    items: [
+      {
+        question: 'How does paying my Supervisor work?',
+        answer:
+          'For Supervisors with an hourly fee, you pay through the app. When you sign the agreement you save a card. Each billing week (Monday–Sunday, US Eastern) your card is charged a weekly prepay — the hourly rate × the maximum hours per week, plus a service fee. After the week you review the sessions your Supervisor logged and pay only for the hours you approve; the unused prepay is refunded to your card.',
+      },
+      {
+        question: 'What is the service fee?',
+        answer:
+          'It covers secure card processing by Stripe (2.9% + 30¢ of the charge) and is added to each weekly charge and any late-session charge. It isn’t refunded, because Stripe keeps its processing fee on refunds. You see the exact weekly total before you sign.',
+      },
+      {
+        question: 'When is my card charged?',
+        answer:
+          "Your first prepay is charged on the agreement's start date (right away if that's today), then every Monday at 12:00 AM US Eastern. Saving or changing a card doesn't charge anything on its own.",
+      },
+      {
+        question: 'How do I review my sessions?',
+        answer:
+          "After each week your Supervisor logs their sessions (by Monday 11:59 PM US Eastern) and you get a notification to review them. Approve or dispute by Thursday 11:59 PM US Eastern — if you don't respond, the week is approved automatically. If no sessions were logged, your prepay is refunded in full (minus the service fee).",
+      },
+      {
+        question: 'How do I dispute a week?',
+        answer:
+          'Open Sessions for that Supervisor, choose Dispute, and explain what’s wrong — you can attach up to 3 images (JPG or PNG, 5 MB each). Gotham support reviews it and decides how many hours are paid; anything not paid is refunded to your card. You’re both notified of the outcome.',
+      },
+      {
+        question: 'When will I get my refund?',
+        answer:
+          'Unused prepay is refunded to the card you paid with as soon as the week is approved (or a dispute is resolved). Your bank usually shows it within 5–10 business days.',
+      },
+      {
+        question: 'What if my weekly payment fails?',
+        answer:
+          "You'll get a notification and an email. Update your card if needed, then tap Pay now from the Supervisor's Sessions or your Billing page. Failed payments aren't retried automatically, and your Supervisor is paid for the week only after it's paid.",
+      },
+      {
+        question: 'How do I change or remove a card?',
+        answer:
+          "Each supervision has its own card. Use Change Card in the agreement or the Supervisor's Sessions to switch which saved card pays for it, and manage your saved cards on the Billing page. A card that pays for an active supervision can't be removed until you switch that supervision to another card.",
+      },
+      {
+        question: 'What is a late session?',
+        answer:
+          "If your Supervisor missed logging a session, they can ask Gotham support to add it within 14 days after that week. You'll be asked to approve or reject it. If that week was already settled, an approved late session is charged on its own (hours × rate plus the service fee).",
+      },
+      {
+        question: 'What happens if I end a supervision mid-week?',
+        answer:
+          "If this week's prepay was already charged, the week is still reviewed — you pay only for approved hours and the rest is refunded. If it hadn't been charged yet, it won't be. There are no more weekly charges after a supervision ends.",
+      },
+      {
+        question: 'Do Medical Directors or monthly-fee Supervisors bill through the app?',
+        answer:
+          'No. With a monthly fee — including all Medical Directors — the agreement records the monthly amount and duration, and you pay them directly outside the app.',
       },
     ],
   },
@@ -377,9 +517,9 @@ function FaqCategoryCard({ title, items }: FaqCategory) {
 function PageHeader({ role }: { role: 'supervisor' | 'supervisee' | 'general' }) {
   const subtitle =
     role === 'supervisor'
-      ? 'Answers to common questions about verification, plans and billing, profiles, and managing your supervisees.'
+      ? 'Answers to common questions about verification, plans, supervision payments and payouts, profiles, and managing your Supervisees.'
       : role === 'supervisee'
-        ? 'Answers to common questions about finding Supervisors, hire requests, messaging, and reviews.'
+        ? 'Answers to common questions about finding Supervisors, hire requests, supervision payments, messaging, and reviews.'
         : 'Answers to common questions about the platform.'
 
   return (

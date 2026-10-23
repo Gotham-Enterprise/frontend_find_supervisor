@@ -101,10 +101,11 @@ export async function PublicFooter() {
               className="flex items-center gap-2 font-semibold text-foreground"
             >
               <Image
-                src="/logo.png"
+                src="/logo.svg"
                 alt="Gotham Enterprises LTD"
-                width={120}
+                width={144}
                 height={32}
+                unoptimized
                 className="h-8 w-auto"
               />
             </a>

@@ -27,10 +27,11 @@ export function CheckoutShellLayout({ children }: CheckoutShellLayoutProps) {
           className="flex items-center gap-2"
         >
           <Image
-            src="/logo.png"
+            src="/logo.svg"
             alt="Gotham Enterprises LTD"
-            width={120}
+            width={144}
             height={32}
+            unoptimized
             className="h-8 w-auto"
           />
         </a>

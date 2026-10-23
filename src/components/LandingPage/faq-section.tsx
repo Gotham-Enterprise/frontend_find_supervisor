@@ -19,7 +19,7 @@ const faqs = [
   {
     question: 'Can I find a Medical Director here?',
     answer:
-      'Yes. If your profile says you need a Medical Director, a dedicated Find Medical Directors page appears in your account. It works like the supervisor search — filter verified Medical Directors by specialty, state, and format, then send a hire request from their profile. Medical Directors work on a monthly retainer basis, and your Medical Director need is tracked separately from your supervision need, each with its own budget and timeline.',
+      'Yes. If your profile says you need a Medical Director, a dedicated Find Medical Directors page appears in your account. It works like the Supervisor search — filter verified Medical Directors by specialty, state, and format, then send a hire request from their profile. Medical Directors work on a monthly retainer basis, and your Medical Director need is tracked separately from your supervision need, each with its own budget and timeline.',
   },
   {
     question: 'I am a physician — can I join as a Medical Director?',
@@ -49,12 +49,37 @@ const faqs = [
   {
     question: 'Is it free for Supervisors to join?',
     answer:
-      'Yes. Every Supervisor starts on the Find a Supervisor Free Plan, which includes a basic profile listing in search, visibility into interested supervisees, the ability to receive and view supervision requests, and platform notifications for new activity. There is no time limit — you can stay on the Free Plan for as long as you like.',
+      'Yes. Every Supervisor starts on the Find a Supervisor Free Plan, which includes a basic profile listing in search, visibility into interested Supervisees, the ability to receive and view supervision requests, and platform notifications for new activity. There is no time limit — you can stay on the Free Plan for as long as you like.',
   },
   {
     question: 'What is the difference between the Free Plan and Platform Access?',
     answer:
-      'Every Supervisor starts on the Find a Supervisor Free Plan. It lets you receive and view supervisee requests, see which supervisees are interested in you, appear in search results with a basic profile listing, and get platform notifications for new activity. Upgrading to Find a Supervisor Platform Access unlocks accepting supervisee requests, full messaging with supervisees, viewing supervisee contact details where applicable, improved discoverability and profile exposure, and the full set of Supervisor platform tools.',
+      'Every Supervisor starts on the Find a Supervisor Free Plan. It lets you receive and view Supervisee requests, see which Supervisees are interested in you, appear in search results with a basic profile listing, and get platform notifications for new activity. Upgrading to Find a Supervisor Platform Access unlocks accepting Supervisee requests, full messaging with Supervisees, viewing Supervisee contact details where applicable, improved discoverability and profile exposure, and the full set of Supervisor platform tools.',
+  },
+  {
+    question: 'How do supervision payments work?',
+    answer:
+      "With Supervisors who charge by the hour, payments run through the app. The Supervisee saves a card when signing the agreement and prepays each week's maximum hours up front. After the week, they review the sessions the Supervisor logged and pay only for approved hours — the unused prepay is refunded to their card. Supervisors who charge a monthly fee, including Medical Directors, are paid directly outside the app.",
+  },
+  {
+    question: 'What fees are involved in supervision payments?',
+    answer:
+      "Supervisees pay a service fee on each weekly charge that covers secure card processing by Stripe (2.9% + 30¢); it isn't refunded. Supervisors pay a platform fee (currently 10%) that's deducted from what they earn. Both are shown before the agreement is signed. The Supervisor's Platform Access subscription is separate.",
+  },
+  {
+    question: 'What if a session is logged incorrectly?',
+    answer:
+      'Supervisees review every week before it is paid out. They can approve it or dispute it with an explanation and screenshots, and Gotham support reviews disputes and decides how many hours are paid. Anything not paid is refunded to the Supervisee.',
+  },
+  {
+    question: 'How do Supervisors get paid?',
+    answer:
+      "Supervisors set up a payout account through Stripe (US bank accounts) from their Billing page. Once a week's sessions are approved, their earnings minus the platform fee are sent to their payout account, and Stripe deposits them to their bank — usually within 2 business days.",
+  },
+  {
+    question: 'Are payments secure?',
+    answer:
+      'Yes. All payments and payouts are processed by Stripe. Find a Supervisor never stores full card numbers or bank and identity details.',
   },
   {
     question: 'How is this different from traditional supervision matching?',

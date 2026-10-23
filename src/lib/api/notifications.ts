@@ -67,6 +67,21 @@ const VALID_NOTIFICATION_TYPES = new Set<NotificationType>([
   'agreement_sent',
   'agreement_signed',
   'agreement_reminder',
+  'prepay_paid',
+  'prepay_failed',
+  'prepay_refunded',
+  'week_paid',
+  'payout_paid',
+  'payout_failed',
+  'payouts_disconnected',
+  'sessions_review',
+  'sessions_approved',
+  'sessions_disputed',
+  'dispute_resolved',
+  'late_session_added',
+  'late_session_approved',
+  'late_session_rejected',
+  'late_entry_request_dismissed',
 ])
 
 function normalizeNotificationType(raw: string | undefined): NotificationType {
