@@ -67,6 +67,8 @@ const VALID_NOTIFICATION_TYPES = new Set<NotificationType>([
   'agreement_sent',
   'agreement_signed',
   'agreement_reminder',
+  'completed_hire',
+  'supervision_ended',
   'prepay_paid',
   'prepay_failed',
   'prepay_refunded',

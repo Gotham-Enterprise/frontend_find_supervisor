@@ -11,6 +11,8 @@ export type NotificationType =
   | 'agreement_signed'
   | 'agreement_reminder'
   // In-app hourly billing (weekly prepays, session review, payouts)
+  | 'completed_hire'
+  | 'supervision_ended'
   | 'prepay_paid'
   | 'prepay_failed'
   | 'prepay_refunded'

@@ -5,6 +5,8 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import {
   acceptHire,
   cancelHire,
+  endSupervision,
+  type EndSupervisionOutcome,
   getAgreement,
   getSuperviseeUpcomingSessions,
   type HireListFilters,
@@ -138,6 +140,23 @@ export function useCancelHire() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (hireId: string) => cancelHire(hireId),
+    onSettled: async () => {
+      await invalidateHireRelatedQueries(queryClient)
+    },
+  })
+}
+
+export function useEndSupervision() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      hireId,
+      ...payload
+    }: {
+      hireId: string
+      outcome: EndSupervisionOutcome
+      reason?: string
+    }) => endSupervision(hireId, payload),
     onSettled: async () => {
       await invalidateHireRelatedQueries(queryClient)
     },

@@ -533,6 +533,19 @@ export async function cancelHire(hireId: string): Promise<void> {
   await apiClient.patch(`/supervision/hires/${hireId}/cancel`)
 }
 
+export type EndSupervisionOutcome = 'completed' | 'ended_early'
+
+/**
+ * PATCH /supervision/hires/:hireId/end — the supervisor ends an accepted or
+ * active supervision: completed (→ COMPLETED) or ended early (→ CANCELED).
+ */
+export async function endSupervision(
+  hireId: string,
+  payload: { outcome: EndSupervisionOutcome; reason?: string },
+): Promise<void> {
+  await apiClient.patch(`/supervision/hires/${hireId}/end`, payload)
+}
+
 /** PATCH /supervision/hires/:hireId/complete — mark a hire as completed (supervisor or supervisee). */
 export async function markHireAsCompleted(hireId: string): Promise<void> {
   await apiClient.patch(`/supervision/hires/${hireId}/complete`)

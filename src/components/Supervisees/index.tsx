@@ -40,6 +40,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuPositioner,
   DropdownMenuRoot,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -69,6 +70,7 @@ import { getAgreementStage, getAgreementStageLabel } from '@/lib/utils/supervisi
 import type { HireListItem } from '@/types/hire'
 import type { Review } from '@/types/review'
 
+import { EndSupervisionDialog } from './EndSupervisionDialog'
 import { SendAgreementModal } from './SendAgreementModal'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -449,8 +451,10 @@ function RowActions({
   onSendAgreement: () => void
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [endOpen, setEndOpen] = useState(false)
   const { showSuccess, showError } = useUserSnackbar()
   const remindMutation = useRemindAgreement()
+  const canEnd = hire.status === 'ACCEPTED' || hire.status === 'ACTIVE'
 
   const agreementStage = getAgreementStage(hire)
   const canSendAgreement = hire.status === 'ACCEPTED' && agreementStage === 'NOT_SENT'
@@ -493,6 +497,14 @@ function RowActions({
               {hasAgreement && (
                 <DropdownMenuItem onClick={onViewAgreement}>View Agreement</DropdownMenuItem>
               )}
+              {canEnd && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem destructive onClick={() => setEndOpen(true)}>
+                    End Supervision
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuPopup>
           </DropdownMenuPositioner>
         </DropdownMenuPortal>
@@ -504,6 +516,8 @@ function RowActions({
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
       />
+
+      {canEnd && <EndSupervisionDialog hire={hire} open={endOpen} onOpenChange={setEndOpen} />}
     </>
   )
 }

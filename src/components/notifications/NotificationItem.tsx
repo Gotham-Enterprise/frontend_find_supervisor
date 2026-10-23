@@ -95,6 +95,8 @@ const TYPE_CONFIG: Record<NotificationType, TypeConfig> = {
     iconBg: 'bg-amber-50',
   },
   // Money in, money out: green; problems: red; things to review: amber.
+  completed_hire: { icon: CheckCircle2, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50' },
+  supervision_ended: { icon: MinusCircle, iconColor: 'text-muted-foreground', iconBg: 'bg-muted' },
   prepay_paid: { icon: CreditCard, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50' },
   prepay_failed: {
     icon: AlertTriangle,

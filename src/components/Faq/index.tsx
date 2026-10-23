@@ -161,6 +161,11 @@ const supervisorFaqs: FaqCategory[] = [
           'In-app billing covers hourly supervision, so Supervisors set an hourly rate. Medical Directors work on monthly retainers: their agreements record the monthly amount and duration, and they’re paid directly by their client outside the app. If your profile still shows a monthly fee from before, your agreements stay on monthly terms paid outside the app until you switch to Hourly in Edit Profile — after that, Monthly is no longer available.',
       },
       {
+        question: 'How do I end a supervision?',
+        answer:
+          "Open the menu (⋮) on the Supervisee's card in My Supervisees and choose End Supervision. Pick Supervision Is Complete (it moves to Completed and they can leave you a review) or Ending Early (it moves to Closed), and add an optional note. Your Supervisee is notified by email and in the app. This can't be undone.",
+      },
+      {
         question: 'What happens if a supervision ends mid-week?',
         answer:
           "If that week's prepay was already charged, you can still log the week's sessions until its deadline, and the week is reviewed and paid out as usual. If it hadn't been charged yet, it's canceled. No new weeks are billed after a supervision ends.",
@@ -347,7 +352,7 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'How do I end a supervision relationship?',
         answer:
-          'Go to Hired Supervisors and open the request details for your active Supervisor. From there you can end the relationship. We recommend messaging the Supervisor first to discuss the transition.',
+          "Open the menu (⋮) on your Supervisor's card in Hired Supervisors: choose Mark as Completed once the supervision is done (you can then leave a review), or Cancel Request to stop it. Your Supervisor can also end it from their side — you'll get a notification and an email. We recommend messaging them first to discuss the transition.",
       },
     ],
   },

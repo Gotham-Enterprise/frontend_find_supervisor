@@ -29,6 +29,7 @@ export {
   useAcceptHire,
   useAgreement,
   useCancelHire,
+  useEndSupervision,
   useHiresList,
   useHireSupervisor,
   useMarkHireAsCompleted,
