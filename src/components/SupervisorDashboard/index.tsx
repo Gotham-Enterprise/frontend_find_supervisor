@@ -52,6 +52,7 @@ import {
   resolveOptionLabels,
 } from '@/lib/utils/profile-formatters'
 import { getAgreementStage } from '@/lib/utils/supervision-status'
+import { hasLegacyMonthlyFee } from '@/lib/utils/supervisor-type'
 import type { PayoutAccountStatus } from '@/types/payouts'
 import type {
   Subscription,
@@ -561,6 +562,37 @@ function AgreementActionBanner() {
       >
         {count === 1 ? 'Send agreement' : 'Send agreements'}
       </Link>
+    </div>
+  )
+}
+
+/**
+ * Supervisors still on the retired monthly fee type: their agreements stay on
+ * monthly terms paid outside the app until they switch to an hourly rate.
+ */
+function LegacyMonthlyFeeBanner({ onEditClick }: { onEditClick: () => void }) {
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-start gap-3">
+        <Wallet className="mt-0.5 size-5 shrink-0 text-amber-600" aria-hidden />
+        <div>
+          <p className="text-sm font-medium text-amber-900">
+            Set your hourly rate to get paid through Find a Supervisor
+          </p>
+          <p className="text-sm text-amber-800">
+            Supervision is now billed hourly in the app: supervisees prepay each week and
+            you&apos;re paid for approved hours. Your profile still has a monthly fee, so your
+            agreements are paid outside the app until you switch to Hourly.
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onEditClick}
+        className="shrink-0 rounded-lg border border-amber-300 bg-white px-4 py-2 text-center text-sm font-medium text-amber-900 hover:bg-amber-100"
+      >
+        Switch to Hourly
+      </button>
     </div>
   )
 }
@@ -1105,7 +1137,7 @@ function BillingSection({ profile }: { profile: SupervisorProfileData }) {
           <p className="text-sm text-muted-foreground">Manage your plan and payment details</p>
         </div>
         <Link
-          href="/billing"
+          href="/billing?tab=subscription"
           className="flex items-center gap-1 text-sm font-medium text-primary hover:underline"
         >
           <CreditCard className="size-4" /> Manage Billing
@@ -1224,6 +1256,10 @@ export function SupervisorDashboard() {
             onEditClick={() => setEditModalOpen(true)}
           />
         ) : null}
+        {IN_APP_PAYMENTS_ENABLED &&
+          hasLegacyMonthlyFee(profile.supervisorType ?? '', profile.supervisionFeeType) && (
+            <LegacyMonthlyFeeBanner onEditClick={() => setEditModalOpen(true)} />
+          )}
         <AgreementActionBanner />
         <StatusCards profile={enrichedProfile} completion={completion} />
 

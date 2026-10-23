@@ -27,7 +27,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { UploadFile } from '@/components/ui/upload-file'
 import { previewAgreement } from '@/lib/api/supervision'
 import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
-import { useHourlyQuote, usePayoutStatusQuery, useUserSnackbar } from '@/lib/hooks'
+import {
+  useHourlyQuote,
+  usePayoutStatusQuery,
+  useSupervisorProfile,
+  useUserSnackbar,
+} from '@/lib/hooks'
 import { useProposeAgreement, useUpdateAgreement } from '@/lib/hooks/useHires'
 import { toEasternISODate } from '@/lib/utils/date'
 import { parseApiError } from '@/lib/utils/error-parser'
@@ -271,12 +276,15 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
   const hasExistingUploadedFile =
     hire.agreement?.source === 'UPLOADED' && hire.agreement.fileUrl != null
 
-  // In-app (hourly) billing applies to every supervisor's non-monthly hires while
-  // the flag is on; the backend makes the same call. Monthly retainers stay on
-  // monthly terms for now.
-  const hourly = IN_APP_PAYMENTS_ENABLED && hire.supervisorFeeType?.toUpperCase() !== 'MONTHLY'
+  // Billing follows the supervisor's current fee type (the backend makes the same
+  // call): hourly is billed in-app; monthly (Medical Directors, and fees saved as
+  // monthly before it was retired for other supervisors) stays on monthly terms.
+  const { data: myProfile, isLoading: profileLoading } = useSupervisorProfile(open)
+  const feeType = myProfile?.supervisionFeeType ?? hire.supervisorFeeType
+  const hourly = IN_APP_PAYMENTS_ENABLED && feeType?.toUpperCase() !== 'MONTHLY'
   const payoutStatus = usePayoutStatusQuery(open && hourly)
-  const termsLoading = hourly && payoutStatus.isLoading
+  const termsLoading =
+    (IN_APP_PAYMENTS_ENABLED && profileLoading) || (hourly && payoutStatus.isLoading)
   // Billed agreements need the supervisor's payout account (the backend enforces it too).
   const payoutsReady = !hourly || payoutStatus.data?.status === 'ready'
 

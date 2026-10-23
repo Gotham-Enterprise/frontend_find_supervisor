@@ -75,8 +75,9 @@ export function useHiresList(
 ) {
   const search = filters.search?.trim() ?? ''
   const group = filters.group ?? ''
+  const excludePending = filters.excludePending ?? false
   return useQuery({
-    queryKey: [...hireKeys.list(page, limit, status), mode ?? 'all', search, group],
+    queryKey: [...hireKeys.list(page, limit, status), mode ?? 'all', search, group, excludePending],
     queryFn: () => listHires(page, limit, status, mode, filters),
     staleTime: 2 * 60 * 1000,
     // Keep the current rows on screen while a new search/filter loads.

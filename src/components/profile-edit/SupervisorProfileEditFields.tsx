@@ -46,8 +46,9 @@ import {
   SUPERVISOR_TYPE_CODES,
 } from '@/lib/utils/supervisee-eligibility'
 import {
+  allowedSupervisionFeeTypes,
   getSupervisorCredentialSelectOptions,
-  isMonthlyOnlySupervisorType,
+  hasLegacyMonthlyFee,
   isPhysicianSupervisorType,
   PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE,
 } from '@/lib/utils/supervisor-type'
@@ -201,17 +202,26 @@ export function SupervisorProfileEditFields({
     )
   }
 
-  const monthlyFeeOnly = isMonthlyOnlySupervisorType(supervisorTypeWatch)
-  const feeTypeOptions = monthlyFeeOnly
-    ? SUPERVISOR_PROFILE_FEE_TYPE_OPTIONS.filter((o) => o.value === 'MONTHLY')
-    : SUPERVISOR_PROFILE_FEE_TYPE_OPTIONS
+  // Medical Directors are monthly-only; everyone else is hourly-only, except a
+  // profile already saved as monthly, which keeps that option until it switches.
+  const allowedFeeTypes = allowedSupervisionFeeTypes(
+    supervisorTypeWatch,
+    profile.supervisionFeeType,
+  )
+  const feeTypeOptions = SUPERVISOR_PROFILE_FEE_TYPE_OPTIONS.filter((o) =>
+    (allowedFeeTypes as string[]).includes(o.value),
+  )
   const supervisionFeeTypeWatch = useWatch({ control: form.control, name: 'supervisionFeeType' })
   useEffect(() => {
-    if (monthlyFeeOnly && supervisionFeeTypeWatch !== 'MONTHLY') {
-      form.setValue('supervisionFeeType', 'MONTHLY', { shouldValidate: false })
+    if (
+      supervisionFeeTypeWatch &&
+      !(allowedFeeTypes as string[]).includes(supervisionFeeTypeWatch)
+    ) {
+      form.setValue('supervisionFeeType', allowedFeeTypes[0], { shouldValidate: false })
       form.clearErrors('supervisionFeeType')
     }
-  }, [monthlyFeeOnly, supervisionFeeTypeWatch, form])
+  }, [allowedFeeTypes, supervisionFeeTypeWatch, form])
+  const showLegacyMonthlyHint = hasLegacyMonthlyFee(supervisorTypeWatch, supervisionFeeTypeWatch)
 
   return (
     <div className="space-y-6">
@@ -733,6 +743,13 @@ export function SupervisorProfileEditFields({
             isSubmitting={isSubmitting}
           />
         </div>
+        {showLegacyMonthlyHint && (
+          <p className="-mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+            Monthly fees aren&apos;t billed through Find a Supervisor. Switch to Hourly and enter
+            your hourly rate to send agreements with in-app payments — once saved, Monthly is no
+            longer available.
+          </p>
+        )}
         <FormField
           control={form.control}
           name="acceptingSupervisees"

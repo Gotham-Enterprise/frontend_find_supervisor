@@ -7,16 +7,17 @@ const STATUS_CONFIG: Record<HireStatus, { label: string; className: string }> = 
   // so the two greens read differently at a glance.
   ACCEPTED: {
     label: 'Accepted',
-    className: 'border-emerald-300 bg-white text-emerald-700 hover:bg-white',
+    className: 'border-primary/40 bg-white text-primary hover:bg-white',
   },
   ACTIVE: {
     label: 'Active',
-    className: 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-600',
+    className: 'border-primary bg-primary text-primary-foreground hover:bg-primary',
   },
   COMPLETED: { label: 'Completed', className: 'bg-gray-100 text-gray-600 hover:bg-gray-100' },
   CANCELED: { label: 'Canceled', className: 'bg-red-100 text-red-600 hover:bg-red-100' },
   REJECTED: { label: 'Rejected', className: 'bg-red-100 text-red-600 hover:bg-red-100' },
-  REVIEWED: { label: 'Reviewed', className: 'bg-blue-100 text-blue-700 hover:bg-blue-100' },
+  // Before completion, REVIEWED only means the supervisor opened the request.
+  REVIEWED: { label: 'Viewed', className: 'bg-blue-100 text-blue-700 hover:bg-blue-100' },
 }
 
 interface HireStatusBadgeProps {

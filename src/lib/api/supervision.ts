@@ -456,6 +456,8 @@ export interface HireListFilters {
   /** Name search on the other party. */
   search?: string
   group?: HireListGroup
+  /** Leave out requests still awaiting the supervisor's decision (PENDING, REVIEWED). */
+  excludePending?: boolean
 }
 
 export async function listHires(
@@ -476,6 +478,7 @@ export async function listHires(
   const filterParams = {
     ...(search ? { search } : {}),
     ...(filters.group ? { group: filters.group } : {}),
+    ...(filters.excludePending ? { excludePending: 'true' } : {}),
   }
   const { data } = await apiClient.get<ApiResponse<HireListResponse>>('/supervision/hires', {
     params: { page, limit, ...statusParam, ...modeParam, ...filterParams },

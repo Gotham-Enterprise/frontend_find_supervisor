@@ -59,7 +59,7 @@ const faqs = [
   {
     question: 'How do supervision payments work?',
     answer:
-      "With Supervisors who charge by the hour, payments run through the app. The Supervisee saves a card when signing the agreement and prepays each week's maximum hours up front. After the week, they review the sessions the Supervisor logged and pay only for approved hours — the unused prepay is refunded to their card. Supervisors who charge a monthly fee, including Medical Directors, are paid directly outside the app.",
+      "Supervision is billed hourly through the app. The Supervisee saves a card when signing the agreement and prepays each week's maximum hours up front. After the week, they review the sessions the Supervisor logged and pay only for approved hours — the unused prepay is refunded to their card. Medical Directors, who work on monthly retainers, are paid directly outside the app.",
   },
   {
     question: 'What fees are involved in supervision payments?',

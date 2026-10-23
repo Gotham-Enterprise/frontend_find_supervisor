@@ -18,7 +18,10 @@ import { Switch } from '@/components/ui/switch'
 import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
 import type { SelectOption } from '@/lib/api/options'
-import { isMonthlyOnlySupervisorType } from '@/lib/utils/supervisor-type'
+import {
+  allowedSupervisionFeeTypes,
+  isMonthlyOnlySupervisorType,
+} from '@/lib/utils/supervisor-type'
 
 const supervisionFeeSelectOptions: SelectOption[] = supervisionFeeTypeOptions.map((o) => ({
   value: o.value,
@@ -56,17 +59,20 @@ export function SupervisorStepPracticeDetails({
   const showPatientPopulation =
     !isMedicalDirector || offerSupervisingPhysician || offerCollaboratingPhysician
 
+  // Medical Directors are monthly-only; every other supervisor is hourly-only.
   const monthlyFeeOnly = isMonthlyOnlySupervisorType(supervisorTypeValue)
-  const feeTypeOptions = monthlyFeeOnly
-    ? supervisionFeeSelectOptions.filter((o) => o.value === 'MONTHLY')
-    : supervisionFeeSelectOptions
+  const allowedFeeTypes = allowedSupervisionFeeTypes(supervisorTypeValue)
+  const feeTypeOptions = supervisionFeeSelectOptions.filter((o) =>
+    (allowedFeeTypes as string[]).includes(o.value),
+  )
+  const onlyFeeType = allowedFeeTypes[0]
 
   useEffect(() => {
-    if (monthlyFeeOnly && supervisionFeeTypeValue !== 'MONTHLY') {
-      setValue('supervisionFeeType', 'MONTHLY', { shouldValidate: false })
+    if (supervisionFeeTypeValue !== onlyFeeType) {
+      setValue('supervisionFeeType', onlyFeeType, { shouldValidate: false })
       clearErrors('supervisionFeeType')
     }
-  }, [monthlyFeeOnly, supervisionFeeTypeValue, setValue, clearErrors])
+  }, [onlyFeeType, supervisionFeeTypeValue, setValue, clearErrors])
 
   return (
     <>
@@ -174,7 +180,7 @@ export function SupervisorStepPracticeDetails({
             label="Fee Type"
             rules={supervisorFieldRules('supervisionFeeType')}
             options={feeTypeOptions}
-            placeholder={monthlyFeeOnly ? 'Monthly' : 'Hourly or Monthly'}
+            placeholder={monthlyFeeOnly ? 'Monthly' : 'Hourly'}
             isSubmitting={isSubmitting}
             required
           />

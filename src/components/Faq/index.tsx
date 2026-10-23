@@ -118,7 +118,7 @@ const supervisorFaqs: FaqCategory[] = [
       {
         question: 'How do Supervisees pay me through the app?',
         answer:
-          "If your fee type is hourly, the agreements you send are billed in the app. You set your hourly rate, the maximum hours per week (1–40), and optionally the total hours the agreement covers. Your Supervisee saves a card and signs. Each billing week (Monday–Sunday, US Eastern) they prepay the weekly maximum up front. You log your sessions, they review them after the week, and you're paid for the approved hours — any unused prepay is refunded to them.",
+          "Supervision is billed hourly in the app. In each agreement you set your hourly rate, the maximum hours per week (1–40), and optionally the total hours the agreement covers. Your Supervisee saves a card and signs. Each billing week (Monday–Sunday, US Eastern) they prepay the weekly maximum up front. You log your sessions, they review them after the week, and you're paid for the approved hours — any unused prepay is refunded to them.",
       },
       {
         question: 'What do I need before I can send an hourly agreement?',
@@ -156,9 +156,9 @@ const supervisorFaqs: FaqCategory[] = [
           "Request a late entry from the Supervisee's Sessions, within 14 days after that week ended. Gotham support adds it, and your Supervisee approves or rejects it. If that week was already paid out, the approved session is charged and paid to you on its own.",
       },
       {
-        question: 'How do monthly-fee agreements work?',
+        question: 'Why can’t I choose a monthly fee?',
         answer:
-          'If your fee type is monthly — including all Medical Directors — your agreement records the monthly amount and duration, and payment is arranged directly between you and your client outside the app. In-app weekly billing applies to hourly agreements only.',
+          'In-app billing covers hourly supervision, so Supervisors set an hourly rate. Medical Directors work on monthly retainers: their agreements record the monthly amount and duration, and they’re paid directly by their client outside the app. If your profile still shows a monthly fee from before, your agreements stay on monthly terms paid outside the app until you switch to Hourly in Edit Profile — after that, Monthly is no longer available.',
       },
       {
         question: 'What happens if a supervision ends mid-week?',
@@ -357,7 +357,7 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'How does paying my Supervisor work?',
         answer:
-          'For Supervisors with an hourly fee, you pay through the app. When you sign the agreement you save a card. Each billing week (Monday–Sunday, US Eastern) your card is charged a weekly prepay — the hourly rate × the maximum hours per week, plus a service fee. After the week you review the sessions your Supervisor logged and pay only for the hours you approve; the unused prepay is refunded to your card.',
+          'You pay your Supervisor through the app. When you sign the agreement you save a card. Each billing week (Monday–Sunday, US Eastern) your card is charged a weekly prepay — the hourly rate × the maximum hours per week, plus a service fee. After the week you review the sessions your Supervisor logged and pay only for the hours you approve; the unused prepay is refunded to your card.',
       },
       {
         question: 'What is the service fee?',
@@ -405,9 +405,9 @@ const superviseeFaqs: FaqCategory[] = [
           "If this week's prepay was already charged, the week is still reviewed — you pay only for approved hours and the rest is refunded. If it hadn't been charged yet, it won't be. There are no more weekly charges after a supervision ends.",
       },
       {
-        question: 'Do Medical Directors or monthly-fee Supervisors bill through the app?',
+        question: 'Do Medical Directors bill through the app?',
         answer:
-          'No. With a monthly fee — including all Medical Directors — the agreement records the monthly amount and duration, and you pay them directly outside the app.',
+          'No. Medical Directors work on monthly retainers: the agreement records the monthly amount and duration, and you pay them directly outside the app. (A few Supervisors who set a monthly fee before in-app billing are paid the same way until they switch to an hourly rate.)',
       },
     ],
   },

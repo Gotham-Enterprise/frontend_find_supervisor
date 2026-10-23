@@ -401,13 +401,11 @@ export function HireRequestCard({
         <Card
           className={cn(
             'gap-0 overflow-hidden rounded-xl py-0 shadow-sm',
-            hire.status === 'ACTIVE' && 'border-emerald-300',
+            hire.status === 'ACTIVE' && 'border-primary/40',
           )}
         >
           {/* Active supervision gets a green accent so it stands out from accepted-but-not-started. */}
-          {hire.status === 'ACTIVE' && (
-            <div className="h-1 bg-gradient-to-r from-emerald-600 to-emerald-400" aria-hidden />
-          )}
+          {hire.status === 'ACTIVE' && <div className="h-1 bg-primary" aria-hidden />}
           {/* ── Header ─────────────────────────────────────────────────── */}
           <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
             <div className="flex min-w-0 flex-1 gap-3">

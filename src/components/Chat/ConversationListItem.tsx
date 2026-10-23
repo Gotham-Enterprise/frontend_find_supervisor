@@ -102,7 +102,7 @@ export const ConversationListItem = memo(function ConversationListItem({
           </span>
           {conversation.hire?.status === 'REVIEWED' && !conversation.hire?.completedAt && (
             <span className="rounded-full bg-blue-100 px-1.5 py-px text-[10px] font-semibold text-blue-700">
-              Reviewed
+              Viewed
             </span>
           )}
           {isPreAcceptMessaging && conversation.remainingMessages > 0 && (
