@@ -3,13 +3,14 @@
  *
  * SupervisorCard links here only when it cannot derive a state slug. This
  * route looks the supervisor up and permanently redirects to the canonical
- * /supervisors/[stateSlug]/[id] profile URL (see profileStateSlug). Unknown
- * supervisors (or ones with no resolvable state at all) 404.
+ * /supervisors/[stateSlug]/[id] profile URL (see profileStateSlug); Medical
+ * Directors go to /medical-directors/[stateSlug]/[id]. Unknown supervisors
+ * (or ones with no resolvable state at all) 404.
  */
 
 import { notFound, permanentRedirect } from 'next/navigation'
 
-import { fetchPublicSupervisorById } from '@/lib/api/public-supervisors'
+import { fetchPublicSupervisorById, publicDirectoryFor } from '@/lib/api/public-supervisors'
 import { profileStateSlug } from '@/lib/seo/routes'
 
 interface Props {
@@ -26,5 +27,6 @@ export default async function SupervisorProfileRedirect({ params }: Props) {
 
   if (!stateSlug) notFound()
 
-  permanentRedirect(`/supervisors/${stateSlug}/${id}`)
+  // Primary Medical Directors resolve straight to /medical-directors (no double hop).
+  permanentRedirect(`${publicDirectoryFor(supervisor)}/${stateSlug}/${id}`)
 }

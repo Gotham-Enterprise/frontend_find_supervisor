@@ -47,7 +47,7 @@ export const metadata: Metadata = {
         url: DEFAULT_OG_IMAGE,
         width: 1200,
         height: 630,
-        alt: `${SITE_NAME} — Find licensed healthcare Supervisors, Collaborating Physicians, and Supervising Physicians`,
+        alt: `Find licensed healthcare Supervisors, Collaborating Physicians, and Supervising Physicians on ${SITE_NAME}`,
       },
     ],
   },

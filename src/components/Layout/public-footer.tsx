@@ -24,7 +24,7 @@ const staticColumns: FooterColumn[] = [
       },
       { label: 'Collaborating Physicians', href: '/supervisors?type=collaborating-physician' },
       { label: 'Supervising Physicians', href: '/supervisors?type=supervising-physician' },
-      { label: 'Medical Directors', href: '/supervisors?type=medical-director' },
+      { label: 'Medical Directors', href: '/medical-directors' },
     ],
   },
   {
