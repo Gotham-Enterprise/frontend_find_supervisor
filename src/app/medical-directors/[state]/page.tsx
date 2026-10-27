@@ -15,6 +15,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { CorporatePracticeGuide } from '@/components/CorporatePracticeGuide'
 import { Breadcrumb } from '@/components/seo/Breadcrumb'
 import { FaqSection } from '@/components/seo/FaqSection'
 import { PublicResultsCta } from '@/components/seo/PublicResultsCta'
@@ -129,6 +130,11 @@ export default async function StateMedicalDirectorsPage({ params }: Props) {
           </p>
         )}
       </header>
+
+      {/* Whether a non-physician owner can engage a Medical Director directly */}
+      <div className="mb-8 empty:hidden">
+        <CorporatePracticeGuide stateCode={stateAbbreviation} stateName={stateName} />
+      </div>
 
       {/* Medical Director grid */}
       {supervisors.length === 0 ? (

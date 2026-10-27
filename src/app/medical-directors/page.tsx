@@ -15,6 +15,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Suspense } from 'react'
 
+import { StateCorporatePracticeChecker } from '@/components/CorporatePracticeGuide/StateCorporatePracticeChecker'
 import { FaqSection } from '@/components/seo/FaqSection'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { PublicResultsCta } from '@/components/seo/PublicResultsCta'
@@ -208,6 +209,9 @@ export default async function MedicalDirectorsIndexPage({ searchParams }: PagePr
               ))}
             </div>
           </section>
+
+          {/* Corporate Practice of Medicine rules per state (client-side picker) */}
+          <StateCorporatePracticeChecker />
 
           {/* Browse by state */}
           <section aria-labelledby="states-heading">
