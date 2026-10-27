@@ -85,11 +85,9 @@ function buildSupervisorTypeLabel(
 
 /** Builds a page title for a supervisor-type pSEO page. */
 function buildSupervisorTypePageTitle(typeSlug: string, stateName: string): string {
-  if (typeSlug === 'collaborating-physicians')
-    return `Collaborating Physicians in ${stateName} | Find A Supervisor`
-  if (typeSlug === 'supervising-physicians')
-    return `Supervising Physicians in ${stateName} | Find A Supervisor`
-  return `Mental Health Counselor Supervisors in ${stateName} | Find A Supervisor`
+  if (typeSlug === 'collaborating-physicians') return `Collaborating Physicians in ${stateName}`
+  if (typeSlug === 'supervising-physicians') return `Supervising Physicians in ${stateName}`
+  return `Mental Health Counselor Supervisors in ${stateName}`
 }
 
 /** Builds a meta description for a supervisor-type pSEO page. */
@@ -151,7 +149,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       const typeLabel = buildSupervisorTypeLabel(supervisor.supervisorType, supervisor.licenseType)
       const isPhysicianType = isPhysicianSupervisorType(supervisor.supervisorType ?? '')
       return buildMetadata({
-        title: `${supervisor.fullName}, ${typeLabel} in ${stateName} | ${SITE_NAME}`,
+        title: `${supervisor.fullName}, ${typeLabel} in ${stateName}`,
         description: isPhysicianType
           ? `View ${supervisor.fullName}'s ${typeLabel} profile, specialties, location, availability, format, and professional background.`
           : `View ${supervisor.fullName}'s supervision profile, including license type, specialties, experience, and availability in ${stateName}. Connect with verified Supervisors on ${SITE_NAME}.`,
@@ -161,7 +159,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
 
     return buildMetadata({
-      title: `Supervisor Profile | ${stateName} | ${SITE_NAME}`,
+      title: `Supervisor Profile in ${stateName}`,
       description: `View this Supervisor's credentials, specialties, and availability in ${stateName} on ${SITE_NAME}.`,
       path: `/supervisors/${stateSlug}/${slug}`,
     })
@@ -181,11 +179,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       limit: MIN_SUPERVISORS_TO_INDEX,
     })
 
-    if (supervisors.length < MIN_SUPERVISORS_TO_INDEX) {
-      return { robots: { index: false, follow: true } }
-    }
-
+    // Thin pages keep their real title/description but stay out of the index.
     return buildMetadata({
+      noIndex: supervisors.length < MIN_SUPERVISORS_TO_INDEX,
       title: typePageTitle,
       description: typePageDesc,
       path: `/supervisors/${stateSlug}/${slug}`,
@@ -205,11 +201,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       limit: MIN_SUPERVISORS_TO_INDEX,
     })
 
-    if (supervisors.length < MIN_SUPERVISORS_TO_INDEX) {
-      return { robots: { index: false, follow: true } }
-    }
-
+    // Thin pages keep their real title/description but stay out of the index.
     return buildMetadata({
+      noIndex: supervisors.length < MIN_SUPERVISORS_TO_INDEX,
       title: `${licenseLabel} Supervisors in ${stateName}`,
       description: `Find ${licenseLabel} Supervisors in ${stateName}. Browse verified ${licenseLabel} Supervisors by specialty and supervision format. Connect with the right Supervisor for your licensure on ${SITE_NAME}.`,
       path: `/supervisors/${stateSlug}/${slug}`,

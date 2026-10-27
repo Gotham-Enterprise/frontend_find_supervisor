@@ -70,11 +70,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     limit: MIN_MEDICAL_DIRECTORS_TO_INDEX,
   })
 
-  if (supervisors.length < MIN_MEDICAL_DIRECTORS_TO_INDEX) {
-    return { robots: { index: false, follow: true } }
-  }
-
+  // Thin pages keep their real title/description but stay out of the index.
   return buildMetadata({
+    noIndex: supervisors.length < MIN_MEDICAL_DIRECTORS_TO_INDEX,
     title: `Medical Directors in ${stateName}`,
     description: `Find verified Medical Directors (MDs and DOs) licensed in ${stateName} for med spas, IV therapy clinics, wellness centers, telehealth, and NP-led practices. Compare specialties, board certifications, format, and monthly fees on ${SITE_NAME}.`,
     path: `${MEDICAL_DIRECTORS_PATH}/${stateSlug}`,

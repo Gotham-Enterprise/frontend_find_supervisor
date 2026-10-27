@@ -2,7 +2,7 @@ import { ReceivedConnectionsPage } from '@/components/Connections/ReceivedConnec
 import { SuperviseeRouteGuard } from '@/components/Layout/SuperviseeRouteGuard'
 
 export const metadata = {
-  title: 'Connection Requests | Find A Supervisor',
+  title: 'Connection Requests',
   description: 'Review and manage connection requests from supervisors.',
 }
 

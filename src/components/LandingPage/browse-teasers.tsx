@@ -9,17 +9,20 @@ const TEASER_LIMIT = 3
 
 /**
  * Homepage teaser sections (async server component): a small sample of the
- * publicly browsable Supervisors and Supervisees with "See More" links into
- * the full browse pages. Each block hides itself when there is no data (e.g.
+ * publicly browsable Supervisors, Medical Directors, and Supervisees with
+ * "See More" links into the full browse pages. Each block hides itself when there is no data (e.g.
  * API unreachable), so the homepage never shows an empty grid.
  */
 export async function BrowseTeasers() {
-  const [{ supervisors }, { supervisees }] = await Promise.all([
+  const [{ supervisors }, { supervisors: medicalDirectors }, { supervisees }] = await Promise.all([
     fetchPublicSupervisors({ limit: TEASER_LIMIT, searchMode: 'supervisors' }),
+    fetchPublicSupervisors({ limit: TEASER_LIMIT, searchMode: 'medicalDirectors' }),
     fetchPublicSupervisees({ limit: TEASER_LIMIT }),
   ])
 
-  if (supervisors.length === 0 && supervisees.length === 0) return null
+  if (supervisors.length === 0 && medicalDirectors.length === 0 && supervisees.length === 0) {
+    return null
+  }
 
   return (
     <section className="bg-muted/30 py-20 sm:py-24">
@@ -45,6 +48,32 @@ export async function BrowseTeasers() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {supervisors.map((supervisor) => (
                 <SupervisorCard key={supervisor.id} supervisor={supervisor} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {medicalDirectors.length > 0 && (
+          <div>
+            <div className="mb-8 flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left">
+              <div>
+                <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  Featured Medical Directors
+                </h2>
+                <p className="mt-2 text-muted-foreground">
+                  Verified MDs and DOs providing oversight for med spas, clinics, and practices.
+                </p>
+              </div>
+              <Link
+                href="/medical-directors"
+                className="inline-flex h-10 shrink-0 items-center justify-center rounded-md border border-input bg-background px-6 text-sm font-medium transition-colors hover:bg-accent"
+              >
+                See More Medical Directors
+              </Link>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {medicalDirectors.map((medicalDirector) => (
+                <SupervisorCard key={medicalDirector.id} supervisor={medicalDirector} />
               ))}
             </div>
           </div>

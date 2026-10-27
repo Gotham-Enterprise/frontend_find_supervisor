@@ -47,7 +47,7 @@ import {
 // ---------------------------------------------------------------------------
 
 export const metadata: Metadata = buildMetadata({
-  title: `Find Healthcare Supervisors, Collaborating Physicians & Supervising Physicians | ${SITE_NAME}`,
+  title: `Find Healthcare Supervisors, Collaborating Physicians & Supervising Physicians`,
   description: `Search Licensed Supervisors, Collaborating Physicians, and Supervising Physicians by state, city, specialty, occupation, and virtual, hybrid, or in-person format. Browse verified healthcare Supervisors across all 50 states.`,
   path: '/supervisors',
 })

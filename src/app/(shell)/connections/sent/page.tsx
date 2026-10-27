@@ -2,7 +2,7 @@ import { SentConnectionsPage } from '@/components/Connections/SentConnectionsPag
 import { SupervisorRouteGuard } from '@/components/Layout/SupervisorRouteGuard'
 
 export const metadata = {
-  title: 'Sent Connections | Find A Supervisor',
+  title: 'Sent Connections',
   description: 'View and manage the connection requests you have sent to supervisees.',
 }
 

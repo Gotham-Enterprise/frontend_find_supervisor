@@ -67,11 +67,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     limit: MIN_SUPERVISEES_TO_INDEX,
   })
 
-  if (supervisees.length < MIN_SUPERVISEES_TO_INDEX) {
-    return { robots: { index: false, follow: true } }
-  }
-
+  // Thin pages keep their real title/description but stay out of the index.
   return buildMetadata({
+    noIndex: supervisees.length < MIN_SUPERVISEES_TO_INDEX,
     title: `Supervisees in ${stateName} Seeking Supervision`,
     description: `Browse Pre-Licensed Counselors, NPs, PAs, and other healthcare professionals looking for clinical supervision or physician collaboration in ${stateName}. Sign up as a Supervisor to connect on ${SITE_NAME}.`,
     path: `/browse-supervisees/${stateSlug}`,

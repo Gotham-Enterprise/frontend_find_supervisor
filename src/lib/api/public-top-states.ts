@@ -19,6 +19,8 @@ export interface TopStateEntry {
 
 export interface PublicTopStates {
   supervisors: TopStateEntry[]
+  /** Primary Medical Directors (absent on older backends → []). */
+  medicalDirectors: TopStateEntry[]
   supervisees: TopStateEntry[]
 }
 
@@ -33,8 +35,8 @@ function parseEntries(raw: unknown): TopStateEntry[] {
 }
 
 /**
- * Fetches the states with the most publicly visible Supervisors and
- * Supervisees. Returns empty lists on any error — never throws.
+ * Fetches the states with the most publicly visible Supervisors, Medical
+ * Directors, and Supervisees. Returns empty lists on any error — never throws.
  */
 export async function fetchPublicTopStates(limit = 4): Promise<PublicTopStates> {
   try {
@@ -45,20 +47,21 @@ export async function fetchPublicTopStates(limit = 4): Promise<PublicTopStates> 
 
     if (!res.ok) {
       console.warn(`[public-top-states] Returned ${res.status}`)
-      return { supervisors: [], supervisees: [] }
+      return { supervisors: [], medicalDirectors: [], supervisees: [] }
     }
 
     const json = (await res.json()) as {
       success?: boolean
-      data?: { supervisors?: unknown; supervisees?: unknown }
+      data?: { supervisors?: unknown; medicalDirectors?: unknown; supervisees?: unknown }
     }
 
     return {
       supervisors: parseEntries(json.data?.supervisors),
+      medicalDirectors: parseEntries(json.data?.medicalDirectors),
       supervisees: parseEntries(json.data?.supervisees),
     }
   } catch (err) {
     console.error('[public-top-states] fetchPublicTopStates error:', err)
-    return { supervisors: [], supervisees: [] }
+    return { supervisors: [], medicalDirectors: [], supervisees: [] }
   }
 }

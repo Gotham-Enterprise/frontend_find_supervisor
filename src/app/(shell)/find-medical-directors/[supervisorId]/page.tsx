@@ -10,7 +10,7 @@ interface MedicalDirectorProfileRouteProps {
 export async function generateMetadata({ params }: MedicalDirectorProfileRouteProps) {
   const { supervisorId: _ } = await params
   return {
-    title: 'Medical Director Profile | Find A Supervisor',
+    title: 'Medical Director Profile',
     description: "View this medical director's credentials, availability, and service details.",
   }
 }
