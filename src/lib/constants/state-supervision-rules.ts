@@ -83,7 +83,7 @@ const NY_CONDITIONS = [
 
 const CA_BOARD = 'California Board of Behavioral Sciences (BBS)'
 const CA_CONDITIONS = [
-  'Two-way, real-time video only — phone does not count',
+  'Two-way, real-time video only (phone does not count)',
   'Supervisor must document that video is appropriate within 60 days',
 ]
 const CA_SUMMARY =
@@ -146,7 +146,7 @@ const PILOT_RULES: StateSupervisionRule[] = [
     summary:
       'All supervision toward licensure can be in person or by live video, with no cap. Audio-only calls do not count.',
     conditions: [
-      'Live (synchronous) video — audio-only does not count',
+      'Live synchronous video (audio-only does not count)',
       'Your primary supervisor must be employed in your work setting',
     ],
     citation: 'Cal. Bus. & Prof. Code §2914(c)(1), §2913(c)(1); 16 CCR §1387(b)(6)',
@@ -212,7 +212,7 @@ const PILOT_RULES: StateSupervisionRule[] = [
     summary:
       'Real-time video supervision counts as face-to-face, with no cap. You need at least one hour of supervision each week.',
     conditions: [
-      'Synchronous video with verbal and visual interaction — audio-only does not count',
+      'Synchronous video with verbal and visual interaction (audio-only does not count)',
     ],
     citation: '68 Ill. Adm. Code 1375.130(e)(1); 225 ILCS 107/10',
     sourceUrl: 'https://www.law.cornell.edu/regulations/illinois/Ill-Admin-Code-tit-68-SS-1375.130',
@@ -246,7 +246,7 @@ const PILOT_RULES: StateSupervisionRule[] = [
     summary:
       'Live, real-time video supervision counts toward all 200 required supervision hours, with no cap.',
     conditions: [
-      'Synchronous video with verbal and visual interaction — audio-only does not count',
+      'Synchronous video with verbal and visual interaction (audio-only does not count)',
       'Must comply with confidentiality laws',
     ],
     citation: '68 Ill. Adm. Code 1283.25(f)',

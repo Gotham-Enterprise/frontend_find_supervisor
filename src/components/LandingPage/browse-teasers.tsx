@@ -15,7 +15,7 @@ const TEASER_LIMIT = 3
  */
 export async function BrowseTeasers() {
   const [{ supervisors }, { supervisees }] = await Promise.all([
-    fetchPublicSupervisors({ limit: TEASER_LIMIT }),
+    fetchPublicSupervisors({ limit: TEASER_LIMIT, searchMode: 'supervisors' }),
     fetchPublicSupervisees({ limit: TEASER_LIMIT }),
   ])
 

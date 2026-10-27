@@ -37,6 +37,7 @@ export const AUTH_ROUTE_PREFIXES = [
 export const PUBLIC_INDEXABLE_ROUTES = [
   '/',
   '/supervisors',
+  '/medical-directors',
   '/browse-supervisees',
   '/contact',
   '/contact-us',
@@ -109,6 +110,30 @@ export const US_STATES: Record<string, string> = {
   wyoming: 'WY',
   'district-of-columbia': 'DC',
 }
+
+/** Highest-traffic states, featured first in the "Browse by State" sections. */
+export const TOP_STATE_SLUGS = [
+  'california',
+  'texas',
+  'florida',
+  'new-york',
+  'pennsylvania',
+  'illinois',
+  'ohio',
+  'georgia',
+  'north-carolina',
+  'virginia',
+  'washington',
+  'colorado',
+  'arizona',
+  'massachusetts',
+  'maryland',
+  'michigan',
+  'tennessee',
+  'indiana',
+  'missouri',
+  'minnesota',
+]
 
 /** Reverse map: abbreviation → slug (e.g. "CA" → "california"). Built once at module load. */
 export const STATE_ABBREVIATION_TO_SLUG: Record<string, string> = Object.fromEntries(
@@ -217,6 +242,9 @@ export type TopLicenseSlug = (typeof TOP_LICENSE_SLUGS_FOR_STATE)[number]
 // Supervisor type slugs (pSEO + URL query params)
 // ---------------------------------------------------------------------------
 
+export const SUPERVISORS_PATH = '/supervisors'
+export const MEDICAL_DIRECTORS_PATH = '/medical-directors'
+
 /**
  * Maps URL query param values to the supervisor type name stored on profiles.
  * Used to convert /supervisors?type=collaborating-physician → filter value.
@@ -225,8 +253,13 @@ export const SUPERVISOR_TYPE_QUERY_MAP: Record<string, string> = {
   'mental-health-counselor': 'Mental Health Counselors',
   'collaborating-physician': 'Collaborating Physician',
   'supervising-physician': 'Supervising Physician',
-  'medical-director': 'Medical Director',
 }
+
+/**
+ * Legacy `/supervisors?type=medical-director` value. Medical Directors have
+ * their own directory now, so this param permanently redirects there.
+ */
+export const LEGACY_MEDICAL_DIRECTOR_TYPE_QUERY = 'medical-director'
 
 /** Reverse map: supervisor type name → URL slug. */
 export const SUPERVISOR_TYPE_TO_SLUG: Record<string, string> = Object.fromEntries(
@@ -241,8 +274,13 @@ export const SUPERVISOR_TYPE_PAGE_SLUGS = [
   'mental-health-counselor-supervisors',
   'collaborating-physicians',
   'supervising-physicians',
-  'medical-directors',
 ] as const
+
+/**
+ * Legacy `/supervisors/[state]/medical-directors` slug — permanently redirects
+ * to `/medical-directors/[state]`.
+ */
+export const LEGACY_MEDICAL_DIRECTOR_TYPE_PAGE_SLUG = 'medical-directors'
 
 export type SupervisorTypePageSlug = (typeof SUPERVISOR_TYPE_PAGE_SLUGS)[number]
 
@@ -251,7 +289,6 @@ export const SUPERVISOR_TYPE_PAGE_SLUG_MAP: Record<SupervisorTypePageSlug, strin
   'mental-health-counselor-supervisors': 'Mental Health Counselors',
   'collaborating-physicians': 'Collaborating Physician',
   'supervising-physicians': 'Supervising Physician',
-  'medical-directors': 'Medical Director',
 }
 
 /** Returns true if the slug is a known supervisor-type pSEO slug. */
@@ -290,7 +327,29 @@ export const SUPERVISOR_TYPE_SLUGS: Array<{
   {
     slug: 'medical-director',
     label: 'Medical Directors',
-    description: 'For healthcare professionals seeking supervision from an MD or DO.',
-    href: '/supervisors?type=medical-director',
+    description: 'For med spas, clinics, and practices that need an MD or DO Medical Director.',
+    href: MEDICAL_DIRECTORS_PATH,
   },
 ]
+
+// ---------------------------------------------------------------------------
+// Public directory paths + canonical profile URLs
+// ---------------------------------------------------------------------------
+
+/** Public directory roots. A profile's directory follows its PRIMARY type. */
+export type PublicDirectoryPath = typeof SUPERVISORS_PATH | typeof MEDICAL_DIRECTORS_PATH
+
+/**
+ * Canonical public profile path: /[directory]/[stateSlug]/[id], or the
+ * /[directory]/profile/[id] resolver when no state slug can be derived.
+ */
+export function publicProfilePath(
+  directory: PublicDirectoryPath,
+  supervisor: { id: string; state: string },
+  stateSlug?: string,
+): string {
+  const resolvedStateSlug = stateSlug ?? stateAbbreviationToSlug(supervisor.state)
+  return resolvedStateSlug
+    ? `${directory}/${resolvedStateSlug}/${supervisor.id}`
+    : `${directory}/profile/${supervisor.id}`
+}

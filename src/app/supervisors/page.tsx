@@ -8,10 +8,14 @@
  * Filters are driven by URL query params so results are shareable and
  * server-rendered on every navigation:
  *   /supervisors?state=TX&type=collaborating-physician&format=virtual
+ *
+ * Primary Medical Directors are listed in their own /medical-directors
+ * directory; the legacy ?type=medical-director param redirects there.
  */
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { permanentRedirect } from 'next/navigation'
 import { Suspense } from 'react'
 
 import { JsonLd } from '@/components/seo/JsonLd'
@@ -27,11 +31,14 @@ import {
 import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
 import { generateOrganizationJsonLd, generateWebSiteJsonLd } from '@/lib/seo/jsonld'
 import {
+  LEGACY_MEDICAL_DIRECTOR_TYPE_QUERY,
+  MEDICAL_DIRECTORS_PATH,
   stateAbbreviationToDisplayName,
   stateAbbreviationToSlug,
   stateSlugToDisplayName,
   SUPERVISOR_TYPE_QUERY_MAP,
   SUPERVISOR_TYPE_SLUGS,
+  TOP_STATE_SLUGS,
   US_STATES,
 } from '@/lib/seo/routes'
 
@@ -59,29 +66,6 @@ const FORMAT_PARAM_MAP: Record<string, string> = {
 // Static browse data
 // ---------------------------------------------------------------------------
 
-const TOP_STATE_SLUGS = [
-  'california',
-  'texas',
-  'florida',
-  'new-york',
-  'pennsylvania',
-  'illinois',
-  'ohio',
-  'georgia',
-  'north-carolina',
-  'virginia',
-  'washington',
-  'colorado',
-  'arizona',
-  'massachusetts',
-  'maryland',
-  'michigan',
-  'tennessee',
-  'indiana',
-  'missouri',
-  'minnesota',
-]
-
 const ALL_STATE_SLUGS = Object.keys(US_STATES)
 const OTHER_STATE_SLUGS = ALL_STATE_SLUGS.filter((s) => !TOP_STATE_SLUGS.includes(s)).sort()
 
@@ -105,6 +89,15 @@ interface PageProps {
 export default async function SupervisorsIndexPage({ searchParams }: PageProps) {
   const { state: rawState, type: rawType, format: rawFormat, q } = await searchParams
 
+  if (rawType?.toLowerCase() === LEGACY_MEDICAL_DIRECTOR_TYPE_QUERY) {
+    const params = new URLSearchParams()
+    if (q) params.set('q', q)
+    if (rawState) params.set('state', rawState)
+    if (rawFormat) params.set('format', rawFormat)
+    const qs = params.toString()
+    permanentRedirect(`${MEDICAL_DIRECTORS_PATH}${qs ? `?${qs}` : ''}`)
+  }
+
   // Resolve URL params to API values. Unknown values are ignored rather than
   // echoed into the heading/filter chip (JF-2536: ?state=ZZ must not render
   // "Supervisors in ZZ") — same policy as unknown type/format params, which
@@ -125,6 +118,7 @@ export default async function SupervisorsIndexPage({ searchParams }: PageProps) 
     supervisorType: supervisorTypeName || undefined,
     supervisionFormat: supervisionFormat || undefined,
     keywords: q ?? undefined,
+    searchMode: 'supervisors',
     limit: PUBLIC_RESULTS_LIMIT,
   })
 
@@ -186,9 +180,8 @@ export default async function SupervisorsIndexPage({ searchParams }: PageProps) 
           </div>
         )}
 
-        {/* Format rules for the filtered type (all professions when no type is
-            set). Medical Directors have no format rules to show. */}
-        {state && type !== 'medical-director' && (
+        {/* Format rules for the filtered type (all professions when no type is set). */}
+        {state && (
           <div className="mb-6 empty:hidden">
             <SupervisionFormatGuide
               states={[{ code: state, name: stateAbbreviationToDisplayName(state) }]}
@@ -235,7 +228,7 @@ export default async function SupervisorsIndexPage({ searchParams }: PageProps) 
               Find the right type of Supervisor or Collaborating Physician for your profession and
               state requirements.
             </p>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {SUPERVISOR_TYPE_SLUGS.map(({ slug, label, description, href }) => (
                 <Link
                   key={slug}
@@ -335,8 +328,7 @@ function buildFilteredHeading({
   if (typeLabel) parts.push(typeLabel)
   else parts.push('Supervisors')
   if (stateLabel) parts.push(`in ${stateLabel}`)
-  if (formatLabel && !typeLabel) parts.push(`— ${formatLabel}`)
-  else if (formatLabel) parts.push(`(${formatLabel})`)
+  if (formatLabel) parts.push(`(${formatLabel})`)
 
   return parts.join(' ')
 }
@@ -353,7 +345,7 @@ function NoResultsState({ hasFilters }: { hasFilters: boolean }) {
       </p>
       <p className="mt-2 text-sm text-muted-foreground">
         {hasFilters
-          ? 'Try broadening your search — remove a filter or change the state.'
+          ? 'Try broadening your search. Remove a filter or change the state.'
           : 'New Supervisors join regularly. Check back soon or browse by state.'}
       </p>
       <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
@@ -388,7 +380,7 @@ const WHY_FEATURES = [
   },
   {
     title: 'Multiple Supervisor Types',
-    body: 'Find Mental Health Counselor Supervisors, Collaborating Physicians for NPs, and Supervising Physicians for PAs — all in one place.',
+    body: 'Find Mental Health Counselor Supervisors, Collaborating Physicians for NPs, and Supervising Physicians for PAs, all in one place.',
   },
   {
     title: 'Browse by State',

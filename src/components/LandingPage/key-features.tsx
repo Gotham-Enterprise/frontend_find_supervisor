@@ -18,7 +18,7 @@ const features = [
   {
     number: '4',
     title: 'Transparent Pricing',
-    description: 'No surprises—see supervision rates, payment options, and availability upfront.',
+    description: 'No surprises. See supervision rates, payment options, and availability upfront.',
   },
   {
     number: '5',

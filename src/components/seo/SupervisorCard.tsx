@@ -1,14 +1,21 @@
 import Link from 'next/link'
 
-import type { PublicSupervisorSummary } from '@/lib/api/public-supervisors'
-import { stateAbbreviationToSlug } from '@/lib/seo/routes'
-import { formatSupervisionFormat, maskNameToFirstInitial } from '@/lib/utils/profile-formatters'
+import {
+  isPublicMedicalDirector,
+  publicSupervisorProfilePath,
+  type PublicSupervisorSummary,
+} from '@/lib/api/public-supervisors'
+import {
+  formatSupervisionFormat,
+  formatSupervisorTypeWithOfferings,
+  maskNameToFirstInitial,
+} from '@/lib/utils/profile-formatters'
 
 interface SupervisorCardProps {
   supervisor: PublicSupervisorSummary
   /**
    * Optional URL slug for the state page (e.g. "california").
-   * When provided, the profile link uses /supervisors/[stateSlug]/[id].
+   * When provided, the profile link uses /[directory]/[stateSlug]/[id].
    * Falls back to deriving the slug from supervisor.state abbreviation.
    */
   stateSlug?: string
@@ -19,11 +26,14 @@ interface SupervisorCardProps {
  * Server Component — no auth dependencies.
  */
 export function SupervisorCard({ supervisor, stateSlug }: SupervisorCardProps) {
-  const resolvedStateSlug = stateSlug ?? stateAbbreviationToSlug(supervisor.state) ?? 'supervisors'
-  const profileHref =
-    resolvedStateSlug === 'supervisors'
-      ? `/supervisors/profile/${supervisor.id}`
-      : `/supervisors/${resolvedStateSlug}/${supervisor.id}`
+  // Primary Medical Directors link into /medical-directors, everyone else into
+  // /supervisors — one canonical profile URL per person, whichever list shows them.
+  const profileHref = publicSupervisorProfilePath(supervisor, stateSlug)
+  // Medical Directors can also be listed as Supervising/Collaborating Physicians
+  // through their offerings, so show every role they cover.
+  const rolesLine = isPublicMedicalDirector(supervisor)
+    ? formatSupervisorTypeWithOfferings('Medical Director', supervisor.offerings)
+    : ''
   const location = [supervisor.city, supervisor.state].filter(Boolean).join(', ')
   const credentialLine = [supervisor.licenseType, supervisor.specialty].filter(Boolean).join(' · ')
   const licensedIn = supervisor.stateOfLicensure.filter(Boolean).join(', ')
@@ -55,6 +65,7 @@ export function SupervisorCard({ supervisor, stateSlug }: SupervisorCardProps) {
         )}
         <div className="min-w-0">
           <h3 className="truncate font-semibold text-foreground">{displayName}</h3>
+          {rolesLine && <p className="text-sm font-medium text-primary">{rolesLine}</p>}
           {credentialLine && <p className="text-sm text-muted-foreground">{credentialLine}</p>}
           {location && <p className="text-sm text-muted-foreground">{location}</p>}
         </div>

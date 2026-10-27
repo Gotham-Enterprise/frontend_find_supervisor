@@ -114,6 +114,68 @@ export function getSupervisorTypeFaqs(typeSlug: string, stateName: string): FaqI
 }
 
 // ---------------------------------------------------------------------------
+// Medical Director FAQs (/medical-directors pages)
+// ---------------------------------------------------------------------------
+
+/** FAQs for the /medical-directors index page (no state context). */
+export function getMedicalDirectorIndexFaqs(): FaqItem[] {
+  return [
+    {
+      question: 'What does a Medical Director do?',
+      answer:
+        'A Medical Director is a licensed physician (MD or DO) who provides clinical oversight for a practice. This can include approving protocols and standing orders, supervising delegated procedures, and reviewing patient care. Med spas, IV therapy clinics, aesthetic practices, wellness centers, and telehealth companies often need one to operate.',
+    },
+    {
+      question: 'Who needs a Medical Director?',
+      answer:
+        'Nurse practitioners, registered nurses, physician assistants, and non-physician owners of med spas or clinics commonly need a Medical Director. Whether one is required, and what their role must include, is set by each state.',
+    },
+    {
+      question: 'How do I find a Medical Director on Find A Supervisor?',
+      answer:
+        'Browse Medical Directors by state, or search by name or specialty. Review each profile for licensed states, board certifications, specialty, format, and fees, then create a free account to message Medical Directors and send a hire request.',
+    },
+    {
+      question: 'Can a Medical Director work with my practice remotely?',
+      answer:
+        'Many Medical Directors offer virtual or hybrid oversight, but on-site requirements differ by state and by service. Confirm with your state medical and nursing boards what level of physician presence your services require before choosing a format.',
+    },
+    {
+      question: 'How are Medical Directors paid?',
+      answer:
+        'Medical Directors on Find A Supervisor list a monthly fee on their profile, so you can compare rates before reaching out. Discuss scope, chart review expectations, and availability up front so the agreement fits your practice.',
+    },
+  ]
+}
+
+/** FAQs for /medical-directors/[state] pages. */
+export function getMedicalDirectorStateFaqs(stateName: string): FaqItem[] {
+  return [
+    {
+      question: `How do I find a Medical Director in ${stateName}?`,
+      answer: `On Find A Supervisor, browse Medical Directors licensed in ${stateName}. Review their specialties, board certifications, supervision format, and monthly fees, then create a free account to message them and send a hire request.`,
+    },
+    {
+      question: `Does my med spa or clinic in ${stateName} need a Medical Director?`,
+      answer: `It depends on the services you offer and who performs them. ${stateName}'s medical and nursing boards set the rules for physician oversight, delegation, and standing orders. Always verify the current requirements with your state boards before opening or expanding services.`,
+    },
+    {
+      question: `Does the Medical Director need to be licensed in ${stateName}?`,
+      answer: `In most cases, a Medical Director overseeing care delivered in ${stateName} must hold an active ${stateName} medical license. Every Medical Director profile lists the states where they are licensed, so you can confirm before reaching out.`,
+    },
+    {
+      question: `Can a Medical Director in ${stateName} provide oversight virtually?`,
+      answer: `Many Medical Directors offer virtual or hybrid arrangements, but on-site and chart review requirements vary by state and by service. Confirm what ${stateName} requires for your services before agreeing on a format.`,
+    },
+    {
+      question: 'What should I discuss before signing a Medical Director agreement?',
+      answer:
+        'Discuss the scope of oversight, which services and protocols they will approve, chart review frequency, availability for urgent questions, the monthly fee, liability coverage, and how the agreement can be renewed or terminated.',
+    },
+  ]
+}
+
+// ---------------------------------------------------------------------------
 // License-type + state FAQ
 // ---------------------------------------------------------------------------
 
