@@ -4,7 +4,12 @@ import { Search, SlidersHorizontal, X } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useRef, useState } from 'react'
 
-import { SUPERVISOR_TYPE_QUERY_MAP, US_STATES } from '@/lib/seo/routes'
+import {
+  type PublicDirectoryPath,
+  SUPERVISOR_TYPE_QUERY_MAP,
+  SUPERVISORS_PATH,
+  US_STATES,
+} from '@/lib/seo/routes'
 
 // ---------------------------------------------------------------------------
 // Static filter options
@@ -49,6 +54,12 @@ export interface PublicFilterValues {
 
 interface PublicSearchFiltersProps {
   initialValues: PublicFilterValues
+  /** Directory the filters drive (defaults to /supervisors). */
+  basePath?: PublicDirectoryPath
+  /** Hide the Supervisor type select (single-type directories like /medical-directors). */
+  showTypeFilter?: boolean
+  /** Lowercase plural noun used in the search input's accessible label. */
+  noun?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -56,11 +67,17 @@ interface PublicSearchFiltersProps {
 // ---------------------------------------------------------------------------
 
 /**
- * Horizontal sticky filter bar for the public /supervisors page.
+ * Horizontal sticky filter bar for the public /supervisors and
+ * /medical-directors pages.
  * Syncs filter state to URL query params via router.push so results
  * are always server-rendered and shareable.
  */
-export function PublicSearchFilters({ initialValues }: PublicSearchFiltersProps) {
+export function PublicSearchFilters({
+  initialValues,
+  basePath = SUPERVISORS_PATH,
+  showTypeFilter = true,
+  noun = 'supervisors',
+}: PublicSearchFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -71,7 +88,9 @@ export function PublicSearchFilters({ initialValues }: PublicSearchFiltersProps)
   // (?state=al → AL) and invalid ones (?state=ZZ) count as no filter, so the
   // selects and chips never echo a value the results ignored.
   const state = resolveOptionValue(STATE_OPTIONS, searchParams.get('state'))
-  const type = resolveOptionValue(SUPERVISOR_TYPE_OPTIONS, searchParams.get('type'))
+  const type = showTypeFilter
+    ? resolveOptionValue(SUPERVISOR_TYPE_OPTIONS, searchParams.get('type'))
+    : ''
   const format = resolveOptionValue(FORMAT_OPTIONS, searchParams.get('format'))
 
   // q needs local state for the debounced text input only.
@@ -90,9 +109,13 @@ export function PublicSearchFilters({ initialValues }: PublicSearchFiltersProps)
       if (next.type) params.set('type', next.type)
       if (next.format) params.set('format', next.format)
       const qs = params.toString()
-      router.push(`/supervisors${qs ? `?${qs}` : ''}`, { scroll: false })
+      router.push(`${basePath}${qs ? `?${qs}` : ''}`, { scroll: false })
+      // New results start from the top. Without this, browser scroll anchoring
+      // keeps the old scroll offset while the heading/hero above the results
+      // changes, tucking the page heading under the sticky header + filter bar.
+      window.scrollTo({ top: 0 })
     },
-    [q, state, type, format, router],
+    [q, state, type, format, router, basePath],
   )
 
   function handleQChange(value: string) {
@@ -117,7 +140,8 @@ export function PublicSearchFilters({ initialValues }: PublicSearchFiltersProps)
 
   function clearAll() {
     setQ('')
-    router.push('/supervisors', { scroll: false })
+    router.push(basePath, { scroll: false })
+    window.scrollTo({ top: 0 })
   }
 
   return (
@@ -146,7 +170,7 @@ export function PublicSearchFilters({ initialValues }: PublicSearchFiltersProps)
                 value={q}
                 onChange={(e) => handleQChange(e.target.value)}
                 placeholder="Search by name, specialty…"
-                aria-label="Search supervisors by name or specialty"
+                aria-label={`Search ${noun} by name or specialty`}
                 className="h-10 w-full rounded-md border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
@@ -182,19 +206,21 @@ export function PublicSearchFilters({ initialValues }: PublicSearchFiltersProps)
             </select>
 
             {/* Supervisor type select */}
-            <select
-              value={type}
-              onChange={(e) => handleTypeChange(e.target.value)}
-              aria-label="Filter by supervisor type"
-              className="h-10 rounded-md border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 sm:w-52"
-            >
-              <option value="">All Supervisor Types</option>
-              {SUPERVISOR_TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            {showTypeFilter && (
+              <select
+                value={type}
+                onChange={(e) => handleTypeChange(e.target.value)}
+                aria-label="Filter by supervisor type"
+                className="h-10 rounded-md border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 sm:w-52"
+              >
+                <option value="">All Supervisor Types</option>
+                {SUPERVISOR_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            )}
 
             {/* Format select */}
             <select

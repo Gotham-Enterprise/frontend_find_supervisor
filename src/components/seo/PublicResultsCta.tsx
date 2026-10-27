@@ -10,7 +10,19 @@ const COPY = {
     moreCta: 'Sign up to see all results',
     emptyHeading: 'Looking for more Supervisors?',
     emptyBody:
-      'New Supervisors join regularly — create a free account to get matched and message them directly.',
+      'New Supervisors join regularly. Create a free account to get matched and message them directly.',
+    emptyCta: 'Create Free Account',
+  },
+  medicalDirector: {
+    noun: 'Medical Director',
+    signupHref: '/signup?type=need-medical-director',
+    loginHref: '/login?redirect=/find-medical-directors',
+    moreBody: (total: number) =>
+      `Sign up free to browse all ${total} matching Medical Directors, filter by specialty, format, fee range, and more.`,
+    moreCta: 'Sign up to see all results',
+    emptyHeading: 'Looking for more Medical Directors?',
+    emptyBody:
+      'New Medical Directors join regularly. Create a free account to get matched and message them directly.',
     emptyCta: 'Create Free Account',
   },
   supervisee: {
@@ -22,7 +34,7 @@ const COPY = {
     moreCta: 'Sign up to see all results',
     emptyHeading: 'Looking for more Supervisees?',
     emptyBody:
-      'New Supervisees join regularly — create a free Supervisor account to get matched and message them directly.',
+      'New Supervisees join regularly. Create a free Supervisor account to get matched and message them directly.',
     emptyCta: 'Create Free Supervisor Account',
   },
 } as const

@@ -70,6 +70,10 @@ interface SupervisorJsonLdInput {
   profilePhotoUrl?: string | null
   website?: string | null
   yearsOfExperience?: string | null
+  /** Canonical profile path; defaults to the /supervisors/[state]/[id] URL. */
+  profilePath?: string
+  /** Board certifications (Medical Directors) — rendered as `hasCredential`. */
+  boardCertifications?: Array<{ certifyingBoard: string; specialty?: string | null }>
   /** AggregateRating — only include when there are REAL reviews. */
   rating?: {
     ratingValue: number
@@ -85,9 +89,11 @@ function resolveJobTitle(supervisorType?: string | null, licenseType?: string | 
 
 export function generateSupervisorJsonLd(supervisor: SupervisorJsonLdInput): JsonLdObject {
   const stateSlug = supervisor.state ? stateAbbreviationToSlug(supervisor.state) : null
-  const profileUrl = stateSlug
-    ? canonicalUrl(`/supervisors/${stateSlug}/${supervisor.id}`)
-    : canonicalUrl(`/supervisors/${supervisor.id}`)
+  const profileUrl = supervisor.profilePath
+    ? canonicalUrl(supervisor.profilePath)
+    : stateSlug
+      ? canonicalUrl(`/supervisors/${stateSlug}/${supervisor.id}`)
+      : canonicalUrl(`/supervisors/${supervisor.id}`)
 
   const schema: JsonLdObject = {
     '@context': 'https://schema.org',
@@ -113,6 +119,15 @@ export function generateSupervisorJsonLd(supervisor: SupervisorJsonLdInput): Jso
 
   if (supervisor.website) {
     schema.sameAs = [supervisor.website]
+  }
+
+  if (supervisor.boardCertifications?.length) {
+    schema.hasCredential = supervisor.boardCertifications.map((certification) => ({
+      '@type': 'EducationalOccupationalCredential',
+      credentialCategory: 'Board Certification',
+      name: [certification.specialty, 'Board Certification'].filter(Boolean).join(' '),
+      recognizedBy: { '@type': 'Organization', name: certification.certifyingBoard },
+    }))
   }
 
   // Only add AggregateRating when we have real data

@@ -10,11 +10,36 @@
  *  - GET /supervision/supervisor/public-profile?id=<uuid>  — single profile by ID
  */
 
+import {
+  MEDICAL_DIRECTORS_PATH,
+  type PublicDirectoryPath,
+  publicProfilePath,
+  SUPERVISORS_PATH,
+} from '@/lib/seo/routes'
+import { isMedicalDirectorType } from '@/lib/utils/supervisee-eligibility'
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:5000/api'
 
 // ---------------------------------------------------------------------------
 // Types (subset of SupervisorSearchApiRow for public usage)
 // ---------------------------------------------------------------------------
+
+/** Medical Director secondary offering (license numbers are never public). */
+export interface PublicSupervisorOffering {
+  supervisorType: string
+  occupation: string
+  specialty: string
+  degreeType: string
+  licenseStates: string[]
+}
+
+/** Medical Director board certification (certification numbers are never public). */
+export interface PublicBoardCertification {
+  certifyingBoard: string
+  specialty: string
+  subspecialty: string
+  expirationDate: string | null
+}
 
 export interface PublicSupervisorSummary {
   id: string
@@ -47,6 +72,10 @@ export interface PublicSupervisorSummary {
   customGenderIdentity: string | null
   /** ISO 639 language codes the supervisor chose to display. */
   languages: string[]
+  /** Medical Director only: other physician roles offered (e.g. Supervising Physician). */
+  offerings: PublicSupervisorOffering[]
+  /** Medical Director only. */
+  boardCertifications: PublicBoardCertification[]
   updatedAt?: string
 }
 
@@ -91,6 +120,37 @@ function parseFeeAmount(row: Record<string, unknown>): number | null {
   return Number.isFinite(amount) && amount > 0 ? amount : null
 }
 
+function asRecords(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value)
+    ? value.filter((v): v is Record<string, unknown> => Boolean(v) && typeof v === 'object')
+    : []
+}
+
+function parseOfferings(value: unknown): PublicSupervisorOffering[] {
+  return asRecords(value)
+    .map((offering) => ({
+      supervisorType: String(offering.supervisorType ?? '').trim(),
+      occupation: String(offering.occupation ?? '').trim(),
+      specialty: String(offering.specialty ?? '').trim(),
+      degreeType: String(offering.degreeType ?? '').trim(),
+      licenseStates: asRecords(offering.licenses)
+        .map((license) => String(license.state ?? '').trim())
+        .filter(Boolean),
+    }))
+    .filter((offering) => offering.supervisorType)
+}
+
+function parseBoardCertifications(value: unknown): PublicBoardCertification[] {
+  return asRecords(value)
+    .map((certification) => ({
+      certifyingBoard: String(certification.certifyingBoard ?? '').trim(),
+      specialty: String(certification.specialty ?? '').trim(),
+      subspecialty: String(certification.subspecialty ?? '').trim(),
+      expirationDate: certification.expirationDate ? String(certification.expirationDate) : null,
+    }))
+    .filter((certification) => certification.certifyingBoard)
+}
+
 function parseRow(row: Record<string, unknown>): PublicSupervisorSummary {
   const professionalSummary = row.professionalSummary
     ? String(row.professionalSummary).trim()
@@ -128,9 +188,44 @@ function parseRow(row: Record<string, unknown>): PublicSupervisorSummary {
     genderIdentity: row.genderIdentity ? String(row.genderIdentity) : null,
     customGenderIdentity: row.customGenderIdentity ? String(row.customGenderIdentity) : null,
     languages: Array.isArray(row.languages) ? (row.languages as string[]) : [],
+    offerings: parseOfferings(row.offerings),
+    boardCertifications: parseBoardCertifications(row.boardCertifications),
     updatedAt: row.updatedAt ? String(row.updatedAt) : undefined,
   }
 }
+
+/**
+ * Whether the supervisor's PRIMARY type is Medical Director. Primary MDs live
+ * under /medical-directors; everyone else (including MDs listed in supervisor
+ * results through an offering) keeps the supervisor's primary-type URL space.
+ */
+export function isPublicMedicalDirector(supervisor: { supervisorType: string }): boolean {
+  // Legacy rows store the enum code ("MEDICAL_DIRECTOR") instead of the name.
+  const value = supervisor.supervisorType
+  return isMedicalDirectorType({ name: value }) || isMedicalDirectorType({ code: value })
+}
+
+/** The public directory a supervisor's profile lives in (by primary type). */
+export function publicDirectoryFor(supervisor: { supervisorType: string }): PublicDirectoryPath {
+  return isPublicMedicalDirector(supervisor) ? MEDICAL_DIRECTORS_PATH : SUPERVISORS_PATH
+}
+
+/** Canonical public profile URL path for a supervisor (or Medical Director). */
+export function publicSupervisorProfilePath(
+  supervisor: { id: string; state: string; supervisorType: string },
+  stateSlug?: string,
+): string {
+  return publicProfilePath(publicDirectoryFor(supervisor), supervisor, stateSlug)
+}
+
+/**
+ * Directory scoping on the public search endpoint:
+ *  - 'supervisors'      — excludes plain Medical Directors (MDs with a matching
+ *                         physician offering stay visible)
+ *  - 'medicalDirectors' — primary Medical Directors only
+ * Omitted keeps the backend's legacy mixed listing.
+ */
+export type PublicSearchMode = 'supervisors' | 'medicalDirectors'
 
 export type PublicSearchParams = {
   stateOfLicensure?: string
@@ -146,6 +241,7 @@ export type PublicSearchParams = {
   city?: string
   /** Free-text keyword search (name, specialty, etc.). */
   keywords?: string
+  searchMode?: PublicSearchMode
   page?: number
   limit?: number
 }
@@ -178,6 +274,7 @@ export async function fetchPublicSupervisors(
     if (params.supervisionFormat) query.set('supervisionFormat', params.supervisionFormat)
     if (params.city?.trim()) query.set('city', params.city.trim())
     if (params.keywords?.trim()) query.set('keywords', params.keywords.trim())
+    if (params.searchMode) query.set('searchMode', params.searchMode)
     query.set('page', String(params.page ?? 1))
     query.set('limit', String(params.limit ?? 20))
     // Public SEO pages only list supervisors who are open to new supervisees.
@@ -225,9 +322,9 @@ export async function fetchPublicSupervisors(
  * Iterates pages until exhausted; caps at 500 to prevent runaway requests.
  * Returns empty array on any error — never throws.
  */
-export async function fetchAllPublicSupervisorIds(): Promise<
-  Array<{ id: string; state: string; updatedAt?: string }>
-> {
+export async function fetchAllPublicSupervisorIds(
+  searchMode?: PublicSearchMode,
+): Promise<Array<{ id: string; state: string; updatedAt?: string }>> {
   const MAX_PAGES = 25 // 25 pages × 20 per page = 500 supervisors max for sitemap
   const results: Array<{ id: string; state: string; updatedAt?: string }> = []
 
@@ -236,7 +333,7 @@ export async function fetchAllPublicSupervisorIds(): Promise<
     let hasMore = true
 
     while (hasMore && page <= MAX_PAGES) {
-      const { supervisors, meta } = await fetchPublicSupervisors({ page, limit: 20 })
+      const { supervisors, meta } = await fetchPublicSupervisors({ page, limit: 20, searchMode })
       for (const s of supervisors) {
         results.push({ id: s.id, state: s.state, updatedAt: s.updatedAt })
       }

@@ -4,7 +4,7 @@ import { SuperviseeRouteGuard } from '@/components/Layout/SuperviseeRouteGuard'
 import { SearchSupervisorPage } from '@/components/SearchSupervisor'
 
 export const metadata = {
-  title: 'Find Medical Directors | Find A Supervisor',
+  title: 'Find Medical Directors',
   description: 'Browse verified medical directors for your practice.',
 }
 
