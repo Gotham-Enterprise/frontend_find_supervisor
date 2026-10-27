@@ -49,11 +49,11 @@ const staticColumns: FooterColumn[] = [
 ]
 
 /**
- * Public footer (async server component). The "Find Supervisors" and
- * "Find Supervisees" state links are data-driven: the states with the most
- * publicly visible members, fetched with 1h ISR. States without any members
- * are never listed; if the data is unavailable, only the "Browse All" links
- * render.
+ * Public footer (async server component). The "Find Supervisors", "Find
+ * Medical Directors", and "Find Supervisees" state links are data-driven: the
+ * states with the most publicly visible members, fetched with 1h ISR. States
+ * without any members are never listed; if the data is unavailable, only the
+ * "Browse All" links render.
  */
 export async function PublicFooter() {
   const topStates = await fetchPublicTopStates(4)
@@ -72,6 +72,20 @@ export async function PublicFooter() {
     }),
   ]
 
+  const medicalDirectorLinks: FooterLink[] = [
+    { label: 'Browse All Medical Directors', href: '/medical-directors' },
+    ...topStates.medicalDirectors.flatMap(({ state }) => {
+      const slug = stateAbbreviationToSlug(state)
+      if (!slug) return []
+      return [
+        {
+          label: `Medical Directors in ${stateAbbreviationToDisplayName(state)}`,
+          href: `/medical-directors/${slug}`,
+        },
+      ]
+    }),
+  ]
+
   const superviseeLinks: FooterLink[] = [
     { label: 'Browse All Supervisees', href: '/browse-supervisees' },
     ...topStates.supervisees.map(({ state }) => {
@@ -85,6 +99,7 @@ export async function PublicFooter() {
 
   const footerColumns: FooterColumn[] = [
     { heading: 'Find Supervisors', links: supervisorLinks },
+    { heading: 'Find Medical Directors', links: medicalDirectorLinks },
     { heading: 'Find Supervisees', links: superviseeLinks },
     ...staticColumns,
   ]
@@ -92,8 +107,9 @@ export async function PublicFooter() {
   return (
     <footer className="border-t bg-background">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-7">
-          <div className="lg:col-span-2">
+        {/* Brand row on top, then the six link columns (3 per row on md, 6 on lg) */}
+        <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+          <div className="sm:col-span-2 md:col-span-3 lg:col-span-6">
             <a
               href="https://www.gothamenterprisesltd.com/"
               target="_blank"
@@ -108,9 +124,9 @@ export async function PublicFooter() {
                 className="h-8 w-auto"
               />
             </a>
-            <p className="mt-3 text-sm text-muted-foreground">
+            <p className="mt-3 max-w-xl text-sm text-muted-foreground">
               The leading platform for connecting healthcare professionals with Licensed
-              Supervisors, Collaborating Physicians, and Supervising Physicians.
+              Supervisors, Collaborating Physicians, Supervising Physicians, and Medical Directors.
             </p>
           </div>
 

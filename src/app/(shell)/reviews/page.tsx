@@ -2,7 +2,7 @@ import { SupervisorRouteGuard } from '@/components/Layout/SupervisorRouteGuard'
 import { SupervisorReviewsPage } from '@/components/SupervisorReviews'
 
 export const metadata = {
-  title: 'My Reviews | Find A Supervisor',
+  title: 'My Reviews',
   description: 'View feedback and ratings submitted by your supervisees.',
 }
 

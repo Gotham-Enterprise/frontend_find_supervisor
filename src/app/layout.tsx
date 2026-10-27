@@ -35,6 +35,8 @@ export const metadata: Metadata = {
     'LPC supervisor',
     'nurse practitioner collaboration',
     'physician assistant supervision',
+    'medical director',
+    'med spa medical director',
   ],
   openGraph: {
     type: 'website',
@@ -47,7 +49,7 @@ export const metadata: Metadata = {
         url: DEFAULT_OG_IMAGE,
         width: 1200,
         height: 630,
-        alt: `Find licensed healthcare Supervisors, Collaborating Physicians, and Supervising Physicians on ${SITE_NAME}`,
+        alt: `Find licensed healthcare Supervisors, Collaborating Physicians, Supervising Physicians, and Medical Directors on ${SITE_NAME}`,
       },
     ],
   },

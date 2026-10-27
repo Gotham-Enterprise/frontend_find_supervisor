@@ -40,6 +40,12 @@ export function HeroSection() {
                 See How It Works
               </a>
             </div>
+            <p className="text-sm text-muted-foreground">
+              Need a Medical Director for your med spa, clinic, or practice?{' '}
+              <Link href="/medical-directors" className="font-medium text-primary hover:underline">
+                Browse Medical Directors
+              </Link>
+            </p>
           </div>
           <div className="relative flex items-center justify-center lg:justify-end">
             <div className="relative h-96 w-full max-w-xl overflow-hidden lg:h-[28rem] lg:max-w-2xl">

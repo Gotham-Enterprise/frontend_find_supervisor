@@ -33,7 +33,7 @@ import {
 // ---------------------------------------------------------------------------
 
 export const metadata: Metadata = buildMetadata({
-  title: `Find Supervisees Seeking Supervision | ${SITE_NAME}`,
+  title: `Find Supervisees Seeking Supervision`,
   description: `Browse pre-licensed professionals and healthcare providers looking for clinical supervision or physician collaboration. Filter Supervisees by state and supervision format, then sign up as a Supervisor to connect.`,
   path: '/browse-supervisees',
 })

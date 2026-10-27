@@ -6,7 +6,7 @@ interface MessagesThreadRouteProps {
 
 export async function generateMetadata() {
   return {
-    title: 'Messages | Find A Supervisor',
+    title: 'Messages',
     description: 'View and manage your supervision conversations.',
   }
 }

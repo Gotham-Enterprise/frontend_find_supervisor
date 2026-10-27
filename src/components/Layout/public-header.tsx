@@ -44,6 +44,15 @@ function isBrowsePath(pathname: string, href: string): boolean {
 }
 
 /**
+ * Re-selecting the directory you're already on (e.g. to drop its filters)
+ * starts from the top. Without this, browser scroll anchoring keeps the old
+ * offset while the page re-renders, tucking the heading under the sticky bars.
+ */
+function scrollToTopIfCurrent(pathname: string, href: string) {
+  if (pathname === href) window.scrollTo({ top: 0 })
+}
+
+/**
  * Desktop "Browse" disclosure menu. The links are always server-rendered into
  * the HTML (only visually hidden while closed) so crawlers still see the
  * header's internal links to every directory — a Radix dropdown would only
@@ -131,7 +140,10 @@ function BrowseMenu() {
               <li key={href}>
                 <Link
                   href={href}
-                  onClick={() => setOpen(false)}
+                  onClick={() => {
+                    setOpen(false)
+                    scrollToTopIfCurrent(pathname, href)
+                  }}
                   aria-current={current ? 'page' : undefined}
                   className={cn(
                     'block rounded-lg px-3 py-2 transition-colors hover:bg-accent',
@@ -151,6 +163,7 @@ function BrowseMenu() {
 }
 
 export function PublicHeader() {
+  const pathname = usePathname() ?? ''
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
@@ -238,7 +251,10 @@ export function PublicHeader() {
               <Link
                 key={href}
                 href={href}
-                onClick={() => setMobileOpen(false)}
+                onClick={() => {
+                  setMobileOpen(false)
+                  scrollToTopIfCurrent(pathname, href)
+                }}
                 className={navLinkClass}
               >
                 {label}

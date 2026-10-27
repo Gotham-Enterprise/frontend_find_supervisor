@@ -110,6 +110,10 @@ export function PublicSearchFilters({
       if (next.format) params.set('format', next.format)
       const qs = params.toString()
       router.push(`${basePath}${qs ? `?${qs}` : ''}`, { scroll: false })
+      // New results start from the top. Without this, browser scroll anchoring
+      // keeps the old scroll offset while the heading/hero above the results
+      // changes, tucking the page heading under the sticky header + filter bar.
+      window.scrollTo({ top: 0 })
     },
     [q, state, type, format, router, basePath],
   )
@@ -137,6 +141,7 @@ export function PublicSearchFilters({
   function clearAll() {
     setQ('')
     router.push(basePath, { scroll: false })
+    window.scrollTo({ top: 0 })
   }
 
   return (
