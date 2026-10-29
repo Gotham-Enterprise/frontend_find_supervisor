@@ -3,6 +3,7 @@
 import { AlertCircle, ArrowLeft, MapPin, Star } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useState } from 'react'
 
 import { AgreementStageBadge } from '@/components/HiredSupervisors/AgreementStageBadge'
 import { HireStatusBadge } from '@/components/HiredSupervisors/HireStatusBadge'
@@ -92,7 +93,16 @@ function Workroom({ hire, existingReview }: { hire: HireListItem; existingReview
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const actions = useHireActions(hire, { existingReview })
+  // Agreement emails/notifications link here with ?agreement=review to open it for signing.
+  const agreementLinked = searchParams.get('agreement') === 'review' && hire.agreement != null
+  const [agreementLinkClosed, setAgreementLinkClosed] = useState(false)
+  const actions = useHireActions(hire, {
+    existingReview,
+    agreementDeepLink: {
+      open: agreementLinked && !agreementLinkClosed,
+      onClose: () => setAgreementLinkClosed(true),
+    },
+  })
   const {
     supervisorName,
     canSignAgreement,

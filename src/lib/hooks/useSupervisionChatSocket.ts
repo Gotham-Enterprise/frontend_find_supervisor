@@ -48,6 +48,8 @@ interface UseSupervisionChatSocketReturn {
   typingUsers: TypingMap
   messagingStatus: MessagingStatusMap
   joinConversation: (conversationId: string) => void
+  /** Leave the conversation's room when its thread closes. */
+  leaveConversation: (conversationId: string) => void
   sendTyping: (conversationId: string, isTyping: boolean) => void
 }
 
@@ -261,6 +263,10 @@ export function useSupervisionChatSocket({
     socketRef.current.emit('join:supervision_messages', conversationId)
   }, [])
 
+  const leaveConversation = useCallback((conversationId: string) => {
+    socketRef.current.emit('leave:supervision_messages', conversationId)
+  }, [])
+
   const sendTyping = useCallback((conversationId: string, isTyping: boolean) => {
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current)
@@ -280,5 +286,12 @@ export function useSupervisionChatSocket({
     void conversationId // the server infers it from the room
   }, [])
 
-  return { isConnected, typingUsers, messagingStatus, joinConversation, sendTyping }
+  return {
+    isConnected,
+    typingUsers,
+    messagingStatus,
+    joinConversation,
+    leaveConversation,
+    sendTyping,
+  }
 }

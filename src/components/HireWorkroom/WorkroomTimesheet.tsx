@@ -134,12 +134,13 @@ export function WorkroomTimesheet({
   const pathname = usePathname()
   const weekParam = useSearchParams().get('week')
   const [shownMonth, setShownMonth] = useState<string | null>(null)
-  const { data, isLoading, isError, refetch, renderWeekCard, dialogs } = useHireSessions({
-    hireId,
-    counterpartName: supervisorName,
-    enabled: true,
-    onChangeCard,
-  })
+  const { data, isLoading, isError, refetch, renderWeekCard, dialogs, approveWeek, disputeWeek } =
+    useHireSessions({
+      hireId,
+      counterpartName: supervisorName,
+      enabled: true,
+      onChangeCard,
+    })
 
   if (isLoading) {
     return (
@@ -184,12 +185,17 @@ export function WorkroomTimesheet({
   const lastSessionDate = [...days.keys()].sort().at(-1) ?? null
   const totals = 'netPaidCents' in data.totals ? data.totals : null
 
-  function selectWeek(date: string) {
+  function selectWeek(date: string, { scrollToDetails = false } = {}) {
     const params = new URLSearchParams(window.location.search)
     params.set('tab', 'timesheet')
     params.set('week', mondayOf(date))
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     if (monthOf(date) !== month) setShownMonth(monthOf(date))
+    if (scrollToDetails) {
+      requestAnimationFrame(() =>
+        document.getElementById('week-details')?.scrollIntoView({ behavior: 'smooth' }),
+      )
+    }
   }
 
   return (
@@ -223,13 +229,35 @@ export function WorkroomTimesheet({
         <StatTile label="Last week" value={lastWeek ? formatHrs(lastWeek.loggedMinutes) : '—'}>
           {lastWeek ? (
             lastWeek.canReview ? (
-              <button
-                type="button"
-                onClick={() => selectWeek(lastWeek.startDate)}
-                className="font-medium text-primary underline-offset-4 hover:underline"
-              >
-                Review this week
-              </button>
+              // Like Upwork's "Dispute" under Last week: act on it right here.
+              <>
+                <span className="block">
+                  Review by {formatEasternDateTime(lastWeek.reviewEndsAt)}
+                </span>
+                <span className="mt-1 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => approveWeek(lastWeek)}
+                    className="font-medium text-primary underline underline-offset-4 hover:text-primary/80"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => disputeWeek(lastWeek)}
+                    className="font-medium text-destructive underline underline-offset-4 hover:text-destructive/80"
+                  >
+                    Dispute
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => selectWeek(lastWeek.startDate, { scrollToDetails: true })}
+                    className="text-muted-foreground underline-offset-4 hover:underline"
+                  >
+                    View sessions
+                  </button>
+                </span>
+              </>
             ) : (
               lastWeekNote(lastWeek)
             )
@@ -373,7 +401,7 @@ export function WorkroomTimesheet({
         </section>
 
         {/* ── The selected week's sessions, payment and review ─────────── */}
-        <section>
+        <section id="week-details" className="scroll-mt-6">
           <h2 className="mb-3 text-lg font-semibold text-foreground">Week Details</h2>
           {selectedWeek ? (
             renderWeekCard(selectedWeek)

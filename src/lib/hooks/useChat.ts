@@ -37,10 +37,32 @@ export function useConversations(options?: { enabled?: boolean }) {
   })
 }
 
+/** Messages per load: the latest page on open, then each "Load earlier messages". */
+export const MESSAGES_PAGE_SIZE = 20
+
+/**
+ * Loads the messages before the oldest one shown and prepends them to the
+ * thread's cache (new messages keep arriving at the end via the socket).
+ * Resolves to whether there may be more.
+ */
+export function useLoadEarlierMessages(conversationId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (beforeId: string) =>
+      fetchMessages(conversationId, 1, MESSAGES_PAGE_SIZE, beforeId),
+    onSuccess: (older) => {
+      queryClient.setQueryData<ChatMessage[]>(chatKeys.messages(conversationId), (prev) => {
+        const seen = new Set((prev ?? []).map((m) => m.id))
+        return [...older.filter((m) => !seen.has(m.id)), ...(prev ?? [])]
+      })
+    },
+  })
+}
+
 export function useConversationMessages(conversationId: string | null) {
   return useQuery({
     queryKey: chatKeys.messages(conversationId ?? ''),
-    queryFn: () => fetchMessages(conversationId!, 1, 20),
+    queryFn: () => fetchMessages(conversationId!, 1, MESSAGES_PAGE_SIZE),
     enabled: Boolean(conversationId),
     staleTime: 0,
     refetchOnWindowFocus: false,

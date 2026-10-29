@@ -167,15 +167,18 @@ interface HiredSupervisorsPageProps {
 
 export function HiredSupervisorsPage({ mode = 'supervisors' }: HiredSupervisorsPageProps) {
   const isMedicalDirectors = mode === 'medical-directors'
-  // Session notifications and emails link to ?sessions=<hireId>; on Hired
-  // Supervisors those sessions live in the hire's workroom (Timesheet tab).
+  // Older notifications and emails link to ?sessions=<hireId> or ?hire=<hireId>;
+  // on Hired Supervisors both now live in the hire's workroom (Timesheet tab, or
+  // the agreement opened for review). Hired Medical Directors keeps the dialogs.
   const router = useRouter()
-  const sessionsLinkId = useSearchParams().get('sessions')
+  const searchParams = useSearchParams()
+  const sessionsLinkId = searchParams.get('sessions')
+  const hireLinkId = searchParams.get('hire')
   useEffect(() => {
-    if (!isMedicalDirectors && sessionsLinkId) {
-      router.replace(workroomHref(sessionsLinkId, 'timesheet'))
-    }
-  }, [isMedicalDirectors, sessionsLinkId, router])
+    if (isMedicalDirectors) return
+    if (sessionsLinkId) router.replace(workroomHref(sessionsLinkId, 'timesheet'))
+    else if (hireLinkId) router.replace(`${workroomHref(hireLinkId)}?agreement=review`)
+  }, [isMedicalDirectors, sessionsLinkId, hireLinkId, router])
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [group, setGroup] = useState<HireListGroupFilter>('all')

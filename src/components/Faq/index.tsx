@@ -347,12 +347,17 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'Can I cancel a pending hire request?',
         answer:
-          'Yes. Go to Hired Supervisors, find the request, and open its details. You will have the option to withdraw the request while it is still in a pending state.',
+          "Yes. Go to Hired Supervisors and open the Supervisor's menu (⋮), on their card or in their workroom, then choose Cancel Request while it is still pending.",
+      },
+      {
+        question: 'Where do I see everything about one supervision?',
+        answer:
+          "Click your Supervisor's name in Hired Supervisors to open the workroom for that supervision. Overview shows this week's cost and anything that needs you; Timesheet shows the logged hours by day and week, where you approve or dispute; Messages is your conversation for this supervision; Contract details has the agreement and your request. Each supervision has its own workroom and its own messages, even with the same Supervisor.",
       },
       {
         question: 'How do I end a supervision relationship?',
         answer:
-          "Open the menu (⋮) on your Supervisor's card in Hired Supervisors: choose Mark as Completed once the supervision is done (you can then leave a review), or Cancel Request to stop it. Your Supervisor can also end it from their side — you'll get a notification and an email. We recommend messaging them first to discuss the transition.",
+          "Open the menu (⋮) on your Supervisor's card in Hired Supervisors, or in their workroom: choose Mark as Completed once the supervision is done (you can then leave a review), or Cancel Request to stop it. Your Supervisor can also end it from their side — you'll get a notification and an email. We recommend messaging them first to discuss the transition.",
       },
     ],
   },
@@ -377,12 +382,12 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'How do I review my sessions?',
         answer:
-          "After each week your Supervisor logs their sessions (by Monday 11:59 PM US Eastern) and you get a notification to review them. Approve or dispute by Thursday 11:59 PM US Eastern — if you don't respond, the week is approved automatically. If no sessions were logged, your prepay is refunded in full (minus the service fee).",
+          "After each week your Supervisor logs their sessions (by Monday 11:59 PM US Eastern) and you get a notification to review them in the Supervisor's workroom (Timesheet). Approve or dispute by Thursday 11:59 PM US Eastern — if you don't respond, the week is approved automatically. If no sessions were logged, your prepay is refunded in full (minus the service fee).",
       },
       {
         question: 'How do I dispute a week?',
         answer:
-          'Open Sessions for that Supervisor, choose Dispute, and explain what’s wrong — you can attach up to 3 images (JPG or PNG, 5 MB each). Gotham support reviews it and decides how many hours are paid; anything not paid is refunded to your card. You’re both notified of the outcome.',
+          'Open that Supervisor’s workroom and go to Timesheet. Choose Dispute under Last week (or on the week in Week Details) and explain what’s wrong — you can attach up to 3 images (JPG or PNG, 5 MB each). Gotham support reviews it and decides how many hours are paid; anything not paid is refunded to your card. You’re both notified of the outcome.',
       },
       {
         question: 'When will I get my refund?',
@@ -392,12 +397,12 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'What if my weekly payment fails?',
         answer:
-          "You'll get a notification and an email. Update your card if needed, then tap Pay now from the Supervisor's Sessions or your Billing page. Failed payments aren't retried automatically, and your Supervisor is paid for the week only after it's paid.",
+          "You'll get a notification and an email. Update your card if needed, then tap Pay now in the Supervisor's workroom (Overview or Timesheet) or on your Billing page. Failed payments aren't retried automatically, and your Supervisor is paid for the week only after it's paid.",
       },
       {
         question: 'How do I change or remove a card?',
         answer:
-          "Each supervision has its own card. Use Change Card in the agreement or the Supervisor's Sessions to switch which saved card pays for it, and manage your saved cards on the Billing page. A card that pays for an active supervision can't be removed until you switch that supervision to another card.",
+          "Each supervision has its own card. Use Change Card in the Supervisor's workroom (Contract details or Timesheet) to switch which saved card pays for it, and manage your saved cards on the Billing page. A card that pays for an active supervision can't be removed until you switch that supervision to another card.",
       },
       {
         question: 'What is a late session?',

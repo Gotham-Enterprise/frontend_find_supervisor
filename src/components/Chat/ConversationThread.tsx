@@ -1,15 +1,17 @@
 'use client'
 
 import { AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { isSuperviseeRole } from '@/lib/auth/roles'
 import { useUser } from '@/lib/hooks'
 import {
+  MESSAGES_PAGE_SIZE,
   useConversationMessages,
   useConversations,
+  useLoadEarlierMessages,
   useMarkConversationRead,
   useSendMessage,
 } from '@/lib/hooks/useChat'
@@ -66,18 +68,21 @@ export function ConversationThread({
 
   // isSupervisor=true signals the socket hook to immediately render new incoming
   // messages as locked (preview-only) without waiting for the backend override.
-  const { joinConversation, sendTyping, typingUsers, messagingStatus } = useSupervisionChatSocket({
-    isSupervisor: !isSupervisee && locked,
-    currentUserId: user?.id,
-  })
+  const { joinConversation, leaveConversation, sendTyping, typingUsers, messagingStatus } =
+    useSupervisionChatSocket({
+      isSupervisor: !isSupervisee && locked,
+      currentUserId: user?.id,
+    })
 
   // Bottom-of-list ref for auto-scroll
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  // Join socket room when this thread opens
+  // Join the socket room while this thread is open, and leave it when it closes
+  // (otherwise the shared socket keeps getting every room's events).
   useEffect(() => {
     joinConversation(conversationId)
-  }, [conversationId, joinConversation])
+    return () => leaveConversation(conversationId)
+  }, [conversationId, joinConversation, leaveConversation])
 
   // Mark as read exactly once per conversationId — fire as soon as messages first arrive.
   // Using a ref (not state) so the flag update never causes a re-render.
@@ -92,10 +97,43 @@ export function ConversationThread({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, messages])
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to the bottom when a message is added at the end (sent or
+  // received) — not when earlier messages are loaded at the top.
+  const lastMessageId = messages?.at(-1)?.id
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages?.length])
+  }, [lastMessageId])
+
+  // "Load earlier messages": pages back from the oldest message shown, keeping
+  // the reader's place when the older ones are inserted above.
+  const listRef = useRef<HTMLDivElement>(null)
+  const restoreScrollRef = useRef<{ height: number; top: number } | null>(null)
+  const [noEarlierFor, setNoEarlierFor] = useState<string | null>(null)
+  const loadEarlier = useLoadEarlierMessages(conversationId)
+  const hasEarlier =
+    (messages?.length ?? 0) >= MESSAGES_PAGE_SIZE && noEarlierFor !== conversationId
+  function handleLoadEarlier() {
+    const oldest = messages?.[0]
+    const el = listRef.current
+    if (!oldest || !el) return
+    restoreScrollRef.current = { height: el.scrollHeight, top: el.scrollTop }
+    loadEarlier.mutate(oldest.id, {
+      onSuccess: (older) => {
+        if (older.length < MESSAGES_PAGE_SIZE) setNoEarlierFor(conversationId)
+      },
+      onError: () => {
+        restoreScrollRef.current = null
+      },
+    })
+  }
+  const firstMessageId = messages?.[0]?.id
+  useLayoutEffect(() => {
+    const el = listRef.current
+    const restore = restoreScrollRef.current
+    if (!el || !restore) return
+    el.scrollTop = el.scrollHeight - restore.height + restore.top
+    restoreScrollRef.current = null
+  }, [firstMessageId])
 
   const handleSend = useCallback(
     (body: string) => {
@@ -211,7 +249,7 @@ export function ConversationThread({
       )}
 
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={listRef} className="flex-1 overflow-y-auto">
         {isLoading ? (
           <MessagesSkeleton />
         ) : isError ? (
@@ -241,6 +279,20 @@ export function ConversationThread({
           />
         ) : (
           <div className="flex flex-col gap-3 p-4">
+            {hasEarlier && (
+              <button
+                type="button"
+                onClick={handleLoadEarlier}
+                disabled={loadEarlier.isPending}
+                className="self-center rounded-full border bg-white px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-60"
+              >
+                {loadEarlier.isPending
+                  ? 'Loading…'
+                  : loadEarlier.isError
+                    ? "Couldn't load — try again"
+                    : 'Load earlier messages'}
+              </button>
+            )}
             {messages.map((message) => (
               <MessageBubble
                 key={message.id}

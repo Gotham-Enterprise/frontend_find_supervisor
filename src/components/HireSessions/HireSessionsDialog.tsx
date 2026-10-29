@@ -796,6 +796,9 @@ export function useHireSessions({
     dialogs,
     openLogForm: () => setForm({ open: true }),
     requestLateEntry: (week: BillingWeek) => setLateEntryWeek(week),
+    /** Supervisee: open the approve / dispute confirmation for a week in review. */
+    approveWeek: (week: BillingWeek) => setApproving(week),
+    disputeWeek: (week: BillingWeek) => setDisputing(week),
   }
 }
 

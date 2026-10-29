@@ -35,10 +35,11 @@ export async function createOrGetConversation(target: string | { hireId: string 
 // Messages
 // ---------------------------------------------------------------------------
 
-export async function fetchMessages(conversationId: string, page = 1, limit = 20) {
+/** Oldest-first. `before` (a message id) returns the messages older than it. */
+export async function fetchMessages(conversationId: string, page = 1, limit = 20, before?: string) {
   const { data } = await apiClient.get<MessagesResponse>(
     `/supervision/chat/conversations/${conversationId}/messages`,
-    { params: { page, limit } },
+    { params: before ? { limit, before } : { page, limit } },
   )
   return data.data
 }
