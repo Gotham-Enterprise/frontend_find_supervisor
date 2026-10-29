@@ -5,6 +5,7 @@ import {
   getProfessionGroupForOccupation,
   type ProfessionGroup,
 } from '@/lib/constants/supervision-professions'
+import { formatPatientPopulation } from '@/lib/utils/profile-formatters'
 import {
   isMedicalDirectorType,
   resolveSupervisorTypeCode,
@@ -141,7 +142,7 @@ export function getActiveChips(
   })
 
   filters.patientPopulation.forEach((pop) => {
-    chips.push({ key: `pop_${pop}`, label: pop })
+    chips.push({ key: `pop_${pop}`, label: formatPatientPopulation(pop) })
   })
 
   filters.genderIdentities.forEach((val) => {

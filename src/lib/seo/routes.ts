@@ -124,6 +124,19 @@ export function stateAbbreviationToSlug(abbreviation: string): string | null {
   return STATE_ABBREVIATION_TO_SLUG[abbreviation.toUpperCase()] ?? null
 }
 
+/**
+ * Converts a stored state value — abbreviation ("CA") or full name ("California") —
+ * to its URL slug. Returns null if it is not a recognized US state.
+ */
+export function stateValueToSlug(value: string): string | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const fromAbbreviation = stateAbbreviationToSlug(trimmed)
+  if (fromAbbreviation) return fromAbbreviation
+  const slug = trimmed.toLowerCase().replace(/\s+/g, '-')
+  return isValidStateSlug(slug) ? slug : null
+}
+
 /** Returns true if the string looks like a UUID (supervisor ID). */
 export function isUUID(str: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)

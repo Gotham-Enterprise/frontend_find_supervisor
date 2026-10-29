@@ -153,7 +153,7 @@ export default async function SupervisorsIndexPage({ searchParams }: PageProps) 
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
               Browse Licensed Supervisors, Collaborating Physicians, and Supervising Physicians by
-              state, city, specialty, occupation, and supervision format.
+              State, City, Specialty, Occupation, and Supervision Format.
             </p>
             <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <Link

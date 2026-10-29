@@ -52,9 +52,11 @@ import {
 } from '@/lib/seo/routes'
 import { formatPublicIdentity } from '@/lib/utils/identity-display'
 import {
+  formatAvailability,
   formatFeeAmount,
   formatFeeType,
   formatNameWithCredentials,
+  formatPatientPopulation,
 } from '@/lib/utils/profile-formatters'
 import { isPhysicianSupervisorType } from '@/lib/utils/supervisor-type'
 
@@ -144,7 +146,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       const typeLabel = buildSupervisorTypeLabel(supervisor.supervisorType, supervisor.licenseType)
       const isPhysicianType = isPhysicianSupervisorType(supervisor.supervisorType ?? '')
       return buildMetadata({
-        title: `${supervisor.fullName} — ${typeLabel} in ${stateName} | ${SITE_NAME}`,
+        title: `${supervisor.fullName} — ${typeLabel} in ${stateName}`,
         description: isPhysicianType
           ? `View ${supervisor.fullName}'s ${typeLabel} profile, specialties, location, availability, format, and professional background.`
           : `View ${supervisor.fullName}'s supervision profile — license type, specialties, experience, and availability in ${stateName}. Connect with verified Supervisors on ${SITE_NAME}.`,
@@ -154,7 +156,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
 
     return buildMetadata({
-      title: `Supervisor Profile | ${stateName} | ${SITE_NAME}`,
+      title: `Supervisor Profile | ${stateName}`,
       description: `View this Supervisor's credentials, specialties, and availability in ${stateName} on ${SITE_NAME}.`,
       path: `/supervisors/${stateSlug}/${slug}`,
     })
@@ -726,17 +728,12 @@ function SupervisorPublicProfile({
           />
         )}
         {supervisor.specialty && <ProfileDetail label="Specialty" value={supervisor.specialty} />}
+        {supervisor.availability && (
+          <ProfileDetail label="Availability" value={formatAvailability(supervisor.availability)} />
+        )}
         {genderIdentity && <ProfileDetail label="Gender Identity" value={genderIdentity} />}
         {languages.length > 0 && <ProfileDetail label="Languages" value={languages.join(', ')} />}
       </div>
-
-      {/* Bio — professionalSummary if set, otherwise describeYourself */}
-      {supervisor.bio && (
-        <div className="border-t px-6 pb-6 pt-4">
-          <p className="text-sm font-semibold text-foreground">About</p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{supervisor.bio}</p>
-        </div>
-      )}
 
       {/* Licensed in */}
       {supervisor.stateOfLicensure.length > 0 && (
@@ -787,10 +784,18 @@ function SupervisorPublicProfile({
         </div>
       )}
 
+      {/* Bio — professionalSummary if set, otherwise describeYourself */}
+      {supervisor.bio && (
+        <div className="border-t px-6 pb-6 pt-4">
+          <p className="text-sm font-semibold text-foreground">About</p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{supervisor.bio}</p>
+        </div>
+      )}
+
       {/* Certifications */}
       {supervisor.certification.length > 0 && (
         <div className="border-t px-6 pb-6 pt-4">
-          <p className="text-sm font-semibold text-foreground">Certifications & Approaches</p>
+          <p className="text-sm font-semibold text-foreground">Certifications</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {supervisor.certification.map((c) => (
               <span
@@ -798,6 +803,23 @@ function SupervisorPublicProfile({
                 className="rounded-md border bg-muted/40 px-2.5 py-0.5 text-xs font-medium text-foreground"
               >
                 {formatCertification(c)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Client populations */}
+      {supervisor.patientPopulation.length > 0 && (
+        <div className="border-t px-6 pb-6 pt-4">
+          <p className="text-sm font-semibold text-foreground">Client Populations</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {supervisor.patientPopulation.map((p) => (
+              <span
+                key={p}
+                className="rounded-md border bg-muted/40 px-2.5 py-0.5 text-xs font-medium text-foreground"
+              >
+                {formatPatientPopulation(p)}
               </span>
             ))}
           </div>
@@ -815,7 +837,7 @@ function SupervisorPublicProfile({
             href={`/login?redirect=/find-supervisors/${supervisorId}`}
             className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Sign in to connect
+            Contact
           </Link>
           <Link
             href="/signup"
