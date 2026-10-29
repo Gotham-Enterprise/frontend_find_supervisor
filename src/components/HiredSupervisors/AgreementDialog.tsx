@@ -246,11 +246,11 @@ export function AgreementDialog({
             {hourly ? (
               <>
                 <TermItem
-                  label="Total Hours"
+                  label="Length"
                   value={
                     agreement.totalHours != null
-                      ? plural(agreement.totalHours, 'hour')
-                      : 'Until ended'
+                      ? `${plural(agreement.totalHours, 'hour')} total`
+                      : 'Ongoing'
                   }
                 />
                 <TermItem

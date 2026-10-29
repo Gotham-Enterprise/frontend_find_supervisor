@@ -52,6 +52,7 @@ const MIN_HOURS_PER_WEEK = 1
 const MAX_HOURS_PER_WEEK = 40
 const MIN_HOURLY_RATE = 1
 const MAX_HOURLY_RATE = 10000
+const MAX_TOTAL_HOURS = 10000
 
 /** Whole hours within the weekly cap bounds (sessions are still logged in 15-minute units). */
 function isValidWeeklyCap(hours: number | null | undefined): hours is number {
@@ -102,14 +103,9 @@ function buildSendAgreementSchema(hasExistingUploadedFile: boolean, hourly: bool
             .min(MIN_HOURS_PER_WEEK, 'Must be at least 1 hour')
             .max(MAX_HOURS_PER_WEEK, 'Must be 40 hours or less')
         : z.number().nullish(),
-      totalHours: hourly
-        ? z
-            .number()
-            .int('Must be a whole number of hours')
-            .min(1, 'Must be at least 1 hour')
-            .max(10000, 'Must be 10,000 hours or less')
-            .nullish()
-        : z.number().nullish(),
+      // Checked below, only when the agreement runs until a set number of hours.
+      length: z.enum(['ONGOING', 'TOTAL_HOURS']),
+      totalHours: z.number().nullish(),
       signatureName: z.string().min(1, 'Please type your full legal name'),
       consent: z.boolean(),
     })
@@ -139,6 +135,19 @@ function buildSendAgreementSchema(hasExistingUploadedFile: boolean, hourly: bool
           path: ['startDate'],
           message: "Start date can't be in the past",
         })
+      }
+      if (hourly && data.length === 'TOTAL_HOURS') {
+        const message =
+          data.totalHours == null
+            ? 'Enter the total hours'
+            : !Number.isInteger(data.totalHours)
+              ? 'Must be a whole number of hours'
+              : data.totalHours < 1
+                ? 'Must be at least 1 hour'
+                : data.totalHours > MAX_TOTAL_HOURS
+                  ? 'Must be 10,000 hours or less'
+                  : null
+        if (message) ctx.addIssue({ code: 'custom', path: ['totalHours'], message })
       }
       if (!data.consent) {
         ctx.addIssue({
@@ -179,6 +188,7 @@ function defaultStartDate(hire: HireListItem): string {
 
 function buildDefaultValues(hire: HireListItem): SendAgreementFormValues {
   const agreement = hire.agreement
+  const totalHours = agreement ? agreement.totalHours : hire.supervisionHours
   return {
     source: agreement?.source ?? 'DEFAULT_TEMPLATE',
     file: undefined,
@@ -199,7 +209,9 @@ function buildDefaultValues(hire: HireListItem): SendAgreementFormValues {
           ? hire.supervisorFeeAmount
           : null,
     maxHoursPerWeek: agreement?.weeklyCapMinutes != null ? agreement.weeklyCapMinutes / 60 : null,
-    totalHours: agreement ? agreement.totalHours : hire.supervisionHours,
+    // Ongoing unless the agreement (or the supervisee's request) has a set number of hours.
+    length: totalHours != null ? 'TOTAL_HOURS' : 'ONGOING',
+    totalHours,
     signatureName: '',
     consent: false,
   }
@@ -232,6 +244,24 @@ function getSourceOptions(
   ]
 }
 
+/** Hourly agreements run until ended (like an Upwork hourly contract) or until a set number of hours. */
+const LENGTH_OPTIONS: {
+  value: SendAgreementFormValues['length']
+  label: string
+  description: (superviseeName: string) => string
+}[] = [
+  {
+    value: 'ONGOING',
+    label: 'Ongoing',
+    description: (name) => `Continues until you or ${name} ends it.`,
+  },
+  {
+    value: 'TOTAL_HOURS',
+    label: 'Until a set number of hours',
+    description: () => 'Billing stops once the total hours below have been logged.',
+  },
+]
+
 /** The term fields the backend expects for the current billing mode. */
 function termsInput(
   values: SendAgreementFormValues,
@@ -244,7 +274,8 @@ function termsInput(
     ? {
         hourlyRate: values.hourlyRate ?? undefined,
         maxHoursPerWeek: values.maxHoursPerWeek ?? undefined,
-        totalHours: values.totalHours ?? undefined,
+        // Omitted for an ongoing agreement, which the backend stores as no total.
+        totalHours: values.length === 'TOTAL_HOURS' ? (values.totalHours ?? undefined) : undefined,
       }
     : {
         supervisionMonths: values.supervisionMonths ?? undefined,
@@ -307,6 +338,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
   const source = useWatch({ control: form.control, name: 'source' })
   const hourlyRate = useWatch({ control: form.control, name: 'hourlyRate' })
   const maxHoursPerWeek = useWatch({ control: form.control, name: 'maxHoursPerWeek' })
+  const length = useWatch({ control: form.control, name: 'length' })
 
   // Debounced so the breakdown isn't re-fetched on every keystroke.
   const [quoteTerms, setQuoteTerms] = useState<{ rate: number | null; cap: number | null }>({
@@ -378,7 +410,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
     // Default template: the backend renders the exact PDF it would send.
     const termsValid = await form.trigger(
       hourly
-        ? ['startDate', 'hourlyRate', 'maxHoursPerWeek', 'totalHours']
+        ? ['startDate', 'hourlyRate', 'maxHoursPerWeek', 'length', 'totalHours']
         : ['startDate', 'supervisionMonths', 'monthlyAmount'],
     )
     if (!termsValid) return
@@ -523,6 +555,16 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                     )}
                   />
                 )}
+
+                {/* The terms below, not the uploaded document, are what billing uses. */}
+                {source === 'UPLOADED' && (
+                  <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                    {hourly
+                      ? `${superviseeName} is billed using the terms below, not the amounts in your document. Make sure your document matches them.`
+                      : `${superviseeName} will see the terms below next to your document. Make sure your document matches them.`}
+                  </p>
+                )}
               </fieldset>
 
               {/* ── Section: Terms ────────────────────────────────────────── */}
@@ -548,7 +590,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                   </div>
                 ) : hourly ? (
                   <>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <FormInputField
                         control={form.control}
                         name="hourlyRate"
@@ -577,18 +619,6 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                         isSubmitting={isSubmitting}
                         placeholder="e.g. 2"
                       />
-                      <FormInputField
-                        control={form.control}
-                        name="totalHours"
-                        label="Total Hours"
-                        type="number"
-                        numberValue
-                        clearErrorsOnChange
-                        min={1}
-                        step={1}
-                        isSubmitting={isSubmitting}
-                        placeholder="e.g. 200"
-                      />
                     </div>
                     {/* Fixed-height slot: summary, skeleton while (re)quoting, or the
                         cap hint — so editing the terms never shifts the form. */}
@@ -608,10 +638,71 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                         <HourlyQuoteSummarySkeleton perspective="supervisor" />
                       )}
                     </div>
+
+                    <FormField
+                      control={form.control}
+                      name="length"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Agreement Length <span className="text-destructive">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <div
+                              role="radiogroup"
+                              aria-label="Agreement length"
+                              className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+                            >
+                              {LENGTH_OPTIONS.map((opt) => (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  role="radio"
+                                  aria-checked={field.value === opt.value}
+                                  disabled={isSubmitting}
+                                  onClick={() => {
+                                    field.onChange(opt.value)
+                                    form.clearErrors('totalHours')
+                                  }}
+                                  className={`rounded-lg border p-3 text-left transition-colors ${
+                                    field.value === opt.value
+                                      ? 'border-primary bg-primary/5'
+                                      : 'border-border hover:bg-muted'
+                                  }`}
+                                >
+                                  <p className="text-sm font-medium text-foreground">{opt.label}</p>
+                                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                                    {opt.description(superviseeName)}
+                                  </p>
+                                </button>
+                              ))}
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {length === 'TOTAL_HOURS' && (
+                      <FormInputField
+                        control={form.control}
+                        name="totalHours"
+                        label="Total Hours"
+                        required
+                        type="number"
+                        numberValue
+                        clearErrorsOnChange
+                        min={1}
+                        max={MAX_TOTAL_HOURS}
+                        step={1}
+                        isSubmitting={isSubmitting}
+                        placeholder="e.g. 200"
+                      />
+                    )}
+
                     <p className="text-xs text-muted-foreground">
                       You log each session in the app (in 15-minute units) and are paid for the
-                      hours {superviseeName} approves, up to the weekly max. Leave Total Hours empty
-                      if the agreement runs until either of you ends it. Payouts go to your bank
+                      hours {superviseeName} approves, up to the weekly max. Payouts go to your bank
                       account via Stripe.
                     </p>
                   </>
@@ -695,8 +786,8 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                 <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                   <AlertCircle className="mt-0.5 size-4 shrink-0" />
                   <span>
-                    Set up payouts before sending an agreement, so {superviseeName} can pay you
-                    through the platform.{' '}
+                    Set up your payment information before sending an agreement, so {superviseeName}{' '}
+                    can pay you through the platform.{' '}
                     <Link href="/billing?tab=earnings" className="font-medium underline">
                       Go to Billing &amp; Invoices
                     </Link>

@@ -70,7 +70,7 @@ export function HourlyQuoteSummary({
         <>
           <Row label="Hourly rate" value={formatUsdCents(quote.hourlyRateCents)} />
           <Row label="Max per week" value={cap} />
-          <Row label="Weekly prepay" value={formatUsdCents(quote.weeklyPrepayCents)} />
+          <Row label="Weekly payment" value={formatUsdCents(quote.weeklyPrepayCents)} />
           <Row label="Service fee" value={formatUsdCents(quote.serviceFeeCents)} />
           <Row
             label="Charged at the start of each week"

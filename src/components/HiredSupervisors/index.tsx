@@ -211,14 +211,11 @@ export function HiredSupervisorsPage({ mode = 'supervisors' }: HiredSupervisorsP
 
   return (
     <div className="space-y-8">
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">Your Hire Requests</h2>
-        <p className="mt-2 text-base leading-relaxed text-muted-foreground">
-          Everyone you&apos;ve asked to supervise you is listed here. Each card shows format, fee,
-          and current status. Open the menu to view a supervisor&apos;s profile, see full request
-          details, or take other actions.
-        </p>
-      </div>
+      <p className="text-base leading-relaxed text-muted-foreground">
+        Everyone you&apos;ve asked to supervise you is listed here. Each card shows format, fee, and
+        current status. Open the menu to view a supervisor&apos;s profile, see full request details,
+        or take other actions.
+      </p>
 
       <HireListToolbar
         search={search}

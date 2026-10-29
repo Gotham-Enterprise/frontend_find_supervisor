@@ -157,7 +157,7 @@ export function WeekSummaryCard() {
                 <div className="rounded-lg border bg-muted/30 px-4 py-3">
                   <dt className="text-xs text-muted-foreground">Platform fee</dt>
                   <dd className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
-                    −{formatUsdCents(data.totals.platformFeeCents)}
+                    {formatUsdCents(data.totals.platformFeeCents)}
                   </dd>
                 </div>
                 <div className="rounded-lg border bg-primary/5 px-4 py-3">
@@ -214,8 +214,8 @@ export function WeekSummaryCard() {
             {data.rows.length === 0 ? (
               <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
                 {data.isCurrentWeek
-                  ? 'No billing weeks yet. They start once a supervisee prepays their week.'
-                  : 'No billing weeks for this week.'}
+                  ? 'No billing summary yet. It starts once a supervisee prepays their week.'
+                  : 'No billing summary for this week.'}
               </p>
             ) : (
               <div className="overflow-x-auto rounded-lg border">
@@ -316,10 +316,13 @@ export function WeekSummaryCard() {
                 </table>
               </div>
             )}
-            <p className="text-xs text-muted-foreground">
-              Click a supervisee to open that week&apos;s sessions. An amber dot marks a day with a
-              late entry added by Gotham support.
-            </p>
+            {data.rows.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Click a supervisee&apos;s name to see their sessions for this week.
+                {data.rows.some((r) => r.days.some((d) => d.lateMinutes > 0)) &&
+                  ' A small orange dot means Gotham support added time on that day.'}
+              </p>
+            )}
           </div>
         )}
       </CardContent>

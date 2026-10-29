@@ -82,7 +82,7 @@ export function PayoutsCard() {
               <Landmark className="size-4 text-primary" />
             </div>
             <div>
-              <CardTitle>Payouts</CardTitle>
+              <CardTitle>Payment Information</CardTitle>
               <CardDescription className="mt-0.5">
                 Receive supervisee payments directly to your bank account.
               </CardDescription>
@@ -165,7 +165,7 @@ export function PayoutsCard() {
 }
 
 const ONBOARDING_CTA: Record<Exclude<PayoutAccountStatus, 'ready' | 'pending'>, string> = {
-  not_started: 'Set Up Payouts',
+  not_started: 'Set Up Payment Information',
   incomplete: 'Continue Setup',
   action_required: 'Update Details',
 }

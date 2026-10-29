@@ -123,7 +123,7 @@ const supervisorFaqs: FaqCategory[] = [
       {
         question: 'What do I need before I can send an hourly agreement?',
         answer:
-          'A payout account. Go to Billing → Earnings and click Set Up Payouts — Stripe verifies your identity and connects your bank account (US bank accounts only). Once your payouts show as Ready, you can send hourly agreements. The agreement start date can’t be in the past.',
+          'A payout account. Go to Billing → Earnings and click Set Up Payment Information — Stripe verifies your identity and connects your bank account (US bank accounts only). Once your payouts show as Ready, you can send hourly agreements. The agreement start date can’t be in the past.',
       },
       {
         question: 'How do I log sessions?',

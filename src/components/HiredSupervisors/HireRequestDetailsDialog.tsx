@@ -201,9 +201,11 @@ export function HireRequestDetailsDialog({
           { label: 'Hourly rate', value: formatUsdCents(hire.agreement.hourlyRateCents) },
           { label: 'Max per week', value: formatHours(hire.agreement.weeklyCapMinutes) },
           {
-            label: 'Total hours',
+            label: 'Length',
             value:
-              hire.agreement.totalHours != null ? String(hire.agreement.totalHours) : 'Until ended',
+              hire.agreement.totalHours != null
+                ? `${formatHours(hire.agreement.totalHours * 60)} total`
+                : 'Ongoing',
           },
           {
             label: 'Payment card',
