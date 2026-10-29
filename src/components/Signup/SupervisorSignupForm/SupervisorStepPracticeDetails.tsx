@@ -11,7 +11,14 @@ import {
 } from '@/components/Signup/schema'
 import { supervisorFieldRules } from '@/components/Signup/supervisorFieldRules'
 import { Checkbox } from '@/components/ui/checkbox'
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { FormInputField } from '@/components/ui/form-input-field'
 import { FormSelectField } from '@/components/ui/form-select-field'
 import { Switch } from '@/components/ui/switch'
@@ -81,10 +88,9 @@ export function SupervisorStepPracticeDetails({
                   Patient Population <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
+                  {/* Keep the backend order — it groups populations (age, identity, …). */}
                   <TagInput
-                    options={patientPopulationOptions.sort((a, b) =>
-                      a.label.localeCompare(b.label),
-                    )}
+                    options={patientPopulationOptions}
                     value={field.value ?? []}
                     onChange={(v) => {
                       field.onChange(v)
@@ -93,9 +99,14 @@ export function SupervisorStepPracticeDetails({
                     placeholder={
                       patientPopulationsLoading ? 'Loading…' : 'Add Population (e.g. Adults)'
                     }
+                    searchable
+                    searchPlaceholder="Search populations…"
                     disabled={patientPopulationsLoading || isSubmitting}
                   />
                 </FormControl>
+                <FormDescription>
+                  Select every client population you have experience working with.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

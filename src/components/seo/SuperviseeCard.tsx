@@ -2,24 +2,36 @@ import Link from 'next/link'
 
 import { getAvatarColor } from '@/components/SearchSupervisee/helpers'
 import type { PublicSuperviseeSummary } from '@/lib/api/public-supervisees'
-import {
-  formatBudgetRange,
-  formatHowSoonLooking,
-  formatSupervisionFormat,
-} from '@/lib/utils/profile-formatters'
+import { stateValueToSlug } from '@/lib/seo/routes'
+import { formatHowSoonLooking, formatSupervisionFormat } from '@/lib/utils/profile-formatters'
 
 interface SuperviseeCardProps {
   supervisee: PublicSuperviseeSummary
   /** Position in the results grid — drives the initials avatar color. */
   index: number
+  /**
+   * State of the page the card is on (e.g. "california"). When omitted, the
+   * profile link uses the supervisee's first licensed state.
+   */
+  stateSlug?: string
 }
 
 /**
- * Lightweight supervisee card for the public /browse-supervisees page.
+ * Lightweight supervisee card for the public /browse-supervisees pages; links to
+ * the public profile at /browse-supervisees/[state]/[id].
  * Server Component — no auth dependencies. `fullName` arrives already masked
  * server-side ("Maria S"), so it is rendered as-is with no client re-masking.
  */
-export function SuperviseeCard({ supervisee, index }: SuperviseeCardProps) {
+export function SuperviseeCard({ supervisee, index, stateSlug }: SuperviseeCardProps) {
+  const profileStateSlug =
+    stateSlug ??
+    [...supervisee.stateOfLicensure, supervisee.state]
+      .map(stateValueToSlug)
+      .find((slug) => slug !== null)
+  // No recognizable state means no profile URL — fall back to the signup CTA.
+  const profileHref = profileStateSlug
+    ? `/browse-supervisees/${profileStateSlug}/${supervisee.id}`
+    : null
   const format = supervisee.preferredFormat
     ? formatSupervisionFormat(supervisee.preferredFormat)
     : ''
@@ -27,23 +39,12 @@ export function SuperviseeCard({ supervisee, index }: SuperviseeCardProps) {
     compact: true,
     emptyFallback: '',
   })
-  // The supervision budget belongs to a non-MD need. MD-only supervisees carry the
-  // backend's 0/0 defaults with no budget type, and their real budget is the MD
-  // monthly budget — so only show it when a budget type was actually chosen.
-  const budget =
-    supervisee.budgetRangeType &&
-    (supervisee.budgetRangeStart != null || supervisee.budgetRangeEnd != null)
-      ? formatBudgetRange(
-          supervisee.budgetRangeStart,
-          supervisee.budgetRangeEnd,
-          supervisee.budgetRangeType,
-        )
-      : ''
   const licensedIn = supervisee.stateOfLicensure.join(', ')
   const supervisorNeeded = supervisee.typeOfSupervisorNeeded.filter(Boolean).join(', ')
-  const credentialLine = [supervisee.title, supervisee.occupation, supervisee.specialty]
-    .filter(Boolean)
-    .join(' · ')
+  // Quick-scan card: credential only — occupation, specialty, budget and the
+  // ideal-supervisor text live on the profile page.
+  const credential = supervisee.title || supervisee.occupation
+  const tags = [format, licensedIn && `Licensed in ${licensedIn}`, timeline].filter(Boolean)
 
   return (
     <article className="flex flex-col gap-3 rounded-xl border bg-card p-5 transition-shadow hover:shadow-md">
@@ -67,65 +68,39 @@ export function SuperviseeCard({ supervisee, index }: SuperviseeCardProps) {
         )}
         <div className="min-w-0">
           <h3 className="truncate font-semibold text-foreground">{supervisee.fullName}</h3>
-          {credentialLine && <p className="text-sm text-muted-foreground">{credentialLine}</p>}
+          {credential && <p className="truncate text-sm text-muted-foreground">{credential}</p>}
           {supervisee.location && (
             <p className="text-sm text-muted-foreground">{supervisee.location}</p>
           )}
         </div>
       </div>
 
-      {/* What they're looking for in a supervisor */}
-      {(supervisorNeeded || format || licensedIn || timeline || budget) && (
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Looking For
-          </p>
-          <dl className="mt-1 space-y-1 text-sm">
-            {supervisorNeeded && (
-              <div className="flex gap-1.5">
-                <dt className="shrink-0 font-medium text-foreground">Supervisor Needed:</dt>
-                <dd className="text-muted-foreground">{supervisorNeeded}</dd>
-              </div>
-            )}
-            {format && (
-              <div className="flex gap-1.5">
-                <dt className="shrink-0 font-medium text-foreground">Supervision Type:</dt>
-                <dd className="text-muted-foreground">{format}</dd>
-              </div>
-            )}
-            {licensedIn && (
-              <div className="flex gap-1.5">
-                <dt className="shrink-0 font-medium text-foreground">Licensed in:</dt>
-                <dd className="text-muted-foreground">{licensedIn}</dd>
-              </div>
-            )}
-            {timeline && (
-              <div className="flex gap-1.5">
-                <dt className="shrink-0 font-medium text-foreground">Timeline:</dt>
-                <dd className="text-muted-foreground">{timeline}</dd>
-              </div>
-            )}
-            {budget && (
-              <div className="flex gap-1.5">
-                <dt className="shrink-0 font-medium text-foreground">Budget:</dt>
-                <dd className="text-muted-foreground">{budget}</dd>
-              </div>
-            )}
-          </dl>
-        </div>
+      {supervisorNeeded && (
+        <p className="text-sm">
+          <span className="font-medium text-foreground">Supervisor Needed: </span>
+          <span className="text-muted-foreground">{supervisorNeeded}</span>
+        </p>
       )}
 
-      {/* Bio — what they want in a supervisor */}
-      {supervisee.bio && (
-        <p className="line-clamp-3 text-sm text-muted-foreground">{supervisee.bio}</p>
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full border px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
       )}
 
       {/* CTA */}
       <Link
-        href="/signup?type=supervisor"
+        href={profileHref ?? '/signup?type=supervisor'}
         className="mt-auto inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
       >
-        Sign up to connect
+        {profileHref ? 'View Profile' : 'Sign up to connect'}
       </Link>
     </article>
   )

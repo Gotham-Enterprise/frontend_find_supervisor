@@ -34,8 +34,12 @@ export interface PublicSupervisorSummary {
   yearsOfExperience: string
   acceptingSupervisees: boolean
   supervisionFormat: string
+  /** Availability code, e.g. 'WEEKDAYS' | 'EVENINGS' | 'FLEXIBLE'. Empty when unset. */
+  availability: string
   stateOfLicensure: string[]
   certification: string[]
+  /** Client population codes, e.g. 'ADULTS' | 'CHILDREN' | 'ADOLESCENTS' | 'FAMILIES'. */
+  patientPopulation: string[]
   /** Fee cadence, e.g. 'HOURLY' | 'MONTHLY' | 'PER_SESSION'. */
   supervisionFeeType: string | null
   /** Fee in whole dollars, e.g. 100 = $100. */
@@ -118,8 +122,12 @@ function parseRow(row: Record<string, unknown>): PublicSupervisorSummary {
     yearsOfExperience: String(row.yearsOfExperience ?? ''),
     acceptingSupervisees: Boolean(row.acceptingSupervisees),
     supervisionFormat: String(row.supervisionFormat ?? ''),
+    availability: String(row.availability ?? ''),
     stateOfLicensure: Array.isArray(row.stateOfLicensure) ? (row.stateOfLicensure as string[]) : [],
     certification: Array.isArray(row.certification) ? (row.certification as string[]) : [],
+    patientPopulation: Array.isArray(row.patientPopulation)
+      ? (row.patientPopulation as string[])
+      : [],
     // The search endpoint nests fee fields under `supervisorProfile`; the
     // public-profile endpoint flattens them to the top level — support both.
     supervisionFeeType: parseFeeType(row),
