@@ -17,10 +17,17 @@ export async function fetchConversations() {
   return data.data
 }
 
-export async function createOrGetConversation(supervisorId: string) {
-  const { data } = await apiClient.post<ConversationResponse>('/supervision/chat/conversations', {
-    supervisorId,
-  })
+/**
+ * A hire's message room (one per hire, like an Upwork contract). Pass
+ * `{ hireId }` from a hire (either party), or a supervisor id from the
+ * supervisee's side to open their latest hire with that supervisor.
+ */
+export async function createOrGetConversation(target: string | { hireId: string }) {
+  const body = typeof target === 'string' ? { supervisorId: target } : { hireId: target.hireId }
+  const { data } = await apiClient.post<ConversationResponse>(
+    '/supervision/chat/conversations',
+    body,
+  )
   return data.data
 }
 

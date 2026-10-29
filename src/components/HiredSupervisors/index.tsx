@@ -2,7 +2,8 @@
 
 import { AlertCircle, Briefcase, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 import {
   type HireListGroupFilter,
@@ -19,6 +20,7 @@ import { useHiresList, useMyReviews } from '@/lib/hooks'
 import type { Review } from '@/types/review'
 
 import { HireRequestCard } from './HireRequestCard'
+import { workroomHref } from './useHireActions'
 
 const PAGE_SIZE = 10
 
@@ -165,6 +167,15 @@ interface HiredSupervisorsPageProps {
 
 export function HiredSupervisorsPage({ mode = 'supervisors' }: HiredSupervisorsPageProps) {
   const isMedicalDirectors = mode === 'medical-directors'
+  // Session notifications and emails link to ?sessions=<hireId>; on Hired
+  // Supervisors those sessions live in the hire's workroom (Timesheet tab).
+  const router = useRouter()
+  const sessionsLinkId = useSearchParams().get('sessions')
+  useEffect(() => {
+    if (!isMedicalDirectors && sessionsLinkId) {
+      router.replace(workroomHref(sessionsLinkId, 'timesheet'))
+    }
+  }, [isMedicalDirectors, sessionsLinkId, router])
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [group, setGroup] = useState<HireListGroupFilter>('all')

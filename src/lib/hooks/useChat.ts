@@ -55,7 +55,7 @@ export function useCreateOrGetConversation() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (supervisorId: string) => createOrGetConversation(supervisorId),
+    mutationFn: (target: string | { hireId: string }) => createOrGetConversation(target),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: chatKeys.conversations() })
     },

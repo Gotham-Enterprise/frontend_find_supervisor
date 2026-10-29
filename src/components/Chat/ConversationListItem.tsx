@@ -14,12 +14,15 @@ interface ConversationListItemProps {
   conversation: Conversation
   isActive: boolean
   onClick: (id: string) => void
+  /** Which hire this room belongs to; set when the viewer has several rooms with this person. */
+  contractLabel?: string | null
 }
 
 export const ConversationListItem = memo(function ConversationListItem({
   conversation,
   isActive,
   onClick,
+  contractLabel,
 }: ConversationListItemProps) {
   const { user } = useUser()
   const isSupervisee = isSuperviseeRole(user?.role)
@@ -116,6 +119,10 @@ export const ConversationListItem = memo(function ConversationListItem({
             </span>
           )}
         </div>
+
+        {contractLabel && (
+          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{contractLabel}</p>
+        )}
 
         {/* Preview */}
         {(preview || (hasUnread && conversation.unreadCount > 1)) && (

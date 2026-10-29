@@ -8,6 +8,7 @@ import {
   endSupervision,
   type EndSupervisionOutcome,
   getAgreement,
+  getHire,
   getSuperviseeUpcomingSessions,
   type HireListFilters,
   type HiresListMode,
@@ -42,6 +43,7 @@ export const hireKeys = {
       Array.isArray(status) ? status.join(',') : (status ?? ''),
     ] as const,
   pendingCount: () => [...hireKeys.all, 'pending-count'] as const,
+  detail: (hireId: string) => [...hireKeys.all, 'detail', hireId] as const,
 }
 
 export const upcomingSessionsKeys = {
@@ -178,6 +180,16 @@ export function useMarkHireAsCompleted() {
 
 export const agreementKeys = {
   detail: (hireId: string) => [...hireKeys.all, 'agreement', hireId] as const,
+}
+
+/** One hire (list-item shape) for its workroom; refreshed with every hire mutation via hireKeys.all. */
+export function useHire(hireId: string) {
+  return useQuery({
+    queryKey: hireKeys.detail(hireId),
+    queryFn: () => getHire(hireId),
+    enabled: Boolean(hireId),
+    retry: false,
+  })
 }
 
 export function useAgreement(hireId: string, enabled = true) {

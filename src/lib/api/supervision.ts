@@ -5,6 +5,7 @@ import { requiresSupervisionHours } from '@/lib/utils/profile-formatters'
 import type { ApiResponse } from '@/types/api'
 import type {
   AgreementRecord,
+  HireListItem,
   HireListResponse,
   HireRecord,
   HireStatus,
@@ -483,6 +484,14 @@ export async function listHires(
   const { data } = await apiClient.get<ApiResponse<HireListResponse>>('/supervision/hires', {
     params: { page, limit, ...statusParam, ...modeParam, ...filterParams },
   })
+  return data.data
+}
+
+/** GET /api/supervision/hires/:hireId — one hire, shaped like a hire list item (the hire's workroom). */
+export async function getHire(hireId: string): Promise<HireListItem> {
+  const { data } = await apiClient.get<ApiResponse<HireListItem>>(
+    `/supervision/hires/${encodeURIComponent(hireId)}`,
+  )
   return data.data
 }
 

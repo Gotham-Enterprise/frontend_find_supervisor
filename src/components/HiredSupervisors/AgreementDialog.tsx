@@ -187,6 +187,199 @@ function SignAgreementSection({
   )
 }
 
+/**
+ * The agreement's terms, document, signatures and (hourly) weekly payment —
+ * shown in the agreement dialog and on the workroom's Contract details tab.
+ */
+export function AgreementBody({
+  hire,
+  showSignForm = false,
+  hasSavedCards = false,
+  cardLabelText = null,
+  onSetUpPayment,
+  onLeave,
+}: {
+  hire: HireListItem
+  /** The supervisee is signing now: the payment section reads as step 1. */
+  showSignForm?: boolean
+  hasSavedCards?: boolean
+  /** The hire's saved card, e.g. "Visa •••• 4242". */
+  cardLabelText?: string | null
+  /** Supervisee only: opens the payment dialog (hourly agreements). */
+  onSetUpPayment?: (options?: { changeCard?: boolean }) => void
+  /** Called before the payment dialog opens (the agreement dialog closes itself). */
+  onLeave?: () => void
+}) {
+  const { user } = useUser()
+  const agreement = hire.agreement
+  if (!agreement) return null
+  const hourly = isHourlyAgreement(agreement)
+  const viewerIsSupervisor = isSupervisorRole(user?.role)
+  const showPayment = IN_APP_PAYMENTS_ENABLED && hourly
+
+  return (
+    <>
+      <section>
+        <h3 className="mb-3 text-sm font-semibold text-foreground">Terms</h3>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <TermItem label="Start Date" value={formatDateOnly(agreement.startDate)} />
+          {hourly ? (
+            <>
+              <TermItem
+                label="Length"
+                value={
+                  agreement.totalHours != null
+                    ? `${plural(agreement.totalHours, 'hour')} total`
+                    : 'Ongoing'
+                }
+              />
+              <TermItem
+                label="Hourly Rate"
+                value={formatUsdCents(agreement.hourlyRateCents ?? 0)}
+              />
+              <TermItem label="Max per Week" value={formatHours(agreement.weeklyCapMinutes ?? 0)} />
+            </>
+          ) : (
+            <>
+              <TermItem
+                label="Duration"
+                value={
+                  agreement.supervisionMonths != null
+                    ? plural(agreement.supervisionMonths, 'month')
+                    : UNSPECIFIED
+                }
+              />
+              <TermItem label="Monthly Amount" value={formatMoney(agreement.monthlyAmount)} />
+            </>
+          )}
+          {agreement.transactionFeePct != null && (
+            <TermItem
+              label="Platform Transaction Fee"
+              value={`${Number(agreement.transactionFeePct)}%`}
+            />
+          )}
+        </dl>
+      </section>
+
+      <Separator className="my-5" />
+
+      <section>
+        <h3 className="mb-3 text-sm font-semibold text-foreground">Document</h3>
+        {agreement.fileUrl ? (
+          <a
+            href={agreement.fileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+          >
+            <FileText className="size-4" aria-hidden />
+            View agreement document
+          </a>
+        ) : (
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            The platform&apos;s standard supervision agreement, applied with the terms above.
+          </p>
+        )}
+      </section>
+
+      <Separator className="my-5" />
+
+      <section>
+        <h3 className="mb-3 text-sm font-semibold text-foreground">Signatures</h3>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <SignatureBlock
+            party="Supervisor"
+            name={agreement.supervisorSignatureName}
+            signedAt={agreement.supervisorSignedAt}
+          />
+          <SignatureBlock
+            party="Supervisee"
+            name={agreement.superviseeSignatureName}
+            signedAt={agreement.superviseeSignedAt}
+          />
+        </div>
+      </section>
+
+      {showPayment && agreement.quote && viewerIsSupervisor && (
+        <>
+          <Separator className="my-5" />
+          <section>
+            <h3 className="mb-3 text-sm font-semibold text-foreground">Weekly Payment</h3>
+            <HourlyQuoteSummary
+              quote={agreement.quote}
+              perspective={viewerIsSupervisor ? 'supervisor' : 'supervisee'}
+            />
+          </section>
+        </>
+      )}
+
+      {showPayment &&
+        !viewerIsSupervisor &&
+        (agreement.superviseeSignedAt != null || showSignForm) &&
+        agreement.quote &&
+        onSetUpPayment && (
+          <>
+            <Separator className="my-5" />
+            <section>
+              <h3 className="mb-3 text-sm font-semibold text-foreground">
+                {showSignForm ? 'Step 1: Set up weekly payment' : 'Weekly Payment'}
+              </h3>
+              <HourlyQuoteSummary quote={agreement.quote} perspective="supervisee" />
+              {showSignForm && hire.paymentMethodSavedAt == null && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {hasSavedCards
+                    ? `Choose which saved card pays for your weekly prepays with ${formatDisplayName(hire.supervisor)}.`
+                    : 'Save the card for your weekly prepays first.'}{' '}
+                  Nothing is charged until the agreement is signed and the first week starts.
+                </p>
+              )}
+              {hire.paymentMethodSavedAt ? (
+                <div className="mt-3 flex items-center justify-between gap-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <CreditCard className="size-4" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-1.5 text-sm font-semibold text-emerald-900">
+                        <CheckCircle2 className="size-4 shrink-0 text-primary" aria-hidden />
+                        Payment card saved
+                      </p>
+                      {cardLabelText && (
+                        <p className="mt-0.5 truncate text-xs text-emerald-800">{cardLabelText}</p>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 border-emerald-300 bg-white hover:bg-emerald-100"
+                    onClick={() => {
+                      onLeave?.()
+                      onSetUpPayment({ changeCard: true })
+                    }}
+                  >
+                    Change Card
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  className="mt-3 w-full"
+                  onClick={() => {
+                    onLeave?.()
+                    onSetUpPayment()
+                  }}
+                >
+                  <CreditCard className="size-4" aria-hidden />
+                  {hasSavedCards ? 'Choose card' : 'Set up payment'}
+                </Button>
+              )}
+            </section>
+          </>
+        )}
+    </>
+  )
+}
+
 interface AgreementDialogProps {
   hire: HireListItem
   open: boolean
@@ -207,7 +400,6 @@ export function AgreementDialog({
   canSign = false,
   onSetUpPayment,
 }: AgreementDialogProps) {
-  const { user } = useUser()
   const agreement = hire.agreement
   // Cards are linked per hire, so a supervisee with cards on file still has to
   // pick one for this agreement — the copy should say "choose", not "save".
@@ -222,9 +414,7 @@ export function AgreementDialog({
   if (!agreement) return null
 
   const showSignForm = canSign && agreement.superviseeSignedAt == null
-  const hourly = isHourlyAgreement(agreement)
-  const viewerIsSupervisor = isSupervisorRole(user?.role)
-  const showPayment = IN_APP_PAYMENTS_ENABLED && hourly
+  const showPayment = IN_APP_PAYMENTS_ENABLED && isHourlyAgreement(agreement)
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
@@ -239,168 +429,14 @@ export function AgreementDialog({
           </>
         }
       >
-        <section>
-          <h3 className="mb-3 text-sm font-semibold text-foreground">Terms</h3>
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
-            <TermItem label="Start Date" value={formatDateOnly(agreement.startDate)} />
-            {hourly ? (
-              <>
-                <TermItem
-                  label="Length"
-                  value={
-                    agreement.totalHours != null
-                      ? `${plural(agreement.totalHours, 'hour')} total`
-                      : 'Ongoing'
-                  }
-                />
-                <TermItem
-                  label="Hourly Rate"
-                  value={formatUsdCents(agreement.hourlyRateCents ?? 0)}
-                />
-                <TermItem
-                  label="Max per Week"
-                  value={formatHours(agreement.weeklyCapMinutes ?? 0)}
-                />
-              </>
-            ) : (
-              <>
-                <TermItem
-                  label="Duration"
-                  value={
-                    agreement.supervisionMonths != null
-                      ? plural(agreement.supervisionMonths, 'month')
-                      : UNSPECIFIED
-                  }
-                />
-                <TermItem label="Monthly Amount" value={formatMoney(agreement.monthlyAmount)} />
-              </>
-            )}
-            {agreement.transactionFeePct != null && (
-              <TermItem
-                label="Platform Transaction Fee"
-                value={`${Number(agreement.transactionFeePct)}%`}
-              />
-            )}
-          </dl>
-        </section>
-
-        <Separator className="my-5" />
-
-        <section>
-          <h3 className="mb-3 text-sm font-semibold text-foreground">Document</h3>
-          {agreement.fileUrl ? (
-            <a
-              href={agreement.fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-            >
-              <FileText className="size-4" aria-hidden />
-              View agreement document
-            </a>
-          ) : (
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              The platform&apos;s standard supervision agreement, applied with the terms above.
-            </p>
-          )}
-        </section>
-
-        <Separator className="my-5" />
-
-        <section>
-          <h3 className="mb-3 text-sm font-semibold text-foreground">Signatures</h3>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <SignatureBlock
-              party="Supervisor"
-              name={agreement.supervisorSignatureName}
-              signedAt={agreement.supervisorSignedAt}
-            />
-            <SignatureBlock
-              party="Supervisee"
-              name={agreement.superviseeSignatureName}
-              signedAt={agreement.superviseeSignedAt}
-            />
-          </div>
-        </section>
-
-        {showPayment && agreement.quote && viewerIsSupervisor && (
-          <>
-            <Separator className="my-5" />
-            <section>
-              <h3 className="mb-3 text-sm font-semibold text-foreground">Weekly Payment</h3>
-              <HourlyQuoteSummary
-                quote={agreement.quote}
-                perspective={viewerIsSupervisor ? 'supervisor' : 'supervisee'}
-              />
-            </section>
-          </>
-        )}
-
-        {showPayment &&
-          !viewerIsSupervisor &&
-          (agreement.superviseeSignedAt != null || showSignForm) &&
-          agreement.quote &&
-          onSetUpPayment && (
-            <>
-              <Separator className="my-5" />
-              <section>
-                <h3 className="mb-3 text-sm font-semibold text-foreground">
-                  {showSignForm ? 'Step 1: Set up weekly payment' : 'Weekly Payment'}
-                </h3>
-                <HourlyQuoteSummary quote={agreement.quote} perspective="supervisee" />
-                {showSignForm && hire.paymentMethodSavedAt == null && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {hasSavedCards
-                      ? `Choose which saved card pays for your weekly prepays with ${formatDisplayName(hire.supervisor)}.`
-                      : 'Save the card for your weekly prepays first.'}{' '}
-                    Nothing is charged until the agreement is signed and the first week starts.
-                  </p>
-                )}
-                {hire.paymentMethodSavedAt ? (
-                  <div className="mt-3 flex items-center justify-between gap-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                        <CreditCard className="size-4" aria-hidden />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="flex items-center gap-1.5 text-sm font-semibold text-emerald-900">
-                          <CheckCircle2 className="size-4 shrink-0 text-primary" aria-hidden />
-                          Payment card saved
-                        </p>
-                        {paymentInfo?.card && (
-                          <p className="mt-0.5 truncate text-xs text-emerald-800">
-                            {cardLabel(paymentInfo.card)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="shrink-0 border-emerald-300 bg-white hover:bg-emerald-100"
-                      onClick={() => {
-                        onOpenChange(false)
-                        onSetUpPayment({ changeCard: true })
-                      }}
-                    >
-                      Change Card
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    className="mt-3 w-full"
-                    onClick={() => {
-                      onOpenChange(false)
-                      onSetUpPayment()
-                    }}
-                  >
-                    <CreditCard className="size-4" aria-hidden />
-                    {hasSavedCards ? 'Choose card' : 'Set up payment'}
-                  </Button>
-                )}
-              </section>
-            </>
-          )}
+        <AgreementBody
+          hire={hire}
+          showSignForm={showSignForm}
+          hasSavedCards={hasSavedCards}
+          cardLabelText={paymentInfo?.card ? cardLabel(paymentInfo.card) : null}
+          onSetUpPayment={onSetUpPayment}
+          onLeave={() => onOpenChange(false)}
+        />
 
         {showSignForm && (
           <SignAgreementSection

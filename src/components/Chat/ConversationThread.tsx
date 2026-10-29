@@ -15,6 +15,7 @@ import {
 } from '@/lib/hooks/useChat'
 import { useSupervisionChatSocket } from '@/lib/hooks/useSupervisionChatSocket'
 import { cn } from '@/lib/utils'
+import { contractLabel, sharesSeveralRooms } from '@/lib/utils/chat-rooms'
 
 import { ChatEmptyState } from './ChatEmptyState'
 import { MessageBubble } from './MessageBubble'
@@ -23,7 +24,10 @@ import { TypingIndicator } from './TypingIndicator'
 
 interface ConversationThreadProps {
   conversationId: string
-  onBack: () => void
+  /** Mobile back to the conversation list; left out where there's no list (a hire's workroom). */
+  onBack?: () => void
+  /** Leave out the name/status header where the page already shows them (a hire's workroom). */
+  hideHeader?: boolean
 }
 
 function MessagesSkeleton() {
@@ -38,7 +42,11 @@ function MessagesSkeleton() {
   )
 }
 
-export function ConversationThread({ conversationId, onBack }: ConversationThreadProps) {
+export function ConversationThread({
+  conversationId,
+  onBack,
+  hideHeader = false,
+}: ConversationThreadProps) {
   const { user } = useUser()
   const isSupervisee = isSuperviseeRole(user?.role)
 
@@ -114,6 +122,12 @@ export function ConversationThread({ conversationId, onBack }: ConversationThrea
     ? other.fullName || [other.firstName, other.lastName].filter(Boolean).join(' ')
     : 'Loading…'
 
+  // One room per hire: name the hire when this person shares several rooms with the viewer.
+  const roomLabel =
+    conversation && conversations && sharesSeveralRooms(conversations, conversation)
+      ? contractLabel(conversation.hire)
+      : null
+
   const hireStatus = conversation?.hire?.status ?? null
   const hireCompletedAt = conversation?.hire?.completedAt ?? null
   const isPending = hireStatus === 'PENDING' || (hireStatus === 'REVIEWED' && !hireCompletedAt)
@@ -139,57 +153,62 @@ export function ConversationThread({ conversationId, onBack }: ConversationThrea
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-white px-4">
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label="Back to conversations"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted md:hidden"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-
-        {other && (
-          <UserAvatar
-            className="shrink-0"
-            size="sm"
-            src={other.profilePhotoUrl}
-            name={otherDisplayName}
-            showPresence
-            userId={other.id}
-            presenceRingClassName="ring-white"
-          />
-        )}
-
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">{otherDisplayName}</p>
-          {hireStatus && (
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
-              {isSupervisee ? 'Supervisor' : 'Supervisee'}
-              {hireStatus === 'PENDING' && (
-                <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-px text-[10px] font-semibold text-amber-700">
-                  Request Pending
-                </span>
-              )}
-              {hireStatus === 'REVIEWED' && !hireCompletedAt && (
-                <span className="ml-1.5 rounded-full bg-blue-100 px-1.5 py-px text-[10px] font-semibold text-blue-700">
-                  Viewed
-                </span>
-              )}
-              {hireStatus === 'ACCEPTED' && (
-                <span className="ml-1.5 rounded-full bg-green-100 px-1.5 py-px text-[10px] font-semibold text-green-700">
-                  Accepted
-                </span>
-              )}
-              {hireStatus === 'ACTIVE' && (
-                <span className="ml-1.5 rounded-full bg-blue-100 px-1.5 py-px text-[10px] font-semibold text-blue-700">
-                  Active
-                </span>
-              )}
-            </p>
+      {!hideHeader && (
+        <div className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-white px-4">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              aria-label="Back to conversations"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted md:hidden"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
           )}
+
+          {other && (
+            <UserAvatar
+              className="shrink-0"
+              size="sm"
+              src={other.profilePhotoUrl}
+              name={otherDisplayName}
+              showPresence
+              userId={other.id}
+              presenceRingClassName="ring-white"
+            />
+          )}
+
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">{otherDisplayName}</p>
+            {hireStatus && (
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                {isSupervisee ? 'Supervisor' : 'Supervisee'}
+                {hireStatus === 'PENDING' && (
+                  <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-px text-[10px] font-semibold text-amber-700">
+                    Request Pending
+                  </span>
+                )}
+                {hireStatus === 'REVIEWED' && !hireCompletedAt && (
+                  <span className="ml-1.5 rounded-full bg-blue-100 px-1.5 py-px text-[10px] font-semibold text-blue-700">
+                    Viewed
+                  </span>
+                )}
+                {hireStatus === 'ACCEPTED' && (
+                  <span className="ml-1.5 rounded-full bg-green-100 px-1.5 py-px text-[10px] font-semibold text-green-700">
+                    Accepted
+                  </span>
+                )}
+                {hireStatus === 'ACTIVE' && (
+                  <span className="ml-1.5 rounded-full bg-blue-100 px-1.5 py-px text-[10px] font-semibold text-blue-700">
+                    In Progress
+                  </span>
+                )}
+                {roomLabel && <span className="ml-1.5">· {roomLabel}</span>}
+              </p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Message list */}
       <div className="flex-1 overflow-y-auto">

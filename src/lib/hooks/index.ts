@@ -30,6 +30,7 @@ export {
   useAgreement,
   useCancelHire,
   useEndSupervision,
+  useHire,
   useHiresList,
   useHireSupervisor,
   useMarkHireAsCompleted,

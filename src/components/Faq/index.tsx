@@ -342,7 +342,7 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'What do the different hire request statuses mean?',
         answer:
-          "Pending — your request has been sent and is awaiting the Supervisor's response. Accepted — the Supervisor accepted your request; next they send you an agreement to review and sign. Active — supervision is underway (for hourly agreements, once your first weekly payment goes through). Completed — the supervision has ended. Rejected — the Supervisor is unable to take you on at this time; you can send a new request to a different Supervisor.",
+          "Pending — your request has been sent and is awaiting the Supervisor's response. Accepted — the Supervisor accepted your request; next they send you an agreement to review and sign. In Progress — supervision is underway (for hourly agreements, once your first weekly payment goes through). Completed — the supervision has ended. Rejected — the Supervisor is unable to take you on at this time; you can send a new request to a different Supervisor.",
       },
       {
         question: 'Can I cancel a pending hire request?',

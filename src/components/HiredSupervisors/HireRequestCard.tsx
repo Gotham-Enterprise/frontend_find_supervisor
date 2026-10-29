@@ -10,7 +10,6 @@ import {
   type LucideIcon,
   MapPin,
   Monitor,
-  MoreVertical,
   Star,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -18,45 +17,22 @@ import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 
 import { HIRE_LIST_GRID } from '@/components/HireList/HireListToolbar'
-import { HirePaymentDialog } from '@/components/HirePayment/HirePaymentDialog'
-import { HireSessionsDialog } from '@/components/HireSessions/HireSessionsDialog'
-import { LeaveReviewModal } from '@/components/reviews/LeaveReviewModal'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
-import {
-  DropdownMenuItem,
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  DropdownMenuRoot,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { UserAvatar } from '@/components/ui/UserAvatar'
-import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
-import { useCancelHire, useMarkHireAsCompleted, useUserSnackbar } from '@/lib/hooks'
-import { useConfetti } from '@/lib/hooks/useConfetti'
 import { cn } from '@/lib/utils'
-import { parseApiError } from '@/lib/utils/error-parser'
 import {
   formatDate,
-  formatDisplayName,
   formatFeeAmount,
   formatLocation,
   formatSupervisionFormat,
 } from '@/lib/utils/profile-formatters'
-import { canMarkHireCompleted, getAgreementStage } from '@/lib/utils/supervision-status'
-import type { HireListItem, HireStatus } from '@/types/hire'
+import type { HireListItem } from '@/types/hire'
 import type { Review } from '@/types/review'
 
-import { AgreementDialog } from './AgreementDialog'
 import { AgreementStageBadge } from './AgreementStageBadge'
-import { HireRequestDetailsDialog } from './HireRequestDetailsDialog'
 import { HireStatusBadge } from './HireStatusBadge'
-
-const CANCELABLE_STATUSES: ReadonlyArray<HireStatus> = ['PENDING', 'REVIEWED', 'ACCEPTED', 'ACTIVE']
+import { useHireActions, workroomHref } from './useHireActions'
 
 /** Normalizes API/formatter placeholders for empty values in supervisee-facing UI. */
 function formatHireDetailDisplay(value: string): string {
@@ -101,47 +77,56 @@ export function HireRequestCard({
   isMedicalDirectors = false,
   layout = 'card',
 }: HireRequestCardProps) {
-  const [detailsOpen, setDetailsOpen] = useState(false)
   // Deep link: agreement notifications/emails point to the hired list with
   // ?hire=<id>, which auto-opens this card's agreement dialog. Driven by the
   // router's search params (not window.location at mount) so clicking a
   // notification while already on this page opens the dialog too.
-  const deepLinkedHireId = useSearchParams().get('hire')
+  const searchParams = useSearchParams()
+  const deepLinkedHireId = searchParams.get('hire')
   const deepLinkMatches = hire.agreement != null && deepLinkedHireId === hire.id
-  const [agreementOpenManually, setAgreementOpenManually] = useState(false)
   // Which deep-linked hire id the user has already closed the dialog for, so
   // the URL-driven open doesn't re-open it on the next render (derived state
   // instead of an effect + setState).
   const [dismissedDeepLinkId, setDismissedDeepLinkId] = useState<string | null>(null)
-  const agreementOpen =
-    agreementOpenManually || (deepLinkMatches && dismissedDeepLinkId !== deepLinkedHireId)
-  const setAgreementOpen = (open: boolean) => {
-    setAgreementOpenManually(open)
-    if (!open && deepLinkMatches) setDismissedDeepLinkId(deepLinkedHireId)
-  }
-  // Supervisee's payment step for hourly agreements (its own dialog, so the card form is in view).
-  const [payment, setPayment] = useState<{ open: boolean; changeCard: boolean }>({
-    open: false,
-    changeCard: false,
-  })
-  const openPayment = (options?: { changeCard?: boolean }) =>
-    setPayment({ open: true, changeCard: options?.changeCard ?? false })
-  // Sessions deep link (?sessions=<id>, from session notifications) works like the agreement one.
-  const deepLinkedSessionsId = useSearchParams().get('sessions')
-  const [sessionsOpenManually, setSessionsOpenManually] = useState(false)
+  // Sessions deep link (?sessions=<id>) works the same way on Hired Medical
+  // Directors; on Hired Supervisors the list sends it to the hire's workroom.
+  const deepLinkedSessionsId = searchParams.get('sessions')
   const [dismissedSessionsLinkId, setDismissedSessionsLinkId] = useState<string | null>(null)
-  const [reasonOpen, setReasonOpen] = useState(false)
-  const [cancelOpen, setCancelOpen] = useState(false)
-  const [completeOpen, setCompleteOpen] = useState(false)
-  const [reviewOpen, setReviewOpen] = useState(false)
-  /** True while showing the review sheet immediately after “Mark as completed” (allows skip). */
-  const [postCompleteReviewFlow, setPostCompleteReviewFlow] = useState(false)
-  const { showSuccess, showError } = useUserSnackbar()
-  const { burst } = useConfetti()
-  const cancelMutation = useCancelHire()
-  const completeMutation = useMarkHireAsCompleted()
 
-  const supervisorName = formatDisplayName(hire.supervisor)
+  const actions = useHireActions(hire, {
+    existingReview,
+    isMedicalDirectors,
+    agreementDeepLink: {
+      open: deepLinkMatches && dismissedDeepLinkId !== deepLinkedHireId,
+      onClose: () => {
+        if (deepLinkMatches) setDismissedDeepLinkId(deepLinkedHireId)
+      },
+    },
+    sessionsDeepLink: isMedicalDirectors
+      ? {
+          open:
+            deepLinkedSessionsId === hire.id && dismissedSessionsLinkId !== deepLinkedSessionsId,
+          onClose: () => {
+            if (deepLinkedSessionsId === hire.id) setDismissedSessionsLinkId(deepLinkedSessionsId)
+          },
+        }
+      : undefined,
+  })
+  const {
+    supervisorName,
+    profileHref,
+    hasWorkroom,
+    canSignAgreement,
+    isAgreementSigned,
+    needsPaymentSetup,
+    hasSessions,
+    openAgreement,
+    openPayment,
+    openSessions,
+  } = actions
+  // Name and photo open the hire's workroom (its profile is in the menu).
+  const primaryHref = hasWorkroom ? workroomHref(hire.id) : profileHref
+
   // A supervisor's occupation/specialty live on their PROFILE. The account-level
   // user.occupation/specialty relations are jobseeker-side leftovers that can
   // hold unrelated values (e.g. "Accountant"), so they are deliberately ignored.
@@ -157,170 +142,24 @@ export function HireRequestCard({
   const feeRaw = formatFeeAmount(hire.supervisorFeeAmount, hire.supervisorFeeType)
   const requestedRaw = formatDate(hire.createdAt)
 
-  const hasRejectionReason = hire.status === 'REJECTED' && Boolean(hire.rejectionReason?.trim())
-  const canCancel = CANCELABLE_STATUSES.includes(hire.status)
-  // Open the profile on the route matching the list it was reached from, and tell
-  // the profile page where to go back to (the two hired lists are separate pages).
-  const profileHref = isMedicalDirectors
-    ? `/find-medical-directors/${hire.supervisorId}?from=hired-medical-directors`
-    : `/find-supervisors/${hire.supervisorId}?from=hired-supervisors`
+  const actionsMenu = actions.renderMenu('card')
 
-  // Agreement: sign while the supervisor's proposal awaits the supervisee's signature
-  const agreementStage = getAgreementStage(hire)
-  const canSignAgreement =
-    (hire.status === 'ACCEPTED' || hire.status === 'ACTIVE') &&
-    agreementStage === 'AWAITING_SIGNATURE'
-  const hasAgreement = hire.agreement != null
-  const isAgreementSigned = hasAgreement && agreementStage === 'SIGNED'
-  // Hourly agreement whose card for the weekly prepays isn't saved yet. The
-  // card comes before the signature, so this covers the pending-signature stage too.
-  const needsPaymentSetup =
-    IN_APP_PAYMENTS_ENABLED &&
-    (isAgreementSigned || canSignAgreement) &&
-    (hire.status === 'ACCEPTED' || hire.status === 'ACTIVE') &&
-    hire.agreement?.hourlyRateCents != null &&
-    hire.paymentMethodSavedAt == null
-
-  // Signed hourly agreement: sessions are logged and reviewed in the app.
-  const hasSessions =
-    IN_APP_PAYMENTS_ENABLED && isAgreementSigned && hire.agreement?.hourlyRateCents != null
-  const sessionsDeepLinkMatches = hasSessions && deepLinkedSessionsId === hire.id
-  const sessionsOpen =
-    sessionsOpenManually ||
-    (sessionsDeepLinkMatches && dismissedSessionsLinkId !== deepLinkedSessionsId)
-  const setSessionsOpen = (open: boolean) => {
-    setSessionsOpenManually(open)
-    if (!open && sessionsDeepLinkMatches) setDismissedSessionsLinkId(deepLinkedSessionsId)
-  }
-
-  // Mark as Completed: only when ACCEPTED or ACTIVE, and the agreement is fully signed
-  const canComplete = canMarkHireCompleted(hire)
-
-  // Review eligibility:
-  // - "Leave Review": hire is COMPLETED and no review submitted yet
-  // - "Edit Review": a review already exists for this hire
-  const hasReview = !!existingReview
-  const canReview = hire.status === 'COMPLETED' && !hasReview
-
-  function handleReviewOpenChange(open: boolean) {
-    setReviewOpen(open)
-    if (!open) {
-      setPostCompleteReviewFlow(false)
-    }
-  }
-
-  function handleCompleteConfirm() {
-    completeMutation.mutate(hire.id, {
-      onSuccess: () => {
-        setCompleteOpen(false)
-        burst()
-        showSuccess('Supervision marked as completed.')
-        setPostCompleteReviewFlow(true)
-        setReviewOpen(true)
-      },
-      onError: (err) => {
-        showError(parseApiError(err))
-        setCompleteOpen(false)
-      },
-    })
-  }
-
-  function handleCancelConfirm() {
-    cancelMutation.mutate(hire.id, {
-      onSuccess: () => {
-        showSuccess('Supervision request cancelled.')
-        setCancelOpen(false)
-      },
-      onError: (err) => {
-        showError(parseApiError(err))
-        setCancelOpen(false)
-      },
-    })
-  }
-
-  const actionsMenu = (
-    <DropdownMenuRoot>
-      <DropdownMenuTrigger
-        render={
-          <Button variant="ghost" size="icon-sm" aria-label="Request actions">
-            <MoreVertical className="size-4" />
-          </Button>
-        }
-      />
-      <DropdownMenuPortal>
-        <DropdownMenuPositioner>
-          <DropdownMenuPopup>
-            <DropdownMenuItem>
-              <Link href={profileHref} className="w-full">
-                View Profile
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setDetailsOpen(true)}>
-              Request Details
-            </DropdownMenuItem>
-            {hasAgreement && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setAgreementOpen(true)}>
-                  {canSignAgreement ? 'Review & Sign Agreement' : 'View Agreement'}
-                </DropdownMenuItem>
-              </>
-            )}
-            {hasRejectionReason && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem destructive onClick={() => setReasonOpen(true)}>
-                  View Reason
-                </DropdownMenuItem>
-              </>
-            )}
-            {canComplete && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setCompleteOpen(true)}>
-                  Mark as Completed
-                </DropdownMenuItem>
-              </>
-            )}
-            {canReview && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => {
-                    setPostCompleteReviewFlow(false)
-                    setReviewOpen(true)
-                  }}
-                >
-                  Leave Review
-                </DropdownMenuItem>
-              </>
-            )}
-            {hasReview && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => {
-                    setPostCompleteReviewFlow(false)
-                    setReviewOpen(true)
-                  }}
-                >
-                  Edit Review
-                </DropdownMenuItem>
-              </>
-            )}
-            {canCancel && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem destructive onClick={() => setCancelOpen(true)}>
-                  Cancel Request
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuPopup>
-        </DropdownMenuPositioner>
-      </DropdownMenuPortal>
-    </DropdownMenuRoot>
-  )
+  // Sessions open in the workroom's Timesheet tab, or the sessions dialog where there's no workroom.
+  const sessionsButton = (size: 'sm') =>
+    hasWorkroom ? (
+      <Link
+        href={workroomHref(hire.id, 'timesheet')}
+        className={buttonVariants({ variant: 'outline', size })}
+      >
+        <CalendarClock className="size-3.5" aria-hidden />
+        Sessions
+      </Link>
+    ) : (
+      <Button variant="outline" size={size} onClick={openSessions}>
+        <CalendarClock className="size-3.5" aria-hidden />
+        Sessions
+      </Button>
+    )
 
   const badges = (
     <>
@@ -337,7 +176,7 @@ export function HireRequestCard({
 
   // List rows show the one action that matters most right now; the rest stay in the menu.
   const rowAction = canSignAgreement ? (
-    <Button size="sm" onClick={() => setAgreementOpen(true)}>
+    <Button size="sm" onClick={openAgreement}>
       <FileSignature className="size-3.5" aria-hidden />
       Review &amp; Sign
     </Button>
@@ -347,10 +186,7 @@ export function HireRequestCard({
       Set up payment
     </Button>
   ) : hasSessions ? (
-    <Button variant="outline" size="sm" onClick={() => setSessionsOpen(true)}>
-      <CalendarClock className="size-3.5" aria-hidden />
-      Sessions
-    </Button>
+    sessionsButton('sm')
   ) : null
 
   return (
@@ -364,7 +200,7 @@ export function HireRequestCard({
           )}
         >
           <Link
-            href={profileHref}
+            href={primaryHref}
             className="flex min-w-0 items-center gap-3 rounded-lg outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
           >
             <UserAvatar
@@ -410,7 +246,7 @@ export function HireRequestCard({
           <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
             <div className="flex min-w-0 flex-1 gap-3">
               <Link
-                href={profileHref}
+                href={primaryHref}
                 className="mt-0.5 shrink-0 rounded-lg outline-none ring-offset-background transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <UserAvatar
@@ -422,7 +258,7 @@ export function HireRequestCard({
               </Link>
               <div className="min-w-0 flex-1">
                 <Link
-                  href={profileHref}
+                  href={primaryHref}
                   className="block rounded-lg py-0.5 outline-none ring-offset-background transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <h3 className="truncate text-sm font-semibold leading-tight tracking-tight text-foreground">
@@ -463,7 +299,7 @@ export function HireRequestCard({
               <Button
                 size="sm"
                 className="shrink-0 self-stretch sm:self-center"
-                onClick={() => setAgreementOpen(true)}
+                onClick={openAgreement}
               >
                 <FileSignature className="size-3.5" aria-hidden />
                 Review &amp; Sign
@@ -473,12 +309,7 @@ export function HireRequestCard({
 
           {isAgreementSigned && (
             <div className="flex justify-end gap-2 border-t border-border/50 px-5 py-3">
-              {hasSessions && (
-                <Button variant="outline" size="sm" onClick={() => setSessionsOpen(true)}>
-                  <CalendarClock className="size-3.5" aria-hidden />
-                  Sessions
-                </Button>
-              )}
+              {hasSessions && sessionsButton('sm')}
               {needsPaymentSetup && (
                 <Button size="sm" onClick={() => openPayment()}>
                   <CreditCard className="size-3.5" aria-hidden />
@@ -495,8 +326,16 @@ export function HireRequestCard({
                   <FileText className="size-3.5" aria-hidden />
                   View Signed Agreement
                 </a>
+              ) : hasWorkroom ? (
+                <Link
+                  href={workroomHref(hire.id, 'details')}
+                  className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                >
+                  <FileText className="size-3.5" aria-hidden />
+                  View Signed Agreement
+                </Link>
               ) : (
-                <Button variant="outline" size="sm" onClick={() => setAgreementOpen(true)}>
+                <Button variant="outline" size="sm" onClick={openAgreement}>
                   <FileText className="size-3.5" aria-hidden />
                   View Signed Agreement
                 </Button>
@@ -506,81 +345,7 @@ export function HireRequestCard({
         </Card>
       )}
 
-      <HireRequestDetailsDialog hire={hire} open={detailsOpen} onOpenChange={setDetailsOpen} />
-
-      {hasAgreement && (
-        <AgreementDialog
-          hire={hire}
-          open={agreementOpen}
-          onOpenChange={setAgreementOpen}
-          canSign={canSignAgreement}
-          onSetUpPayment={IN_APP_PAYMENTS_ENABLED ? openPayment : undefined}
-        />
-      )}
-
-      {hasSessions && (
-        <HireSessionsDialog
-          hireId={hire.id}
-          counterpartName={supervisorName}
-          open={sessionsOpen}
-          onOpenChange={setSessionsOpen}
-          onChangeCard={() => openPayment({ changeCard: !needsPaymentSetup })}
-        />
-      )}
-
-      {hasAgreement && IN_APP_PAYMENTS_ENABLED && (
-        <HirePaymentDialog
-          hire={hire}
-          open={payment.open}
-          onOpenChange={(open) => setPayment((prev) => ({ ...prev, open }))}
-          changeCard={payment.changeCard}
-          // Card saved while the signature is still pending: bring them back to sign.
-          onSaved={canSignAgreement ? () => setAgreementOpen(true) : undefined}
-        />
-      )}
-
-      {hasRejectionReason && (
-        <DialogRoot open={reasonOpen} onOpenChange={setReasonOpen}>
-          <DialogContent className="max-w-sm">
-            <DialogTitle>Rejection Reason</DialogTitle>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              {hire.rejectionReason}
-            </p>
-          </DialogContent>
-        </DialogRoot>
-      )}
-
-      <ConfirmDialog
-        open={completeOpen}
-        onOpenChange={setCompleteOpen}
-        title="Mark supervision as completed?"
-        description={`This will mark your supervision with ${supervisorName} as completed. You can leave an optional review next, or skip and add one later from this card. This action cannot be undone.`}
-        confirmLabel="Mark as Completed"
-        isPending={completeMutation.isPending}
-        onConfirm={handleCompleteConfirm}
-      />
-
-      <ConfirmDialog
-        open={cancelOpen}
-        onOpenChange={(open) => !open && setCancelOpen(false)}
-        title="Cancel supervision request?"
-        description={`You are about to cancel your supervision request with ${supervisorName}. This action cannot be undone.`}
-        confirmLabel="Cancel Request"
-        destructive
-        isPending={cancelMutation.isPending}
-        onConfirm={handleCancelConfirm}
-      />
-
-      {(canReview || hasReview || postCompleteReviewFlow) && (
-        <LeaveReviewModal
-          open={reviewOpen}
-          onOpenChange={handleReviewOpenChange}
-          hireId={hire.id}
-          supervisorName={supervisorName}
-          existingReview={existingReview}
-          allowSkip={postCompleteReviewFlow && !hasReview}
-        />
-      )}
+      {actions.dialogs}
     </>
   )
 }

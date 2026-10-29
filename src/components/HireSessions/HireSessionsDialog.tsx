@@ -86,7 +86,7 @@ const STATUS_BADGE: Record<BillingWeekStatus, { label: string; className: string
   SETTLED: { label: 'Paid', className: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
 }
 
-function ProgressSummary({ data }: { data: HireBillingWeeks }) {
+export function ProgressSummary({ data }: { data: HireBillingWeeks }) {
   const { progress, terms } = data
   const approvedHours = progress.approvedMinutes / 60
   const pct =
@@ -114,7 +114,7 @@ function ProgressSummary({ data }: { data: HireBillingWeeks }) {
         <p className="mt-1 text-xs text-muted-foreground">
           Paid so far: {formatUsdCents(data.totals.netPaidCents)}
           {data.totals.refundedCents > 0 &&
-            ` (${formatUsdCents(data.totals.chargedCents)} charged, ${formatUsdCents(data.totals.refundedCents)} refunded for unused hours)`}
+            ` (${formatUsdCents(data.totals.chargedCents)} charged, ${formatUsdCents(data.totals.refundedCents)} back to your card for unused hours)`}
         </p>
       )}
       {'paidOutCents' in data.totals && data.totals.paidOutCents > 0 && (
@@ -397,7 +397,7 @@ function PaymentLine({
         ? `Paid ${total} · ${formatUsdCents(payment.refundCents)} refunded for unused hours`
         : `Paid ${total}`
     } else if (payment.prepayStatus === 'PAID') {
-      text = `Prepaid ${total}${payment.paidAt ? ` on ${formatEasternDate(payment.paidAt)}` : ''}; unused hours are refunded after the review.`
+      text = `Charged ${total}${payment.paidAt ? ` on ${formatEasternDate(payment.paidAt)}` : ''}; anything unused goes back to your card after the review.`
     } else if (payment.prepayStatus === 'PENDING') {
       text = `${total} prepay is charged on ${formatCalendarDate(payment.prepayDueDate)}.`
     } else if (payment.prepayStatus === 'CANCELED') {
@@ -535,26 +535,25 @@ function WeekCard({
 }
 
 /**
- * Sessions and weekly review for an hourly (in-app billed) hire. The supervisor
- * logs sessions while a week is open; the supervisee approves or disputes it
- * during the 3-day review.
+ * Everything the sessions view does for one hourly hire — the billing weeks,
+ * each week's card (pay now, approve, dispute, late entries, edit/delete
+ * sessions) and the dialogs behind those actions — so the sessions dialog and
+ * the hire workroom's timesheet share one implementation.
  */
-export function HireSessionsDialog({
+export function useHireSessions({
   hireId,
   counterpartName,
-  open,
-  onOpenChange,
+  enabled,
   onChangeCard,
 }: {
   hireId: string
   /** The other party: the supervisee for supervisors, the supervisor for supervisees. */
   counterpartName: string
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  enabled: boolean
   /** Supervisee only: opens the payment dialog to add or change the prepay card. */
   onChangeCard?: () => void
 }) {
-  const { data, isLoading, isError, refetch } = useHireBillingWeeks(hireId, open)
+  const { data, isLoading, isError, refetch } = useHireBillingWeeks(hireId, enabled)
   const { showSuccess, showError } = useUserSnackbar()
   const deleteMutation = useDeleteHireSession(hireId)
   const approveMutation = useApproveBillingWeek(hireId)
@@ -569,8 +568,6 @@ export function HireSessionsDialog({
   const [form, setForm] = useState<{ open: boolean; session?: HireSession }>({ open: false })
   const [deleting, setDeleting] = useState<HireSession | null>(null)
   const [approving, setApproving] = useState<BillingWeek | null>(null)
-  const [showEarlier, setShowEarlier] = useState(false)
-  const [openOlderIds, setOpenOlderIds] = useState<string[]>([])
   const [lateEntryWeek, setLateEntryWeek] = useState<BillingWeek | null>(null)
   const [disputing, setDisputing] = useState<BillingWeek | null>(null)
   const [disputeReason, setDisputeReason] = useState('')
@@ -667,14 +664,7 @@ export function HireSessionsDialog({
             counterpartName={counterpartName}
             isPaying={payingWeekId === week.id}
             onPayNow={() => handlePayNow(week)}
-            onChangeCard={
-              onChangeCard
-                ? () => {
-                    onOpenChange(false)
-                    onChangeCard()
-                  }
-                : undefined
-            }
+            onChangeCard={onChangeCard}
           />
         }
         respondingSessionId={respondMutation.isPending ? (responding?.session.id ?? null) : null}
@@ -685,6 +675,174 @@ export function HireSessionsDialog({
         onDispute={() => setDisputing(week)}
       />
     ) : null
+
+  const dialogs = (
+    <>
+      {data?.role === 'supervisor' && (
+        <SessionFormDialog
+          hireId={hireId}
+          data={data}
+          session={form.session}
+          open={form.open}
+          onOpenChange={(next) => setForm((prev) => ({ ...prev, open: next }))}
+        />
+      )}
+
+      {lateEntryWeek && (
+        <LateEntryRequestDialog
+          hireId={hireId}
+          week={lateEntryWeek}
+          counterpartName={counterpartName}
+          open
+          onOpenChange={(next) => !next && setLateEntryWeek(null)}
+        />
+      )}
+
+      <ConfirmDialog
+        open={responding != null}
+        onOpenChange={(next) => !next && setResponding(null)}
+        title={
+          responding
+            ? `${responding.approve ? 'Approve' : 'Reject'} the ${formatDuration(responding.session.durationMinutes)} session on ${formatCalendarDate(responding.session.sessionDate)}?`
+            : ''
+        }
+        description={
+          responding?.approve
+            ? `${counterpartName} is paid for it. If this week is already settled, your card is charged for these hours plus the service fee.`
+            : `${counterpartName} isn't paid for it. Reject it only if the session didn't happen as described.`
+        }
+        confirmLabel={responding?.approve ? 'Approve' : 'Reject'}
+        destructive={responding?.approve === false}
+        isPending={respondMutation.isPending}
+        onConfirm={handleRespond}
+      />
+
+      <ConfirmDialog
+        open={deleting != null}
+        onOpenChange={(next) => !next && setDeleting(null)}
+        title="Delete this session?"
+        description={
+          deleting
+            ? `${formatCalendarDate(deleting.sessionDate)} · ${formatDuration(deleting.durationMinutes)} will be removed from this week.`
+            : ''
+        }
+        confirmLabel="Delete"
+        destructive
+        isPending={deleteMutation.isPending}
+        onConfirm={handleDelete}
+      />
+
+      <ConfirmDialog
+        open={approving != null}
+        onOpenChange={(next) => !next && setApproving(null)}
+        title={
+          approving
+            ? `Approve ${formatDuration(approving.loggedMinutes)} for ${formatWeekRange(approving.startDate, approving.endDate)}?`
+            : ''
+        }
+        description={`${counterpartName} is paid for the approved hours, and anything unused goes back to your card. This can't be undone.`}
+        confirmLabel="Approve"
+        isPending={approveMutation.isPending}
+        onConfirm={handleApprove}
+      />
+
+      <ConfirmDialog
+        open={disputing != null}
+        onOpenChange={(next) => {
+          if (!next) {
+            setDisputing(null)
+            setDisputeReason('')
+            setDisputeFiles([])
+          }
+        }}
+        title={
+          disputing ? `Dispute ${formatWeekRange(disputing.startDate, disputing.endDate)}?` : ''
+        }
+        description="Tell us what's wrong with the logged sessions. The week isn't paid until Gotham support reviews it with you both."
+        confirmLabel="Dispute week"
+        destructive
+        isPending={disputeMutation.isPending}
+        confirmDisabled={disputeReason.trim().length < DISPUTE_REASON_MIN}
+        onConfirm={handleDispute}
+      >
+        <Textarea
+          rows={4}
+          maxLength={1000}
+          value={disputeReason}
+          onChange={(e) => setDisputeReason(e.target.value)}
+          placeholder="e.g. We only met for 30 minutes on Oct 14, not 1 hour."
+          aria-label="Reason for the dispute"
+          disabled={disputeMutation.isPending}
+        />
+        <p className="mt-1 text-xs text-muted-foreground">
+          At least {DISPUTE_REASON_MIN} characters.
+        </p>
+        <DisputeAttachmentsField
+          files={disputeFiles}
+          onChange={setDisputeFiles}
+          disabled={disputeMutation.isPending}
+        />
+      </ConfirmDialog>
+    </>
+  )
+
+  return {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    olderWeeks,
+    renderWeekCard,
+    dialogs,
+    openLogForm: () => setForm({ open: true }),
+    requestLateEntry: (week: BillingWeek) => setLateEntryWeek(week),
+  }
+}
+
+/**
+ * Sessions and weekly review for an hourly (in-app billed) hire. The supervisor
+ * logs sessions while a week is open; the supervisee approves or disputes it
+ * during the 3-day review.
+ */
+export function HireSessionsDialog({
+  hireId,
+  counterpartName,
+  open,
+  onOpenChange,
+  onChangeCard,
+}: {
+  hireId: string
+  /** The other party: the supervisee for supervisors, the supervisor for supervisees. */
+  counterpartName: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  /** Supervisee only: opens the payment dialog to add or change the prepay card. */
+  onChangeCard?: () => void
+}) {
+  const [showEarlier, setShowEarlier] = useState(false)
+  const [openOlderIds, setOpenOlderIds] = useState<string[]>([])
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    olderWeeks,
+    renderWeekCard,
+    dialogs,
+    openLogForm,
+    requestLateEntry,
+  } = useHireSessions({
+    hireId,
+    counterpartName,
+    enabled: open,
+    // The payment dialog replaces this one.
+    onChangeCard: onChangeCard
+      ? () => {
+          onOpenChange(false)
+          onChangeCard()
+        }
+      : undefined,
+  })
 
   return (
     <>
@@ -700,7 +858,7 @@ export function HireSessionsDialog({
                 </p>
               </div>
               {data?.canLog && (
-                <Button size="sm" className="shrink-0" onClick={() => setForm({ open: true })}>
+                <Button size="sm" className="shrink-0" onClick={openLogForm}>
                   <Plus className="size-3.5" aria-hidden />
                   Log Session
                 </Button>
@@ -765,7 +923,7 @@ export function HireSessionsDialog({
                             Forgot one?{' '}
                             <button
                               type="button"
-                              onClick={() => setLateEntryWeek(data.weeks[0])}
+                              onClick={() => requestLateEntry(data.weeks[0])}
                               className="font-medium text-primary hover:underline"
                             >
                               Request a late entry
@@ -854,111 +1012,7 @@ export function HireSessionsDialog({
         </DialogContent>
       </DialogRoot>
 
-      {data?.role === 'supervisor' && (
-        <SessionFormDialog
-          hireId={hireId}
-          data={data}
-          session={form.session}
-          open={form.open}
-          onOpenChange={(next) => setForm((prev) => ({ ...prev, open: next }))}
-        />
-      )}
-
-      {lateEntryWeek && (
-        <LateEntryRequestDialog
-          hireId={hireId}
-          week={lateEntryWeek}
-          counterpartName={counterpartName}
-          open
-          onOpenChange={(next) => !next && setLateEntryWeek(null)}
-        />
-      )}
-
-      <ConfirmDialog
-        open={responding != null}
-        onOpenChange={(next) => !next && setResponding(null)}
-        title={
-          responding
-            ? `${responding.approve ? 'Approve' : 'Reject'} the ${formatDuration(responding.session.durationMinutes)} session on ${formatCalendarDate(responding.session.sessionDate)}?`
-            : ''
-        }
-        description={
-          responding?.approve
-            ? `${counterpartName} is paid for it. If this week is already settled, your card is charged for these hours plus the service fee.`
-            : `${counterpartName} isn't paid for it. Reject it only if the session didn't happen as described.`
-        }
-        confirmLabel={responding?.approve ? 'Approve' : 'Reject'}
-        destructive={responding?.approve === false}
-        isPending={respondMutation.isPending}
-        onConfirm={handleRespond}
-      />
-
-      <ConfirmDialog
-        open={deleting != null}
-        onOpenChange={(next) => !next && setDeleting(null)}
-        title="Delete this session?"
-        description={
-          deleting
-            ? `${formatCalendarDate(deleting.sessionDate)} · ${formatDuration(deleting.durationMinutes)} will be removed from this week.`
-            : ''
-        }
-        confirmLabel="Delete"
-        destructive
-        isPending={deleteMutation.isPending}
-        onConfirm={handleDelete}
-      />
-
-      <ConfirmDialog
-        open={approving != null}
-        onOpenChange={(next) => !next && setApproving(null)}
-        title={
-          approving
-            ? `Approve ${formatDuration(approving.loggedMinutes)} for ${formatWeekRange(approving.startDate, approving.endDate)}?`
-            : ''
-        }
-        description={`${counterpartName} is paid for the approved hours, and the unused part of your weekly prepay is refunded. This can't be undone.`}
-        confirmLabel="Approve"
-        isPending={approveMutation.isPending}
-        onConfirm={handleApprove}
-      />
-
-      <ConfirmDialog
-        open={disputing != null}
-        onOpenChange={(next) => {
-          if (!next) {
-            setDisputing(null)
-            setDisputeReason('')
-            setDisputeFiles([])
-          }
-        }}
-        title={
-          disputing ? `Dispute ${formatWeekRange(disputing.startDate, disputing.endDate)}?` : ''
-        }
-        description="Tell us what's wrong with the logged sessions. The week isn't paid until Gotham support reviews it with you both."
-        confirmLabel="Dispute week"
-        destructive
-        isPending={disputeMutation.isPending}
-        confirmDisabled={disputeReason.trim().length < DISPUTE_REASON_MIN}
-        onConfirm={handleDispute}
-      >
-        <Textarea
-          rows={4}
-          maxLength={1000}
-          value={disputeReason}
-          onChange={(e) => setDisputeReason(e.target.value)}
-          placeholder="e.g. We only met for 30 minutes on Oct 14, not 1 hour."
-          aria-label="Reason for the dispute"
-          disabled={disputeMutation.isPending}
-        />
-        <p className="mt-1 text-xs text-muted-foreground">
-          At least {DISPUTE_REASON_MIN} characters.
-        </p>
-        <DisputeAttachmentsField
-          files={disputeFiles}
-          onChange={setDisputeFiles}
-          disabled={disputeMutation.isPending}
-        />
-      </ConfirmDialog>
+      {dialogs}
     </>
   )
 }

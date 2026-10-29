@@ -17,7 +17,7 @@ export const HIRE_LIST_GROUPS: { id: HireListGroupFilter; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'needs_action', label: 'Needs action' },
   { id: 'pending', label: 'Pending' },
-  { id: 'active', label: 'Active' },
+  { id: 'active', label: 'In Progress' },
   { id: 'completed', label: 'Completed' },
   { id: 'closed', label: 'Closed' },
 ]

@@ -145,7 +145,7 @@ function AddCardDialog({
       <DialogContent className="max-h-[min(92vh,1000px)] max-w-2xl">
         <DialogTitle>Add a card</DialogTitle>
         <p className="mb-4 mt-1 text-sm text-muted-foreground">
-          Saved to your account for the weekly supervision prepays.
+          Saved to your account for your weekly supervision payments.
         </p>
         {!clientSecret || !stripePromise ? (
           <div className="space-y-3">
@@ -217,7 +217,8 @@ function SavedCardsCard() {
             <div>
               <CardTitle>Saved cards</CardTitle>
               <CardDescription className="mt-0.5">
-                Cards for your weekly supervision prepays. One card can pay for several supervisors.
+                Cards for your weekly supervision payments. One card can pay for several
+                supervisors.
               </CardDescription>
             </div>
           </div>
@@ -332,12 +333,7 @@ function weekState(week: SuperviseePaymentWeek): { text: string; className: stri
   }
   if (week.status === 'SETTLED') {
     const when = week.settledAt ? ` ${formatEasternDate(week.settledAt)}` : ''
-    return {
-      text: week.refundCents
-        ? `Refund of ${formatUsdCents(week.refundCents)} sent${when}`
-        : `Settled${when} · no refund`,
-      className: 'text-muted-foreground',
-    }
+    return { text: `Settled${when}`, className: 'text-muted-foreground' }
   }
   if (week.status === 'DISPUTED')
     return { text: 'Disputed · with Gotham support', className: 'text-destructive' }
@@ -347,9 +343,9 @@ function weekState(week: SuperviseePaymentWeek): { text: string; className: stri
       className: 'text-amber-700',
     }
   if (week.status === 'APPROVED')
-    return { text: 'Approved · refund on its way', className: 'text-muted-foreground' }
+    return { text: 'Approved · settling', className: 'text-muted-foreground' }
   return {
-    text: `Prepaid · logging until ${formatEasternDate(week.logDeadlineAt)}`,
+    text: `Paid · logging until ${formatEasternDate(week.logDeadlineAt)}`,
     className: 'text-muted-foreground',
   }
 }
@@ -400,10 +396,10 @@ function WeekDetails({ week }: { week: SuperviseePaymentWeek }) {
   const lateCents = latePaid.reduce((sum, l) => sum + l.totalCents, 0)
 
   const timeline: { label: string; value: string }[] = []
-  if (week.paidAt) timeline.push({ label: 'Prepay charged', value: formatEasternDate(week.paidAt) })
+  if (week.paidAt) timeline.push({ label: 'Charged', value: formatEasternDate(week.paidAt) })
   else if (week.prepayStatus === 'FAILED')
     timeline.push({
-      label: 'Prepay',
+      label: 'Payment',
       value: `Didn't go through${week.failedAt ? ` ${formatEasternDate(week.failedAt)}` : ''}`,
     })
   timeline.push({ label: 'Logging deadline', value: formatEasternDateTime(week.logDeadlineAt) })
@@ -417,11 +413,7 @@ function WeekDetails({ week }: { week: SuperviseePaymentWeek }) {
   } else if (week.status !== 'SETTLED') {
     timeline.push({ label: 'Review ends', value: formatEasternDateTime(week.reviewEndsAt) })
   }
-  if (week.settledAt)
-    timeline.push({
-      label: week.refundCents ? 'Refund sent' : 'Settled',
-      value: formatEasternDate(week.settledAt),
-    })
+  if (week.settledAt) timeline.push({ label: 'Settled', value: formatEasternDate(week.settledAt) })
 
   return (
     <div className="grid gap-4 border-t bg-muted/20 px-4 py-3 sm:grid-cols-2">
@@ -430,40 +422,23 @@ function WeekDetails({ week }: { week: SuperviseePaymentWeek }) {
           {week.estimated ? 'Estimated cost' : 'Your cost'}
         </p>
         <dl className="mt-1.5 space-y-1 text-sm">
-          {prepaid && (
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">
-                Prepaid ({formatDuration(week.weeklyCapMinutes)} max + service fee)
-              </dt>
-              <dd className="tabular-nums text-foreground">{formatUsdCents(week.totalCents)}</dd>
-            </div>
-          )}
           <div className="flex justify-between gap-4">
             <dt className="text-muted-foreground">
-              {formatDuration(week.billedMinutes)} × {formatUsdCents(week.hourlyRateCents)}/h
+              Supervision ({formatDuration(week.billedMinutes)} ×{' '}
+              {formatUsdCents(week.hourlyRateCents)}/h)
             </dt>
             <dd className="tabular-nums text-foreground">
               {formatUsdCents(week.hoursChargeCents)}
             </dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-muted-foreground">Service fee (not refunded)</dt>
+            <dt className="text-muted-foreground">Service fee</dt>
             <dd className="tabular-nums text-foreground">{formatUsdCents(week.serviceFeeCents)}</dd>
           </div>
           {lateCents > 0 && (
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Late sessions, charged separately</dt>
               <dd className="tabular-nums text-foreground">{formatUsdCents(lateCents)}</dd>
-            </div>
-          )}
-          {prepaid && (
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">
-                {week.estimated ? 'Expected refund' : 'Refund'} for unused hours
-              </dt>
-              <dd className="tabular-nums text-foreground">
-                −{formatUsdCents(week.expectedRefundCents)}
-              </dd>
             </div>
           )}
           <div className="flex justify-between gap-4 border-t pt-1 font-medium">
@@ -477,6 +452,19 @@ function WeekDetails({ week }: { week: SuperviseePaymentWeek }) {
         {week.estimated && week.approvedMinutes == null && (
           <p className="mt-1.5 text-xs text-muted-foreground">
             Based on the hours logged so far; you approve them after the week.
+          </p>
+        )}
+        {prepaid && (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {formatUsdCents(week.totalCents)} was charged at the start of the week (
+            {formatDuration(week.weeklyCapMinutes)} max + service fee).{' '}
+            {week.status === 'SETTLED'
+              ? week.refundCents
+                ? `The unused ${formatUsdCents(week.refundCents)} went back to your card${week.settledAt ? ` on ${formatEasternDate(week.settledAt)}` : ''}.`
+                : 'All of it was used.'
+              : week.expectedRefundCents > 0
+                ? `${week.estimated ? 'About ' : ''}${formatUsdCents(week.expectedRefundCents)} for unused hours goes back to your card after the review.`
+                : null}
           </p>
         )}
         {latePaid.length > 0 && (
@@ -564,8 +552,7 @@ function PaymentHistoryCard() {
             <div>
               <CardTitle>Payment History</CardTitle>
               <CardDescription className="mt-0.5">
-                Weekly prepays across all your supervisors. Unused hours are refunded after each
-                week&apos;s review.
+                Weekly payments across all your supervisors. You pay only for the hours you approve.
               </CardDescription>
             </div>
           </div>
@@ -601,24 +588,25 @@ function PaymentHistoryCard() {
           </div>
         ) : (
           <div className="space-y-4">
-            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <dt className="text-xs text-muted-foreground">Charged</dt>
-                <dd className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
-                  {formatUsdCents(data.totals.chargedCents)}
-                </dd>
-              </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <dt className="text-xs text-muted-foreground">Refunded</dt>
-                <dd className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
-                  {formatUsdCents(data.totals.refundedCents)}
-                </dd>
-              </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <dt className="text-xs text-muted-foreground">Net paid</dt>
+            {/* What they actually spent leads; what went back to the card is a footnote. */}
+            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border bg-primary/5 px-4 py-3">
+                <dt className="text-xs text-muted-foreground">Total spent</dt>
                 <dd className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
                   {formatUsdCents(data.totals.netPaidCents)}
                 </dd>
+                <dd className="text-xs text-muted-foreground">approved hours + service fees</dd>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <dt className="text-xs text-muted-foreground">Charged to your card</dt>
+                <dd className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
+                  {formatUsdCents(data.totals.chargedCents)}
+                </dd>
+                {data.totals.refundedCents > 0 && (
+                  <dd className="text-xs text-muted-foreground">
+                    {formatUsdCents(data.totals.refundedCents)} back for unused hours
+                  </dd>
+                )}
               </div>
               <div className="rounded-lg border bg-muted/30 px-4 py-3">
                 <dt className="text-xs text-muted-foreground">Charged this month</dt>
@@ -627,7 +615,7 @@ function PaymentHistoryCard() {
                 </dd>
                 {data.totals.refundedThisMonthCents > 0 && (
                   <dd className="text-xs text-muted-foreground">
-                    {formatUsdCents(data.totals.refundedThisMonthCents)} refunded
+                    {formatUsdCents(data.totals.refundedThisMonthCents)} back for unused hours
                   </dd>
                 )}
               </div>
@@ -635,7 +623,7 @@ function PaymentHistoryCard() {
 
             {data.items.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No payments yet. Weeks show up here once your first prepay goes through.
+                No payments yet. Weeks show up here once your first weekly payment goes through.
               </p>
             ) : (
               <ul className="divide-y rounded-lg border">
@@ -669,15 +657,20 @@ function PaymentHistoryCard() {
                         </div>
                         <span className="flex shrink-0 items-center gap-2">
                           <span className="text-right">
+                            {/* Leads with the week's cost; the full charge is secondary. */}
                             <span className="block text-sm font-semibold tabular-nums text-foreground">
-                              {week.prepayStatus === 'FAILED'
-                                ? 'Not charged'
-                                : formatUsdCents(week.chargedCents)}
+                              {week.prepayStatus === 'FAILED' ? (
+                                'Not charged'
+                              ) : (
+                                <>
+                                  {week.estimated ? '≈ ' : ''}
+                                  {formatUsdCents(week.costCents)}
+                                </>
+                              )}
                             </span>
                             {week.prepayStatus === 'PAID' && (
                               <span className="block text-xs tabular-nums text-muted-foreground">
-                                {week.estimated ? '≈ ' : ''}
-                                {formatUsdCents(week.costCents)} your cost
+                                {week.estimated ? 'your cost so far' : 'your cost'}
                               </span>
                             )}
                           </span>

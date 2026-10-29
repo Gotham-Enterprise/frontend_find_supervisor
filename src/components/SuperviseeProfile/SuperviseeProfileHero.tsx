@@ -11,6 +11,7 @@ import { DisabledWithTooltip } from '@/components/ui/tooltip'
 import { isSupervisorRole } from '@/lib/auth/roles'
 import { useConversations, useSupervisorProfile, useUser } from '@/lib/hooks'
 import { useCheckConnectionAvailability } from '@/lib/hooks/useConnections'
+import { pickConversation } from '@/lib/utils/chat-rooms'
 import { getMakeConnectionAccess } from '@/lib/utils/make-connection-access'
 import {
   formatCredentialWithState,
@@ -133,7 +134,8 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
   const roleBadgeLabel =
     formatCredentialWithState(profile.title, profile.licensureState) || 'Supervisee'
 
-  const existingConversation = conversations?.find((c) => c.superviseeId === user.id)
+  // One room per hire: open the current hire's room with this supervisee.
+  const existingConversation = pickConversation(conversations, (c) => c.superviseeId === user.id)
   const isInMyHireList = profile.isInMyHireList ?? false
 
   const connectionAccess = useMemo(

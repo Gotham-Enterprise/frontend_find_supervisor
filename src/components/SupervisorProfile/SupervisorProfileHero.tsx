@@ -15,6 +15,7 @@ import {
   useSupervisorTypeOptions,
 } from '@/lib/hooks'
 import { useCheckConnectionAvailability } from '@/lib/hooks/useConnections'
+import { pickConversation } from '@/lib/utils/chat-rooms'
 import {
   formatDisplayName,
   formatNameWithCredentials,
@@ -114,7 +115,11 @@ export function SupervisorProfileHero({
 
   // Check if there's an existing conversation with this supervisor
   const { data: conversations } = useConversations()
-  const existingConversation = conversations?.find((c) => c.supervisorId === profile.user.id)
+  // One room per hire: open the current hire's room with this supervisor.
+  const existingConversation = pickConversation(
+    conversations,
+    (c) => c.supervisorId === profile.user.id,
+  )
 
   // Realtime messaging status — overrides static profile data when the socket fires
   const { messagingStatus } = useSupervisionChatSocket()

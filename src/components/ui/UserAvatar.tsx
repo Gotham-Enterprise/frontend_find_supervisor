@@ -28,6 +28,8 @@ export type UserAvatarProps = {
    * ring-brand-light so the dot stays crisp on tinted row backgrounds.
    */
   presenceRingClassName?: string
+  /** Overrides the status dot's size/position for this avatar (merged last). */
+  presenceDotClassName?: string
   /** Renders at bottom-right instead of presence (e.g. locked conversation badge) */
   bottomRightSlot?: ReactNode
 }
@@ -115,6 +117,7 @@ export function UserAvatar({
   presenceKnown,
   isOnline,
   presenceRingClassName = 'ring-white',
+  presenceDotClassName,
   bottomRightSlot,
 }: UserAvatarProps) {
   const styles = SIZE_STYLES[size]
@@ -157,6 +160,7 @@ export function UserAvatar({
         styles.dot,
         presenceRingClassName,
         online ? 'bg-green-500' : 'bg-zinc-400',
+        presenceDotClassName,
       )}
     />
   ) : null

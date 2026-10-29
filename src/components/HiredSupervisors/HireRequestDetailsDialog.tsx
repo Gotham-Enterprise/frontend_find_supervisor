@@ -61,15 +61,20 @@ function Field({ label, value, multiline }: { label: string; value: string; mult
 
 function FieldList({
   fields,
+  wide = false,
 }: {
   fields: Array<{ label: string; value: string; multiline?: boolean }>
+  /** Two columns on wider screens; long text still spans the full width. */
+  wide?: boolean
 }) {
   const visible = fields.filter((f) => isSpecified(f.value))
   if (visible.length === 0) return null
   return (
-    <div className="space-y-3">
+    <div className={wide ? 'grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2' : 'space-y-3'}>
       {visible.map((f) => (
-        <Field key={f.label} label={f.label} value={f.value} multiline={f.multiline} />
+        <div key={f.label} className={wide && f.multiline ? 'sm:col-span-2' : undefined}>
+          <Field label={f.label} value={f.value} multiline={f.multiline} />
+        </div>
       ))}
     </div>
   )
@@ -83,20 +88,23 @@ function SectionTitle({ children }: { children: ReactNode }) {
   )
 }
 
-interface HireRequestDetailsDialogProps {
-  hire: HireListItem
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
-
-export function HireRequestDetailsDialog({
+/**
+ * Everything about the hire request — what was requested, the supervisor
+ * snapshot, and the agreement timeline. Shown in the request details dialog
+ * and on the workroom's Contract details tab.
+ */
+export function HireRequestDetailsBody({
   hire,
-  open,
-  onOpenChange,
-}: HireRequestDetailsDialogProps) {
+  showStatus = true,
+  wide = false,
+}: {
+  hire: HireListItem
+  showStatus?: boolean
+  /** Full-width page layout: fields in two columns. */
+  wide?: boolean
+}) {
   const { supervisorTypes } = useSuperviseeFormOptions()
   const supervisorTypeOptions = supervisorTypes.data ?? []
-  const supervisorName = formatDisplayName(hire.supervisor)
   const licenseStates =
     hire.supervisorStateLicense?.length > 0 ? hire.supervisorStateLicense.join(', ') : UNSPECIFIED
 
@@ -248,6 +256,65 @@ export function HireRequestDetailsDialog({
   const hasAgreement = agreementFields.some((f) => isSpecified(f.value))
 
   return (
+    <div className="space-y-6">
+      {showStatus && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">Status</span>
+          <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
+        </div>
+      )}
+
+      {hasRequested && (
+        <div>
+          <SectionTitle>What you requested</SectionTitle>
+          <div className="mt-3">
+            <FieldList fields={requestedFields} wide={wide} />
+          </div>
+        </div>
+      )}
+
+      {hasRequested && hasSnapshot && <Separator />}
+
+      {hasSnapshot && (
+        <div>
+          <SectionTitle>Supervisor snapshot (at request)</SectionTitle>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Captured when you submitted this request; may differ from the supervisor’s current
+            profile.
+          </p>
+          <div className="mt-3">
+            <FieldList fields={snapshotFields} wide={wide} />
+          </div>
+        </div>
+      )}
+
+      {(hasRequested || hasSnapshot) && hasAgreement && <Separator />}
+
+      {hasAgreement && (
+        <div>
+          <SectionTitle>Agreement & timeline</SectionTitle>
+          <div className="mt-3">
+            <FieldList fields={agreementFields} wide={wide} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface HireRequestDetailsDialogProps {
+  hire: HireListItem
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+export function HireRequestDetailsDialog({
+  hire,
+  open,
+  onOpenChange,
+}: HireRequestDetailsDialogProps) {
+  const supervisorName = formatDisplayName(hire.supervisor)
+  return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="max-h-[min(85vh,780px)] max-w-2xl sm:max-w-2xl"
@@ -262,46 +329,8 @@ export function HireRequestDetailsDialog({
           </>
         }
       >
-        <div className="space-y-6 px-6 py-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground">Status</span>
-            <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
-          </div>
-
-          {hasRequested && (
-            <div>
-              <SectionTitle>What you requested</SectionTitle>
-              <div className="mt-3">
-                <FieldList fields={requestedFields} />
-              </div>
-            </div>
-          )}
-
-          {hasRequested && hasSnapshot && <Separator />}
-
-          {hasSnapshot && (
-            <div>
-              <SectionTitle>Supervisor snapshot (at request)</SectionTitle>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Captured when you submitted this request; may differ from the supervisor’s current
-                profile.
-              </p>
-              <div className="mt-3">
-                <FieldList fields={snapshotFields} />
-              </div>
-            </div>
-          )}
-
-          {(hasRequested || hasSnapshot) && hasAgreement && <Separator />}
-
-          {hasAgreement && (
-            <div>
-              <SectionTitle>Agreement & timeline</SectionTitle>
-              <div className="mt-3">
-                <FieldList fields={agreementFields} />
-              </div>
-            </div>
-          )}
+        <div className="px-6 py-5">
+          <HireRequestDetailsBody hire={hire} />
         </div>
       </DialogContent>
     </DialogRoot>

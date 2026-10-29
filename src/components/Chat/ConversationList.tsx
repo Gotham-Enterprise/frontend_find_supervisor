@@ -4,6 +4,7 @@ import { AlertCircle, RefreshCw } from 'lucide-react'
 
 import { Skeleton } from '@/components/ui/skeleton'
 import { useConversations } from '@/lib/hooks/useChat'
+import { contractLabel, sharesSeveralRooms } from '@/lib/utils/chat-rooms'
 
 import { ChatEmptyState } from './ChatEmptyState'
 import { ConversationListItem } from './ConversationListItem'
@@ -87,6 +88,11 @@ export function ConversationList({ activeConversationId, onSelect }: Conversatio
           conversation={conversation}
           isActive={conversation.id === activeConversationId}
           onClick={onSelect}
+          contractLabel={
+            sharesSeveralRooms(conversations, conversation)
+              ? contractLabel(conversation.hire)
+              : null
+          }
         />
       ))}
     </div>

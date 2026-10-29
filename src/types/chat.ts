@@ -22,13 +22,20 @@ export interface ChatHire {
   status: ChatHireStatus
   /** Present when supervision was marked complete; distinguishes hire `REVIEWED` after review vs pre-accept `REVIEWED`. */
   completedAt?: string | null
+  /** When the request was sent; with startDate, tells two rooms with the same person apart. */
+  createdAt?: string
+  startDate?: string | null
+  canceledAt?: string | null
+  rejectedAt?: string | null
+  /** Role the supervisor was hired for, e.g. ["Medical Director"] */
+  typeOfSupervisorNeeded?: string[]
 }
 
 export interface Conversation {
   id: string
   supervisorId: string
   superviseeId: string
-  /** Null for conversations created via connection-request approval (no hire involved). */
+  /** One room per hire; null only for a pre-hire room opened by an approved connection. */
   hireId: string | null
   status: ConversationStatus
   lastMessageAt: string | null

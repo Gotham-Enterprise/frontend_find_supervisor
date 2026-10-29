@@ -50,9 +50,7 @@ function rowStatus(row: SuperviseeWeekRow): { text: string; className: string } 
     return { text: "Payment didn't go through", className: 'text-destructive' }
   if (row.status === 'SETTLED') {
     return {
-      text: row.refundCents
-        ? `Refund of ${formatUsdCents(row.refundCents)} sent ${row.settledAt ? formatEasternDate(row.settledAt) : ''}`.trim()
-        : 'Settled',
+      text: `Settled ${row.settledAt ? formatEasternDate(row.settledAt) : ''}`.trim(),
       className: 'text-muted-foreground',
     }
   }
@@ -64,9 +62,9 @@ function rowStatus(row: SuperviseeWeekRow): { text: string; className: string } 
       className: 'text-amber-700',
     }
   if (row.status === 'APPROVED')
-    return { text: 'Approved · refund on its way', className: 'text-muted-foreground' }
+    return { text: 'Approved · settling', className: 'text-muted-foreground' }
   return {
-    text: `Prepaid · logging until ${formatEasternDate(row.logDeadlineAt)}`,
+    text: `Paid · logging until ${formatEasternDate(row.logDeadlineAt)}`,
     className: 'text-muted-foreground',
   }
 }
@@ -113,7 +111,7 @@ function RowActions({ row }: { row: SuperviseeWeekRow }) {
         open={approving}
         onOpenChange={setApproving}
         title="Approve this week?"
-        description={`${row.supervisorName ?? 'Your supervisor'} will be paid for ${formatDuration(row.billedMinutes)} (${formatUsdCents(row.hoursChargeCents)}), and ${formatUsdCents(row.expectedRefundCents)} of your prepay is refunded to your card.`}
+        description={`${row.supervisorName ?? 'Your supervisor'} will be paid for ${formatDuration(row.billedMinutes)} (${formatUsdCents(row.hoursChargeCents)}).${row.expectedRefundCents > 0 ? ` The unused ${formatUsdCents(row.expectedRefundCents)} goes back to your card.` : ''}`}
         confirmLabel="Approve"
         isPending={approve.isPending}
         onConfirm={() =>
@@ -121,7 +119,8 @@ function RowActions({ row }: { row: SuperviseeWeekRow }) {
             onSuccess: () => {
               setApproving(false)
               showSuccess('Week approved', {
-                description: 'Your supervisor will be paid and the unused prepay refunded.',
+                description:
+                  'Your supervisor will be paid, and anything unused goes back to your card.',
               })
               void refresh()
             },
@@ -180,8 +179,8 @@ function RowActions({ row }: { row: SuperviseeWeekRow }) {
 }
 
 /**
- * The supervisee's weekly summary: what was prepaid, the hours each
- * supervisor logged per day, the expected refund, and anything that needs
+ * The supervisee's weekly summary: what the week costs them, the hours each
+ * supervisor logged per day, what was charged, and anything that needs
  * them (a week to review, a payment that failed). Weeks are Monday–Sunday,
  * US Eastern.
  */
@@ -207,7 +206,7 @@ export function SuperviseeWeekCard() {
             <div>
               <CardTitle>Weekly Summary</CardTitle>
               <CardDescription className="mt-0.5">
-                What you prepaid, the hours logged so far, and what comes back. Times in US Eastern.
+                The hours logged this week and what they cost you. Times in US Eastern.
               </CardDescription>
             </div>
           </div>
@@ -277,7 +276,7 @@ export function SuperviseeWeekCard() {
               </p>
             )}
 
-            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-lg border bg-muted/30 px-4 py-3">
                 <dt className="text-xs text-muted-foreground">Hours logged</dt>
                 <dd className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
@@ -289,23 +288,6 @@ export function SuperviseeWeekCard() {
                   {data.totals.supervisors === 1 ? 'supervisor' : 'supervisors'}
                 </dd>
               </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <dt className="text-xs text-muted-foreground">Prepaid</dt>
-                <dd className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
-                  {formatUsdCents(data.totals.prepaidCents)}
-                </dd>
-                <dd className="text-xs text-muted-foreground">weekly max + service fee</dd>
-              </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <dt className="text-xs text-muted-foreground">
-                  {data.totals.estimated ? 'Expected refund' : 'Refunded'}
-                </dt>
-                <dd className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
-                  {data.totals.estimated ? '≈ ' : ''}
-                  {formatUsdCents(data.totals.expectedRefundCents)}
-                </dd>
-                <dd className="text-xs text-muted-foreground">for hours not used</dd>
-              </div>
               <div className="rounded-lg border bg-primary/5 px-4 py-3">
                 <dt className="text-xs text-muted-foreground">
                   {data.totals.estimated ? 'Your cost (estimated)' : 'Your cost'}
@@ -316,12 +298,24 @@ export function SuperviseeWeekCard() {
                 </dd>
                 <dd className="text-xs text-muted-foreground">hours + service fee</dd>
               </div>
+              {/* The unused part is a footnote on the charge, not a figure of its own. */}
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <dt className="text-xs text-muted-foreground">Charged to your card</dt>
+                <dd className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
+                  {formatUsdCents(data.totals.prepaidCents)}
+                </dd>
+                <dd className="text-xs text-muted-foreground">
+                  {data.totals.expectedRefundCents > 0
+                    ? `${data.totals.estimated ? '≈ ' : ''}${formatUsdCents(data.totals.expectedRefundCents)} back for unused hours`
+                    : 'weekly max + service fee'}
+                </dd>
+              </div>
             </dl>
 
             {data.rows.length === 0 ? (
               <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
                 {data.isCurrentWeek
-                  ? 'No billing weeks yet. Your first prepay is charged when a signed hourly agreement starts.'
+                  ? 'No billing weeks yet. Your first weekly payment is charged when a signed hourly agreement starts.'
                   : 'No billing weeks for this week.'}
               </p>
             ) : (
