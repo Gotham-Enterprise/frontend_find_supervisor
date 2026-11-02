@@ -11,7 +11,8 @@ interface SuperviseeCardProps {
   index: number
   /**
    * State of the page the card is on (e.g. "california"). When omitted, the
-   * profile link uses the supervisee's first licensed state.
+   * profile link uses the supervisee's home state if they're licensed there,
+   * else their first licensed state.
    */
   stateSlug?: string
 }
@@ -23,11 +24,18 @@ interface SuperviseeCardProps {
  * server-side ("Maria S"), so it is rendered as-is with no client re-masking.
  */
 export function SuperviseeCard({ supervisee, index, stateSlug }: SuperviseeCardProps) {
+  // Supervision follows licensure, so the URL state must be one they're licensed
+  // in — preferring their home state so it matches the location shown on the
+  // profile. Home state alone is the fallback when no licensed state resolves.
+  const homeStateSlug = stateValueToSlug(supervisee.state)
+  const licensedSlugs = supervisee.stateOfLicensure
+    .map(stateValueToSlug)
+    .filter((slug): slug is string => slug !== null)
   const profileStateSlug =
     stateSlug ??
-    [...supervisee.stateOfLicensure, supervisee.state]
-      .map(stateValueToSlug)
-      .find((slug) => slug !== null)
+    (homeStateSlug && licensedSlugs.includes(homeStateSlug) ? homeStateSlug : undefined) ??
+    licensedSlugs[0] ??
+    homeStateSlug
   // No recognizable state means no profile URL — fall back to the signup CTA.
   const profileHref = profileStateSlug
     ? `/browse-supervisees/${profileStateSlug}/${supervisee.id}`
