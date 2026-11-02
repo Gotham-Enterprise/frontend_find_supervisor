@@ -5,6 +5,7 @@ import { useState } from 'react'
 
 import { cardLabel } from '@/components/HirePayment/HirePaymentSetup'
 import { formatHours, HourlyQuoteSummary } from '@/components/HirePayment/HourlyQuoteSummary'
+import { MonthlyAgreementPayment } from '@/components/MonthlyBilling/MonthlyAgreementPayment'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
@@ -15,8 +16,10 @@ import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import { useHirePayment, useUser, useUserSnackbar } from '@/lib/hooks'
 import { useConfetti } from '@/lib/hooks/useConfetti'
 import { useSignAgreement } from '@/lib/hooks/useHires'
+import { useHireMonthlyBilling } from '@/lib/hooks/useMonthlyBilling'
 import { parseApiError } from '@/lib/utils/error-parser'
 import { formatUsdCents } from '@/lib/utils/money'
+import { usesInAppMonthlyBilling } from '@/lib/utils/monthly-billing'
 import { formatDateOnly, formatDisplayName } from '@/lib/utils/profile-formatters'
 import type { AgreementRecord, HireListItem } from '@/types/hire'
 
@@ -216,6 +219,8 @@ export function AgreementBody({
   const hourly = isHourlyAgreement(agreement)
   const viewerIsSupervisor = isSupervisorRole(user?.role)
   const showPayment = IN_APP_PAYMENTS_ENABLED && hourly
+  // Monthly terms billed in-app (Medical Director retainers) have their own payment section.
+  const monthlyInApp = usesInAppMonthlyBilling(hire)
 
   return (
     <>
@@ -246,7 +251,9 @@ export function AgreementBody({
                 value={
                   agreement.supervisionMonths != null
                     ? plural(agreement.supervisionMonths, 'month')
-                    : UNSPECIFIED
+                    : monthlyInApp
+                      ? 'Month to month'
+                      : UNSPECIFIED
                 }
               />
               <TermItem label="Monthly Amount" value={formatMoney(agreement.monthlyAmount)} />
@@ -376,6 +383,18 @@ export function AgreementBody({
             </section>
           </>
         )}
+
+      {monthlyInApp && (
+        <MonthlyAgreementPayment
+          hire={hire}
+          viewerIsSupervisor={viewerIsSupervisor}
+          showSignForm={showSignForm}
+          hasSavedCards={hasSavedCards}
+          cardLabelText={cardLabelText}
+          onSetUpPayment={onSetUpPayment}
+          onLeave={onLeave}
+        />
+      )}
     </>
   )
 }
@@ -410,11 +429,18 @@ export function AgreementDialog({
     agreement != null &&
     isHourlyAgreement(agreement)
   const { data: paymentInfo } = useHirePayment(hire.id, open && showsSuperviseePayment)
-  const hasSavedCards = (paymentInfo?.savedCards.length ?? 0) > 0
+  // In-app monthly agreements: the same card step, from the monthly billing endpoint.
+  const monthlyInApp = usesInAppMonthlyBilling(hire)
+  const { data: monthlyInfo } = useHireMonthlyBilling(
+    hire.id,
+    open && monthlyInApp && onSetUpPayment != null,
+  )
+  const cards = monthlyInApp ? monthlyInfo : paymentInfo
+  const hasSavedCards = (cards?.savedCards.length ?? 0) > 0
   if (!agreement) return null
 
   const showSignForm = canSign && agreement.superviseeSignedAt == null
-  const showPayment = IN_APP_PAYMENTS_ENABLED && isHourlyAgreement(agreement)
+  const showPayment = (IN_APP_PAYMENTS_ENABLED && isHourlyAgreement(agreement)) || monthlyInApp
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
@@ -433,7 +459,7 @@ export function AgreementDialog({
           hire={hire}
           showSignForm={showSignForm}
           hasSavedCards={hasSavedCards}
-          cardLabelText={paymentInfo?.card ? cardLabel(paymentInfo.card) : null}
+          cardLabelText={cards?.card ? cardLabel(cards.card) : null}
           onSetUpPayment={onSetUpPayment}
           onLeave={() => onOpenChange(false)}
         />

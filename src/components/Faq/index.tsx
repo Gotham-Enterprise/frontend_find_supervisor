@@ -6,6 +6,7 @@ import { useState } from 'react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { isSuperviseeRole, isSupervisorRole } from '@/lib/auth/roles'
+import { IN_APP_MONTHLY_ENABLED } from '@/lib/constants/feature-flags'
 import { useUser } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 
@@ -20,6 +21,37 @@ interface FaqCategory {
   title: string
   items: FaqItem[]
 }
+
+// In-app monthly billing for Medical Director retainers (flagged): these
+// answers replace the "paid outside the app" ones while it's on.
+const MONTHLY_FEE_ANSWER_SUPERVISOR = IN_APP_MONTHLY_ENABLED
+  ? 'In-app billing for Supervisors is hourly, so you set an hourly rate. Monthly fees are for Medical Directors (and Supervisors whose profile already had a monthly fee): their clients pay each month through the app, and the payment is released to them after the month ends. Once you switch to Hourly in Edit Profile, Monthly is no longer available.'
+  : 'In-app billing covers hourly supervision, so Supervisors set an hourly rate. Medical Directors work on monthly retainers: their agreements record the monthly amount and duration, and they’re paid directly by their client outside the app. If your profile still shows a monthly fee from before, your agreements stay on monthly terms paid outside the app until you switch to Hourly in Edit Profile — after that, Monthly is no longer available.'
+
+const MONTHLY_SUPERVISOR_FAQS: FaqItem[] = IN_APP_MONTHLY_ENABLED
+  ? [
+      {
+        question: 'How do monthly (Medical Director) payments work?',
+        answer:
+          'Your agreement sets a monthly amount, a start date, and either month to month or a set number of months. Your client saves a card before signing and is charged on the start date and on the same day each month. The platform holds each payment and releases your share (minus the 10% platform fee) 3 days after that month ends, unless they report a problem. You need your payment information set up on the Billing page before you send the agreement.',
+      },
+      {
+        question: 'What happens if a monthly supervision is ended?',
+        answer:
+          'Whoever ends it, the supervision continues until the end of the month already paid for, and you’re paid for that month as usual. No more months are charged. Your client isn’t refunded for the month they paid for, unless Gotham support decides otherwise on a reported problem.',
+      },
+      {
+        question: 'What if my client’s monthly payment fails?',
+        answer:
+          'We ask them to pay and remind them. They have 7 days. If it’s still unpaid after that, you can end the supervision from Monthly Billing (the unpaid month is canceled), or keep waiting. No new month is charged while one is unpaid.',
+      },
+      {
+        question: 'What if my client reports a problem with a month?',
+        answer:
+          'The payment for that month is held and Gotham support reviews it with you both. Support decides how much is released to you; the rest goes back to your client’s card.',
+      },
+    ]
+  : []
 
 const supervisorFaqs: FaqCategory[] = [
   {
@@ -157,9 +189,9 @@ const supervisorFaqs: FaqCategory[] = [
       },
       {
         question: 'Why can’t I choose a monthly fee?',
-        answer:
-          'In-app billing covers hourly supervision, so Supervisors set an hourly rate. Medical Directors work on monthly retainers: their agreements record the monthly amount and duration, and they’re paid directly by their client outside the app. If your profile still shows a monthly fee from before, your agreements stay on monthly terms paid outside the app until you switch to Hourly in Edit Profile — after that, Monthly is no longer available.',
+        answer: MONTHLY_FEE_ANSWER_SUPERVISOR,
       },
+      ...MONTHLY_SUPERVISOR_FAQS,
       {
         question: 'How do I end a supervision?',
         answer:
@@ -414,11 +446,36 @@ const superviseeFaqs: FaqCategory[] = [
         answer:
           "If this week's prepay was already charged, the week is still reviewed — you pay only for approved hours and the rest is refunded. If it hadn't been charged yet, it won't be. There are no more weekly charges after a supervision ends.",
       },
-      {
-        question: 'Do Medical Directors bill through the app?',
-        answer:
-          'No. Medical Directors work on monthly retainers: the agreement records the monthly amount and duration, and you pay them directly outside the app. (A few Supervisors who set a monthly fee before in-app billing are paid the same way until they switch to an hourly rate.)',
-      },
+      ...(IN_APP_MONTHLY_ENABLED
+        ? [
+            {
+              question: 'How do I pay a Medical Director?',
+              answer:
+                'Through the app, monthly. Before signing the agreement you save a card. It’s charged the monthly amount plus a service fee (Stripe processing, not refundable) on the start date and on the same day each month. The platform holds each payment and releases it to your Medical Director 3 days after that month ends. You can see every month under Monthly Billing on the hire, and on your Billing page.',
+            },
+            {
+              question: 'What if I end a monthly supervision?',
+              answer:
+                'It stays active until the end of the month you already paid for, and that month isn’t refunded. No more months are charged. The same applies if your Medical Director ends it.',
+            },
+            {
+              question: 'What if my monthly payment fails?',
+              answer:
+                'Update your card if needed and tap Pay now under Monthly Billing. You have 7 days; after that, your Medical Director may end the supervision. No new month is charged while one is unpaid.',
+            },
+            {
+              question: 'What if something goes wrong during a month?',
+              answer:
+                'Use Report a problem on that month under Monthly Billing, while it runs or within 3 days after it ends. The payment is held and Gotham support reviews it with you both; they decide how much is released and refund the rest to your card.',
+            },
+          ]
+        : [
+            {
+              question: 'Do Medical Directors bill through the app?',
+              answer:
+                'No. Medical Directors work on monthly retainers: the agreement records the monthly amount and duration, and you pay them directly outside the app. (A few Supervisors who set a monthly fee before in-app billing are paid the same way until they switch to an hourly rate.)',
+            },
+          ]),
     ],
   },
   {

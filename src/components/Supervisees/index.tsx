@@ -11,6 +11,7 @@ import {
   MapPin,
   Monitor,
   MoreVertical,
+  Receipt,
   Star,
   Target,
   Users,
@@ -30,6 +31,7 @@ import {
   useHireListView,
 } from '@/components/HireList/HireListToolbar'
 import { HireSessionsDialog } from '@/components/HireSessions/HireSessionsDialog'
+import { MonthlyBillingDialog } from '@/components/MonthlyBilling/MonthlyBillingDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -55,6 +57,7 @@ import {
 } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 import { parseApiError } from '@/lib/utils/error-parser'
+import { scheduledLastDayLabel, usesInAppMonthlyBilling } from '@/lib/utils/monthly-billing'
 import {
   formatAvailability,
   formatContactNumber,
@@ -444,17 +447,21 @@ function RowActions({
   review,
   onViewAgreement,
   onSendAgreement,
+  onOpenBilling,
 }: {
   hire: HireListItem
   review?: Review
   onViewAgreement: () => void
   onSendAgreement: () => void
+  /** In-app monthly hires: opens the monthly billing dialog. */
+  onOpenBilling?: () => void
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [endOpen, setEndOpen] = useState(false)
   const { showSuccess, showError } = useUserSnackbar()
   const remindMutation = useRemindAgreement()
-  const canEnd = hire.status === 'ACCEPTED' || hire.status === 'ACTIVE'
+  // A monthly hire already ending when its paid month runs out can't be ended again.
+  const canEnd = (hire.status === 'ACCEPTED' || hire.status === 'ACTIVE') && !hire.scheduledEndAt
 
   const agreementStage = getAgreementStage(hire)
   const canSendAgreement = hire.status === 'ACCEPTED' && agreementStage === 'NOT_SENT'
@@ -496,6 +503,9 @@ function RowActions({
               )}
               {hasAgreement && (
                 <DropdownMenuItem onClick={onViewAgreement}>View Agreement</DropdownMenuItem>
+              )}
+              {onOpenBilling && (
+                <DropdownMenuItem onClick={onOpenBilling}>Monthly Billing</DropdownMenuItem>
               )}
               {canEnd && (
                 <>
@@ -582,8 +592,20 @@ function SuperviseeCard({
   // Signed hourly agreement: the supervisor logs sessions in the app.
   const hasSessions =
     IN_APP_PAYMENTS_ENABLED && isAgreementSigned && hire.agreement?.hourlyRateCents != null
-  // Signed, but the supervisee hasn't saved a card: no billing weeks until they do.
-  const awaitingPaymentSetup = hasSessions && hire.paymentMethodSavedAt == null
+  // Signed in-app monthly agreement (Medical Director retainers): months in the billing dialog.
+  const hasMonthlyBilling = usesInAppMonthlyBilling(hire) && isAgreementSigned
+  // Signed, but the supervisee hasn't saved a card: no billing weeks (or months) until they do.
+  const awaitingPaymentSetup =
+    (hasSessions || hasMonthlyBilling) && hire.paymentMethodSavedAt == null
+  // Deep link: monthly billing notifications point to …?billing=<id> (lazy init, as above).
+  const [billingOpen, setBillingOpen] = useState(
+    () =>
+      hasMonthlyBilling &&
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('billing') === hire.id,
+  )
+  // End Supervision offered from the billing dialog after 7 days unpaid.
+  const [endForNonPaymentOpen, setEndForNonPaymentOpen] = useState(false)
   // Deep link: session notifications point to /supervisees?sessions=<id> (lazy init, as above).
   const [sessionsOpen, setSessionsOpen] = useState(
     () =>
@@ -609,6 +631,7 @@ function SuperviseeCard({
       review={review}
       onViewAgreement={() => setViewAgreementOpen(true)}
       onSendAgreement={() => setSendAgreementOpen(true)}
+      onOpenBilling={hasMonthlyBilling ? () => setBillingOpen(true) : undefined}
     />
   )
 
@@ -622,6 +645,14 @@ function SuperviseeCard({
           className="border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-50"
         >
           Payment not set up
+        </Badge>
+      )}
+      {hire.scheduledEndAt && (hire.status === 'ACCEPTED' || hire.status === 'ACTIVE') && (
+        <Badge
+          variant="outline"
+          className="border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-50"
+        >
+          Ends {scheduledLastDayLabel(hire.scheduledEndAt)}
         </Badge>
       )}
       {review && (
@@ -643,6 +674,11 @@ function SuperviseeCard({
     <Button variant="outline" size="sm" onClick={() => setSessionsOpen(true)}>
       <CalendarClock className="size-3.5" aria-hidden />
       Sessions
+    </Button>
+  ) : hasMonthlyBilling ? (
+    <Button variant="outline" size="sm" onClick={() => setBillingOpen(true)}>
+      <Receipt className="size-3.5" aria-hidden />
+      Billing
     </Button>
   ) : null
 
@@ -746,6 +782,12 @@ function SuperviseeCard({
                   Sessions
                 </Button>
               )}
+              {hasMonthlyBilling && (
+                <Button size="sm" onClick={() => setBillingOpen(true)}>
+                  <Receipt className="size-3.5" aria-hidden />
+                  Billing
+                </Button>
+              )}
               {hire.agreement?.fileUrl ? (
                 <a
                   href={hire.agreement.fileUrl}
@@ -786,6 +828,23 @@ function SuperviseeCard({
           open={sessionsOpen}
           onOpenChange={setSessionsOpen}
         />
+      )}
+
+      {hasMonthlyBilling && (
+        <>
+          <MonthlyBillingDialog
+            hireId={hire.id}
+            counterpartName={superviseeName}
+            open={billingOpen}
+            onOpenChange={setBillingOpen}
+            onEndSupervision={() => setEndForNonPaymentOpen(true)}
+          />
+          <EndSupervisionDialog
+            hire={hire}
+            open={endForNonPaymentOpen}
+            onOpenChange={setEndForNonPaymentOpen}
+          />
+        </>
       )}
     </>
   )

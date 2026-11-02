@@ -10,6 +10,7 @@ import {
   type LucideIcon,
   MapPin,
   Monitor,
+  Receipt,
   Star,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -21,6 +22,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { cn } from '@/lib/utils'
+import { scheduledLastDayLabel } from '@/lib/utils/monthly-billing'
 import {
   formatDate,
   formatFeeAmount,
@@ -92,6 +94,9 @@ export function HireRequestCard({
   // Directors; on Hired Supervisors the list sends it to the hire's workroom.
   const deepLinkedSessionsId = searchParams.get('sessions')
   const [dismissedSessionsLinkId, setDismissedSessionsLinkId] = useState<string | null>(null)
+  // Monthly billing deep link (?billing=<id>) from monthly payment notifications and emails.
+  const deepLinkedBillingId = searchParams.get('billing')
+  const [dismissedBillingLinkId, setDismissedBillingLinkId] = useState<string | null>(null)
 
   const actions = useHireActions(hire, {
     existingReview,
@@ -111,6 +116,12 @@ export function HireRequestCard({
           },
         }
       : undefined,
+    billingDeepLink: {
+      open: deepLinkedBillingId === hire.id && dismissedBillingLinkId !== deepLinkedBillingId,
+      onClose: () => {
+        if (deepLinkedBillingId === hire.id) setDismissedBillingLinkId(deepLinkedBillingId)
+      },
+    },
   })
   const {
     supervisorName,
@@ -120,6 +131,8 @@ export function HireRequestCard({
     isAgreementSigned,
     needsPaymentSetup,
     hasSessions,
+    hasMonthlyBilling,
+    openMonthlyBilling,
     openAgreement,
     openPayment,
     openSessions,
@@ -165,6 +178,11 @@ export function HireRequestCard({
     <>
       <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
       <AgreementStageBadge hire={hire} />
+      {hire.scheduledEndAt && (hire.status === 'ACCEPTED' || hire.status === 'ACTIVE') && (
+        <span className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+          Ends {scheduledLastDayLabel(hire.scheduledEndAt)}
+        </span>
+      )}
       {hire.hasReviewed && (
         <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
           <Star className="size-2.5 fill-amber-500 text-amber-500" aria-hidden />
@@ -187,6 +205,11 @@ export function HireRequestCard({
     </Button>
   ) : hasSessions ? (
     sessionsButton('sm')
+  ) : hasMonthlyBilling ? (
+    <Button variant="outline" size="sm" onClick={openMonthlyBilling}>
+      <Receipt className="size-3.5" aria-hidden />
+      Billing
+    </Button>
   ) : null
 
   return (
@@ -310,6 +333,12 @@ export function HireRequestCard({
           {isAgreementSigned && (
             <div className="flex justify-end gap-2 border-t border-border/50 px-5 py-3">
               {hasSessions && sessionsButton('sm')}
+              {hasMonthlyBilling && !needsPaymentSetup && (
+                <Button variant="outline" size="sm" onClick={openMonthlyBilling}>
+                  <Receipt className="size-3.5" aria-hidden />
+                  Billing
+                </Button>
+              )}
               {needsPaymentSetup && (
                 <Button size="sm" onClick={() => openPayment()}>
                   <CreditCard className="size-3.5" aria-hidden />

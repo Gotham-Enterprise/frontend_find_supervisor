@@ -22,6 +22,10 @@ function blockerText(blocker: PayoutRemovalBlocker): string {
       return `${plural(blocker.count, 'week', 'weeks')} of supervisee payments ${blocker.count === 1 ? "hasn't" : "haven't"} been paid out to you yet.`
     case 'unpaid_late_sessions':
       return `${plural(blocker.count, 'late session payment', 'late session payments')} ${blocker.count === 1 ? "hasn't" : "haven't"} been paid out to you yet.`
+    case 'active_monthly_hires':
+      return `${plural(blocker.count, 'supervision is', 'supervisions are')} billed monthly through this account. End ${blocker.count === 1 ? 'it' : 'them'} first.`
+    case 'unsettled_months':
+      return `${plural(blocker.count, 'month', 'months')} of client payments ${blocker.count === 1 ? "hasn't" : "haven't"} been paid out to you yet.`
     case 'stripe_balance':
       return `${formatUsdCents(blocker.amountCents)} is still in your Stripe balance. Wait for it to reach your bank.`
   }

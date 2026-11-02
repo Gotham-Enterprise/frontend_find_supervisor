@@ -11,6 +11,10 @@ import {
   HourlyQuoteSummary,
   HourlyQuoteSummarySkeleton,
 } from '@/components/HirePayment/HourlyQuoteSummary'
+import {
+  MonthlyQuoteSummary,
+  MonthlyQuoteSummarySkeleton,
+} from '@/components/MonthlyBilling/MonthlyQuoteSummary'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
@@ -26,7 +30,7 @@ import { FormInputField } from '@/components/ui/form-input-field'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UploadFile } from '@/components/ui/upload-file'
 import { previewAgreement } from '@/lib/api/supervision'
-import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
+import { IN_APP_MONTHLY_ENABLED, IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import {
   useHourlyQuote,
   usePayoutStatusQuery,
@@ -34,8 +38,10 @@ import {
   useUserSnackbar,
 } from '@/lib/hooks'
 import { useProposeAgreement, useUpdateAgreement } from '@/lib/hooks/useHires'
+import { useMonthlyQuote } from '@/lib/hooks/useMonthlyBilling'
 import { toEasternISODate } from '@/lib/utils/date'
 import { parseApiError } from '@/lib/utils/error-parser'
+import { isInAppMonthlyAgreement } from '@/lib/utils/monthly-billing'
 import { coerceStringList, formatDisplayName } from '@/lib/utils/profile-formatters'
 import { isMedicalDirectorType } from '@/lib/utils/supervisee-eligibility'
 import type { AgreementSource, HireListItem, ProposeAgreementInput } from '@/types/hire'
@@ -53,6 +59,10 @@ const MAX_HOURS_PER_WEEK = 40
 const MIN_HOURLY_RATE = 1
 const MAX_HOURLY_RATE = 10000
 const MAX_TOTAL_HOURS = 10000
+// In-app monthly (Medical Director retainers); mirrored by the backend validator.
+const MIN_MONTHLY_AMOUNT = 1
+const MAX_MONTHLY_AMOUNT = 100000
+const MAX_MONTHS = 60
 
 /** Whole hours within the weekly cap bounds (sessions are still logged in 15-minute units). */
 function isValidWeeklyCap(hours: number | null | undefined): hours is number {
@@ -73,23 +83,34 @@ function isValidHourlyRate(rate: number | null | undefined): rate is number {
  * fee) — that's what the supervisee's weekly prepays are based on — and monthly
  * (paid outside the app) otherwise.
  */
-function buildSendAgreementSchema(hasExistingUploadedFile: boolean, hourly: boolean) {
+function buildSendAgreementSchema(
+  hasExistingUploadedFile: boolean,
+  hourly: boolean,
+  monthlyInApp = false,
+) {
   const required = { error: 'Must be a number' }
   return z
     .object({
       source: z.enum(['DEFAULT_TEMPLATE', 'UPLOADED']),
       file: z.any().optional(),
       startDate: z.string().min(1, 'Start date is required'),
-      supervisionMonths: hourly
-        ? z.number().nullish()
-        : z
-            .number(required)
-            .int('Must be a whole number of months')
-            .min(1, 'Must be at least 1 month')
-            .max(60, 'Must be 60 months or less'),
+      // In-app monthly: checked below, only when the agreement runs a set number of months.
+      supervisionMonths:
+        hourly || monthlyInApp
+          ? z.number().nullish()
+          : z
+              .number(required)
+              .int('Must be a whole number of months')
+              .min(1, 'Must be at least 1 month')
+              .max(60, 'Must be 60 months or less'),
       monthlyAmount: hourly
         ? z.number().nullish()
-        : z.number(required).min(1, 'Must be at least $1'),
+        : monthlyInApp
+          ? z
+              .number(required)
+              .min(MIN_MONTHLY_AMOUNT, 'Must be at least $1')
+              .max(MAX_MONTHLY_AMOUNT, 'Must be $100,000 or less')
+          : z.number(required).min(1, 'Must be at least $1'),
       hourlyRate: hourly
         ? z
             .number(required)
@@ -106,6 +127,8 @@ function buildSendAgreementSchema(hasExistingUploadedFile: boolean, hourly: bool
       // Checked below, only when the agreement runs until a set number of hours.
       length: z.enum(['ONGOING', 'TOTAL_HOURS']),
       totalHours: z.number().nullish(),
+      // In-app monthly: month to month, or a set number of months.
+      monthlyLength: z.enum(['ONGOING', 'MONTHS']),
       signatureName: z.string().min(1, 'Please type your full legal name'),
       consent: z.boolean(),
     })
@@ -129,7 +152,7 @@ function buildSendAgreementSchema(hasExistingUploadedFile: boolean, hourly: bool
       }
       // Hourly agreements are billed in-app from the start date, so it can't be
       // in the past (the backend enforces the same, in US Eastern time).
-      if (hourly && data.startDate && data.startDate < toEasternISODate()) {
+      if ((hourly || monthlyInApp) && data.startDate && data.startDate < toEasternISODate()) {
         ctx.addIssue({
           code: 'custom',
           path: ['startDate'],
@@ -148,6 +171,19 @@ function buildSendAgreementSchema(hasExistingUploadedFile: boolean, hourly: bool
                   ? 'Must be 10,000 hours or less'
                   : null
         if (message) ctx.addIssue({ code: 'custom', path: ['totalHours'], message })
+      }
+      if (monthlyInApp && data.monthlyLength === 'MONTHS') {
+        const message =
+          data.supervisionMonths == null
+            ? 'Enter the number of months'
+            : !Number.isInteger(data.supervisionMonths)
+              ? 'Must be a whole number of months'
+              : data.supervisionMonths < 1
+                ? 'Must be at least 1 month'
+                : data.supervisionMonths > MAX_MONTHS
+                  ? 'Must be 60 months or less'
+                  : null
+        if (message) ctx.addIssue({ code: 'custom', path: ['supervisionMonths'], message })
       }
       if (!data.consent) {
         ctx.addIssue({
@@ -181,7 +217,9 @@ function defaultStartDate(hire: HireListItem): string {
   const agreement = hire.agreement
   if (agreement) {
     const proposed = toDateInputValue(agreement.startDate)
-    return agreement.hourlyRateCents != null ? laterDate(proposed, today) : proposed
+    return agreement.hourlyRateCents != null || isInAppMonthlyAgreement(agreement)
+      ? laterDate(proposed, today)
+      : proposed
   }
   return laterDate(toDateInputValue(hire.startDate ?? hire.preferredStartDate), today)
 }
@@ -194,12 +232,16 @@ function buildDefaultValues(hire: HireListItem): SendAgreementFormValues {
     file: undefined,
     startDate: defaultStartDate(hire),
     supervisionMonths: agreement?.supervisionMonths ?? hire.supervisionMonths ?? 6,
+    // Monthly terms: an edit keeps the proposed amount; a new agreement starts from the
+    // hire's amount, else the supervisor's listed monthly fee (stored in dollars).
     monthlyAmount:
       agreement?.monthlyAmount != null
         ? Number(agreement.monthlyAmount)
         : hire.monthlyAmount != null
           ? Number(hire.monthlyAmount)
-          : 0,
+          : hire.supervisorFeeType?.toUpperCase() === 'MONTHLY' && hire.supervisorFeeAmount
+            ? hire.supervisorFeeAmount
+            : 0,
     // Hourly terms: an edit keeps the proposed ones; a new agreement starts from the
     // supervisor's listed hourly fee (stored in dollars) and the requested hours.
     hourlyRate:
@@ -212,6 +254,12 @@ function buildDefaultValues(hire: HireListItem): SendAgreementFormValues {
     // Ongoing unless the agreement (or the supervisee's request) has a set number of hours.
     length: totalHours != null ? 'TOTAL_HOURS' : 'ONGOING',
     totalHours,
+    // In-app monthly retainers are month to month unless a number of months was set.
+    monthlyLength: agreement
+      ? isInAppMonthlyAgreement(agreement) && agreement.supervisionMonths != null
+        ? 'MONTHS'
+        : 'ONGOING'
+      : 'ONGOING',
     signatureName: '',
     consent: false,
   }
@@ -266,6 +314,7 @@ const LENGTH_OPTIONS: {
 function termsInput(
   values: SendAgreementFormValues,
   hourly: boolean,
+  monthlyInApp = false,
 ): Pick<
   ProposeAgreementInput,
   'supervisionMonths' | 'monthlyAmount' | 'hourlyRate' | 'maxHoursPerWeek' | 'totalHours'
@@ -277,11 +326,36 @@ function termsInput(
         // Omitted for an ongoing agreement, which the backend stores as no total.
         totalHours: values.length === 'TOTAL_HOURS' ? (values.totalHours ?? undefined) : undefined,
       }
-    : {
-        supervisionMonths: values.supervisionMonths ?? undefined,
-        monthlyAmount: values.monthlyAmount ?? undefined,
-      }
+    : monthlyInApp
+      ? {
+          // Omitted for month to month, which the backend stores as no set number.
+          supervisionMonths:
+            values.monthlyLength === 'MONTHS' ? (values.supervisionMonths ?? undefined) : undefined,
+          monthlyAmount: values.monthlyAmount ?? undefined,
+        }
+      : {
+          supervisionMonths: values.supervisionMonths ?? undefined,
+          monthlyAmount: values.monthlyAmount ?? undefined,
+        }
 }
+
+/** In-app monthly agreements run month to month or for a set number of months. */
+const MONTHLY_LENGTH_OPTIONS: {
+  value: SendAgreementFormValues['monthlyLength']
+  label: string
+  description: (superviseeName: string) => string
+}[] = [
+  {
+    value: 'ONGOING',
+    label: 'Month to month',
+    description: (name) => `Continues until you or ${name} ends it.`,
+  },
+  {
+    value: 'MONTHS',
+    label: 'A set number of months',
+    description: () => 'Ends automatically after the last month.',
+  },
+]
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -313,15 +387,18 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
   const { data: myProfile, isLoading: profileLoading } = useSupervisorProfile(open)
   const feeType = myProfile?.supervisionFeeType ?? hire.supervisorFeeType
   const hourly = IN_APP_PAYMENTS_ENABLED && feeType?.toUpperCase() !== 'MONTHLY'
-  const payoutStatus = usePayoutStatusQuery(open && hourly)
+  // Monthly fees are billed in-app too once monthly billing is on (Medical Director retainers).
+  const monthlyInApp = IN_APP_MONTHLY_ENABLED && feeType?.toUpperCase() === 'MONTHLY'
+  const billedInApp = hourly || monthlyInApp
+  const payoutStatus = usePayoutStatusQuery(open && billedInApp)
   const termsLoading =
-    (IN_APP_PAYMENTS_ENABLED && profileLoading) || (hourly && payoutStatus.isLoading)
+    (IN_APP_PAYMENTS_ENABLED && profileLoading) || (billedInApp && payoutStatus.isLoading)
   // Billed agreements need the supervisor's payout account (the backend enforces it too).
-  const payoutsReady = !hourly || payoutStatus.data?.status === 'ready'
+  const payoutsReady = !billedInApp || payoutStatus.data?.status === 'ready'
 
   const schema = useMemo(
-    () => buildSendAgreementSchema(hasExistingUploadedFile, hourly),
-    [hasExistingUploadedFile, hourly],
+    () => buildSendAgreementSchema(hasExistingUploadedFile, hourly, monthlyInApp),
+    [hasExistingUploadedFile, hourly, monthlyInApp],
   )
 
   const form = useForm<SendAgreementFormValues>({
@@ -339,6 +416,23 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
   const hourlyRate = useWatch({ control: form.control, name: 'hourlyRate' })
   const maxHoursPerWeek = useWatch({ control: form.control, name: 'maxHoursPerWeek' })
   const length = useWatch({ control: form.control, name: 'length' })
+  const monthlyAmount = useWatch({ control: form.control, name: 'monthlyAmount' })
+  const monthlyLength = useWatch({ control: form.control, name: 'monthlyLength' })
+  // Debounced like the hourly quote below.
+  const [quotedMonthlyAmount, setQuotedMonthlyAmount] = useState<number | null>(null)
+  useEffect(() => {
+    const id = setTimeout(() => setQuotedMonthlyAmount(monthlyAmount ?? null), 300)
+    return () => clearTimeout(id)
+  }, [monthlyAmount])
+  const { data: monthlyQuote } = useMonthlyQuote(quotedMonthlyAmount, open && monthlyInApp)
+  const monthlyAmountValid =
+    monthlyAmount != null &&
+    monthlyAmount >= MIN_MONTHLY_AMOUNT &&
+    monthlyAmount <= MAX_MONTHLY_AMOUNT
+  const monthlyQuoteMatches =
+    monthlyAmountValid &&
+    quotedMonthlyAmount === monthlyAmount &&
+    monthlyQuote?.monthlyAmountCents === Math.round(monthlyAmount * 100)
 
   // Debounced so the breakdown isn't re-fetched on every keystroke.
   const [quoteTerms, setQuoteTerms] = useState<{ rate: number | null; cap: number | null }>({
@@ -411,7 +505,9 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
     const termsValid = await form.trigger(
       hourly
         ? ['startDate', 'hourlyRate', 'maxHoursPerWeek', 'length', 'totalHours']
-        : ['startDate', 'supervisionMonths', 'monthlyAmount'],
+        : monthlyInApp
+          ? ['startDate', 'monthlyAmount', 'monthlyLength', 'supervisionMonths']
+          : ['startDate', 'supervisionMonths', 'monthlyAmount'],
     )
     if (!termsValid) return
     const values = form.getValues()
@@ -419,7 +515,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
     try {
       const blob = await previewAgreement(hire.id, {
         startDate: values.startDate,
-        ...termsInput(values, hourly),
+        ...termsInput(values, hourly, monthlyInApp),
         signatureName: values.signatureName.trim() || undefined,
       })
       setPreviewUrl(URL.createObjectURL(blob))
@@ -436,7 +532,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
       source: values.source,
       file: values.source === 'UPLOADED' && values.file instanceof File ? values.file : null,
       startDate: values.startDate,
-      ...termsInput(values, hourly),
+      ...termsInput(values, hourly, monthlyInApp),
       signatureName: values.signatureName,
     }
     try {
@@ -560,7 +656,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                 {source === 'UPLOADED' && (
                   <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                     <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                    {hourly
+                    {billedInApp
                       ? `${superviseeName} is billed using the terms below, not the amounts in your document. Make sure your document matches them.`
                       : `${superviseeName} will see the terms below next to your document. Make sure your document matches them.`}
                   </p>
@@ -577,7 +673,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                   label="Supervision Start Date"
                   required
                   type="date"
-                  min={hourly ? toEasternISODate() : undefined}
+                  min={billedInApp ? toEasternISODate() : undefined}
                   clearErrorsOnChange
                   isSubmitting={isSubmitting}
                   rules={{ required: 'Start date is required' }}
@@ -706,6 +802,104 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                       account via Stripe.
                     </p>
                   </>
+                ) : monthlyInApp ? (
+                  <>
+                    <FormInputField
+                      control={form.control}
+                      name="monthlyAmount"
+                      label="Monthly Amount ($)"
+                      required
+                      type="number"
+                      numberValue
+                      clearErrorsOnChange
+                      min={MIN_MONTHLY_AMOUNT}
+                      max={MAX_MONTHLY_AMOUNT}
+                      step={0.01}
+                      isSubmitting={isSubmitting}
+                      placeholder="e.g. 1000"
+                      startAdornment={<span className="text-muted-foreground">$</span>}
+                    />
+                    {/* Fixed-height slot, as for hourly terms, so the form doesn't shift. */}
+                    <div className="min-h-[9.5rem]">
+                      {!monthlyAmountValid ? (
+                        <p className="flex min-h-[9.5rem] items-center justify-center rounded-lg border border-dashed px-4 text-center text-xs text-muted-foreground">
+                          Enter a monthly amount between $1 and $100,000 to see your breakdown.
+                        </p>
+                      ) : monthlyQuote && monthlyQuoteMatches ? (
+                        <MonthlyQuoteSummary quote={monthlyQuote} perspective="supervisor" />
+                      ) : (
+                        <MonthlyQuoteSummarySkeleton />
+                      )}
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="monthlyLength"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Agreement Length <span className="text-destructive">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <div
+                              role="radiogroup"
+                              aria-label="Agreement length"
+                              className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+                            >
+                              {MONTHLY_LENGTH_OPTIONS.map((opt) => (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  role="radio"
+                                  aria-checked={field.value === opt.value}
+                                  disabled={isSubmitting}
+                                  onClick={() => {
+                                    field.onChange(opt.value)
+                                    form.clearErrors('supervisionMonths')
+                                  }}
+                                  className={`rounded-lg border p-3 text-left transition-colors ${
+                                    field.value === opt.value
+                                      ? 'border-primary bg-primary/5'
+                                      : 'border-border hover:bg-muted'
+                                  }`}
+                                >
+                                  <p className="text-sm font-medium text-foreground">{opt.label}</p>
+                                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                                    {opt.description(superviseeName)}
+                                  </p>
+                                </button>
+                              ))}
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {monthlyLength === 'MONTHS' && (
+                      <FormInputField
+                        control={form.control}
+                        name="supervisionMonths"
+                        label="Number of Months"
+                        required
+                        type="number"
+                        numberValue
+                        clearErrorsOnChange
+                        min={1}
+                        max={MAX_MONTHS}
+                        step={1}
+                        isSubmitting={isSubmitting}
+                        placeholder="e.g. 12"
+                      />
+                    )}
+
+                    <p className="text-xs text-muted-foreground">
+                      {superviseeName} is charged at the start of each month, from the start date.
+                      You&apos;re paid 3 days after each month ends, to your bank account via
+                      Stripe. If either of you ends the supervision, it continues until the end of
+                      the month already paid for.
+                    </p>
+                  </>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
                     <FormInputField
@@ -782,7 +976,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                 />
               </fieldset>
 
-              {hourly && payoutStatus.data && !payoutsReady && (
+              {billedInApp && payoutStatus.data && !payoutsReady && (
                 <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                   <AlertCircle className="mt-0.5 size-4 shrink-0" />
                   <span>

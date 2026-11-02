@@ -8,9 +8,12 @@ import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import type { EndSupervisionOutcome } from '@/lib/api/supervision'
 import { useEndSupervision, useUserSnackbar } from '@/lib/hooks'
+import { useHireMonthlyBilling } from '@/lib/hooks/useMonthlyBilling'
 import { cn } from '@/lib/utils'
+import { formatEasternDateTime } from '@/lib/utils/date'
 import { parseApiError } from '@/lib/utils/error-parser'
-import { formatDisplayName } from '@/lib/utils/profile-formatters'
+import { usesInAppMonthlyBilling } from '@/lib/utils/monthly-billing'
+import { formatDateOnly, formatDisplayName } from '@/lib/utils/profile-formatters'
 import type { HireListItem } from '@/types/hire'
 
 const REASON_MAX = 500
@@ -72,6 +75,17 @@ function EndSupervisionBody({
   const { showSuccess, showError } = useUserSnackbar()
   const superviseeName = formatDisplayName(hire.supervisee)
   const billedInApp = hire.agreement?.hourlyRateCents != null
+  // In-app monthly: a paid month runs to its end; an unpaid one only after 7 days.
+  const monthly = usesInAppMonthlyBilling(hire) && hire.agreement?.superviseeSignedAt != null
+  const { data: monthlyBilling, isLoading: monthlyLoading } = useHireMonthlyBilling(
+    hire.id,
+    monthly,
+  )
+  const paidMonth = monthlyBilling?.periods.find((p) => p.isCurrent && p.paymentStatus === 'PAID')
+  const unpaidInGrace =
+    monthlyBilling?.unpaid != null && !monthlyBilling.unpaid.graceOver
+      ? monthlyBilling.unpaid
+      : null
   const isPending = endMutation.isPending
 
   // mutateAsync, not mutate(…, { onSuccess }): the hire leaves the current
@@ -88,9 +102,14 @@ function EndSupervisionBody({
       showError(parseApiError(error))
       return
     }
-    showSuccess(outcome === 'completed' ? 'Supervision completed' : 'Supervision ended', {
-      description: `${superviseeName} has been notified.`,
-    })
+    showSuccess(
+      paidMonth
+        ? `Supervision ends after ${formatDateOnly(paidMonth.endDate)}`
+        : outcome === 'completed'
+          ? 'Supervision completed'
+          : 'Supervision ended',
+      { description: `${superviseeName} has been notified.` },
+    )
     onOpenChange(false)
   }
 
@@ -136,13 +155,23 @@ function EndSupervisionBody({
         </p>
       )}
 
+      {monthly && !monthlyLoading && (
+        <p className="rounded-lg border bg-muted/40 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+          {unpaidInGrace
+            ? `${superviseeName}'s monthly payment is unpaid. They have until ${unpaidInGrace.graceEndsAt ? formatEasternDateTime(unpaidInGrace.graceEndsAt) : 'the end of their 7-day grace period'} to pay; you can end the supervision after that if it's still unpaid.`
+            : paidMonth
+              ? `This month is already paid, so the supervision continues through ${formatDateOnly(paidMonth.endDate)} and you're paid for it after it ends. No more monthly payments are charged after that.`
+              : 'The supervision ends now. No more monthly payments are charged, and an unpaid month is canceled.'}
+        </p>
+      )}
+
       <div className="flex justify-end gap-2">
         <Button variant="outline" disabled={isPending} onClick={() => onOpenChange(false)}>
           Cancel
         </Button>
         <Button
           variant="destructive"
-          disabled={!outcome || isPending}
+          disabled={!outcome || isPending || unpaidInGrace != null || (monthly && monthlyLoading)}
           onClick={() => void handleEnd()}
         >
           {isPending ? 'Ending…' : 'End Supervision'}

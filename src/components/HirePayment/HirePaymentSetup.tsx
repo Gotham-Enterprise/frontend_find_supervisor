@@ -226,7 +226,7 @@ export function HirePaymentSetup({
   )
 }
 
-function PaymentChoice({
+export function PaymentChoice({
   checked,
   disabled,
   onSelect,
@@ -257,18 +257,21 @@ function PaymentChoice({
 }
 
 /** Collects a new card with a SetupIntent, then hands its payment method to `onCardSaved`. */
-function NewCardForm({
+export function NewCardForm({
   hireId,
   ctaLabel,
   authorization,
   isSaving,
   onCardSaved,
+  createSetupIntent = createHirePaymentSetupIntent,
 }: {
   hireId: string
   ctaLabel: string
   authorization: string
   isSaving: boolean
   onCardSaved: (paymentMethodId: string) => void
+  /** Which hire billing the card is for; the hourly weekly prepays by default. */
+  createSetupIntent?: (hireId: string) => Promise<{ clientSecret: string }>
 }) {
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -277,10 +280,10 @@ function NewCardForm({
   useEffect(() => {
     if (requested.current) return
     requested.current = true
-    createHirePaymentSetupIntent(hireId)
+    createSetupIntent(hireId)
       .then(({ clientSecret: secret }) => setClientSecret(secret))
       .catch((err) => setError(parseApiError(err)))
-  }, [hireId])
+  }, [hireId, createSetupIntent])
 
   if (!stripePromise) {
     return <p className="text-sm text-destructive">Card payments are not configured.</p>

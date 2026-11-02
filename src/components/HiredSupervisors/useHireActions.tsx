@@ -6,6 +6,8 @@ import { useState } from 'react'
 
 import { HirePaymentDialog } from '@/components/HirePayment/HirePaymentDialog'
 import { HireSessionsDialog } from '@/components/HireSessions/HireSessionsDialog'
+import { MonthlyBillingDialog } from '@/components/MonthlyBilling/MonthlyBillingDialog'
+import { MonthlyPaymentDialog } from '@/components/MonthlyBilling/MonthlyPaymentDialog'
 import { LeaveReviewModal } from '@/components/reviews/LeaveReviewModal'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -22,8 +24,10 @@ import {
 import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import { useCancelHire, useMarkHireAsCompleted, useUserSnackbar } from '@/lib/hooks'
 import { useConfetti } from '@/lib/hooks/useConfetti'
+import { useHireMonthlyBilling } from '@/lib/hooks/useMonthlyBilling'
 import { parseApiError } from '@/lib/utils/error-parser'
-import { formatDisplayName } from '@/lib/utils/profile-formatters'
+import { usesInAppMonthlyBilling } from '@/lib/utils/monthly-billing'
+import { formatDateOnly, formatDisplayName } from '@/lib/utils/profile-formatters'
 import { canMarkHireCompleted, getAgreementStage } from '@/lib/utils/supervision-status'
 import type { HireListItem, HireStatus } from '@/types/hire'
 import type { Review } from '@/types/review'
@@ -49,6 +53,8 @@ interface UseHireActionsOptions {
   agreementDeepLink?: { open: boolean; onClose: () => void }
   /** A `?sessions=<id>` link asked for this hire's sessions dialog (no-workroom lists only). */
   sessionsDeepLink?: { open: boolean; onClose: () => void }
+  /** A `?billing=<id>` link asked for this hire's monthly billing dialog. */
+  billingDeepLink?: { open: boolean; onClose: () => void }
 }
 
 /**
@@ -62,6 +68,7 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
     isMedicalDirectors = false,
     agreementDeepLink,
     sessionsDeepLink,
+    billingDeepLink,
   } = options
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [agreementOpenManually, setAgreementOpenManually] = useState(false)
@@ -98,7 +105,9 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
     : `/find-supervisors/${hire.supervisorId}?from=hired-supervisors`
 
   const hasRejectionReason = hire.status === 'REJECTED' && Boolean(hire.rejectionReason?.trim())
-  const canCancel = CANCELABLE_STATUSES.includes(hire.status)
+  // A monthly hire already ending when its paid month runs out can't be ended again.
+  const endScheduled = hire.scheduledEndAt != null
+  const canCancel = CANCELABLE_STATUSES.includes(hire.status) && !endScheduled
 
   // Agreement: sign while the supervisor's proposal awaits the supervisee's signature
   const agreementStage = getAgreementStage(hire)
@@ -109,12 +118,23 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
   const isAgreementSigned = hasAgreement && agreementStage === 'SIGNED'
   // Hourly agreement whose card for the weekly prepays isn't saved yet. The
   // card comes before the signature, so this covers the pending-signature stage too.
+  // In-app monthly agreements (Medical Director retainers) need the card first too.
+  const monthlyBilled = usesInAppMonthlyBilling(hire)
   const needsPaymentSetup =
     IN_APP_PAYMENTS_ENABLED &&
     (isAgreementSigned || canSignAgreement) &&
     (hire.status === 'ACCEPTED' || hire.status === 'ACTIVE') &&
-    hire.agreement?.hourlyRateCents != null &&
+    (hire.agreement?.hourlyRateCents != null || monthlyBilled) &&
     hire.paymentMethodSavedAt == null
+
+  // Signed in-app monthly agreement: its months and payments are in the billing dialog.
+  const hasMonthlyBilling = monthlyBilled && isAgreementSigned
+  const [billingOpenManually, setBillingOpenManually] = useState(false)
+  const billingOpen = billingOpenManually || (hasMonthlyBilling && (billingDeepLink?.open ?? false))
+  const setBillingOpen = (open: boolean) => {
+    setBillingOpenManually(open)
+    if (!open) billingDeepLink?.onClose()
+  }
 
   // Signed hourly agreement: sessions are logged and reviewed in the app.
   const hasSessions =
@@ -126,7 +146,19 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
   }
 
   // Mark as Completed: only when ACCEPTED or ACTIVE, and the agreement is fully signed
-  const canComplete = canMarkHireCompleted(hire)
+  const canComplete = canMarkHireCompleted(hire) && !endScheduled
+
+  // Ending a paid monthly hire keeps it running until the paid month ends (no refund).
+  const { data: monthlyBilling } = useHireMonthlyBilling(
+    hire.id,
+    hasMonthlyBilling && (cancelOpen || completeOpen),
+  )
+  const paidMonth = monthlyBilling?.periods.find((p) => p.isCurrent && p.paymentStatus === 'PAID')
+  const monthlyEndNote = hasMonthlyBilling
+    ? paidMonth
+      ? ` Since this month is already paid, supervision continues through ${formatDateOnly(paidMonth.endDate)}, and that month isn't refunded. No more monthly payments will be charged.`
+      : ' No more monthly payments will be charged.'
+    : ''
 
   // Review eligibility:
   // - "Leave Review": hire is COMPLETED and no review submitted yet
@@ -145,6 +177,13 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
     completeMutation.mutate(hire.id, {
       onSuccess: () => {
         setCompleteOpen(false)
+        if (hasMonthlyBilling && paidMonth) {
+          // Completes when the paid month ends; the review comes after that.
+          showSuccess('Supervision will complete at the end of this month.', {
+            description: 'No more monthly payments will be charged.',
+          })
+          return
+        }
         burst()
         showSuccess('Supervision marked as completed.')
         setPostCompleteReviewFlow(true)
@@ -160,7 +199,14 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
   function handleCancelConfirm() {
     cancelMutation.mutate(hire.id, {
       onSuccess: () => {
-        showSuccess('Supervision request cancelled.')
+        showSuccess(
+          hasMonthlyBilling && paidMonth
+            ? 'Supervision will end at the end of this month.'
+            : 'Supervision request cancelled.',
+          hasMonthlyBilling
+            ? { description: 'No more monthly payments will be charged.' }
+            : undefined,
+        )
         setCancelOpen(false)
       },
       onError: (err) => {
@@ -234,6 +280,14 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
                   )}
                 </>
               )}
+              {hasMonthlyBilling && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setBillingOpen(true)}>
+                    Monthly Billing
+                  </DropdownMenuItem>
+                </>
+              )}
               {hasRejectionReason && (
                 <>
                   <DropdownMenuSeparator />
@@ -301,7 +355,7 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
         />
       )}
 
-      {hasAgreement && IN_APP_PAYMENTS_ENABLED && (
+      {hasAgreement && IN_APP_PAYMENTS_ENABLED && !monthlyBilled && (
         <HirePaymentDialog
           hire={hire}
           open={payment.open}
@@ -309,6 +363,26 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
           changeCard={payment.changeCard}
           // Card saved while the signature is still pending: bring them back to sign.
           onSaved={canSignAgreement ? () => setAgreementOpen(true) : undefined}
+        />
+      )}
+
+      {monthlyBilled && (
+        <MonthlyPaymentDialog
+          hire={hire}
+          open={payment.open}
+          onOpenChange={(open) => setPayment((prev) => ({ ...prev, open }))}
+          changeCard={payment.changeCard}
+          onSaved={canSignAgreement ? () => setAgreementOpen(true) : undefined}
+        />
+      )}
+
+      {hasMonthlyBilling && (
+        <MonthlyBillingDialog
+          hireId={hire.id}
+          counterpartName={supervisorName}
+          open={billingOpen}
+          onOpenChange={setBillingOpen}
+          onChangeCard={() => openPayment({ changeCard: hire.paymentMethodSavedAt != null })}
         />
       )}
 
@@ -327,7 +401,11 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
         open={completeOpen}
         onOpenChange={setCompleteOpen}
         title="Mark supervision as completed?"
-        description={`This will mark your supervision with ${supervisorName} as completed. You can leave an optional review next, or skip and add one later from this card. This action cannot be undone.`}
+        description={
+          hasMonthlyBilling
+            ? `This will mark your supervision with ${supervisorName} as completed.${monthlyEndNote} This action cannot be undone.`
+            : `This will mark your supervision with ${supervisorName} as completed. You can leave an optional review next, or skip and add one later from this card. This action cannot be undone.`
+        }
         confirmLabel="Mark as Completed"
         isPending={completeMutation.isPending}
         onConfirm={handleCompleteConfirm}
@@ -336,9 +414,13 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
       <ConfirmDialog
         open={cancelOpen}
         onOpenChange={(open) => !open && setCancelOpen(false)}
-        title="Cancel supervision request?"
-        description={`You are about to cancel your supervision request with ${supervisorName}. This action cannot be undone.`}
-        confirmLabel="Cancel Request"
+        title={hasMonthlyBilling ? 'End supervision?' : 'Cancel supervision request?'}
+        description={
+          hasMonthlyBilling
+            ? `You are about to end your supervision with ${supervisorName}.${monthlyEndNote} This action cannot be undone.`
+            : `You are about to cancel your supervision request with ${supervisorName}. This action cannot be undone.`
+        }
+        confirmLabel={hasMonthlyBilling ? 'End Supervision' : 'Cancel Request'}
         destructive
         isPending={cancelMutation.isPending}
         onConfirm={handleCancelConfirm}
@@ -366,6 +448,8 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
     canSignAgreement,
     needsPaymentSetup,
     hasSessions,
+    hasMonthlyBilling,
+    openMonthlyBilling: () => setBillingOpen(true),
     openAgreement: () => setAgreementOpen(true),
     openPayment,
     openSessions: () => setSessionsOpen(true),

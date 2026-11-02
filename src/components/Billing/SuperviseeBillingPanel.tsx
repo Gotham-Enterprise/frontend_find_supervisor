@@ -16,6 +16,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 import { SuperviseeRouteGuard } from '@/components/Layout/SuperviseeRouteGuard'
+import { MonthlyPaymentsCard } from '@/components/MonthlyBilling/MonthlyPaymentsCard'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -737,6 +738,7 @@ function SuperviseeBillingContent() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
             <div className="flex flex-col gap-6 lg:col-span-3">
               <PaymentHistoryCard />
+              <MonthlyPaymentsCard role="supervisee" />
             </div>
             <div className="flex flex-col gap-6 lg:col-span-2">
               <SavedCardsCard />

@@ -212,6 +212,13 @@ export interface HireListItem {
   transactionFeePct: string | null
   /** Set once the supervisee saves the card for an hourly agreement's weekly prepays. */
   paymentMethodSavedAt: string | null
+  /**
+   * In-app monthly billing: a canceled or ended hire keeps running until its
+   * paid month ends (12:00 AM US Eastern), then becomes `scheduledEndStatus`.
+   */
+  scheduledEndAt?: string | null
+  scheduledEndStatus?: 'COMPLETED' | 'CANCELED' | null
+  scheduledEndBy?: 'SUPERVISOR' | 'SUPERVISEE' | 'TERM' | null
   status: HireStatus
   agreedAt: string | null
   acceptedAt: string | null

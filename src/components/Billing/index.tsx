@@ -19,6 +19,7 @@ import {
 } from '@/components/Dashboard/subscription/SubscriptionFeatureRows'
 import { SubscriptionModal } from '@/components/Dashboard/subscription/SubscriptionModal'
 import { SupervisorRouteGuard } from '@/components/Layout/SupervisorRouteGuard'
+import { MonthlyPaymentsCard } from '@/components/MonthlyBilling/MonthlyPaymentsCard'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -649,6 +650,7 @@ function BillingContent() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
             <div className="flex flex-col gap-6 lg:col-span-3">
               <EarningsCard />
+              <MonthlyPaymentsCard role="supervisor" />
             </div>
             <div className="flex flex-col gap-6 lg:col-span-2">
               <PayoutsCard />
