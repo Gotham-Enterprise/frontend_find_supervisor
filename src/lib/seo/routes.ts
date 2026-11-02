@@ -140,20 +140,24 @@ export function stateValueToSlug(value: string): string | null {
 /**
  * State slug for a public profile URL (/supervisors/[state]/[id],
  * /browse-supervisees/[state]/[id]) when no state page context applies.
- * Supervision follows licensure, so it prefers the home state when they're
- * licensed there, else the first licensed state; the home state alone is the
- * last resort. Returns null when nothing resolves to a known state.
+ * `states` is what the browse state pages filter on: licensed states for
+ * supervisors, the states a supervisee needs supervision in for supervisees.
+ * The URL state is always one of those (so the profile is listed on that state
+ * page), preferring the supervisee's own license state, then the home state
+ * (matching the location shown), then the first listed state. The home state
+ * alone is the last resort. Returns null when nothing resolves to a known state.
  */
 export function profileStateSlug(
   homeState: string | null | undefined,
-  licensedStates: string[],
+  states: string[],
+  licenseState?: string | null,
 ): string | null {
   const homeSlug = homeState ? stateValueToSlug(homeState) : null
-  const licensedSlugs = licensedStates
-    .map(stateValueToSlug)
-    .filter((slug): slug is string => slug !== null)
-  if (homeSlug && licensedSlugs.includes(homeSlug)) return homeSlug
-  return licensedSlugs[0] ?? homeSlug
+  const licenseSlug = licenseState ? stateValueToSlug(licenseState) : null
+  const stateSlugs = states.map(stateValueToSlug).filter((slug): slug is string => slug !== null)
+  if (licenseSlug && stateSlugs.includes(licenseSlug)) return licenseSlug
+  if (homeSlug && stateSlugs.includes(homeSlug)) return homeSlug
+  return stateSlugs[0] ?? homeSlug
 }
 
 /** Returns true if the string looks like a UUID (supervisor ID). */

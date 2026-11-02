@@ -13,7 +13,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 
 import { Breadcrumb } from '@/components/seo/Breadcrumb'
 import type { PublicSuperviseeProfile } from '@/lib/api/public-supervisees'
@@ -22,13 +22,16 @@ import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
 import {
   isUUID,
   isValidStateSlug,
+  profileStateSlug,
   stateAbbreviationToDisplayName,
   stateSlugToDisplayName,
+  stateValueToSlug,
 } from '@/lib/seo/routes'
 import { formatPublicIdentity } from '@/lib/utils/identity-display'
 import {
   formatAvailability,
   formatBudgetRange,
+  formatCredentialWithState,
   formatHowSoonLooking,
   formatSupervisionFormat,
 } from '@/lib/utils/profile-formatters'
@@ -80,6 +83,23 @@ export default async function SuperviseeProfilePage({ params }: Props) {
   const stateName = stateSlugToDisplayName(stateSlug)
   const supervisee = await fetchPublicSuperviseeById(id)
 
+  // Keep the URL state one they're listed under: a stale link, or a state they
+  // since dropped from their supervision needs, moves to their current one.
+  // Links from a state page always pass, since that page lists them there.
+  if (supervisee) {
+    const listedSlugs = supervisee.stateOfLicensure.map(stateValueToSlug)
+    if (!listedSlugs.includes(stateSlug)) {
+      const currentSlug = profileStateSlug(
+        supervisee.state,
+        supervisee.stateOfLicensure,
+        supervisee.licensureState,
+      )
+      if (currentSlug && currentSlug !== stateSlug) {
+        redirect(`/browse-supervisees/${currentSlug}/${id}`)
+      }
+    }
+  }
+
   const breadcrumbs = [
     { name: 'Home', href: '/' },
     { name: 'Browse Supervisees', href: '/browse-supervisees' },
@@ -126,7 +146,11 @@ function SuperviseePublicProfile({
   const format = supervisee.preferredFormat
     ? formatSupervisionFormat(supervisee.preferredFormat)
     : ''
-  const tags = [supervisee.title, format].filter(Boolean)
+  // e.g. "PhD (CT)" — the state their own credential is held in.
+  const credential = supervisee.title
+    ? formatCredentialWithState(supervisee.title, supervisee.licensureState)
+    : ''
+  const tags = [credential, format].filter(Boolean)
   // The public endpoint already strips the blocks the supervisee kept private.
   const { pronouns, genderIdentity, languages } = formatPublicIdentity(supervisee)
 
@@ -233,39 +257,55 @@ function SuperviseePublicProfile({
         {languages.length > 0 && <ProfileDetail label="Languages" value={languages.join(', ')} />}
       </div>
 
-      {/* Licensed in */}
-      {supervisee.stateOfLicensure.length > 0 && (
-        <div className="border-t bg-[#F0F7F3] px-6 py-5">
-          <div className="flex items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="size-4 shrink-0 text-[#006D36]"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-            <p className="text-sm font-semibold text-[#006D36]">
-              Licensed in {supervisee.stateOfLicensure.length} state
-              {supervisee.stateOfLicensure.length > 1 ? 's' : ''}
-            </p>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {supervisee.stateOfLicensure.map((s) => (
-              <span
-                key={s}
-                className="rounded-md border border-[#006D36]/20 bg-white px-3 py-1 text-sm font-semibold text-[#006D36]"
-              >
-                {stateAbbreviationToDisplayName(s)}{' '}
-                <span className="font-normal opacity-70">({s.toUpperCase()})</span>
-              </span>
-            ))}
-          </div>
+      {/* States — where their own license is held, then where they need supervision */}
+      {(supervisee.licensureState || supervisee.stateOfLicensure.length > 0) && (
+        <div className="space-y-5 border-t bg-[#F0F7F3] px-6 py-5">
+          {supervisee.licensureState && (
+            <div>
+              <div className="flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="size-4 shrink-0 text-[#006D36]"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                <p className="text-sm font-semibold text-[#006D36]">Licensed in</p>
+              </div>
+              <StateChips states={[supervisee.licensureState]} />
+            </div>
+          )}
+          {supervisee.stateOfLicensure.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="size-4 shrink-0 text-[#006D36]"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <p className="text-sm font-semibold text-[#006D36]">
+                  Seeking supervision in {supervisee.stateOfLicensure.length} state
+                  {supervisee.stateOfLicensure.length > 1 ? 's' : ''}
+                </p>
+              </div>
+              <StateChips states={supervisee.stateOfLicensure} />
+            </div>
+          )}
         </div>
       )}
 
@@ -381,6 +421,22 @@ function ProfileNotFound({ stateSlug, stateName }: { stateSlug: string; stateNam
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function StateChips({ states }: { states: string[] }) {
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {states.map((s) => (
+        <span
+          key={s}
+          className="rounded-md border border-[#006D36]/20 bg-white px-3 py-1 text-sm font-semibold text-[#006D36]"
+        >
+          {stateAbbreviationToDisplayName(s)}{' '}
+          <span className="font-normal opacity-70">({s.toUpperCase()})</span>
+        </span>
+      ))}
+    </div>
+  )
+}
 
 function ProfileDetail({ label, value }: { label: string; value: string }) {
   return (

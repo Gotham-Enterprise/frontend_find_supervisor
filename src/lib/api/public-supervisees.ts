@@ -30,13 +30,19 @@ export interface PublicSuperviseeSummary {
   specialty: string
   /** License/credential in progress, e.g. "AMFT", "LPC-Associate". */
   title: string
+  /** State abbreviation the credential is held in, e.g. "CT". Empty when unset. */
+  licensureState: string
   /** "VIRTUAL" | "IN_PERSON" | "HYBRID" | "" */
   preferredFormat: string
   /** Timeline enum, e.g. "IMMEDIATELY", "WITHIN_2_WEEKS". */
   howSoonLooking: string
   /** Supervisor types they need, e.g. ["Mental Health Counselors"]. */
   typeOfSupervisorNeeded: string[]
-  /** Licensed states (the retired "state looking in" concept now maps here). */
+  /**
+   * States they need supervision in (Supervision Needs → "States of Licensure";
+   * the retired "state looking in" concept maps here). Browse state pages filter
+   * on these. Not where they hold their own license — that's `licensureState`.
+   */
   stateOfLicensure: string[]
   /** Truncated `idealSupervisor` free text — what they want in a supervisor. */
   bio: string
@@ -104,6 +110,7 @@ function parseRow(row: Record<string, unknown>): PublicSuperviseeSummary {
     occupation: String(row.occupation ?? ''),
     specialty: String(row.specialty ?? ''),
     title: String(row.title ?? ''),
+    licensureState: String(row.licensureState ?? ''),
     preferredFormat: String(row.preferredFormat ?? ''),
     howSoonLooking: String(row.howSoonLooking ?? ''),
     typeOfSupervisorNeeded: Array.isArray(row.typeOfSupervisorNeeded)

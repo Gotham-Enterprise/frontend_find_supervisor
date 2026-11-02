@@ -3,7 +3,11 @@ import Link from 'next/link'
 import { getAvatarColor } from '@/components/SearchSupervisee/helpers'
 import type { PublicSuperviseeSummary } from '@/lib/api/public-supervisees'
 import { profileStateSlug } from '@/lib/seo/routes'
-import { formatHowSoonLooking, formatSupervisionFormat } from '@/lib/utils/profile-formatters'
+import {
+  formatCredentialWithState,
+  formatHowSoonLooking,
+  formatSupervisionFormat,
+} from '@/lib/utils/profile-formatters'
 
 interface SuperviseeCardProps {
   supervisee: PublicSuperviseeSummary
@@ -11,8 +15,8 @@ interface SuperviseeCardProps {
   index: number
   /**
    * State of the page the card is on (e.g. "california"). When omitted, the
-   * profile link uses profileStateSlug (home state if licensed there, else the
-   * first licensed state).
+   * profile link uses profileStateSlug: of the states they need supervision
+   * in, their license state, else their home state, else the first one.
    */
   stateSlug?: string
 }
@@ -25,7 +29,8 @@ interface SuperviseeCardProps {
  */
 export function SuperviseeCard({ supervisee, index, stateSlug }: SuperviseeCardProps) {
   const resolvedStateSlug =
-    stateSlug ?? profileStateSlug(supervisee.state, supervisee.stateOfLicensure)
+    stateSlug ??
+    profileStateSlug(supervisee.state, supervisee.stateOfLicensure, supervisee.licensureState)
   // No recognizable state means no profile URL — fall back to the signup CTA.
   const profileHref = resolvedStateSlug
     ? `/browse-supervisees/${resolvedStateSlug}/${supervisee.id}`
@@ -37,12 +42,18 @@ export function SuperviseeCard({ supervisee, index, stateSlug }: SuperviseeCardP
     compact: true,
     emptyFallback: '',
   })
-  const licensedIn = supervisee.stateOfLicensure.join(', ')
+  const supervisionStates = supervisee.stateOfLicensure.join(', ')
   const supervisorNeeded = supervisee.typeOfSupervisorNeeded.filter(Boolean).join(', ')
   // Quick-scan card: credential only — occupation, specialty, budget and the
   // ideal-supervisor text live on the profile page.
-  const credential = supervisee.title || supervisee.occupation
-  const tags = [format, licensedIn && `Licensed in ${licensedIn}`, timeline].filter(Boolean)
+  const credential = supervisee.title
+    ? formatCredentialWithState(supervisee.title, supervisee.licensureState)
+    : supervisee.occupation
+  const tags = [
+    format,
+    supervisionStates && `Seeking supervision in ${supervisionStates}`,
+    timeline,
+  ].filter(Boolean)
 
   return (
     <article className="flex flex-col gap-3 rounded-xl border bg-card p-5 transition-shadow hover:shadow-md">
