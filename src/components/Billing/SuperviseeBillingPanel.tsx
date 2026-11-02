@@ -100,7 +100,7 @@ function AddCardFields({ onSaved }: { onSaved: () => void }) {
         supervision agreement when you sign it.
       </p>
       <Button className="w-full" disabled={!stripe || isConfirming} onClick={handleSubmit}>
-        {isConfirming ? 'Saving…' : 'Save card'}
+        {isConfirming ? 'Saving…' : 'Save Card'}
       </Button>
     </div>
   )

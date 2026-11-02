@@ -50,6 +50,7 @@ import {
 import { useConfetti } from '@/lib/hooks/useConfetti'
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
+  coerceStringList,
   formatAvailability,
   formatBudgetRange,
   formatContactNumber,
@@ -61,6 +62,7 @@ import {
   formatSupervisionHours,
   resolveSupervisorTypeLabel,
 } from '@/lib/utils/profile-formatters'
+import { isMedicalDirectorType } from '@/lib/utils/supervisee-eligibility'
 import type { HireListItem, HireStatus } from '@/types/hire'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
@@ -668,8 +670,9 @@ function SupervisionRequestCard({
 /**
  * Shown right after a request is accepted. Accepting alone doesn't start
  * supervision: the supervisor still has to send (and the supervisee sign) an
- * agreement, which lives on the My Supervisees page. Deep link opens the
- * Send Agreement form for this hire directly.
+ * agreement, which lives on My Supervisees — or on Medical Director Clients for
+ * a hire made for the Medical Director role (that list excludes them from My
+ * Supervisees). Deep link opens the Send Agreement form for this hire directly.
  */
 function AcceptedNextStepDialog({
   hire,
@@ -682,11 +685,19 @@ function AcceptedNextStepDialog({
 }) {
   const router = useRouter()
   const superviseeName = hire ? formatDisplayName(hire.supervisee) : 'the supervisee'
+  const isMedicalDirectorHire = hire
+    ? coerceStringList(hire.typeOfSupervisorNeeded).some((name) => isMedicalDirectorType({ name }))
+    : false
+  const listPath = isMedicalDirectorHire ? '/medical-director-clients' : '/supervisees'
+  const listName = isMedicalDirectorHire ? 'Medical Director Clients' : 'My Supervisees'
+  const agreementName = isMedicalDirectorHire
+    ? 'medical director agreement'
+    : 'supervision agreement'
 
   function handleSendAgreement() {
     if (!hire) return
     onOpenChange(false)
-    router.push(`/supervisees?hire=${encodeURIComponent(hire.id)}&agreement=send`)
+    router.push(`${listPath}?hire=${encodeURIComponent(hire.id)}&agreement=send`)
   }
 
   return (
@@ -708,11 +719,12 @@ function AcceptedNextStepDialog({
               <FileSignature className="mt-0.5 size-5 shrink-0 text-amber-600" aria-hidden />
               <div className="space-y-1">
                 <p className="text-sm font-semibold text-amber-950">
-                  Next step: send a supervision agreement
+                  Next step: send a {agreementName}
                 </p>
                 <p className="text-sm leading-relaxed text-amber-900">
-                  Supervision doesn&apos;t formally begin until {superviseeName} signs an agreement.
-                  You can send one now from My Supervisees, or come back to it later.
+                  {isMedicalDirectorHire ? 'Your services don' : 'Supervision doesn'}&apos;t
+                  formally begin until {superviseeName} signs an agreement. You can send one now
+                  from {listName}, or come back to it later.
                 </p>
               </div>
             </div>

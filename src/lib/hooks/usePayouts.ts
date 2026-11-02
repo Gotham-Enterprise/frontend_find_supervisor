@@ -18,6 +18,7 @@ import {
 } from '@/lib/api/supervision'
 
 import { hireKeys } from './useHires'
+import { hireSessionKeys } from './useHireSessions'
 
 export const payoutKeys = {
   all: ['supervision', 'payouts'] as const,
@@ -173,8 +174,14 @@ export function useSaveHirePaymentMethod() {
     onError: async (_error, { hireId }) => {
       await queryClient.invalidateQueries({ queryKey: payoutKeys.hirePayment(hireId) })
     },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: hireKeys.all })
+    // The billing weeks show the payment state (and Pay now uses the new card),
+    // so refresh them too, along with the payment history.
+    onSettled: async (_data, _error, { hireId }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: hireKeys.all }),
+        queryClient.invalidateQueries({ queryKey: hireSessionKeys.weeks(hireId) }),
+        queryClient.invalidateQueries({ queryKey: payoutKeys.all }),
+      ])
     },
   })
 }

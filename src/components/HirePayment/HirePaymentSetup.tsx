@@ -146,8 +146,16 @@ export function HirePaymentSetup({
       { hireId, paymentMethodId },
       {
         onSuccess: (updated) => {
+          const replacing = info?.paymentStatus === 'card_saved'
           setChangingCard(false)
           onSaved?.()
+          if (replacing) {
+            // A weekly payment that already failed isn't retried on its own.
+            showSuccess('Card updated', {
+              description: `Weekly payments now use ${updated.card ? cardLabel(updated.card) : 'this card'}. If a week's payment didn't go through, tap Pay now on that week to pay it with this card.`,
+            })
+            return
+          }
           showSuccess('Payment card saved!', {
             description: updated.firstPrepayDate
               ? `Your first weekly prepay is charged on ${formatDateOnly(updated.firstPrepayDate)}.`
@@ -193,7 +201,7 @@ export function HirePaymentSetup({
       {choice === NEW_CARD ? (
         <NewCardForm
           hireId={hireId}
-          ctaLabel="Save card"
+          ctaLabel="Save Card"
           authorization={authorization}
           isSaving={isSaving}
           onCardSaved={save}
@@ -209,7 +217,7 @@ export function HirePaymentSetup({
             )}
             <Button className="flex-1" disabled={isSaving} onClick={() => save(choice)}>
               <Lock className="size-3.5" />
-              {isSaving ? 'Saving…' : 'Save card'}
+              {isSaving ? 'Saving…' : 'Save Card'}
             </Button>
           </div>
         </div>
