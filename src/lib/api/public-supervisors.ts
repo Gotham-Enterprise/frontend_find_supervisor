@@ -234,10 +234,15 @@ export async function fetchPublicSupervisors(
  * Returns empty array on any error — never throws.
  */
 export async function fetchAllPublicSupervisorIds(): Promise<
-  Array<{ id: string; state: string; updatedAt?: string }>
+  Array<{ id: string; state: string; stateOfLicensure: string[]; updatedAt?: string }>
 > {
   const MAX_PAGES = 25 // 25 pages × 20 per page = 500 supervisors max for sitemap
-  const results: Array<{ id: string; state: string; updatedAt?: string }> = []
+  const results: Array<{
+    id: string
+    state: string
+    stateOfLicensure: string[]
+    updatedAt?: string
+  }> = []
 
   try {
     let page = 1
@@ -246,7 +251,12 @@ export async function fetchAllPublicSupervisorIds(): Promise<
     while (hasMore && page <= MAX_PAGES) {
       const { supervisors, meta } = await fetchPublicSupervisors({ page, limit: 20 })
       for (const s of supervisors) {
-        results.push({ id: s.id, state: s.state, updatedAt: s.updatedAt })
+        results.push({
+          id: s.id,
+          state: s.state,
+          stateOfLicensure: s.stateOfLicensure,
+          updatedAt: s.updatedAt,
+        })
       }
       hasMore = meta.hasNextPage
       page++

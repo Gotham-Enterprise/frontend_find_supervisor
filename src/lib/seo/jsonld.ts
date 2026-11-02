@@ -62,6 +62,8 @@ interface SupervisorJsonLdInput {
   fullName: string | null
   city?: string | null
   state?: string | null
+  /** State slug of the canonical profile URL; defaults to the slug of `state`. */
+  profileStateSlug?: string | null
   licenseType?: string | null
   /** Supervisor type name from the hierarchy (e.g. "Collaborating Physician", "Supervising Physician", "Mental Health Counselors"). */
   supervisorType?: string | null
@@ -84,7 +86,9 @@ function resolveJobTitle(supervisorType?: string | null, licenseType?: string | 
 }
 
 export function generateSupervisorJsonLd(supervisor: SupervisorJsonLdInput): JsonLdObject {
-  const stateSlug = supervisor.state ? stateAbbreviationToSlug(supervisor.state) : null
+  const stateSlug =
+    supervisor.profileStateSlug ??
+    (supervisor.state ? stateAbbreviationToSlug(supervisor.state) : null)
   const profileUrl = stateSlug
     ? canonicalUrl(`/supervisors/${stateSlug}/${supervisor.id}`)
     : canonicalUrl(`/supervisors/${supervisor.id}`)

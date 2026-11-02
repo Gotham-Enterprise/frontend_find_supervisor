@@ -43,6 +43,7 @@ import {
   isValidSupervisorTypeSlug,
   LICENSE_TYPE_SLUGS,
   licenseSlugToLabel,
+  profileStateSlug,
   stateAbbreviationToDisplayName,
   stateSlugToAbbreviation,
   stateSlugToDisplayName,
@@ -145,12 +146,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     if (supervisor) {
       const typeLabel = buildSupervisorTypeLabel(supervisor.supervisorType, supervisor.licenseType)
       const isPhysicianType = isPhysicianSupervisorType(supervisor.supervisorType ?? '')
+      // State pages link here under the browsed state; point every variant at
+      // one canonical URL so search engines index a single profile.
+      const canonicalStateSlug =
+        profileStateSlug(supervisor.state, supervisor.stateOfLicensure) ?? stateSlug
       return buildMetadata({
         title: `${supervisor.fullName} — ${typeLabel} in ${stateName}`,
         description: isPhysicianType
           ? `View ${supervisor.fullName}'s ${typeLabel} profile, specialties, location, availability, format, and professional background.`
           : `View ${supervisor.fullName}'s supervision profile — license type, specialties, experience, and availability in ${stateName}. Connect with verified Supervisors on ${SITE_NAME}.`,
-        path: `/supervisors/${stateSlug}/${slug}`,
+        path: `/supervisors/${canonicalStateSlug}/${slug}`,
         ogImage: supervisor.profilePhotoUrl ?? undefined,
       })
     }
@@ -583,7 +588,11 @@ async function SupervisorProfileView({
   const jsonLd = generateSupervisorJsonLd({
     id: supervisorId,
     fullName: supervisor?.fullName ?? 'Supervisor',
-    state: stateAbbreviation,
+    // The supervisor's own state for the address; the URL state is only browse context.
+    state: supervisor?.state || stateAbbreviation,
+    profileStateSlug: supervisor
+      ? (profileStateSlug(supervisor.state, supervisor.stateOfLicensure) ?? stateSlug)
+      : stateSlug,
     city: supervisor?.city ?? null,
     licenseType: supervisor?.licenseType ?? null,
     supervisorType: supervisor?.supervisorType ?? null,

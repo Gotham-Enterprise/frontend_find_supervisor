@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import type { PublicSupervisorSummary } from '@/lib/api/public-supervisors'
-import { stateAbbreviationToSlug } from '@/lib/seo/routes'
+import { profileStateSlug } from '@/lib/seo/routes'
 import { formatSupervisionFormat, maskNameToFirstInitial } from '@/lib/utils/profile-formatters'
 
 interface SupervisorCardProps {
@@ -9,7 +9,8 @@ interface SupervisorCardProps {
   /**
    * Optional URL slug for the state page (e.g. "california").
    * When provided, the profile link uses /supervisors/[stateSlug]/[id].
-   * Falls back to deriving the slug from supervisor.state abbreviation.
+   * Falls back to profileStateSlug (home state if licensed there, else the
+   * first licensed state).
    */
   stateSlug?: string
 }
@@ -19,11 +20,11 @@ interface SupervisorCardProps {
  * Server Component — no auth dependencies.
  */
 export function SupervisorCard({ supervisor, stateSlug }: SupervisorCardProps) {
-  const resolvedStateSlug = stateSlug ?? stateAbbreviationToSlug(supervisor.state) ?? 'supervisors'
-  const profileHref =
-    resolvedStateSlug === 'supervisors'
-      ? `/supervisors/profile/${supervisor.id}`
-      : `/supervisors/${resolvedStateSlug}/${supervisor.id}`
+  const resolvedStateSlug =
+    stateSlug ?? profileStateSlug(supervisor.state, supervisor.stateOfLicensure)
+  const profileHref = resolvedStateSlug
+    ? `/supervisors/${resolvedStateSlug}/${supervisor.id}`
+    : `/supervisors/profile/${supervisor.id}`
   const location = [supervisor.city, supervisor.state].filter(Boolean).join(', ')
   const credentialLine = [supervisor.licenseType, supervisor.specialty].filter(Boolean).join(' · ')
   const licensedIn = supervisor.stateOfLicensure.filter(Boolean).join(', ')

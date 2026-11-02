@@ -3,7 +3,7 @@ import type { MetadataRoute } from 'next'
 import { fetchAllPublicSupervisorIds } from '@/lib/api/public-supervisors'
 import { SITE_URL } from '@/lib/seo/config'
 import {
-  stateAbbreviationToSlug,
+  profileStateSlug,
   SUPERVISOR_TYPE_PAGE_SLUGS,
   TOP_LICENSE_SLUGS_FOR_STATE,
   US_STATES,
@@ -88,25 +88,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // fetchAllPublicSupervisorIds never throws — returns [] on failure.
   const supervisorIds = await fetchAllPublicSupervisorIds()
 
-  const supervisorPages: MetadataRoute.Sitemap = supervisorIds
-    .filter(({ state }) => {
-      // Only include supervisor profiles where we can resolve a valid state slug.
-      // Profiles with missing or unrecognized state abbreviations are excluded
-      // from the sitemap to avoid generating broken URLs.
-      // TODO: Fix /supervisors/profile/[id] — no matching route exists. Public profiles
-      // must be at /supervisors/[stateSlug]/[id]. Ensure supervisor data always includes
-      // a valid state abbreviation to prevent sitemap exclusions.
-      return Boolean(stateAbbreviationToSlug(state))
-    })
-    .map(({ id, state, updatedAt }) => {
-      const stateSlug = stateAbbreviationToSlug(state)!
+  // Same state slug as the profile's canonical URL. Profiles with no
+  // resolvable state are left out to avoid generating broken URLs.
+  const supervisorPages: MetadataRoute.Sitemap = supervisorIds.flatMap(
+    ({ id, state, stateOfLicensure, updatedAt }) => {
+      const stateSlug = profileStateSlug(state, stateOfLicensure)
+      if (!stateSlug) return []
       return {
         url: `${SITE_URL}/supervisors/${stateSlug}/${id}`,
         lastModified: updatedAt ? new Date(updatedAt) : new Date(),
         changeFrequency: 'weekly' as const,
         priority: 0.8,
       }
-    })
+    },
+  )
 
   return [
     ...STATIC_PAGES,

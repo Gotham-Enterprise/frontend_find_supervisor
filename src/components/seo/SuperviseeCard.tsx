@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { getAvatarColor } from '@/components/SearchSupervisee/helpers'
 import type { PublicSuperviseeSummary } from '@/lib/api/public-supervisees'
-import { stateValueToSlug } from '@/lib/seo/routes'
+import { profileStateSlug } from '@/lib/seo/routes'
 import { formatHowSoonLooking, formatSupervisionFormat } from '@/lib/utils/profile-formatters'
 
 interface SuperviseeCardProps {
@@ -11,8 +11,8 @@ interface SuperviseeCardProps {
   index: number
   /**
    * State of the page the card is on (e.g. "california"). When omitted, the
-   * profile link uses the supervisee's home state if they're licensed there,
-   * else their first licensed state.
+   * profile link uses profileStateSlug (home state if licensed there, else the
+   * first licensed state).
    */
   stateSlug?: string
 }
@@ -24,21 +24,11 @@ interface SuperviseeCardProps {
  * server-side ("Maria S"), so it is rendered as-is with no client re-masking.
  */
 export function SuperviseeCard({ supervisee, index, stateSlug }: SuperviseeCardProps) {
-  // Supervision follows licensure, so the URL state must be one they're licensed
-  // in — preferring their home state so it matches the location shown on the
-  // profile. Home state alone is the fallback when no licensed state resolves.
-  const homeStateSlug = stateValueToSlug(supervisee.state)
-  const licensedSlugs = supervisee.stateOfLicensure
-    .map(stateValueToSlug)
-    .filter((slug): slug is string => slug !== null)
-  const profileStateSlug =
-    stateSlug ??
-    (homeStateSlug && licensedSlugs.includes(homeStateSlug) ? homeStateSlug : undefined) ??
-    licensedSlugs[0] ??
-    homeStateSlug
+  const resolvedStateSlug =
+    stateSlug ?? profileStateSlug(supervisee.state, supervisee.stateOfLicensure)
   // No recognizable state means no profile URL — fall back to the signup CTA.
-  const profileHref = profileStateSlug
-    ? `/browse-supervisees/${profileStateSlug}/${supervisee.id}`
+  const profileHref = resolvedStateSlug
+    ? `/browse-supervisees/${resolvedStateSlug}/${supervisee.id}`
     : null
   const format = supervisee.preferredFormat
     ? formatSupervisionFormat(supervisee.preferredFormat)

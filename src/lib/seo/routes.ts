@@ -137,6 +137,25 @@ export function stateValueToSlug(value: string): string | null {
   return isValidStateSlug(slug) ? slug : null
 }
 
+/**
+ * State slug for a public profile URL (/supervisors/[state]/[id],
+ * /browse-supervisees/[state]/[id]) when no state page context applies.
+ * Supervision follows licensure, so it prefers the home state when they're
+ * licensed there, else the first licensed state; the home state alone is the
+ * last resort. Returns null when nothing resolves to a known state.
+ */
+export function profileStateSlug(
+  homeState: string | null | undefined,
+  licensedStates: string[],
+): string | null {
+  const homeSlug = homeState ? stateValueToSlug(homeState) : null
+  const licensedSlugs = licensedStates
+    .map(stateValueToSlug)
+    .filter((slug): slug is string => slug !== null)
+  if (homeSlug && licensedSlugs.includes(homeSlug)) return homeSlug
+  return licensedSlugs[0] ?? homeSlug
+}
+
 /** Returns true if the string looks like a UUID (supervisor ID). */
 export function isUUID(str: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)
