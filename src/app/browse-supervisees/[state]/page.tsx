@@ -156,7 +156,12 @@ export default async function StateSuperviseesPage({ params }: Props) {
               </h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {supervisees.map((supervisee, index) => (
-                  <SuperviseeCard key={supervisee.id} supervisee={supervisee} index={index} />
+                  <SuperviseeCard
+                    key={supervisee.id}
+                    supervisee={supervisee}
+                    index={index}
+                    stateSlug={stateSlug}
+                  />
                 ))}
               </div>
             </section>

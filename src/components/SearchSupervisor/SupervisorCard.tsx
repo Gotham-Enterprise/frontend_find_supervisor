@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { formatNameWithCredentials } from '@/lib/utils/profile-formatters'
+import { formatNameWithCredentials, formatPatientPopulation } from '@/lib/utils/profile-formatters'
 
 import { FORMAT_BADGE_CLASSES, FORMAT_LABELS } from './helpers'
 import { SearchResultAvatar } from './SearchResultAvatar'
@@ -161,7 +161,7 @@ export function SupervisorCard({
             )}
             {patientPopulation.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                Population: {patientPopulation.join(', ')}
+                Population: {patientPopulation.map(formatPatientPopulation).join(', ')}
               </p>
             )}
           </div>

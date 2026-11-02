@@ -124,6 +124,42 @@ export function stateAbbreviationToSlug(abbreviation: string): string | null {
   return STATE_ABBREVIATION_TO_SLUG[abbreviation.toUpperCase()] ?? null
 }
 
+/**
+ * Converts a stored state value — abbreviation ("CA") or full name ("California") —
+ * to its URL slug. Returns null if it is not a recognized US state.
+ */
+export function stateValueToSlug(value: string): string | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const fromAbbreviation = stateAbbreviationToSlug(trimmed)
+  if (fromAbbreviation) return fromAbbreviation
+  const slug = trimmed.toLowerCase().replace(/\s+/g, '-')
+  return isValidStateSlug(slug) ? slug : null
+}
+
+/**
+ * State slug for a public profile URL (/supervisors/[state]/[id],
+ * /browse-supervisees/[state]/[id]) when no state page context applies.
+ * `states` is what the browse state pages filter on: licensed states for
+ * supervisors, the states a supervisee needs supervision in for supervisees.
+ * The URL state is always one of those (so the profile is listed on that state
+ * page), preferring the supervisee's own license state, then the home state
+ * (matching the location shown), then the first listed state. The home state
+ * alone is the last resort. Returns null when nothing resolves to a known state.
+ */
+export function profileStateSlug(
+  homeState: string | null | undefined,
+  states: string[],
+  licenseState?: string | null,
+): string | null {
+  const homeSlug = homeState ? stateValueToSlug(homeState) : null
+  const licenseSlug = licenseState ? stateValueToSlug(licenseState) : null
+  const stateSlugs = states.map(stateValueToSlug).filter((slug): slug is string => slug !== null)
+  if (licenseSlug && stateSlugs.includes(licenseSlug)) return licenseSlug
+  if (homeSlug && stateSlugs.includes(homeSlug)) return homeSlug
+  return stateSlugs[0] ?? homeSlug
+}
+
 /** Returns true if the string looks like a UUID (supervisor ID). */
 export function isUUID(str: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)

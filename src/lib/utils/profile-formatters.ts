@@ -218,6 +218,52 @@ export function formatAvailability(availability: string | null | undefined): str
   return AVAILABILITY_LABELS[availability] ?? availability
 }
 
+// ─── Client / patient population ─────────────────────────────────────────────
+
+/**
+ * Mirrors the backend PATIENT_POPULATION_SUGGESTIONS labels so server-rendered
+ * pages and search cards can label codes without fetching the options list.
+ */
+const PATIENT_POPULATION_LABELS: Record<string, string> = {
+  INFANTS_EARLY_CHILDHOOD: 'Infants & Early Childhood (0–5)',
+  CHILDREN: 'Children',
+  ADOLESCENTS: 'Adolescents',
+  YOUNG_ADULTS: 'Young Adults / College Students',
+  ADULTS: 'Adults',
+  OLDER_ADULTS: 'Older Adults (65+)',
+  FAMILIES: 'Families',
+  COUPLES: 'Couples',
+  PARENTS: 'Parents',
+  LGBTQIA_PLUS: 'LGBTQIA+',
+  TRANSGENDER_NONBINARY: 'Transgender & Nonbinary',
+  BIPOC: 'BIPOC / People of Color',
+  IMMIGRANTS_REFUGEES: 'Immigrants & Refugees',
+  FAITH_BASED: 'Faith-Based / Religious Communities',
+  NEURODIVERGENT: 'Neurodivergent',
+  AUTISM_SPECTRUM: 'Autism Spectrum',
+  PEOPLE_WITH_DISABILITIES: 'People with Disabilities',
+  DEAF_HARD_OF_HEARING: 'Deaf & Hard of Hearing',
+  SERIOUS_MENTAL_ILLNESS: 'Serious Mental Illness (SMI)',
+  CO_OCCURRING_SUBSTANCE_USE: 'Co-occurring / Substance Use',
+  VETERANS_MILITARY: 'Veterans & Military Families',
+  FIRST_RESPONDERS: 'First Responders',
+  HEALTHCARE_WORKERS: 'Healthcare Workers',
+  JUSTICE_INVOLVED: 'Justice-Involved / Forensic',
+  FOSTER_CARE_ADOPTION: 'Foster Care & Adoption',
+  PEOPLE_EXPERIENCING_HOMELESSNESS: 'People Experiencing Homelessness',
+}
+
+/** Label for a population code; unknown/legacy codes fall back to Title Case. */
+export function formatPatientPopulation(value: string): string {
+  return (
+    PATIENT_POPULATION_LABELS[value] ??
+    value
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+  )
+}
+
 // ─── Type of supervisor (GET /supervision/options `supervisorType`; same list as signup) ─
 
 /** Stored values from the previous counseling-focused option list and older API shapes. */
