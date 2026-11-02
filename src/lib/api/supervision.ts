@@ -57,6 +57,20 @@ export async function getCurrentSubscription(): Promise<Subscription | null> {
 }
 
 /**
+ * POST /supervision/payments/sync-subscription — brings the latest checkout up to
+ * date from Stripe. `activated` is true once the plan just paid for is active.
+ */
+export async function syncSubscription(): Promise<{
+  activated: boolean
+  subscription: Subscription | null
+}> {
+  const { data } = await apiClient.post<
+    ApiResponse<{ activated: boolean; subscription: Subscription | null }>
+  >('/supervision/payments/sync-subscription')
+  return data.data
+}
+
+/**
  * POST /supervision/payments/cancel-subscription
  *
  * Sets cancel_at_period_end = true on the active Stripe subscription so access
