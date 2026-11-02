@@ -13,3 +13,10 @@ export const IN_APP_PAYMENTS_ENABLED = process.env.NEXT_PUBLIC_IN_APP_PAYMENTS_E
  */
 export const IN_APP_MONTHLY_ENABLED =
   IN_APP_PAYMENTS_ENABLED && process.env.NEXT_PUBLIC_IN_APP_MONTHLY_ENABLED === 'true'
+
+/**
+ * Medical Director activity log (meetings, chart reviews, protocol sign-offs)
+ * on Medical Director hires. Never billed, so it doesn't need the payment
+ * flags; needs the backend's SUPERVISION_ACTIVITY_LOG_ENABLED.
+ */
+export const ACTIVITY_LOG_ENABLED = process.env.NEXT_PUBLIC_ACTIVITY_LOG_ENABLED === 'true'

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
+import { ActivityLogPanel } from '@/components/ActivityLog/ActivityLogPanel'
 import { AgreementStageBadge } from '@/components/HiredSupervisors/AgreementStageBadge'
 import { HireStatusBadge } from '@/components/HiredSupervisors/HireStatusBadge'
 import { useHireActions } from '@/components/HiredSupervisors/useHireActions'
@@ -13,6 +14,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { ACTIVITY_LOG_ENABLED } from '@/lib/constants/feature-flags'
 import { useHire, useMyReviews } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 import {
@@ -35,6 +37,7 @@ const TABS: { id: WorkroomTab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'timesheet', label: 'Timesheet' },
   { id: 'billing', label: 'Billing' },
+  { id: 'activity', label: 'Activity' },
   { id: 'messages', label: 'Messages' },
   { id: 'details', label: 'Contract details' },
 ]
@@ -146,14 +149,20 @@ function Workroom({
     needsPaymentSetup,
     hasSessions,
     monthlyBilled,
+    isAgreementSigned,
     openAgreement,
     openPayment,
   } = actions
 
   // Timesheet only exists once a signed hourly agreement is billed in the app;
-  // Billing for any agreement billed monthly in the app (its card comes before signing).
+  // Billing for any agreement billed monthly in the app (its card comes before signing);
+  // Activity for a signed Medical Director agreement, billed in the app or not.
+  const hasActivityLog = ACTIVITY_LOG_ENABLED && isMedicalDirector && isAgreementSigned
   const tabs = TABS.filter(
-    (t) => (t.id !== 'timesheet' || hasSessions) && (t.id !== 'billing' || monthlyBilled),
+    (t) =>
+      (t.id !== 'timesheet' || hasSessions) &&
+      (t.id !== 'billing' || monthlyBilled) &&
+      (t.id !== 'activity' || hasActivityLog),
   )
   const requested = searchParams.get('tab') as WorkroomTab | null
   const activeTab: WorkroomTab = tabs.some((t) => t.id === requested) ? requested! : 'overview'
@@ -310,6 +319,12 @@ function Workroom({
                 hire.status === 'ACCEPTED' || hire.status === 'ACTIVE' ? changeCard : undefined
               }
             />
+          </section>
+        )}
+        {activeTab === 'activity' && (
+          <section className="rounded-xl border bg-card px-6 py-5">
+            <h2 className="mb-4 text-base font-semibold text-foreground">Activity Log</h2>
+            <ActivityLogPanel hireId={hire.id} counterpartName={supervisorName} />
           </section>
         )}
         {activeTab === 'messages' && <WorkroomMessages hire={hire} />}

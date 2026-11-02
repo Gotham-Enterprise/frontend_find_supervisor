@@ -1,6 +1,6 @@
 import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 
-export type WorkroomTab = 'overview' | 'timesheet' | 'billing' | 'messages' | 'details'
+export type WorkroomTab = 'overview' | 'timesheet' | 'billing' | 'activity' | 'messages' | 'details'
 
 /** The supervisee's hired list a hire lives on (Medical Director hires have their own page). */
 export type HiredListPath = '/hired-supervisors' | '/hired-medical-directors'

@@ -11,6 +11,7 @@ import {
   MapPin,
   Monitor,
   MoreVertical,
+  NotebookPen,
   Receipt,
   Star,
   Target,
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import { ActivityLogDialog } from '@/components/ActivityLog/ActivityLogDialog'
 import { AgreementDialog } from '@/components/HiredSupervisors/AgreementDialog'
 import { AgreementStageBadge } from '@/components/HiredSupervisors/AgreementStageBadge'
 import { HireStatusBadge } from '@/components/HiredSupervisors/HireStatusBadge'
@@ -47,7 +49,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
-import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
+import { ACTIVITY_LOG_ENABLED, IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import {
   useHiresList,
   useMyReviews,
@@ -57,6 +59,7 @@ import {
 } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 import { parseApiError } from '@/lib/utils/error-parser'
+import { hiredListPath } from '@/lib/utils/hire-workroom'
 import { scheduledLastDayLabel, usesInAppMonthlyBilling } from '@/lib/utils/monthly-billing'
 import {
   formatAvailability,
@@ -448,6 +451,7 @@ function RowActions({
   onViewAgreement,
   onSendAgreement,
   onOpenBilling,
+  onOpenActivity,
 }: {
   hire: HireListItem
   review?: Review
@@ -455,6 +459,8 @@ function RowActions({
   onSendAgreement: () => void
   /** In-app monthly hires: opens the monthly billing dialog. */
   onOpenBilling?: () => void
+  /** Signed Medical Director hires: opens the activity log. */
+  onOpenActivity?: () => void
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [endOpen, setEndOpen] = useState(false)
@@ -506,6 +512,9 @@ function RowActions({
               )}
               {onOpenBilling && (
                 <DropdownMenuItem onClick={onOpenBilling}>Monthly Billing</DropdownMenuItem>
+              )}
+              {onOpenActivity && (
+                <DropdownMenuItem onClick={onOpenActivity}>Activity Log</DropdownMenuItem>
               )}
               {canEnd && (
                 <>
@@ -604,6 +613,10 @@ function SuperviseeCard({
       typeof window !== 'undefined' &&
       new URLSearchParams(window.location.search).get('billing') === hire.id,
   )
+  // Signed Medical Director agreement (billed in the app or not): the activity log.
+  const hasActivityLog =
+    ACTIVITY_LOG_ENABLED && isAgreementSigned && hiredListPath(hire) === '/hired-medical-directors'
+  const [activityOpen, setActivityOpen] = useState(false)
   // End Supervision offered from the billing dialog after 7 days unpaid.
   const [endForNonPaymentOpen, setEndForNonPaymentOpen] = useState(false)
   // Deep link: session notifications point to /supervisees?sessions=<id> (lazy init, as above).
@@ -632,6 +645,7 @@ function SuperviseeCard({
       onViewAgreement={() => setViewAgreementOpen(true)}
       onSendAgreement={() => setSendAgreementOpen(true)}
       onOpenBilling={hasMonthlyBilling ? () => setBillingOpen(true) : undefined}
+      onOpenActivity={hasActivityLog ? () => setActivityOpen(true) : undefined}
     />
   )
 
@@ -788,6 +802,12 @@ function SuperviseeCard({
                   Billing
                 </Button>
               )}
+              {hasActivityLog && (
+                <Button variant="outline" size="sm" onClick={() => setActivityOpen(true)}>
+                  <NotebookPen className="size-3.5" aria-hidden />
+                  Activity Log
+                </Button>
+              )}
               {hire.agreement?.fileUrl ? (
                 <a
                   href={hire.agreement.fileUrl}
@@ -827,6 +847,15 @@ function SuperviseeCard({
           counterpartName={superviseeName}
           open={sessionsOpen}
           onOpenChange={setSessionsOpen}
+        />
+      )}
+
+      {hasActivityLog && (
+        <ActivityLogDialog
+          hireId={hire.id}
+          clientName={superviseeName}
+          open={activityOpen}
+          onOpenChange={setActivityOpen}
         />
       )}
 
