@@ -593,17 +593,12 @@ function BillingContent() {
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Page header */}
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">
-          {IN_APP_PAYMENTS_ENABLED ? 'Billing' : 'Billing & Invoices'}
-        </h1>
-        <p className="mt-1 text-base text-muted-foreground">
-          {IN_APP_PAYMENTS_ENABLED
-            ? 'Your subscription and invoices, and what you earn from in-app supervision.'
-            : 'Manage your subscription, billing details, and invoices.'}
-        </p>
-      </div>
+      {/* The page title is in the top bar; only its description here. */}
+      <p className="text-base text-muted-foreground">
+        {IN_APP_PAYMENTS_ENABLED
+          ? 'Your subscription and invoices, and what you earn from in-app supervision.'
+          : 'Manage your subscription, billing details, and invoices.'}
+      </p>
 
       {IN_APP_PAYMENTS_ENABLED && (
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Billing sections">

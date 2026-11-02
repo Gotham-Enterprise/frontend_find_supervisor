@@ -915,10 +915,8 @@ export function SuperviseesPage({ mode = 'supervisors' }: { mode?: SuperviseesPa
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          {isMdClients ? 'Medical Director Clients' : 'My Supervisees'}
-        </h2>
+      {/* The page title is in the top bar; only its description here. */}
+      <div>
         <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
           {isMdClients
             ? 'Clients you’ve accepted as their Medical Director are listed here, including completed and closed engagements. New requests are on Supervision Requests. Search by name or filter by status, and open the menu on any client to view full profile and engagement details.'

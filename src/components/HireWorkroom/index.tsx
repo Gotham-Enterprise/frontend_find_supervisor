@@ -3,42 +3,53 @@
 import { AlertCircle, ArrowLeft, MapPin, Star } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { AgreementStageBadge } from '@/components/HiredSupervisors/AgreementStageBadge'
 import { HireStatusBadge } from '@/components/HiredSupervisors/HireStatusBadge'
-import { useHireActions, type WorkroomTab } from '@/components/HiredSupervisors/useHireActions'
+import { useHireActions } from '@/components/HiredSupervisors/useHireActions'
+import { MonthlyBillingPanel } from '@/components/MonthlyBilling/MonthlyBillingDialog'
 import { buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { useHire, useMyReviews } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
+import {
+  type HiredListPath,
+  hiredListPath,
+  workroomHref,
+  type WorkroomTab,
+} from '@/lib/utils/hire-workroom'
 import { formatDate, formatLocation } from '@/lib/utils/profile-formatters'
 import type { HireListItem } from '@/types/hire'
 import type { Review } from '@/types/review'
 
 import { WorkroomDetails } from './WorkroomDetails'
 import { WorkroomMessages } from './WorkroomMessages'
+import { WorkroomMonthlyOverview } from './WorkroomMonthlyOverview'
 import { WorkroomOverview } from './WorkroomOverview'
 import { WorkroomTimesheet } from './WorkroomTimesheet'
 
 const TABS: { id: WorkroomTab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'timesheet', label: 'Timesheet' },
+  { id: 'billing', label: 'Billing' },
   { id: 'messages', label: 'Messages' },
   { id: 'details', label: 'Contract details' },
 ]
 
-const BACK_LINK = (
-  <Link
-    href="/hired-supervisors"
-    className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-  >
-    <ArrowLeft className="size-4" aria-hidden />
-    Hired Supervisors
-  </Link>
-)
+function BackLink({ listPath }: { listPath: HiredListPath }) {
+  return (
+    <Link
+      href={listPath}
+      className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+    >
+      <ArrowLeft className="size-4" aria-hidden />
+      {listPath === '/hired-medical-directors' ? 'Hired Medical Directors' : 'Hired Supervisors'}
+    </Link>
+  )
+}
 
 function WorkroomSkeleton() {
   return (
@@ -62,18 +73,34 @@ function WorkroomSkeleton() {
 /**
  * A supervisee's workroom for one hire, modeled on Upwork's contract
  * workroom: a header with the supervisor and the hire's actions, and tabs for
- * Overview, Timesheet (signed hourly agreements), Messages and Contract details.
- * The tab lives in `?tab=` so notifications can link straight to it.
+ * Overview, Timesheet (signed hourly agreements), Billing (in-app monthly
+ * agreements), Messages and Contract details. The tab lives in `?tab=` so
+ * notifications can link straight to it. Hired Supervisors and Hired Medical
+ * Directors each have it under their own route (`listPath`).
  */
-export function HireWorkroomPage({ hireId }: { hireId: string }) {
+export function HireWorkroomPage({
+  hireId,
+  listPath,
+}: {
+  hireId: string
+  listPath: HiredListPath
+}) {
+  const router = useRouter()
   const { data: hire, isLoading, isError } = useHire(hireId)
   const { data: reviewsData } = useMyReviews(0)
+  // A hire opened under the other hired list (a hand-typed or stale link) moves to its own.
+  const hireListPath = hire ? hiredListPath(hire) : null
+  const misplaced = hireListPath != null && hireListPath !== listPath
+  useEffect(() => {
+    if (!misplaced || !hireListPath) return
+    router.replace(`${hireListPath}/${hireId}${window.location.search}`)
+  }, [misplaced, hireListPath, hireId, router])
 
-  if (isLoading) return <WorkroomSkeleton />
+  if (isLoading || misplaced) return <WorkroomSkeleton />
   if (isError || !hire) {
     return (
       <div className="space-y-6">
-        {BACK_LINK}
+        <BackLink listPath={listPath} />
         <Card className="items-center rounded-xl py-14 text-center">
           <AlertCircle className="size-8 text-muted-foreground" aria-hidden />
           <p className="text-base font-semibold text-foreground">We couldn&apos;t find this hire</p>
@@ -86,18 +113,28 @@ export function HireWorkroomPage({ hireId }: { hireId: string }) {
   }
 
   const existingReview = reviewsData?.items.find((r) => r.hireId === hire.id)
-  return <Workroom hire={hire} existingReview={existingReview} />
+  return <Workroom hire={hire} listPath={listPath} existingReview={existingReview} />
 }
 
-function Workroom({ hire, existingReview }: { hire: HireListItem; existingReview?: Review }) {
+function Workroom({
+  hire,
+  listPath,
+  existingReview,
+}: {
+  hire: HireListItem
+  listPath: HiredListPath
+  existingReview?: Review
+}) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   // Agreement emails/notifications link here with ?agreement=review to open it for signing.
   const agreementLinked = searchParams.get('agreement') === 'review' && hire.agreement != null
   const [agreementLinkClosed, setAgreementLinkClosed] = useState(false)
+  const isMedicalDirector = listPath === '/hired-medical-directors'
   const actions = useHireActions(hire, {
     existingReview,
+    isMedicalDirectors: isMedicalDirector,
     agreementDeepLink: {
       open: agreementLinked && !agreementLinkClosed,
       onClose: () => setAgreementLinkClosed(true),
@@ -108,12 +145,16 @@ function Workroom({ hire, existingReview }: { hire: HireListItem; existingReview
     canSignAgreement,
     needsPaymentSetup,
     hasSessions,
+    monthlyBilled,
     openAgreement,
     openPayment,
   } = actions
 
-  // Timesheet only exists once a signed hourly agreement is billed in the app.
-  const tabs = TABS.filter((t) => t.id !== 'timesheet' || hasSessions)
+  // Timesheet only exists once a signed hourly agreement is billed in the app;
+  // Billing for any agreement billed monthly in the app (its card comes before signing).
+  const tabs = TABS.filter(
+    (t) => (t.id !== 'timesheet' || hasSessions) && (t.id !== 'billing' || monthlyBilled),
+  )
   const requested = searchParams.get('tab') as WorkroomTab | null
   const activeTab: WorkroomTab = tabs.some((t) => t.id === requested) ? requested! : 'overview'
 
@@ -129,7 +170,7 @@ function Workroom({ hire, existingReview }: { hire: HireListItem; existingReview
 
   return (
     <div className="space-y-6">
-      {BACK_LINK}
+      <BackLink listPath={listPath} />
 
       {/* ── Header ───────────────────────────────────────────────────── */}
       <Card className="gap-0 overflow-hidden rounded-2xl border-0 bg-primary py-0 text-primary-foreground">
@@ -228,7 +269,18 @@ function Workroom({ hire, existingReview }: { hire: HireListItem; existingReview
 
       {/* ── Tab content ──────────────────────────────────────────────── */}
       <div role="tabpanel">
-        {activeTab === 'overview' && (
+        {activeTab === 'overview' && monthlyBilled && (
+          <WorkroomMonthlyOverview
+            hire={hire}
+            supervisorName={supervisorName}
+            billingHref={workroomHref(hire.id, 'billing', listPath)}
+            canSignAgreement={canSignAgreement}
+            needsPaymentSetup={needsPaymentSetup}
+            onSign={openAgreement}
+            onSetUpPayment={() => openPayment()}
+          />
+        )}
+        {activeTab === 'overview' && !monthlyBilled && (
           <WorkroomOverview
             hire={hire}
             supervisorName={supervisorName}
@@ -247,11 +299,25 @@ function Workroom({ hire, existingReview }: { hire: HireListItem; existingReview
             onSetUpPayment={() => openPayment()}
           />
         )}
+        {activeTab === 'billing' && (
+          <section className="rounded-xl border bg-card px-6 py-5">
+            <h2 className="mb-4 text-base font-semibold text-foreground">Monthly Billing</h2>
+            <MonthlyBillingPanel
+              hireId={hire.id}
+              counterpartName={supervisorName}
+              // An ended hire has nothing left to charge.
+              onChangeCard={
+                hire.status === 'ACCEPTED' || hire.status === 'ACTIVE' ? changeCard : undefined
+              }
+            />
+          </section>
+        )}
         {activeTab === 'messages' && <WorkroomMessages hire={hire} />}
         {activeTab === 'details' && (
           <WorkroomDetails
             hire={hire}
             supervisorName={supervisorName}
+            isMedicalDirector={isMedicalDirector}
             canSignAgreement={canSignAgreement}
             onSign={openAgreement}
             onSetUpPayment={openPayment}

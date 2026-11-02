@@ -3,7 +3,6 @@
 import type { ReactNode } from 'react'
 
 import { formatHours } from '@/components/HirePayment/HourlyQuoteSummary'
-import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { useSuperviseeFormOptions } from '@/lib/hooks'
 import { formatUsdCents } from '@/lib/utils/money'
@@ -12,7 +11,6 @@ import {
   formatBudgetRange,
   formatDate,
   formatDateOnly,
-  formatDisplayName,
   formatFeeAmount,
   formatSupervisionFormat,
   formatSupervisionHours,
@@ -299,40 +297,5 @@ export function HireRequestDetailsBody({
         </div>
       )}
     </div>
-  )
-}
-
-interface HireRequestDetailsDialogProps {
-  hire: HireListItem
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
-
-export function HireRequestDetailsDialog({
-  hire,
-  open,
-  onOpenChange,
-}: HireRequestDetailsDialogProps) {
-  const supervisorName = formatDisplayName(hire.supervisor)
-  return (
-    <DialogRoot open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-h-[min(85vh,780px)] max-w-2xl sm:max-w-2xl"
-        bodyClassName="p-0"
-        header={
-          <>
-            <DialogTitle className="text-lg">Request details</DialogTitle>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              Full information for this hire request
-            </p>
-            <p className="mt-3 text-sm font-medium text-foreground">{supervisorName}</p>
-          </>
-        }
-      >
-        <div className="px-6 py-5">
-          <HireRequestDetailsBody hire={hire} />
-        </div>
-      </DialogContent>
-    </DialogRoot>
   )
 }

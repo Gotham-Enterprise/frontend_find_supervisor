@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, CalendarClock, CreditCard, Flag } from 'lucide-react'
+import { AlertCircle, CalendarClock, Flag } from 'lucide-react'
 import { useState } from 'react'
 
 import { cardLabel } from '@/components/HirePayment/HirePaymentSetup'
@@ -31,20 +31,23 @@ const DISPUTE_REASON_MAX = 1000
 type Role = HireMonthlyBilling['role']
 
 /** Badge for a month, from the viewer's side. */
-function periodBadge(period: MonthlyPeriod, role: Role): { label: string; className: string } {
+export function periodBadge(
+  period: MonthlyPeriod,
+  role: Role,
+): { label: string; className: string } {
   const amber = 'border-amber-200 bg-amber-50 text-amber-800'
   const green = 'border-emerald-200 bg-emerald-50 text-emerald-800'
   const muted = 'border-border bg-muted text-muted-foreground'
   if (period.status === 'CANCELED') return { label: 'Canceled', className: muted }
   if (period.status === 'SETTLED')
-    return { label: role === 'supervisor' ? 'Paid out' : 'Complete', className: green }
-  if (period.status === 'DISPUTED') return { label: 'On hold · reported', className: amber }
+    return { label: role === 'supervisor' ? 'Paid Out' : 'Complete', className: green }
+  if (period.status === 'DISPUTED') return { label: 'On Hold · Reported', className: amber }
   if (period.status === 'APPROVED') return { label: 'Releasing', className: green }
-  if (period.status === 'IN_REVIEW') return { label: 'Ended · releasing soon', className: green }
+  if (period.status === 'IN_REVIEW') return { label: 'Ended · Releasing Soon', className: green }
   if (period.paymentStatus === 'FAILED')
     return { label: 'Unpaid', className: 'border-destructive/30 bg-destructive/5 text-destructive' }
-  if (period.paymentStatus === 'PENDING') return { label: 'Not charged yet', className: muted }
-  return { label: period.isCurrent ? 'Current month · paid' : 'Paid', className: green }
+  if (period.paymentStatus === 'PENDING') return { label: 'Not Charged Yet', className: muted }
+  return { label: period.isCurrent ? 'Current Month · Paid' : 'Paid', className: green }
 }
 
 /** One line on where the money is for this month. */
@@ -308,13 +311,16 @@ function BillingBody({
             <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Card
             </dt>
-            <dd className="mt-0.5 flex items-center gap-2 text-foreground">
-              <span className="truncate">{billing.card ? cardLabel(billing.card) : 'None'}</span>
+            <dd className="mt-0.5 text-foreground">
+              <p className="truncate">{billing.card ? cardLabel(billing.card) : 'None'}</p>
               {onChangeCard && (
-                <Button variant="link" size="sm" className="h-auto p-0" onClick={onChangeCard}>
-                  <CreditCard className="size-3.5" aria-hidden />
-                  Change
-                </Button>
+                <button
+                  type="button"
+                  onClick={onChangeCard}
+                  className="mt-0.5 rounded-sm text-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:underline"
+                >
+                  {billing.card ? 'Change card' : 'Add a card'}
+                </button>
               )}
             </dd>
           </div>
@@ -372,11 +378,64 @@ function BillingBody({
   )
 }
 
+interface MonthlyBillingPanelProps {
+  hireId: string
+  /** The other side: the Medical Director for a supervisee, the client for a Medical Director. */
+  counterpartName: string
+  /** Supervisee only: opens the card picker. */
+  onChangeCard?: () => void
+  /** Supervisor only: opens End Supervision (offered after 7 days unpaid). */
+  onEndSupervision?: () => void
+  /** False while hidden (a closed dialog), so the billing isn't fetched. */
+  enabled?: boolean
+}
+
 /**
  * A monthly (Medical Director) hire's billing for either side: the terms, the
  * card, every month's payment and where its money is, plus Pay now, Release
- * now and Report a problem for the supervisee.
+ * now and Report a problem for the supervisee. Shown in the billing dialog and
+ * on the supervisee workroom's Billing tab.
  */
+export function MonthlyBillingPanel({
+  hireId,
+  counterpartName,
+  onChangeCard,
+  onEndSupervision,
+  enabled = true,
+}: MonthlyBillingPanelProps) {
+  const { data: billing, isLoading, isError, refetch } = useHireMonthlyBilling(hireId, enabled)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-28 w-full" />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-20 w-full" />
+      </div>
+    )
+  }
+  if (isError || !billing) {
+    return (
+      <div className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3">
+        <p className="text-sm text-muted-foreground">We couldn&apos;t load the billing.</p>
+        <Button variant="outline" size="sm" onClick={() => void refetch()}>
+          Retry
+        </Button>
+      </div>
+    )
+  }
+  return (
+    <BillingBody
+      billing={billing}
+      hireId={hireId}
+      counterpartName={counterpartName}
+      onChangeCard={onChangeCard}
+      onEndSupervision={onEndSupervision}
+    />
+  )
+}
+
+/** {@link MonthlyBillingPanel} in a dialog. */
 export function MonthlyBillingDialog({
   hireId,
   counterpartName,
@@ -384,19 +443,10 @@ export function MonthlyBillingDialog({
   onOpenChange,
   onChangeCard,
   onEndSupervision,
-}: {
-  hireId: string
-  /** The other side: the Medical Director for a supervisee, the client for a Medical Director. */
-  counterpartName: string
+}: Omit<MonthlyBillingPanelProps, 'enabled'> & {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** Supervisee only: opens the card picker. */
-  onChangeCard?: () => void
-  /** Supervisor only: opens End Supervision (offered after 7 days unpaid). */
-  onEndSupervision?: () => void
 }) {
-  const { data: billing, isLoading, isError, refetch } = useHireMonthlyBilling(hireId, open)
-
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -410,42 +460,27 @@ export function MonthlyBillingDialog({
           </>
         }
       >
-        {isLoading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-28 w-full" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-20 w-full" />
-          </div>
-        ) : isError || !billing ? (
-          <div className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3">
-            <p className="text-sm text-muted-foreground">We couldn&apos;t load the billing.</p>
-            <Button variant="outline" size="sm" onClick={() => void refetch()}>
-              Retry
-            </Button>
-          </div>
-        ) : (
-          <BillingBody
-            billing={billing}
-            hireId={hireId}
-            counterpartName={counterpartName}
-            onChangeCard={
-              onChangeCard
-                ? () => {
-                    onOpenChange(false)
-                    onChangeCard()
-                  }
-                : undefined
-            }
-            onEndSupervision={
-              onEndSupervision
-                ? () => {
-                    onOpenChange(false)
-                    onEndSupervision()
-                  }
-                : undefined
-            }
-          />
-        )}
+        <MonthlyBillingPanel
+          hireId={hireId}
+          counterpartName={counterpartName}
+          enabled={open}
+          onChangeCard={
+            onChangeCard
+              ? () => {
+                  onOpenChange(false)
+                  onChangeCard()
+                }
+              : undefined
+          }
+          onEndSupervision={
+            onEndSupervision
+              ? () => {
+                  onOpenChange(false)
+                  onEndSupervision()
+                }
+              : undefined
+          }
+        />
       </DialogContent>
     </DialogRoot>
   )

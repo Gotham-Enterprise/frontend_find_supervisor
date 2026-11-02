@@ -4,12 +4,12 @@ import { AlertCircle, CalendarClock, CreditCard, FileSignature, Hourglass } from
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
-import { workroomHref } from '@/components/HiredSupervisors/useHireActions'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import { useHireBillingWeeks } from '@/lib/hooks'
 import { formatEasternDateTime, formatWeekRange, toEasternISODate } from '@/lib/utils/date'
+import { hiredListPath, workroomHref } from '@/lib/utils/hire-workroom'
 import { formatUsdCents } from '@/lib/utils/money'
 import { formatDateOnly } from '@/lib/utils/profile-formatters'
 import type { HireListItem } from '@/types/hire'
@@ -17,7 +17,7 @@ import type { BillingWeek, SuperviseeWeekPayment } from '@/types/sessions'
 
 import { formatHrs, mondayOf } from './dates'
 
-function Banner({
+export function Banner({
   tone,
   icon,
   children,
@@ -101,7 +101,7 @@ export function WorkroomOverview({
   onSetUpPayment: () => void
 }) {
   const { data, isLoading } = useHireBillingWeeks(hire.id, hasSessions)
-  const timesheetHref = workroomHref(hire.id, 'timesheet')
+  const timesheetHref = workroomHref(hire.id, 'timesheet', hiredListPath(hire))
   const weekHref = (week: BillingWeek) => `${timesheetHref}&week=${week.startDate}`
 
   const thisMonday = mondayOf(toEasternISODate())

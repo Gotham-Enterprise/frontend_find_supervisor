@@ -33,7 +33,7 @@ import { EditSupervisorProfileModal } from '@/components/EditSupervisorProfileMo
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
+import { IN_APP_MONTHLY_ENABLED, IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import { isFreePlan } from '@/lib/constants/subscription-plans'
 import {
   useCertificateOptions,
@@ -146,13 +146,16 @@ interface ChecklistStep {
 
 /**
  * Payout onboarding as seen by the checklist. `undefined` = not applicable
- * (flag off, monthly-retainer supervisor, or status unavailable), so the
- * step is omitted rather than blocking setup on something we can't read.
+ * (flag off, monthly-retainer supervisor while monthly billing is off, or
+ * status unavailable), so the step is omitted rather than blocking setup on
+ * something we can't read.
  */
 type ChecklistPayoutStatus = PayoutAccountStatus | undefined
 
+/** Supervisors paid in the app need a payout account: hourly, and monthly once that's billed in-app. */
 function payoutStepApplies(profile: SupervisorProfileData): boolean {
-  return IN_APP_PAYMENTS_ENABLED && profile.supervisionFeeType?.toUpperCase() !== 'MONTHLY'
+  if (!IN_APP_PAYMENTS_ENABLED) return false
+  return profile.supervisionFeeType?.toUpperCase() !== 'MONTHLY' || IN_APP_MONTHLY_ENABLED
 }
 
 function hasActiveSubscription(profile: SupervisorProfileData): boolean {
@@ -264,7 +267,10 @@ function getChecklist(
   if (payoutStepApplies(profile) && payoutStatus !== undefined) {
     steps.push({
       label: 'Set up payouts',
-      description: 'Connect your bank account to get paid for in-app supervision sessions',
+      description:
+        profile.supervisionFeeType?.toUpperCase() === 'MONTHLY'
+          ? "Connect your bank account to receive your clients' monthly payments"
+          : 'Connect your bank account to get paid for in-app supervision sessions',
       status: payoutStatus === 'ready' ? 'done' : subscribed ? 'current' : 'upcoming',
       payoutsAction: { status: payoutStatus },
     })

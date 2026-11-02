@@ -21,12 +21,12 @@ function statusText(period: MonthlyPeriod, role: Role): { text: string; classNam
   const muted = 'border-border bg-muted text-muted-foreground'
   if (period.status === 'CANCELED') return { text: 'Canceled', className: muted }
   if (period.status === 'SETTLED')
-    return { text: role === 'supervisor' ? 'Paid out' : 'Complete', className: green }
-  if (period.status === 'DISPUTED') return { text: 'On hold', className: amber }
+    return { text: role === 'supervisor' ? 'Paid Out' : 'Complete', className: green }
+  if (period.status === 'DISPUTED') return { text: 'On Hold', className: amber }
   if (period.paymentStatus === 'FAILED')
     return { text: 'Unpaid', className: 'border-destructive/30 bg-destructive/5 text-destructive' }
-  if (period.paymentStatus === 'PENDING') return { text: 'Not charged yet', className: muted }
-  return { text: role === 'supervisor' ? 'Releasing after the month' : 'Paid', className: green }
+  if (period.paymentStatus === 'PENDING') return { text: 'Not Charged Yet', className: muted }
+  return { text: role === 'supervisor' ? 'Releasing After the Month' : 'Paid', className: green }
 }
 
 /**

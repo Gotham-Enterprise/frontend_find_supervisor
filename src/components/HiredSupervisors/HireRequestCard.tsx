@@ -14,8 +14,6 @@ import {
   Star,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
-import { useState } from 'react'
 
 import { HIRE_LIST_GRID } from '@/components/HireList/HireListToolbar'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -34,7 +32,7 @@ import type { Review } from '@/types/review'
 
 import { AgreementStageBadge } from './AgreementStageBadge'
 import { HireStatusBadge } from './HireStatusBadge'
-import { useHireActions, workroomHref } from './useHireActions'
+import { useHireActions } from './useHireActions'
 
 /** Normalizes API/formatter placeholders for empty values in supervisee-facing UI. */
 function formatHireDetailDisplay(value: string): string {
@@ -79,66 +77,20 @@ export function HireRequestCard({
   isMedicalDirectors = false,
   layout = 'card',
 }: HireRequestCardProps) {
-  // Deep link: agreement notifications/emails point to the hired list with
-  // ?hire=<id>, which auto-opens this card's agreement dialog. Driven by the
-  // router's search params (not window.location at mount) so clicking a
-  // notification while already on this page opens the dialog too.
-  const searchParams = useSearchParams()
-  const deepLinkedHireId = searchParams.get('hire')
-  const deepLinkMatches = hire.agreement != null && deepLinkedHireId === hire.id
-  // Which deep-linked hire id the user has already closed the dialog for, so
-  // the URL-driven open doesn't re-open it on the next render (derived state
-  // instead of an effect + setState).
-  const [dismissedDeepLinkId, setDismissedDeepLinkId] = useState<string | null>(null)
-  // Sessions deep link (?sessions=<id>) works the same way on Hired Medical
-  // Directors; on Hired Supervisors the list sends it to the hire's workroom.
-  const deepLinkedSessionsId = searchParams.get('sessions')
-  const [dismissedSessionsLinkId, setDismissedSessionsLinkId] = useState<string | null>(null)
-  // Monthly billing deep link (?billing=<id>) from monthly payment notifications and emails.
-  const deepLinkedBillingId = searchParams.get('billing')
-  const [dismissedBillingLinkId, setDismissedBillingLinkId] = useState<string | null>(null)
-
-  const actions = useHireActions(hire, {
-    existingReview,
-    isMedicalDirectors,
-    agreementDeepLink: {
-      open: deepLinkMatches && dismissedDeepLinkId !== deepLinkedHireId,
-      onClose: () => {
-        if (deepLinkMatches) setDismissedDeepLinkId(deepLinkedHireId)
-      },
-    },
-    sessionsDeepLink: isMedicalDirectors
-      ? {
-          open:
-            deepLinkedSessionsId === hire.id && dismissedSessionsLinkId !== deepLinkedSessionsId,
-          onClose: () => {
-            if (deepLinkedSessionsId === hire.id) setDismissedSessionsLinkId(deepLinkedSessionsId)
-          },
-        }
-      : undefined,
-    billingDeepLink: {
-      open: deepLinkedBillingId === hire.id && dismissedBillingLinkId !== deepLinkedBillingId,
-      onClose: () => {
-        if (deepLinkedBillingId === hire.id) setDismissedBillingLinkId(deepLinkedBillingId)
-      },
-    },
-  })
+  const actions = useHireActions(hire, { existingReview, isMedicalDirectors })
   const {
     supervisorName,
-    profileHref,
-    hasWorkroom,
+    workroomLink,
     canSignAgreement,
     isAgreementSigned,
     needsPaymentSetup,
     hasSessions,
     hasMonthlyBilling,
-    openMonthlyBilling,
     openAgreement,
     openPayment,
-    openSessions,
   } = actions
   // Name and photo open the hire's workroom (its profile is in the menu).
-  const primaryHref = hasWorkroom ? workroomHref(hire.id) : profileHref
+  const primaryHref = workroomLink()
 
   // A supervisor's occupation/specialty live on their PROFILE. The account-level
   // user.occupation/specialty relations are jobseeker-side leftovers that can
@@ -157,22 +109,25 @@ export function HireRequestCard({
 
   const actionsMenu = actions.renderMenu('card')
 
-  // Sessions open in the workroom's Timesheet tab, or the sessions dialog where there's no workroom.
-  const sessionsButton = (size: 'sm') =>
-    hasWorkroom ? (
-      <Link
-        href={workroomHref(hire.id, 'timesheet')}
-        className={buttonVariants({ variant: 'outline', size })}
-      >
-        <CalendarClock className="size-3.5" aria-hidden />
-        Sessions
-      </Link>
-    ) : (
-      <Button variant="outline" size={size} onClick={openSessions}>
-        <CalendarClock className="size-3.5" aria-hidden />
-        Sessions
-      </Button>
-    )
+  // Sessions and monthly billing open on their workroom tabs.
+  const sessionsButton = (
+    <Link
+      href={workroomLink('timesheet')}
+      className={buttonVariants({ variant: 'outline', size: 'sm' })}
+    >
+      <CalendarClock className="size-3.5" aria-hidden />
+      Sessions
+    </Link>
+  )
+  const billingButton = (
+    <Link
+      href={workroomLink('billing')}
+      className={buttonVariants({ variant: 'outline', size: 'sm' })}
+    >
+      <Receipt className="size-3.5" aria-hidden />
+      Billing
+    </Link>
+  )
 
   const badges = (
     <>
@@ -204,12 +159,9 @@ export function HireRequestCard({
       Set up payment
     </Button>
   ) : hasSessions ? (
-    sessionsButton('sm')
+    sessionsButton
   ) : hasMonthlyBilling ? (
-    <Button variant="outline" size="sm" onClick={openMonthlyBilling}>
-      <Receipt className="size-3.5" aria-hidden />
-      Billing
-    </Button>
+    billingButton
   ) : null
 
   return (
@@ -332,13 +284,8 @@ export function HireRequestCard({
 
           {isAgreementSigned && (
             <div className="flex justify-end gap-2 border-t border-border/50 px-5 py-3">
-              {hasSessions && sessionsButton('sm')}
-              {hasMonthlyBilling && !needsPaymentSetup && (
-                <Button variant="outline" size="sm" onClick={openMonthlyBilling}>
-                  <Receipt className="size-3.5" aria-hidden />
-                  Billing
-                </Button>
-              )}
+              {hasSessions && sessionsButton}
+              {hasMonthlyBilling && !needsPaymentSetup && billingButton}
               {needsPaymentSetup && (
                 <Button size="sm" onClick={() => openPayment()}>
                   <CreditCard className="size-3.5" aria-hidden />
@@ -355,19 +302,14 @@ export function HireRequestCard({
                   <FileText className="size-3.5" aria-hidden />
                   View Signed Agreement
                 </a>
-              ) : hasWorkroom ? (
+              ) : (
                 <Link
-                  href={workroomHref(hire.id, 'details')}
+                  href={workroomLink('details')}
                   className={buttonVariants({ variant: 'outline', size: 'sm' })}
                 >
                   <FileText className="size-3.5" aria-hidden />
                   View Signed Agreement
                 </Link>
-              ) : (
-                <Button variant="outline" size="sm" onClick={openAgreement}>
-                  <FileText className="size-3.5" aria-hidden />
-                  View Signed Agreement
-                </Button>
               )}
             </div>
           )}

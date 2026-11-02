@@ -8,22 +8,26 @@ import { cardLabel } from '@/components/HirePayment/HirePaymentSetup'
 import { Button } from '@/components/ui/button'
 import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import { useHirePayment } from '@/lib/hooks'
+import { useHireMonthlyBilling } from '@/lib/hooks/useMonthlyBilling'
+import { usesInAppMonthlyBilling } from '@/lib/utils/monthly-billing'
 import type { HireListItem } from '@/types/hire'
 
 /**
  * Upwork's "Contract details": the agreement (terms, document, signatures,
- * weekly payment and card) and the original request with its timeline.
+ * weekly or monthly payment and card) and the original request with its timeline.
  * Signing still happens in the agreement dialog.
  */
 export function WorkroomDetails({
   hire,
   supervisorName,
+  isMedicalDirector = false,
   canSignAgreement,
   onSign,
   onSetUpPayment,
 }: {
   hire: HireListItem
   supervisorName: string
+  isMedicalDirector?: boolean
   canSignAgreement: boolean
   onSign: () => void
   onSetUpPayment: (options?: { changeCard?: boolean }) => void
@@ -31,6 +35,10 @@ export function WorkroomDetails({
   const agreement = hire.agreement
   const hourly = agreement?.hourlyRateCents != null && agreement.weeklyCapMinutes != null
   const { data: paymentInfo } = useHirePayment(hire.id, IN_APP_PAYMENTS_ENABLED && hourly)
+  // In-app monthly agreements keep their card on the monthly billing endpoint.
+  const monthlyInApp = usesInAppMonthlyBilling(hire)
+  const { data: monthlyInfo } = useHireMonthlyBilling(hire.id, monthlyInApp)
+  const cards = monthlyInApp ? monthlyInfo : paymentInfo
 
   // Before an agreement exists there's nothing to show but where it stands.
   const noAgreementNote =
@@ -46,7 +54,9 @@ export function WorkroomDetails({
         <section className="rounded-xl border bg-card px-6 py-5">
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-base font-semibold text-foreground">Supervision Agreement</h2>
+              <h2 className="text-base font-semibold text-foreground">
+                {isMedicalDirector ? 'Medical Director Agreement' : 'Supervision Agreement'}
+              </h2>
               <p className="mt-0.5 text-sm text-muted-foreground">
                 Version {agreement.version} ·{' '}
                 {agreement.source === 'UPLOADED'
@@ -63,8 +73,8 @@ export function WorkroomDetails({
           </div>
           <AgreementBody
             hire={hire}
-            hasSavedCards={(paymentInfo?.savedCards.length ?? 0) > 0}
-            cardLabelText={paymentInfo?.card ? cardLabel(paymentInfo.card) : null}
+            hasSavedCards={(cards?.savedCards.length ?? 0) > 0}
+            cardLabelText={cards?.card ? cardLabel(cards.card) : null}
             onSetUpPayment={IN_APP_PAYMENTS_ENABLED ? onSetUpPayment : undefined}
           />
         </section>

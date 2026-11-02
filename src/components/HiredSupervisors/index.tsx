@@ -17,10 +17,10 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useHiresList, useMyReviews } from '@/lib/hooks'
+import { workroomHref } from '@/lib/utils/hire-workroom'
 import type { Review } from '@/types/review'
 
 import { HireRequestCard } from './HireRequestCard'
-import { workroomHref } from './useHireActions'
 
 const PAGE_SIZE = 10
 
@@ -167,18 +167,21 @@ interface HiredSupervisorsPageProps {
 
 export function HiredSupervisorsPage({ mode = 'supervisors' }: HiredSupervisorsPageProps) {
   const isMedicalDirectors = mode === 'medical-directors'
-  // Older notifications and emails link to ?sessions=<hireId> or ?hire=<hireId>;
-  // on Hired Supervisors both now live in the hire's workroom (Timesheet tab, or
-  // the agreement opened for review). Hired Medical Directors keeps the dialogs.
+  // Older notifications and emails link to ?sessions=, ?billing= or ?hire=<hireId>;
+  // these now live in the hire's workroom (Timesheet or Billing tab, or the
+  // agreement opened for review).
   const router = useRouter()
   const searchParams = useSearchParams()
   const sessionsLinkId = searchParams.get('sessions')
+  const billingLinkId = searchParams.get('billing')
   const hireLinkId = searchParams.get('hire')
   useEffect(() => {
-    if (isMedicalDirectors) return
-    if (sessionsLinkId) router.replace(workroomHref(sessionsLinkId, 'timesheet'))
-    else if (hireLinkId) router.replace(`${workroomHref(hireLinkId)}?agreement=review`)
-  }, [isMedicalDirectors, sessionsLinkId, hireLinkId, router])
+    const listPath = isMedicalDirectors ? '/hired-medical-directors' : '/hired-supervisors'
+    if (sessionsLinkId) router.replace(workroomHref(sessionsLinkId, 'timesheet', listPath))
+    else if (billingLinkId) router.replace(workroomHref(billingLinkId, 'billing', listPath))
+    else if (hireLinkId)
+      router.replace(`${workroomHref(hireLinkId, undefined, listPath)}?agreement=review`)
+  }, [isMedicalDirectors, sessionsLinkId, billingLinkId, hireLinkId, router])
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [group, setGroup] = useState<HireListGroupFilter>('all')

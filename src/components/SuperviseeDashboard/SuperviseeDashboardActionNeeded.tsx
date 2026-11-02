@@ -3,19 +3,10 @@ import Link from 'next/link'
 
 import { buttonVariants } from '@/components/ui/button'
 import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
+import { hiredListPath, workroomHref } from '@/lib/utils/hire-workroom'
 import { formatDisplayName } from '@/lib/utils/profile-formatters'
-import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 import { getAgreementStage } from '@/lib/utils/supervision-status'
 import type { HireListItem } from '@/types/hire'
-
-/** Hired list the hire lives on (Medical Director hires have their own page). */
-function hiredListPath(hire: HireListItem): string {
-  const raw = hire.typeOfSupervisorNeeded
-  const needed = Array.isArray(raw) ? raw : raw ? [raw] : []
-  return needed.some((name) => name?.trim() === MEDICAL_DIRECTOR_TYPE_NAME)
-    ? '/hired-medical-directors'
-    : '/hired-supervisors'
-}
 
 interface ActionItem {
   hire: HireListItem
@@ -83,7 +74,7 @@ export function SuperviseeDashboardActionNeeded({ hires }: { hires: HireListItem
               </div>
             </div>
             <Link
-              href={`${hiredListPath(hire)}?hire=${encodeURIComponent(hire.id)}`}
+              href={`${workroomHref(hire.id, undefined, hiredListPath(hire))}?agreement=review`}
               className={buttonVariants({
                 size: 'sm',
                 className: 'shrink-0 self-stretch sm:self-center',

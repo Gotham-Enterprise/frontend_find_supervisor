@@ -321,14 +321,11 @@ export function SupervisorReviewsPage() {
   const totalPages = data?.totalPages ?? 1
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">My Reviews</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          View feedback and ratings from your supervisees.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      {/* The page title is in the top bar; only its description here. */}
+      <p className="text-sm text-muted-foreground">
+        View feedback and ratings from your supervisees.
+      </p>
 
       {/* Loading: summary skeleton */}
       {isLoading && (

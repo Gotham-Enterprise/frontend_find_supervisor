@@ -5,8 +5,6 @@ import Link from 'next/link'
 import { useState } from 'react'
 
 import { HirePaymentDialog } from '@/components/HirePayment/HirePaymentDialog'
-import { HireSessionsDialog } from '@/components/HireSessions/HireSessionsDialog'
-import { MonthlyBillingDialog } from '@/components/MonthlyBilling/MonthlyBillingDialog'
 import { MonthlyPaymentDialog } from '@/components/MonthlyBilling/MonthlyPaymentDialog'
 import { LeaveReviewModal } from '@/components/reviews/LeaveReviewModal'
 import { Button } from '@/components/ui/button'
@@ -26,6 +24,7 @@ import { useCancelHire, useMarkHireAsCompleted, useUserSnackbar } from '@/lib/ho
 import { useConfetti } from '@/lib/hooks/useConfetti'
 import { useHireMonthlyBilling } from '@/lib/hooks/useMonthlyBilling'
 import { parseApiError } from '@/lib/utils/error-parser'
+import { workroomHref, type WorkroomTab } from '@/lib/utils/hire-workroom'
 import { usesInAppMonthlyBilling } from '@/lib/utils/monthly-billing'
 import { formatDateOnly, formatDisplayName } from '@/lib/utils/profile-formatters'
 import { canMarkHireCompleted, getAgreementStage } from '@/lib/utils/supervision-status'
@@ -33,28 +32,15 @@ import type { HireListItem, HireStatus } from '@/types/hire'
 import type { Review } from '@/types/review'
 
 import { AgreementDialog } from './AgreementDialog'
-import { HireRequestDetailsDialog } from './HireRequestDetailsDialog'
 
 const CANCELABLE_STATUSES: ReadonlyArray<HireStatus> = ['PENDING', 'REVIEWED', 'ACCEPTED', 'ACTIVE']
 
-export type WorkroomTab = 'overview' | 'timesheet' | 'messages' | 'details'
-
-/** A supervisee's workroom for one hire (Hired Supervisors only; Medical Directors keep the dialogs). */
-export function workroomHref(hireId: string, tab?: WorkroomTab): string {
-  const base = `/hired-supervisors/${hireId}`
-  return tab && tab !== 'overview' ? `${base}?tab=${tab}` : base
-}
-
 interface UseHireActionsOptions {
   existingReview?: Review
-  /** Hired Medical Directors: profile links target the MD routes, and there's no workroom. */
+  /** Hired Medical Directors: profile and workroom links target the MD routes. */
   isMedicalDirectors?: boolean
-  /** An `?hire=<id>` link asked for this hire's agreement dialog; `onClose` dismisses it. */
+  /** An `?agreement=review` link asked for this hire's agreement dialog; `onClose` dismisses it. */
   agreementDeepLink?: { open: boolean; onClose: () => void }
-  /** A `?sessions=<id>` link asked for this hire's sessions dialog (no-workroom lists only). */
-  sessionsDeepLink?: { open: boolean; onClose: () => void }
-  /** A `?billing=<id>` link asked for this hire's monthly billing dialog. */
-  billingDeepLink?: { open: boolean; onClose: () => void }
 }
 
 /**
@@ -63,14 +49,7 @@ interface UseHireActionsOptions {
  * and the hire's workroom so both offer the same actions.
  */
 export function useHireActions(hire: HireListItem, options: UseHireActionsOptions = {}) {
-  const {
-    existingReview,
-    isMedicalDirectors = false,
-    agreementDeepLink,
-    sessionsDeepLink,
-    billingDeepLink,
-  } = options
-  const [detailsOpen, setDetailsOpen] = useState(false)
+  const { existingReview, isMedicalDirectors = false, agreementDeepLink } = options
   const [agreementOpenManually, setAgreementOpenManually] = useState(false)
   const agreementOpen = agreementOpenManually || (agreementDeepLink?.open ?? false)
   const setAgreementOpen = (open: boolean) => {
@@ -84,7 +63,6 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
   })
   const openPayment = (opts?: { changeCard?: boolean }) =>
     setPayment({ open: true, changeCard: opts?.changeCard ?? false })
-  const [sessionsOpenManually, setSessionsOpenManually] = useState(false)
   const [reasonOpen, setReasonOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [completeOpen, setCompleteOpen] = useState(false)
@@ -97,7 +75,12 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
   const completeMutation = useMarkHireAsCompleted()
 
   const supervisorName = formatDisplayName(hire.supervisor)
-  const hasWorkroom = !isMedicalDirectors
+  const workroomLink = (tab?: WorkroomTab) =>
+    workroomHref(
+      hire.id,
+      tab,
+      isMedicalDirectors ? '/hired-medical-directors' : '/hired-supervisors',
+    )
   // Open the profile on the route matching the list it was reached from, and tell
   // the profile page where to go back to (the two hired lists are separate pages).
   const profileHref = isMedicalDirectors
@@ -127,23 +110,12 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
     (hire.agreement?.hourlyRateCents != null || monthlyBilled) &&
     hire.paymentMethodSavedAt == null
 
-  // Signed in-app monthly agreement: its months and payments are in the billing dialog.
+  // Signed in-app monthly agreement: its months and payments are on the workroom's Billing tab.
   const hasMonthlyBilling = monthlyBilled && isAgreementSigned
-  const [billingOpenManually, setBillingOpenManually] = useState(false)
-  const billingOpen = billingOpenManually || (hasMonthlyBilling && (billingDeepLink?.open ?? false))
-  const setBillingOpen = (open: boolean) => {
-    setBillingOpenManually(open)
-    if (!open) billingDeepLink?.onClose()
-  }
 
-  // Signed hourly agreement: sessions are logged and reviewed in the app.
+  // Signed hourly agreement: sessions are logged and reviewed on the workroom's Timesheet tab.
   const hasSessions =
     IN_APP_PAYMENTS_ENABLED && isAgreementSigned && hire.agreement?.hourlyRateCents != null
-  const sessionsOpen = sessionsOpenManually || (hasSessions && (sessionsDeepLink?.open ?? false))
-  const setSessionsOpen = (open: boolean) => {
-    setSessionsOpenManually(open)
-    if (!open) sessionsDeepLink?.onClose()
-  }
 
   // Mark as Completed: only when ACCEPTED or ACTIVE, and the agreement is fully signed
   const canComplete = canMarkHireCompleted(hire) && !endScheduled
@@ -240,9 +212,9 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
         <DropdownMenuPortal>
           <DropdownMenuPositioner>
             <DropdownMenuPopup>
-              {!inWorkroom && hasWorkroom && (
+              {!inWorkroom && (
                 <DropdownMenuItem>
-                  <Link href={workroomHref(hire.id)} className="w-full">
+                  <Link href={workroomLink()} className="w-full">
                     Open Workroom
                   </Link>
                 </DropdownMenuItem>
@@ -252,39 +224,36 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
                   View Profile
                 </Link>
               </DropdownMenuItem>
-              {!inWorkroom &&
-                (hasWorkroom ? (
-                  <DropdownMenuItem>
-                    <Link href={workroomHref(hire.id, 'details')} className="w-full">
-                      Request Details
-                    </Link>
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem onClick={() => setDetailsOpen(true)}>
+              {!inWorkroom && (
+                <DropdownMenuItem>
+                  <Link href={workroomLink('details')} className="w-full">
                     Request Details
-                  </DropdownMenuItem>
-                ))}
+                  </Link>
+                </DropdownMenuItem>
+              )}
               {hasAgreement && (canSignAgreement || !inWorkroom) && (
                 <>
                   <DropdownMenuSeparator />
-                  {canSignAgreement || !hasWorkroom ? (
+                  {canSignAgreement ? (
                     <DropdownMenuItem onClick={() => setAgreementOpen(true)}>
-                      {canSignAgreement ? 'Review & Sign Agreement' : 'View Agreement'}
+                      Review &amp; Sign Agreement
                     </DropdownMenuItem>
                   ) : (
                     <DropdownMenuItem>
-                      <Link href={workroomHref(hire.id, 'details')} className="w-full">
+                      <Link href={workroomLink('details')} className="w-full">
                         View Agreement
                       </Link>
                     </DropdownMenuItem>
                   )}
                 </>
               )}
-              {hasMonthlyBilling && (
+              {hasMonthlyBilling && !inWorkroom && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setBillingOpen(true)}>
-                    Monthly Billing
+                  <DropdownMenuItem>
+                    <Link href={workroomLink('billing')} className="w-full">
+                      Monthly Billing
+                    </Link>
                   </DropdownMenuItem>
                 </>
               )}
@@ -333,8 +302,6 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
 
   const dialogs = (
     <>
-      <HireRequestDetailsDialog hire={hire} open={detailsOpen} onOpenChange={setDetailsOpen} />
-
       {hasAgreement && (
         <AgreementDialog
           hire={hire}
@@ -342,16 +309,6 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
           onOpenChange={setAgreementOpen}
           canSign={canSignAgreement}
           onSetUpPayment={IN_APP_PAYMENTS_ENABLED ? openPayment : undefined}
-        />
-      )}
-
-      {hasSessions && (
-        <HireSessionsDialog
-          hireId={hire.id}
-          counterpartName={supervisorName}
-          open={sessionsOpen}
-          onOpenChange={setSessionsOpen}
-          onChangeCard={() => openPayment({ changeCard: !needsPaymentSetup })}
         />
       )}
 
@@ -373,16 +330,6 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
           onOpenChange={(open) => setPayment((prev) => ({ ...prev, open }))}
           changeCard={payment.changeCard}
           onSaved={canSignAgreement ? () => setAgreementOpen(true) : undefined}
-        />
-      )}
-
-      {hasMonthlyBilling && (
-        <MonthlyBillingDialog
-          hireId={hire.id}
-          counterpartName={supervisorName}
-          open={billingOpen}
-          onOpenChange={setBillingOpen}
-          onChangeCard={() => openPayment({ changeCard: hire.paymentMethodSavedAt != null })}
         />
       )}
 
@@ -442,17 +389,16 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
   return {
     supervisorName,
     profileHref,
-    hasWorkroom,
+    workroomLink,
     hasAgreement,
     isAgreementSigned,
     canSignAgreement,
     needsPaymentSetup,
     hasSessions,
+    monthlyBilled,
     hasMonthlyBilling,
-    openMonthlyBilling: () => setBillingOpen(true),
     openAgreement: () => setAgreementOpen(true),
     openPayment,
-    openSessions: () => setSessionsOpen(true),
     renderMenu,
     dialogs,
   }

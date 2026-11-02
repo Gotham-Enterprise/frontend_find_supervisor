@@ -691,8 +691,8 @@ function AcceptedNextStepDialog({
   const listPath = isMedicalDirectorHire ? '/medical-director-clients' : '/supervisees'
   const listName = isMedicalDirectorHire ? 'Medical Director Clients' : 'My Supervisees'
   const agreementName = isMedicalDirectorHire
-    ? 'medical director agreement'
-    : 'supervision agreement'
+    ? 'Medical Director Agreement'
+    : 'Supervision Agreement'
 
   function handleSendAgreement() {
     if (!hire) return
@@ -719,7 +719,7 @@ function AcceptedNextStepDialog({
               <FileSignature className="mt-0.5 size-5 shrink-0 text-amber-600" aria-hidden />
               <div className="space-y-1">
                 <p className="text-sm font-semibold text-amber-950">
-                  Next step: send a {agreementName}
+                  Next Step: Send a {agreementName}
                 </p>
                 <p className="text-sm leading-relaxed text-amber-900">
                   {isMedicalDirectorHire ? 'Your services don' : 'Supervision doesn'}&apos;t
@@ -814,10 +814,8 @@ export function SupervisionRequestsPage() {
   return (
     <>
       <div className="space-y-8">
+        {/* The page title is in the top bar; only its description here. */}
         <div className="space-y-3">
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">
-            Incoming requests
-          </h2>
           <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
             Pending requests appear below (accepted, active, and completed hires are on other
             pages). Use the menu on any card to view full details, accept, or decline.

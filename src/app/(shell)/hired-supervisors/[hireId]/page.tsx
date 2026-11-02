@@ -20,7 +20,7 @@ export default async function HireWorkroomRoute({ params }: HireWorkroomRoutePro
   return (
     <SuperviseeRouteGuard>
       <Suspense fallback={null}>
-        <HireWorkroomPage hireId={hireId} />
+        <HireWorkroomPage hireId={hireId} listPath="/hired-supervisors" />
       </Suspense>
     </SuperviseeRouteGuard>
   )

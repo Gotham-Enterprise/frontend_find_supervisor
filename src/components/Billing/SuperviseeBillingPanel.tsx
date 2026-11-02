@@ -725,12 +725,10 @@ function PaymentHistoryCard() {
 function SuperviseeBillingContent() {
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Billing</h1>
-        <p className="mt-1 text-base text-muted-foreground">
-          Your saved cards and what you&apos;ve paid for supervision.
-        </p>
-      </div>
+      {/* The page title is in the top bar; only its description here. */}
+      <p className="text-base text-muted-foreground">
+        Your saved cards and what you&apos;ve paid for supervision.
+      </p>
 
       {IN_APP_PAYMENTS_ENABLED ? (
         <div className="flex flex-col gap-6">
