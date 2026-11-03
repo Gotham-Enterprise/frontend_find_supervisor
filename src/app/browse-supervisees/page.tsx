@@ -33,7 +33,7 @@ import {
 // ---------------------------------------------------------------------------
 
 export const metadata: Metadata = buildMetadata({
-  title: `Find Supervisees Seeking Supervision | ${SITE_NAME}`,
+  title: `Find Supervisees Seeking Supervision`,
   description: `Browse pre-licensed professionals and healthcare providers looking for clinical supervision or physician collaboration. Filter Supervisees by state and supervision format, then sign up as a Supervisor to connect.`,
   path: '/browse-supervisees',
 })
@@ -121,7 +121,7 @@ export default async function BrowseSuperviseesPage({ searchParams }: PageProps)
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
               Browse Pre-Licensed Counselors, NPs, PAs, and other healthcare professionals seeking
-              clinical supervision or physician collaboration — filtered by state and supervision
+              clinical supervision or physician collaboration. Filter by state and supervision
               format.
             </p>
             <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
@@ -254,7 +254,7 @@ function buildFilteredHeading({ state, format }: { state?: string; format?: stri
 
   const parts: string[] = ['Supervisees']
   if (stateLabel) parts.push(`in ${stateLabel}`)
-  if (formatLabel) parts.push(`— ${formatLabel}`)
+  if (formatLabel) parts.push(`(${formatLabel})`)
 
   return parts.join(' ')
 }
@@ -271,7 +271,7 @@ function NoResultsState({ hasFilters }: { hasFilters: boolean }) {
       </p>
       <p className="mt-2 text-sm text-muted-foreground">
         {hasFilters
-          ? 'Try broadening your search — remove a filter or change the state.'
+          ? 'Try broadening your search. Remove a filter or change the state.'
           : 'New Supervisees join regularly. Check back soon.'}
       </p>
       <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">

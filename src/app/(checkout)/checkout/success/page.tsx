@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import { CheckoutSuccessPage } from '@/components/checkout/CheckoutSuccessPage'
 
 export const metadata: Metadata = {
-  title: 'Subscription Activated | Find A Supervisor',
+  title: 'Subscription Activated',
 }
 
 export default function CheckoutSuccessRoutePage() {

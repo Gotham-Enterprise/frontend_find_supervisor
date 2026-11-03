@@ -9,7 +9,7 @@ const faqs = [
   {
     question: 'How does Find A Supervisor work?',
     answer:
-      'Supervisors create a profile that is verified by our admin team before appearing in search. Supervisees then browse and filter verified Supervisors and send a supervision request or message to the ones that fit. To accept a request and start the relationship, the Supervisor needs an active Platform Access subscription — on the Free Plan, requests stay pending until they upgrade. Once connected, both sides manage messaging, requests, and reviews from their dashboard.',
+      'Supervisors create a profile that is verified by our admin team before appearing in search. Supervisees then browse and filter verified Supervisors and send a supervision request or message to the ones that fit. To accept a request and start the relationship, the Supervisor needs an active Platform Access subscription. On the Free Plan, requests stay pending until they upgrade. Once connected, both sides manage messaging, requests, and reviews from their dashboard.',
   },
   {
     question: 'What types of Supervisors can I find on this platform?',
@@ -19,12 +19,12 @@ const faqs = [
   {
     question: 'Can I find a Medical Director here?',
     answer:
-      'Yes. If your profile says you need a Medical Director, a dedicated Find Medical Directors page appears in your account. It works like the supervisor search — filter verified Medical Directors by specialty, state, and format, then send a hire request from their profile. Medical Directors work on a monthly retainer basis, and your Medical Director need is tracked separately from your supervision need, each with its own budget and timeline.',
+      'Yes. If your profile says you need a Medical Director, a dedicated Find Medical Directors page appears in your account. It works like the supervisor search. Filter verified Medical Directors by specialty, state, and format, then send a hire request from their profile. Medical Directors work on a monthly retainer basis, and your Medical Director need is tracked separately from your supervision need, each with its own budget and timeline.',
   },
   {
-    question: 'I am a physician — can I join as a Medical Director?',
+    question: 'I am a physician. Can I join as a Medical Director?',
     answer:
-      'Yes. Medical Directors sign up with their own dedicated flow: physician credentials (MD/DO), optional board certifications, and monthly-only fees. Your profile is listed on the Find Medical Directors page for people seeking medical direction, and you can additionally offer Supervising Physician and/or Collaborating Physician services for PAs and NPs — each offering with its own credentials. Verification, plans, messaging, and reviews work the same as for other Supervisors.',
+      'Yes. Medical Directors sign up with their own dedicated flow: physician credentials (MD/DO), optional board certifications, and monthly-only fees. Your profile is listed on the Find Medical Directors page for people seeking medical direction, and you can additionally offer Supervising Physician and/or Collaborating Physician services for PAs and NPs, each with its own credentials. Verification, plans, messaging, and reviews work the same as for other Supervisors.',
   },
   {
     question: 'What is the matching feature?',
@@ -49,7 +49,7 @@ const faqs = [
   {
     question: 'Is it free for Supervisors to join?',
     answer:
-      'Yes. Every Supervisor starts on the Find a Supervisor Free Plan, which includes a basic profile listing in search, visibility into interested supervisees, the ability to receive and view supervision requests, and platform notifications for new activity. There is no time limit — you can stay on the Free Plan for as long as you like.',
+      'Yes. Every Supervisor starts on the Find a Supervisor Free Plan, which includes a basic profile listing in search, visibility into interested supervisees, the ability to receive and view supervision requests, and platform notifications for new activity. There is no time limit, so you can stay on the Free Plan for as long as you like.',
   },
   {
     question: 'What is the difference between the Free Plan and Platform Access?',
@@ -59,7 +59,7 @@ const faqs = [
   {
     question: 'How is this different from traditional supervision matching?',
     answer:
-      'Traditional matching requires you to manage each connection separately. With our platform, you can browse vetted healthcare Supervisors, Collaborating Physicians, and Supervising Physicians — then communicate through personalized introductions, all in one place.',
+      'Traditional matching requires you to manage each connection separately. With our platform, you can browse vetted healthcare Supervisors, Collaborating Physicians, and Supervising Physicians, then communicate through personalized introductions, all in one place.',
   },
 ]
 

@@ -1,7 +1,7 @@
 import { ContactUsEntry } from '@/components/ContactUs/ContactUsEntry'
 
 export const metadata = {
-  title: 'Contact Us | Find A Supervisor',
+  title: 'Contact Us',
   description: 'Get in touch with the Find A Supervisor support team.',
 }
 

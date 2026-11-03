@@ -4,7 +4,7 @@ import { SuperviseeRouteGuard } from '@/components/Layout/SuperviseeRouteGuard'
 import { SearchSupervisorPage } from '@/components/SearchSupervisor'
 
 export const metadata = {
-  title: 'Find Your Supervisor | Find A Supervisor',
+  title: 'Find Your Supervisor',
   description: 'Browse verified Supervisors matched to your specialty, license, and goals.',
 }
 

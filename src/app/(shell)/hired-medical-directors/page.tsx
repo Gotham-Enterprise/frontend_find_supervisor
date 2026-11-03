@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { HiredSupervisorsPage } from '@/components/HiredSupervisors'
 
 export const metadata = {
-  title: 'Hired Medical Directors | Find A Supervisor',
+  title: 'Hired Medical Directors',
   description: 'Your hired medical directors and engagement details.',
 }
 
