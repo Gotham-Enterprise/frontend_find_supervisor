@@ -1,6 +1,6 @@
 'use client'
 
-import { Lock, NotebookPen, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Download, Lock, NotebookPen, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ import type { ActivityEntry, HireActivityLog } from '@/types/activity-log'
 
 import { ACTIVITY_TYPE_ICONS, ACTIVITY_TYPE_LABELS } from './activity-types'
 import { ActivityEntryDialog } from './ActivityEntryDialog'
+import { ActivityExportDialog } from './ActivityExportDialog'
 
 /** "Tue, Nov 3" for a "YYYY-MM-DD". */
 function shortDate(iso: string): string {
@@ -166,6 +167,7 @@ export function ActivityLogPanel({
   const { data: log, isLoading, isError, refetch } = useHireActivityLog(hireId, enabled)
   const [form, setForm] = useState<{ open: boolean; entry?: ActivityEntry }>({ open: false })
   const [deleting, setDeleting] = useState<ActivityEntry | null>(null)
+  const [exportOpen, setExportOpen] = useState(false)
   const deleteMutation = useDeleteActivityEntry(hireId)
   const { showSuccess, showError } = useUserSnackbar()
 
@@ -205,12 +207,20 @@ export function ActivityLogPanel({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <p className="text-sm text-muted-foreground">{intro}</p>
-        {log.canLog && (
-          <Button size="sm" className="shrink-0" onClick={() => setForm({ open: true })}>
-            <Plus className="size-3.5" aria-hidden />
-            Log Activity
-          </Button>
-        )}
+        <div className="flex shrink-0 gap-2">
+          {log.entries.length > 0 && (
+            <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+              <Download className="size-3.5" aria-hidden />
+              Export
+            </Button>
+          )}
+          {log.canLog && (
+            <Button size="sm" onClick={() => setForm({ open: true })}>
+              <Plus className="size-3.5" aria-hidden />
+              Log Activity
+            </Button>
+          )}
+        </div>
       </div>
 
       {groups.length === 0 ? (
@@ -251,6 +261,14 @@ export function ActivityLogPanel({
           onOpenChange={(open) => setForm((prev) => ({ ...prev, open }))}
         />
       )}
+
+      <ActivityExportDialog
+        hireId={hireId}
+        log={log}
+        fileLabel={counterpartName}
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+      />
 
       <ConfirmDialog
         open={deleting != null}

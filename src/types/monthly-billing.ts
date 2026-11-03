@@ -25,6 +25,33 @@ export type MonthlyPeriodStatus =
 
 export type MonthlyPaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'CANCELED'
 
+/** What the client reports about a disputed month. */
+export type MonthlyDisputeCategory =
+  | 'UNREACHABLE'
+  | 'MISSED_MEETINGS'
+  | 'NO_CHART_REVIEW'
+  | 'PROTOCOLS_NOT_SIGNED'
+  | 'UNPROFESSIONAL'
+  | 'OTHER'
+
+export interface DisputeEvidenceFile {
+  id: string
+  /** Presigned, valid for 24 hours. */
+  url: string
+  fileName: string
+  contentType: string
+  sizeBytes: number
+}
+
+/** One submission on a disputed month: the report, more from the client, or the Medical Director's side. */
+export interface DisputeEvidenceItem {
+  id: string
+  authorRole: 'SUPERVISEE' | 'SUPERVISOR'
+  note: string | null
+  createdAt: string
+  files: DisputeEvidenceFile[]
+}
+
 /** One month of a monthly hire, as the supervisee or supervisor sees it. */
 export interface MonthlyPeriod {
   id: string
@@ -44,6 +71,8 @@ export interface MonthlyPeriod {
   reviewEndsAt: string
   disputedAt: string | null
   disputeReason: string | null
+  /** null on months reported before categories existed. */
+  disputeCategory: MonthlyDisputeCategory | null
   resolvedAt: string | null
   resolutionNote: string | null
   approvedAmountCents: number | null
@@ -51,6 +80,12 @@ export interface MonthlyPeriod {
   settledAt: string | null
   refundCents: number
   isCurrent: boolean
+  /** The dispute timeline, oldest first (empty unless the month was disputed). */
+  evidence: DisputeEvidenceItem[]
+  /** True while support reviews the month: either side can add to it. */
+  canAddEvidence: boolean
+  /** Files this side can still attach to the month. */
+  evidenceFilesLeft: number
   // supervisee
   serviceFeeCents?: number
   totalCents?: number

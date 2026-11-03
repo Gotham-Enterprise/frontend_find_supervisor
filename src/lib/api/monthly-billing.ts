@@ -1,5 +1,10 @@
 import type { ApiResponse } from '@/types/api'
-import type { HireMonthlyBilling, MonthlyPaymentsPage, MonthlyQuote } from '@/types/monthly-billing'
+import type {
+  HireMonthlyBilling,
+  MonthlyDisputeCategory,
+  MonthlyPaymentsPage,
+  MonthlyQuote,
+} from '@/types/monthly-billing'
 
 import { apiClient } from './client'
 
@@ -88,11 +93,35 @@ export async function approveMonthlyPeriod(
 export async function disputeMonthlyPeriod(
   hireId: string,
   periodId: string,
-  reason: string,
+  report: { reason: string; category: MonthlyDisputeCategory; files: File[] },
 ): Promise<HireMonthlyBilling> {
+  // multipart: reason, category, plus up to 5 files (JPG, PNG or PDF)
+  const form = new FormData()
+  form.append('reason', report.reason)
+  form.append('category', report.category)
+  report.files.forEach((file) => form.append('attachments', file))
+  // Unset the client's JSON default so axios sends real multipart/form-data.
   const { data } = await apiClient.post<ApiResponse<HireMonthlyBilling>>(
     `/supervision/hires/${hireId}/monthly-billing/periods/${periodId}/dispute`,
-    { reason },
+    form,
+    { headers: { 'Content-Type': undefined } },
+  )
+  return data.data
+}
+
+/** POST …/periods/:periodId/evidence — either side adds a note and/or files to a disputed month. */
+export async function addMonthlyDisputeEvidence(
+  hireId: string,
+  periodId: string,
+  evidence: { note: string; files: File[] },
+): Promise<HireMonthlyBilling> {
+  const form = new FormData()
+  if (evidence.note) form.append('note', evidence.note)
+  evidence.files.forEach((file) => form.append('attachments', file))
+  const { data } = await apiClient.post<ApiResponse<HireMonthlyBilling>>(
+    `/supervision/hires/${hireId}/monthly-billing/periods/${periodId}/evidence`,
+    form,
+    { headers: { 'Content-Type': undefined } },
   )
   return data.data
 }

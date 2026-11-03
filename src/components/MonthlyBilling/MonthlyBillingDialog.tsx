@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, CalendarClock, Flag } from 'lucide-react'
+import { AlertCircle, CalendarClock, Flag, MessageSquarePlus } from 'lucide-react'
 import { useState } from 'react'
 
 import { cardLabel } from '@/components/HirePayment/HirePaymentSetup'
@@ -9,11 +9,9 @@ import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Textarea } from '@/components/ui/textarea'
 import { CardPaymentError, useUserSnackbar } from '@/lib/hooks'
 import {
   useApproveMonthlyPeriod,
-  useDisputeMonthlyPeriod,
   useHireMonthlyBilling,
   usePayNowMonthlyPeriod,
 } from '@/lib/hooks/useMonthlyBilling'
@@ -23,10 +21,8 @@ import { formatUsdCents } from '@/lib/utils/money'
 import { formatDateOnly } from '@/lib/utils/profile-formatters'
 import type { HireMonthlyBilling, MonthlyPeriod } from '@/types/monthly-billing'
 
+import { AddEvidenceForm, DisputeTimeline, ReportProblemForm } from './MonthlyDispute'
 import { MonthlyQuoteSummary } from './MonthlyQuoteSummary'
-
-const DISPUTE_REASON_MIN = 10
-const DISPUTE_REASON_MAX = 1000
 
 type Role = HireMonthlyBilling['role']
 
@@ -101,9 +97,8 @@ function PeriodRow({
   const { showSuccess, showError } = useUserSnackbar()
   const payNow = usePayNowMonthlyPeriod(hireId)
   const approve = useApproveMonthlyPeriod(hireId)
-  const dispute = useDisputeMonthlyPeriod(hireId)
-  const [disputing, setDisputing] = useState(false)
-  const [reason, setReason] = useState('')
+  // Which inline form is open: the client's report, or adding to a disputed month.
+  const [form, setForm] = useState<'report' | 'evidence' | null>(null)
   const [approveOpen, setApproveOpen] = useState(false)
   const badge = periodBadge(period, role)
   const line = moneyLine(period, role, counterpartName)
@@ -114,21 +109,6 @@ function PeriodRow({
       onError: (err) =>
         showError(err instanceof CardPaymentError ? err.message : parseApiError(err)),
     })
-  }
-
-  function handleDispute() {
-    dispute.mutate(
-      { periodId: period.id, reason: reason.trim() },
-      {
-        onSuccess: () => {
-          setDisputing(false)
-          showSuccess('Problem reported', {
-            description: 'The payment is on hold. Gotham support will contact you both.',
-          })
-        },
-        onError: (err) => showError(parseApiError(err)),
-      },
-    )
   }
 
   return (
@@ -167,27 +147,41 @@ function PeriodRow({
         </div>
       )}
 
-      {(period.disputeReason || period.resolutionNote) && (
-        <div className="mt-2 space-y-1 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-          {period.disputeReason && (
-            <p>
-              <span className="font-medium text-foreground">Reported problem:</span>{' '}
-              {period.disputeReason}
-            </p>
-          )}
-          {period.resolutionNote && (
-            <p>
-              <span className="font-medium text-foreground">Support&apos;s decision:</span>{' '}
-              {period.resolutionNote}
-            </p>
-          )}
+      {period.evidence.length > 0 ? (
+        <DisputeTimeline period={period} role={role} counterpartName={counterpartName} />
+      ) : (
+        // Months reported before the evidence timeline existed.
+        (period.disputeReason || period.resolutionNote) && (
+          <div className="mt-2 space-y-1 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+            {period.disputeReason && (
+              <p>
+                <span className="font-medium text-foreground">Reported problem:</span>{' '}
+                {period.disputeReason}
+              </p>
+            )}
+            {period.resolutionNote && (
+              <p>
+                <span className="font-medium text-foreground">Support&apos;s decision:</span>{' '}
+                {period.resolutionNote}
+              </p>
+            )}
+          </div>
+        )
+      )}
+
+      {period.canAddEvidence && form !== 'evidence' && (
+        <div className="mt-2 flex justify-end">
+          <Button variant="outline" size="sm" onClick={() => setForm('evidence')}>
+            <MessageSquarePlus className="size-3.5" aria-hidden />
+            {role === 'supervisor' ? 'Add Your Side' : 'Add to Report'}
+          </Button>
         </div>
       )}
 
-      {role === 'supervisee' && (period.canApprove || period.canDispute) && !disputing && (
+      {role === 'supervisee' && (period.canApprove || period.canDispute) && form !== 'report' && (
         <div className="mt-2 flex flex-wrap justify-end gap-2">
           {period.canDispute && (
-            <Button variant="outline" size="sm" onClick={() => setDisputing(true)}>
+            <Button variant="outline" size="sm" onClick={() => setForm('report')}>
               <Flag className="size-3.5" aria-hidden />
               Report a problem
             </Button>
@@ -200,43 +194,23 @@ function PeriodRow({
         </div>
       )}
 
-      {disputing && (
-        <div className="mt-3 space-y-2">
-          <label htmlFor={`dispute-${period.id}`} className="text-sm font-medium text-foreground">
-            What went wrong this month?
-          </label>
-          <Textarea
-            id={`dispute-${period.id}`}
-            rows={3}
-            maxLength={DISPUTE_REASON_MAX}
-            value={reason}
-            disabled={dispute.isPending}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder={`E.g. ${counterpartName} was unreachable for two weeks`}
-          />
-          <p className="text-xs text-muted-foreground">
-            The payment is held and Gotham support reviews it with you both. They decide how much is
-            released to {counterpartName}; the rest goes back to your card.
-          </p>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={dispute.isPending}
-              onClick={() => setDisputing(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              disabled={dispute.isPending || reason.trim().length < DISPUTE_REASON_MIN}
-              onClick={handleDispute}
-            >
-              {dispute.isPending ? 'Reporting…' : 'Report Problem'}
-            </Button>
-          </div>
-        </div>
+      {form === 'report' && (
+        <ReportProblemForm
+          hireId={hireId}
+          period={period}
+          counterpartName={counterpartName}
+          onClose={() => setForm(null)}
+        />
+      )}
+
+      {form === 'evidence' && (
+        <AddEvidenceForm
+          hireId={hireId}
+          period={period}
+          role={role}
+          counterpartName={counterpartName}
+          onClose={() => setForm(null)}
+        />
       )}
 
       <ConfirmDialog

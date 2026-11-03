@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+  addMonthlyDisputeEvidence,
   approveMonthlyPeriod,
   disputeMonthlyPeriod,
   getHireMonthlyBilling,
@@ -13,7 +14,7 @@ import {
   syncPayNowMonthlyPeriod,
 } from '@/lib/api/monthly-billing'
 import { stripePromise } from '@/lib/stripe/client'
-import type { HireMonthlyBilling } from '@/types/monthly-billing'
+import type { HireMonthlyBilling, MonthlyDisputeCategory } from '@/types/monthly-billing'
 
 import { hireKeys } from './useHires'
 import { CardPaymentError } from './useHireSessions'
@@ -100,8 +101,23 @@ export function useApproveMonthlyPeriod(hireId: string) {
 export function useDisputeMonthlyPeriod(hireId: string) {
   return useMonthlyBillingMutation(
     hireId,
-    ({ periodId, reason }: { periodId: string; reason: string }) =>
-      disputeMonthlyPeriod(hireId, periodId, reason),
+    ({
+      periodId,
+      ...report
+    }: {
+      periodId: string
+      reason: string
+      category: MonthlyDisputeCategory
+      files: File[]
+    }) => disputeMonthlyPeriod(hireId, periodId, report),
+  )
+}
+
+export function useAddMonthlyDisputeEvidence(hireId: string) {
+  return useMonthlyBillingMutation(
+    hireId,
+    ({ periodId, ...evidence }: { periodId: string; note: string; files: File[] }) =>
+      addMonthlyDisputeEvidence(hireId, periodId, evidence),
   )
 }
 

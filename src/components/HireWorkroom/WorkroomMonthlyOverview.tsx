@@ -5,6 +5,7 @@ import {
   CalendarClock,
   CreditCard,
   FileSignature,
+  Flag,
   Hourglass,
   Receipt,
 } from 'lucide-react'
@@ -92,6 +93,7 @@ export function WorkroomMonthlyOverview({
     ? (billing.periods.find((p) => p.id === billing.unpaid?.periodId) ?? null)
     : null
   const toCheck = billing?.periods.filter((p) => p.status === 'IN_REVIEW' && p.canDispute) ?? []
+  const disputed = billing?.periods.filter((p) => p.status === 'DISPUTED') ?? []
   const current = billing?.periods.find((p) => p.isCurrent) ?? null
   const currentBadge = current ? periodBadge(current, 'supervisee') : null
   const ended = endedLine(hire)
@@ -160,6 +162,22 @@ export function WorkroomMonthlyOverview({
           <span className="font-semibold">{period.label} has ended.</span> Its payment is released
           to {supervisorName} after {formatEasternDateTime(period.reviewEndsAt)}, unless you report
           a problem.
+        </Banner>
+      ))}
+      {disputed.map((period) => (
+        <Banner
+          key={period.id}
+          tone="amber"
+          icon={<Flag className="size-4 text-amber-600" aria-hidden />}
+          action={
+            <Link href={billingHref} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+              View report
+            </Link>
+          }
+        >
+          <span className="font-semibold">{period.label} is on hold.</span> Gotham support is
+          reviewing your report. {supervisorName} can add their side, and you can add more in
+          Billing.
         </Banner>
       ))}
       {billing?.scheduledEnd && !ended && (

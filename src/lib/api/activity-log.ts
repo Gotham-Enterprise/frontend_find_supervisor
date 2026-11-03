@@ -48,3 +48,18 @@ export async function deleteActivityEntry(
   )
   return data.data
 }
+
+/**
+ * GET /supervision/hires/:hireId/activity-log/export — the log as a PDF or
+ * CSV file, oldest first; `from`/`to` ("YYYY-MM-DD") narrow it. Either side.
+ */
+export async function exportActivityLog(
+  hireId: string,
+  params: { format: 'pdf' | 'csv'; from?: string; to?: string },
+): Promise<Blob> {
+  const { data } = await apiClient.get<Blob>(`/supervision/hires/${hireId}/activity-log/export`, {
+    params,
+    responseType: 'blob',
+  })
+  return data
+}
