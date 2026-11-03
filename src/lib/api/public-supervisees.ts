@@ -90,6 +90,8 @@ export interface PublicSuperviseeSearchMeta {
 export interface PublicSuperviseeSearchResult {
   supervisees: PublicSuperviseeSummary[]
   meta: PublicSuperviseeSearchMeta
+  /** `true` when the API answered successfully; `false` when the request failed. */
+  ok: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -228,6 +230,7 @@ export async function fetchPublicSupervisees(
     const meta = json.metaData ?? {}
 
     return {
+      ok: true,
       supervisees: rows.map((row) => parseRow(row as Record<string, unknown>)),
       meta: {
         totalCount: Number(meta.totalCount ?? rows.length),
@@ -279,6 +282,7 @@ export async function fetchPublicSuperviseeById(
 
 function emptyResult(): PublicSuperviseeSearchResult {
   return {
+    ok: false,
     supervisees: [],
     meta: { totalCount: 0, totalPages: 0, currentPage: 1, hasNextPage: false },
   }

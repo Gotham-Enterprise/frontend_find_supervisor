@@ -93,6 +93,13 @@ export interface PublicSupervisorSearchMeta {
 export interface PublicSupervisorSearchResult {
   supervisors: PublicSupervisorSummary[]
   meta: PublicSupervisorSearchMeta
+  /**
+   * `true` when the API answered successfully (even with zero rows). `false`
+   * when the request failed (network error, non-2xx such as a 502 during a
+   * backend restart), so callers can tell "nobody matched" apart from
+   * "we could not ask" and avoid caching a blank page.
+   */
+  ok: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -311,6 +318,7 @@ export async function fetchPublicSupervisors(
     const meta = json.metaData ?? {}
 
     return {
+      ok: true,
       supervisors: rows.map((row) => parseRow(row as Record<string, unknown>)),
       meta: {
         totalCount: Number(meta.totalCount ?? rows.length),
@@ -404,6 +412,7 @@ export async function fetchPublicSupervisorById(
 
 function emptyResult(): PublicSupervisorSearchResult {
   return {
+    ok: false,
     supervisors: [],
     meta: { totalCount: 0, totalPages: 0, currentPage: 1, hasNextPage: false },
   }

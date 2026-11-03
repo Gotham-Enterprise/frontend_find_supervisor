@@ -265,7 +265,7 @@ export default async function MedicalDirectorsIndexPage({ searchParams }: PagePr
             Looking for a Supervisor or Collaborating Physician?
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Nurse practitioners, physician assistants, and pre-licensed mental health professionals
+            Nurse Practitioners, Physician Assistants, and pre-licensed mental health professionals
             can browse Supervisors, Collaborating Physicians, and Supervising Physicians.
           </p>
           <Link
