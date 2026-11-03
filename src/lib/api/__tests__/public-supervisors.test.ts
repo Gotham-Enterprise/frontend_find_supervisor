@@ -119,3 +119,28 @@ describe('public directory routing', () => {
     ).toBe('/supervisors/new-york/xyz')
   })
 })
+
+describe('fetchPublicSupervisors — ok flag', () => {
+  it('reports ok: true when the API answers, even with zero rows', async () => {
+    mockSearchResponse([])
+    const result = await fetchPublicSupervisors({ limit: 3 })
+    expect(result.ok).toBe(true)
+    expect(result.supervisors).toEqual([])
+  })
+
+  it('reports ok: false on a non-2xx response (e.g. 502 during a backend restart)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 502, json: async () => ({}) }),
+    )
+    const result = await fetchPublicSupervisors({ limit: 3 })
+    expect(result.ok).toBe(false)
+    expect(result.supervisors).toEqual([])
+  })
+
+  it('reports ok: false when the request throws (API unreachable)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')))
+    const result = await fetchPublicSupervisors({ limit: 3 })
+    expect(result.ok).toBe(false)
+  })
+})

@@ -51,24 +51,61 @@ export function formatCredentialWithState(
   return `${c} (${s})`
 }
 
+/** Leading titles that are not a first name: "Dr. Julie Robinson" → "Dr. Julie R", never "Dr. R". */
+const HONORIFICS = new Set([
+  'dr',
+  'mr',
+  'mrs',
+  'ms',
+  'mx',
+  'miss',
+  'prof',
+  'rev',
+  'fr',
+  'sr',
+  'hon',
+])
+/** Trailing generational suffixes that are not surnames: "Jim Santiano Jr." → "Jim S". */
+const NAME_SUFFIXES = new Set(['jr', 'sr', 'ii', 'iii', 'iv', 'v'])
+
+function normalizeNameToken(token: string): string {
+  return token.replace(/\.$/, '').toLowerCase()
+}
+
 /**
  * Mask a full name to first name + last initial, e.g. "Katie Cruz" → "Katie C".
  * Used to protect a person's identity until they're connected with the viewer.
- * The initial comes from the last token that begins with a letter, so trailing
- * suffixes that aren't surnames (e.g. account numbers: "Jim Santiano 02" → "Jim S")
- * don't leak through. Single-word or empty names are returned unchanged.
+ * A leading honorific is kept ("Dr. Julie Robinson" → "Dr. Julie R") and anything
+ * after a comma (credentials) is ignored. The initial comes from the last token
+ * that begins with a letter and is not a generational suffix, so "Jim Santiano 02"
+ * and "Jim Santiano Jr." → "Jim S". A title followed by a single surname masks that
+ * surname ("Dr. Robinson" → "Dr. R"); a single untitled word is returned unchanged.
+ * Mirrors maskNameToFirstInitial in the backend's supervision_name_privacy.
  */
 export function maskNameToFirstInitial(fullName: string | null | undefined): string {
-  const parts = (fullName ?? '').trim().split(/\s+/).filter(Boolean)
+  const parts = (fullName ?? '').split(',')[0].trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return ''
+
+  const honorifics: string[] = []
+  while (parts.length > 0 && HONORIFICS.has(normalizeNameToken(parts[0]))) {
+    honorifics.push(parts.shift() as string)
+  }
+  const prefix = honorifics.length > 0 ? `${honorifics.join(' ')} ` : ''
+  if (parts.length === 0) return honorifics.join(' ')
+
   const first = parts[0]
   for (let i = parts.length - 1; i >= 1; i--) {
-    const initial = parts[i][0]
-    if (/\p{L}/u.test(initial)) {
-      return `${first} ${initial.toUpperCase()}`
+    const token = parts[i]
+    const initial = token[0]
+    if (/\p{L}/u.test(initial) && !NAME_SUFFIXES.has(normalizeNameToken(token))) {
+      return `${prefix}${first} ${initial.toUpperCase()}`
     }
   }
-  return first
+  // Only one name token left. After a title it is almost certainly a surname.
+  if (honorifics.length > 0 && /\p{L}/u.test(first[0])) {
+    return `${prefix}${first[0].toUpperCase()}`
+  }
+  return `${prefix}${first}`
 }
 
 /**
