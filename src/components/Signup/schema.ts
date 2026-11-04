@@ -516,8 +516,13 @@ export const superviseeSchemaObject = accountSchemaBase.extend({
   // supervision type + the MD checkbox); MD-only flows reuse `description`.
   mdIdealDescription: z.string().max(500, 'Must be 500 characters or less').optional(),
 
-  // Optional self introduction (separate from the ideal-supervisor description)
-  introduction: z.string().max(500, 'Must be 500 characters or less').optional(),
+  // Required self introduction (separate from the ideal-supervisor description).
+  // Trimmed first so whitespace-only input does not satisfy the minimum.
+  introduction: z
+    .string()
+    .trim()
+    .min(1, 'Please introduce yourself')
+    .max(500, 'Must be 500 characters or less'),
 
   // Step 2 — profile fields (sent to backend as numeric category IDs); collected before
   // `typeOfSupervisor` so the available supervision types can be filtered by eligibility

@@ -19,6 +19,7 @@ function makeProfile(overrides: Partial<SuperviseeProfileData> = {}): Supervisee
     licensureState: 'TX',
     availability: 'FLEXIBLE',
     idealSupervisor: 'Supportive supervisor with CBT experience.',
+    introduction: 'Pre-licensed counselor completing supervised hours.',
     budgetRangeType: 'HOURLY',
     budgetRangeStart: 0,
     budgetRangeEnd: 100,
@@ -126,6 +127,24 @@ describe('editSuperviseeProfileSchema — supervision type requiredness', () => 
 
   it('accepts a supervision type without the checkbox', () => {
     expect(editSuperviseeProfileSchema.safeParse(validValues).success).toBe(true)
+  })
+
+  it.each([
+    ['empty', ''],
+    ['whitespace-only', '   '],
+  ])('requires an introduction on edit, rejecting %s input', (_label, introduction) => {
+    const result = editSuperviseeProfileSchema.safeParse({ ...validValues, introduction })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.path[0] === 'introduction')
+      expect(issue?.message).toBe('Please introduce yourself')
+    }
+  })
+
+  it('loads an existing profile without an introduction as an empty field the user must fill', () => {
+    const values = getDefaultSuperviseeProfileFormValues(makeProfile({ introduction: '' }))
+    expect(values.introduction).toBe('')
+    expect(editSuperviseeProfileSchema.safeParse(values).success).toBe(false)
   })
 
   it('accepts a Medical Director-only request — no type or occupation', () => {

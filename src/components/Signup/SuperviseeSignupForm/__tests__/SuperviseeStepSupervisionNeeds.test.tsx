@@ -52,7 +52,7 @@ const supervisorTypesData: SupervisorTypeData[] = [
 const occupationOptions: SelectOption[] = [
   { label: 'Nurse Practitioner', value: '1' },
   { label: 'Physician Assistant', value: '2' },
-  { label: 'Associate Clinical Social Worker', value: '3' },
+  { label: 'Associate Social Worker', value: '3' },
 ]
 
 function Harness({
@@ -144,7 +144,7 @@ describe('SuperviseeStepSupervisionNeeds', () => {
     expect(getForm().getValues('typeOfSupervisor')).toBe('Collaborating Physician')
 
     await act(async () => {
-      getForm().setValue('occupationId', '3') // Associate Clinical Social Worker — not NP-eligible
+      getForm().setValue('occupationId', '3') // Associate Social Worker — not NP-eligible
     })
     expect(getForm().getValues('typeOfSupervisor')).toBe('')
   })

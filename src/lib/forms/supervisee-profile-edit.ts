@@ -79,8 +79,13 @@ export const editSuperviseeProfileSchema = z
       z.number().min(1, 'Monthly budget must be at least $1').optional(),
     ),
     mdIdealDescription: z.string().max(500, 'Must be 500 characters or less').optional(),
-    // Optional self introduction (separate from idealSupervisor)
-    introduction: z.string().max(500, 'Must be 500 characters or less').optional(),
+    // Required self introduction (separate from idealSupervisor). Existing
+    // profiles saved without one must add it on their next edit.
+    introduction: z
+      .string()
+      .trim()
+      .min(1, 'Please introduce yourself')
+      .max(500, 'Must be 500 characters or less'),
     uploadProfilePhoto: z.any().optional(),
   })
   .superRefine((data, ctx) => {
@@ -280,8 +285,7 @@ export function superviseeProfileFormValuesToPayload(
     mdIdealDescription: values.typeOfSupervisorNeeded
       ? values.mdIdealDescription?.trim() || undefined
       : values.idealSupervisor.trim() || undefined,
-    // '' (not undefined) so an erased introduction clears the stored value
-    introduction: values.introduction?.trim() ?? '',
+    introduction: values.introduction.trim(),
     uploadProfilePhoto:
       values.uploadProfilePhoto instanceof File ? values.uploadProfilePhoto : undefined,
   }

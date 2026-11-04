@@ -32,8 +32,11 @@ export const PROFESSION_GROUP_LABELS: Record<ProfessionGroup, string> = {
  */
 const OCCUPATION_PROFESSION_GROUPS: Record<ProfessionGroup, readonly string[]> = {
   COUNSELING: [
+    // Retired from the supervisee dropdown on 2026-11-04 (APC, APCC, ALC) but kept
+    // here so legacy profiles that still carry them resolve to a profession group.
     'Associate Professional Counselor',
     'Associate Professional Clinical Counselor',
+    'Associate Mental Health Counselor',
     'Licensed Mental Health Counselor Associate',
     'Licensed Clinical Mental Health Counselor Associate',
     'Licensed Professional Counselor Associate',
@@ -54,6 +57,8 @@ const OCCUPATION_PROFESSION_GROUPS: Record<ProfessionGroup, readonly string[]> =
     'Registered Marriage and Family Therapist Intern',
   ],
   SOCIAL_WORK: [
+    'Associate Social Worker',
+    // Legacy name kept so profiles saved before the 2026-11-04 rename still resolve.
     'Associate Clinical Social Worker',
     'Clinical Social Work Associate',
     'Licensed Social Worker',

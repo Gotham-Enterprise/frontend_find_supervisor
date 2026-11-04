@@ -232,14 +232,30 @@ describe('three-step structure (Introduction & Terms split into step 3)', () => 
     }
   })
 
-  it('accepts step 3 with the agreements checked (introduction optional)', () => {
+  it('accepts step 3 with an introduction and the agreements checked', () => {
     expect(
       superviseeStep3Schema.safeParse({
-        introduction: '',
+        introduction: 'Pre-licensed counselor looking for weekly virtual supervision.',
         agreedToPost: true,
         agreedToTerms: true,
       }).success,
     ).toBe(true)
+  })
+
+  it.each([
+    ['empty', ''],
+    ['whitespace-only', '   '],
+  ])('rejects step 3 when the introduction is %s', (_label, introduction) => {
+    const result = superviseeStep3Schema.safeParse({
+      introduction,
+      agreedToPost: true,
+      agreedToTerms: true,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.path[0] === 'introduction')
+      expect(issue?.message).toBe('Please introduce yourself')
+    }
   })
 })
 

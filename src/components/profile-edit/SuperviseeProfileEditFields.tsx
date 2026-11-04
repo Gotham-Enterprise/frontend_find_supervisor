@@ -797,7 +797,9 @@ export function SuperviseeProfileEditFields({
           name="introduction"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Introduce Yourself (Optional)</FormLabel>
+              <FormLabel>
+                Introduce Yourself <span className="text-destructive">*</span>
+              </FormLabel>
               <FormControl>
                 <Textarea
                   {...field}

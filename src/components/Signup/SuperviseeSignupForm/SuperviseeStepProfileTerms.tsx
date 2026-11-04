@@ -15,7 +15,7 @@ type SuperviseeStepProfileTermsProps = {
   isSubmitting: boolean
 }
 
-/** Step 3: optional self introduction + the agreement checkboxes. */
+/** Step 3: required self introduction + the agreement checkboxes. */
 export function SuperviseeStepProfileTerms({
   variant = 'supervisee',
   isSubmitting,
@@ -32,7 +32,9 @@ export function SuperviseeStepProfileTerms({
         rules={superviseeFieldRules('introduction')}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Introduce Yourself (Optional)</FormLabel>
+            <FormLabel>
+              Introduce Yourself <span className="text-destructive">*</span>
+            </FormLabel>
             <FormControl>
               <Textarea
                 rows={4}

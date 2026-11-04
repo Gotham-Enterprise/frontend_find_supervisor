@@ -36,6 +36,7 @@ function makeSuperviseeProfile(): SuperviseeProfileData {
     licensureState: 'TX',
     availability: 'FLEXIBLE',
     idealSupervisor: 'Supportive supervisor with CBT experience.',
+    introduction: 'Pre-licensed counselor completing supervised hours.',
     budgetRangeType: 'HOURLY',
     budgetRangeStart: 0,
     budgetRangeEnd: 100,

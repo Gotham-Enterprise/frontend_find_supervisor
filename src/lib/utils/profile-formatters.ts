@@ -353,7 +353,7 @@ function resolveOneSupervisorTypeLabel(key: string, options: SelectOption[]): st
     LEGACY_SUPERVISOR_TYPE_LABELS[key] ??
     humanizeSupervisorTypeFallback(key)
   // Shared display override so "Mental Health Counselors" reads
-  // "Supervising Mental Health Counselors" everywhere this family renders.
+  // "Mental Health Counselor Supervisor" everywhere this family renders.
   return supervisionTypeDisplayLabel(label)
 }
 
