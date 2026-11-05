@@ -64,7 +64,6 @@ export const SUPERVISEE_ALLOWED_OCCUPATIONS = [
   'Registered Marriage and Family Therapist Intern',
   // Social Work
   'Associate Social Worker',
-  'Clinical Social Work Associate',
   'Licensed Social Worker',
   'Licensed Master Social Worker',
   'Licensed Graduate Social Worker',

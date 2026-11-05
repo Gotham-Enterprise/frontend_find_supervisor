@@ -8,6 +8,7 @@ import {
   formatHowSoonLooking,
   formatSupervisionFormat,
 } from '@/lib/utils/profile-formatters'
+import { supervisionTypeDisplayLabel } from '@/lib/utils/supervisee-eligibility'
 
 interface SuperviseeCardProps {
   supervisee: PublicSuperviseeSummary
@@ -43,7 +44,12 @@ export function SuperviseeCard({ supervisee, index, stateSlug }: SuperviseeCardP
     emptyFallback: '',
   })
   const supervisionStates = supervisee.stateOfLicensure.join(', ')
-  const supervisorNeeded = supervisee.typeOfSupervisorNeeded.filter(Boolean).join(', ')
+  // Same display override as the profile page, so "Mental Health Counselors"
+  // reads "Mental Health Counselor Supervisor" here too.
+  const supervisorNeeded = supervisee.typeOfSupervisorNeeded
+    .filter(Boolean)
+    .map(supervisionTypeDisplayLabel)
+    .join(', ')
   // Quick-scan card: credential only — occupation, specialty, budget and the
   // ideal-supervisor text live on the profile page.
   const credential = supervisee.title

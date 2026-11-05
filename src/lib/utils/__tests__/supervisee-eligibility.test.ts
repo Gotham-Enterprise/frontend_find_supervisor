@@ -208,6 +208,7 @@ describe('retired supervisee occupations', () => {
     'Associate Professional Counselor',
     'Associate Professional Clinical Counselor',
     'Associate Licensed Counselor',
+    'Clinical Social Work Associate',
   ])('no longer offers %s in the supervisee dropdown', (name) => {
     expect(filterSuperviseeOccupationOptions([{ label: name, value: '1' }])).toEqual([])
   })

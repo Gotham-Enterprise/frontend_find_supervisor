@@ -60,6 +60,7 @@ const OCCUPATION_PROFESSION_GROUPS: Record<ProfessionGroup, readonly string[]> =
     'Associate Social Worker',
     // Legacy name kept so profiles saved before the 2026-11-04 rename still resolve.
     'Associate Clinical Social Worker',
+    // Retired 2026-11-04 (duplicate of Associate Social Worker); kept for legacy profiles.
     'Clinical Social Work Associate',
     'Licensed Social Worker',
     'Licensed Master Social Worker',
