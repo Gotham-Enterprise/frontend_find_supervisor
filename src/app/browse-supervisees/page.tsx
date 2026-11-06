@@ -48,7 +48,7 @@ const FORMAT_PARAM_MAP: Record<string, string> = {
   hybrid: 'HYBRID',
 }
 
-const PUBLIC_RESULTS_LIMIT = 12
+const PUBLIC_RESULTS_LIMIT = 21
 
 const TOP_STATE_SLUGS = [
   'california',

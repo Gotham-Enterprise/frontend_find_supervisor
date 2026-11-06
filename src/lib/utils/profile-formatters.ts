@@ -450,7 +450,7 @@ export function parseSupervisionHoursInput(
 
 export function formatSupervisionHours(value: number | null | undefined): string {
   if (value == null) return ''
-  return `${value} hour${value === 1 ? '' : 's'}`
+  return `${value.toLocaleString('en-US')} hour${value === 1 ? '' : 's'}`
 }
 
 // ─── Budget range ─────────────────────────────────────────────────────────────

@@ -57,6 +57,8 @@ export interface PublicSuperviseeSummary {
 export interface PublicSuperviseeProfile extends Omit<PublicSuperviseeSummary, 'bio'> {
   /** Availability code, e.g. "WEEKDAYS". Empty when unset. */
   availability: string
+  /** Total supervised hours still needed (MHC needs only); null when unset. */
+  supervisionHoursNeeded: number | null
   /** Specific start date when howSoonLooking is a date-based choice. */
   lookingDate: string | null
   /** "About me" free text. */
@@ -144,6 +146,7 @@ function parseProfile(row: Record<string, unknown>): PublicSuperviseeProfile {
   return {
     ...summary,
     availability: str(row.availability),
+    supervisionHoursNeeded: numOrNull(row.supervisionHoursNeeded),
     lookingDate: str(row.lookingDate) || null,
     introduction: str(row.introduction),
     idealSupervisor: str(row.idealSupervisor),

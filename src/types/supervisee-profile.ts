@@ -77,6 +77,9 @@ export interface SuperviseeProfileData {
   /** Optional self introduction (separate from idealSupervisor) */
   introduction?: string | null
 
+  /** Total supervised hours still needed for licensure (MHC needs only) */
+  supervisionHoursNeeded?: number | null
+
   /** Number of completed supervision sessions */
   completedCount: number
   /** Number of remaining required supervision hours/sessions */

@@ -29,6 +29,7 @@ import {
   useSuperviseeFormOptions,
   useSupervisorTypesData,
 } from '@/lib/hooks'
+import { requiresSupervisionHours } from '@/lib/utils/profile-formatters'
 import {
   filterSuperviseeOccupationOptions,
   getEligibleSupervisorTypes,
@@ -114,6 +115,7 @@ export function SuperviseeProfileEditFields({
   const mdHowSoonLooking = useWatch({ control: form.control, name: 'mdHowSoonLooking' })
   // MD-only profile: the supervision-only preference fields are hidden and skipped.
   const isMdOnly = needsMedicalDirector && !typeOfSupervisorNeeded
+  const showSupervisionHours = requiresSupervisionHours(typeOfSupervisorNeeded)
   const { data: specialtyOptions = [] } = useSpecialtiesByOccupation(selectedOccupationId)
   // Full state names ("Alabama") for the credential's state; value stays the abbreviation
   const { data: licensureStateOptions = [] } = useStateNameOptions()
@@ -627,6 +629,22 @@ export function SuperviseeProfileEditFields({
             required
           />
         </div>
+        {showSupervisionHours && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormInputField
+              control={form.control}
+              name="supervisionHoursNeeded"
+              label="Supervision Hours Needed"
+              description="Total supervised hours you still need for licensure."
+              type="number"
+              numberValue
+              min={1}
+              step={1}
+              placeholder="e.g. 2000"
+              isSubmitting={isSubmitting}
+            />
+          </div>
+        )}
 
         {isMdOnly && mdTimingFields}
       </fieldset>

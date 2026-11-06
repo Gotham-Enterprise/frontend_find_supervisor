@@ -50,6 +50,8 @@ export interface UpdateSuperviseeProfilePayload {
   mdMonthlyBudget?: number
   mdIdealDescription?: string
   introduction?: string
+  /** Sent as '' to clear the stored value. */
+  supervisionHoursNeeded?: number | ''
   uploadProfilePhoto?: File
 }
 
@@ -71,6 +73,7 @@ export async function updateSuperviseeProfile(
     mdPreferredSpecialty,
     mdMonthlyBudget,
     introduction,
+    supervisionHoursNeeded,
     identity,
     ...rest
   } = payload
@@ -109,6 +112,10 @@ export async function updateSuperviseeProfile(
   // Present-but-empty clears the stored introduction (it is optional and erasable).
   if (introduction !== undefined) {
     fd.append('introduction', introduction)
+  }
+  // Same for the optional hours — '' clears the stored value.
+  if (supervisionHoursNeeded !== undefined) {
+    fd.append('supervisionHoursNeeded', String(supervisionHoursNeeded))
   }
 
   if (budgetRangeStart !== undefined) {

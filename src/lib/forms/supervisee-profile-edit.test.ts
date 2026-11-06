@@ -214,3 +214,36 @@ describe('editSuperviseeProfileSchema — supervision type requiredness', () => 
     }
   })
 })
+
+describe('supervisionHoursNeeded — supervisee profile edit round trip', () => {
+  it('loads the stored hours and sends them back for a Mental Health Counselor need', () => {
+    const defaults = getDefaultSuperviseeProfileFormValues(
+      makeProfile({ supervisionHoursNeeded: 2000 }),
+    )
+    expect(defaults.supervisionHoursNeeded).toBe(2000)
+    expect(superviseeProfileFormValuesToPayload(defaults).supervisionHoursNeeded).toBe(2000)
+  })
+
+  it("sends '' when the field is cleared so the backend nulls it", () => {
+    const defaults = getDefaultSuperviseeProfileFormValues(makeProfile())
+    expect(superviseeProfileFormValuesToPayload(defaults).supervisionHoursNeeded).toBe('')
+  })
+
+  it('omits the hours for a non-MHC need', () => {
+    const defaults = getDefaultSuperviseeProfileFormValues(
+      makeProfile({
+        typeOfSupervisorNeeded: ['Collaborating Physicians'],
+        supervisionHoursNeeded: 2000,
+      }),
+    )
+    expect(superviseeProfileFormValuesToPayload(defaults).supervisionHoursNeeded).toBeUndefined()
+  })
+
+  it('rejects zero and fractional hours', () => {
+    const base = getDefaultSuperviseeProfileFormValues(makeProfile())
+    for (const supervisionHoursNeeded of [0, 1.5]) {
+      const result = editSuperviseeProfileSchema.safeParse({ ...base, supervisionHoursNeeded })
+      expect(result.success).toBe(false)
+    }
+  })
+})

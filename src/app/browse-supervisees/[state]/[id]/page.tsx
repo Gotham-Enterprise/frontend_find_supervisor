@@ -34,6 +34,7 @@ import {
   formatCredentialWithState,
   formatHowSoonLooking,
   formatSupervisionFormat,
+  formatSupervisionHours,
 } from '@/lib/utils/profile-formatters'
 import {
   isMedicalDirectorType,
@@ -253,6 +254,13 @@ function SuperviseePublicProfile({
           <ProfileDetail label="Availability" value={formatAvailability(supervisee.availability)} />
         )}
         {hasNonMdNeed && timeline && <ProfileDetail label="Timeline" value={timeline} />}
+        {/* After Timeline so it lands in the column under Availability (two-column flow). */}
+        {supervisee.supervisionHoursNeeded != null && (
+          <ProfileDetail
+            label="Hours Needed"
+            value={formatSupervisionHours(supervisee.supervisionHoursNeeded)}
+          />
+        )}
         {genderIdentity && <ProfileDetail label="Gender Identity" value={genderIdentity} />}
         {languages.length > 0 && <ProfileDetail label="Languages" value={languages.join(', ')} />}
       </div>

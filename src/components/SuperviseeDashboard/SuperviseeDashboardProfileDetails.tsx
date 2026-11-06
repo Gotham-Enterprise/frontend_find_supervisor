@@ -14,6 +14,7 @@ import {
   formatHowSoonLooking,
   formatLocation,
   formatSupervisionFormat,
+  formatSupervisionHours,
   resolveOptionLabel,
   resolveSupervisorTypeLabel,
 } from '@/lib/utils/profile-formatters'
@@ -177,6 +178,11 @@ export function SuperviseeDashboardProfileDetails({
           )}
           {profile.availability && (
             <ProfileDetailRow label="Availability">{availabilityLabel}</ProfileDetailRow>
+          )}
+          {profile.supervisionHoursNeeded != null && (
+            <ProfileDetailRow label="Hours Needed">
+              {formatSupervisionHours(profile.supervisionHoursNeeded)}
+            </ProfileDetailRow>
           )}
           {profile.howSoonLooking && (
             <ProfileDetailRow label="How Soon">{howSoonLabel}</ProfileDetailRow>

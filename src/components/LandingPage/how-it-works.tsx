@@ -3,7 +3,7 @@ function StepVisual({ index }: { index: number }) {
     return (
       <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
         <div className="space-y-2">
-          {['Discipline', 'License Type', 'Supervision Requirements'].map((label) => (
+          {['Profession', 'License Type', 'Supervision Requirements'].map((label) => (
             <div key={label} className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">{label} *</span>
               <div className="h-9 rounded-md border border-border bg-background" />
@@ -65,7 +65,7 @@ function StepVisual({ index }: { index: number }) {
 const steps = [
   {
     title: 'Create Your Profile',
-    description: 'Tell us your discipline, license type, and supervision requirements.',
+    description: 'Tell us your profession, license type, and supervision requirements.',
     visualLabel: 'Create Your Profile',
   },
   {

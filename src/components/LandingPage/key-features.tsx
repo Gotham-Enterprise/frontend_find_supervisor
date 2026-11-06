@@ -59,7 +59,7 @@ export function KeyFeatures() {
                   <div className="mt-1 h-3 w-40 rounded bg-muted-foreground/10" />
                 </div>
                 <div className="space-y-3">
-                  {['First Name', 'Last Name', 'Discipline', 'License Type', 'Email'].map(
+                  {['First Name', 'Last Name', 'Profession', 'License Type', 'Email'].map(
                     (label) => (
                       <div key={label} className="flex flex-col gap-1">
                         <span className="text-[10px] font-medium text-muted-foreground">

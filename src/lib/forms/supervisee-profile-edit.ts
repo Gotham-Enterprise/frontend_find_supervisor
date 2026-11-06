@@ -9,7 +9,7 @@ import {
 } from '@/lib/forms/identity-preferences'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
 import { formatUSPhoneForDisplay, normalizeUSPhoneNumber } from '@/lib/utils/phone'
-import { coerceStringList } from '@/lib/utils/profile-formatters'
+import { coerceStringList, requiresSupervisionHours } from '@/lib/utils/profile-formatters'
 import {
   isMedicalDirectorType,
   MEDICAL_DIRECTOR_TYPE_NAME,
@@ -68,6 +68,11 @@ export const editSuperviseeProfileSchema = z
     budgetRangeType: z.string(),
     budgetRangeStart: z.preprocess(normalizeNumberFieldInput, z.number().min(0).optional()),
     budgetRangeEnd: z.preprocess(normalizeNumberFieldInput, z.number().min(0).optional()),
+    // Optional — shown only for a Mental Health Counselor need.
+    supervisionHoursNeeded: z.preprocess(
+      normalizeNumberFieldInput,
+      z.number().int('Enter a whole number').min(1, 'Must be at least 1 hour').optional(),
+    ),
     // Medical Director need preferences (md* columns) — required only when the
     // checkbox is ticked; enforced in the superRefine below.
     mdPreferredOccupation: z.string(),
@@ -207,6 +212,7 @@ export function getDefaultSuperviseeProfileFormValues(
     budgetRangeType: profile.budgetRangeType ?? '',
     budgetRangeStart: profile.budgetRangeStart ?? undefined,
     budgetRangeEnd: profile.budgetRangeEnd ?? undefined,
+    supervisionHoursNeeded: profile.supervisionHoursNeeded ?? undefined,
     mdPreferredOccupation: profile.mdPreferredOccupation ?? '',
     mdPreferredSpecialty: profile.mdPreferredSpecialty ?? '',
     mdHowSoonLooking: profile.mdHowSoonLooking ?? '',
@@ -272,6 +278,10 @@ export function superviseeProfileFormValuesToPayload(
         : values.budgetRangeStart
       : undefined,
     budgetRangeEnd: values.typeOfSupervisorNeeded ? values.budgetRangeEnd : undefined,
+    // '' clears a removed value; the backend also clears it when the need is no longer MHC.
+    supervisionHoursNeeded: requiresSupervisionHours(values.typeOfSupervisorNeeded)
+      ? (values.supervisionHoursNeeded ?? '')
+      : undefined,
     // Medical Director preferences — the backend clears the md* columns itself
     // when the submitted needs no longer include Medical Director.
     mdPreferredOccupation: values.mdPreferredOccupation,

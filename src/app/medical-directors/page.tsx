@@ -68,7 +68,7 @@ const OTHER_STATE_SLUGS = Object.keys(US_STATES)
   .filter((s) => !TOP_STATE_SLUGS.includes(s))
   .sort()
 
-const PUBLIC_RESULTS_LIMIT = 12
+const PUBLIC_RESULTS_LIMIT = 21
 
 // ---------------------------------------------------------------------------
 // Page
