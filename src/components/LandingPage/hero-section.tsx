@@ -9,7 +9,7 @@ import { buttonVariants } from '@/components/ui/button'
 export function HeroSection() {
   return (
     <section id="home" className="relative overflow-hidden bg-hero-bg">
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 pt-20 pb-10 sm:px-6 sm:pt-28 sm:pb-12 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="space-y-6">
             <h1 className="line-clamp-4 text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl lg:text-6xl">

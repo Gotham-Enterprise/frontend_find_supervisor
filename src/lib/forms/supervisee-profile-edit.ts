@@ -9,7 +9,11 @@ import {
 } from '@/lib/forms/identity-preferences'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
 import { formatUSPhoneForDisplay, normalizeUSPhoneNumber } from '@/lib/utils/phone'
-import { coerceStringList } from '@/lib/utils/profile-formatters'
+import {
+  coerceStringList,
+  requiresSupervisionHoursNeeded,
+  SUPERVISION_HOURS_NEEDED_REQUIRED_MESSAGE,
+} from '@/lib/utils/profile-formatters'
 import {
   isMedicalDirectorType,
   MEDICAL_DIRECTOR_TYPE_NAME,
@@ -68,6 +72,8 @@ export const editSuperviseeProfileSchema = z
     budgetRangeType: z.string(),
     budgetRangeStart: z.preprocess(normalizeNumberFieldInput, z.number().min(0).optional()),
     budgetRangeEnd: z.preprocess(normalizeNumberFieldInput, z.number().min(0).optional()),
+    // Required for every need except Medical Director — enforced in the superRefine below.
+    supervisionHoursNeeded: z.string().optional(),
     // Medical Director need preferences (md* columns) — required only when the
     // checkbox is ticked; enforced in the superRefine below.
     mdPreferredOccupation: z.string(),
@@ -79,8 +85,13 @@ export const editSuperviseeProfileSchema = z
       z.number().min(1, 'Monthly budget must be at least $1').optional(),
     ),
     mdIdealDescription: z.string().max(500, 'Must be 500 characters or less').optional(),
-    // Optional self introduction (separate from idealSupervisor)
-    introduction: z.string().max(500, 'Must be 500 characters or less').optional(),
+    // Required self introduction (separate from idealSupervisor). Existing
+    // profiles saved without one must add it on their next edit.
+    introduction: z
+      .string()
+      .trim()
+      .min(1, 'Please introduce yourself')
+      .max(500, 'Must be 500 characters or less'),
     uploadProfilePhoto: z.any().optional(),
   })
   .superRefine((data, ctx) => {
@@ -97,6 +108,17 @@ export const editSuperviseeProfileSchema = z
         code: 'custom',
         path: ['typeOfSupervisorNeeded'],
         message: SUPERVISION_TYPE_REQUIRED_MESSAGE,
+      })
+    }
+    // Existing profiles saved without hours must pick a range on their next edit.
+    if (
+      requiresSupervisionHoursNeeded(data.typeOfSupervisorNeeded) &&
+      !data.supervisionHoursNeeded
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['supervisionHoursNeeded'],
+        message: SUPERVISION_HOURS_NEEDED_REQUIRED_MESSAGE,
       })
     }
     if (data.typeOfSupervisorNeeded && !data.superviseeOccupation) {
@@ -202,6 +224,7 @@ export function getDefaultSuperviseeProfileFormValues(
     budgetRangeType: profile.budgetRangeType ?? '',
     budgetRangeStart: profile.budgetRangeStart ?? undefined,
     budgetRangeEnd: profile.budgetRangeEnd ?? undefined,
+    supervisionHoursNeeded: profile.supervisionHoursNeeded ?? '',
     mdPreferredOccupation: profile.mdPreferredOccupation ?? '',
     mdPreferredSpecialty: profile.mdPreferredSpecialty ?? '',
     mdHowSoonLooking: profile.mdHowSoonLooking ?? '',
@@ -267,6 +290,10 @@ export function superviseeProfileFormValuesToPayload(
         : values.budgetRangeStart
       : undefined,
     budgetRangeEnd: values.typeOfSupervisorNeeded ? values.budgetRangeEnd : undefined,
+    // '' clears a removed value; the backend also clears it when the need is no longer MHC.
+    supervisionHoursNeeded: requiresSupervisionHoursNeeded(values.typeOfSupervisorNeeded)
+      ? (values.supervisionHoursNeeded ?? '')
+      : undefined,
     // Medical Director preferences — the backend clears the md* columns itself
     // when the submitted needs no longer include Medical Director.
     mdPreferredOccupation: values.mdPreferredOccupation,
@@ -280,8 +307,7 @@ export function superviseeProfileFormValuesToPayload(
     mdIdealDescription: values.typeOfSupervisorNeeded
       ? values.mdIdealDescription?.trim() || undefined
       : values.idealSupervisor.trim() || undefined,
-    // '' (not undefined) so an erased introduction clears the stored value
-    introduction: values.introduction?.trim() ?? '',
+    introduction: values.introduction.trim(),
     uploadProfilePhoto:
       values.uploadProfilePhoto instanceof File ? values.uploadProfilePhoto : undefined,
   }

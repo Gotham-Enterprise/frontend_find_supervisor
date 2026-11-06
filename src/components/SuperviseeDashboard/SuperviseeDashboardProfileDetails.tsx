@@ -14,6 +14,7 @@ import {
   formatHowSoonLooking,
   formatLocation,
   formatSupervisionFormat,
+  formatSupervisionHoursNeeded,
   resolveOptionLabel,
   resolveSupervisorTypeLabel,
 } from '@/lib/utils/profile-formatters'
@@ -95,6 +96,7 @@ export function SuperviseeDashboardProfileDetails({
   const statesOfLicensure = profile.user.stateOfLicensure ?? []
 
   const availabilityLabel = resolveOptionLabel(profile.availability, availabilityOptions)
+  const hoursNeededLabel = formatSupervisionHoursNeeded(profile.supervisionHoursNeeded)
   const supervisorTypeLabel = resolveSupervisorTypeLabel(
     profile.typeOfSupervisorNeeded,
     supervisorTypeOptions,
@@ -177,6 +179,9 @@ export function SuperviseeDashboardProfileDetails({
           )}
           {profile.availability && (
             <ProfileDetailRow label="Availability">{availabilityLabel}</ProfileDetailRow>
+          )}
+          {hoursNeededLabel && (
+            <ProfileDetailRow label="Hours Needed">{hoursNeededLabel}</ProfileDetailRow>
           )}
           {profile.howSoonLooking && (
             <ProfileDetailRow label="How Soon">{howSoonLabel}</ProfileDetailRow>

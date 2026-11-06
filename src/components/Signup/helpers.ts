@@ -113,6 +113,7 @@ export const superviseeDefaultValues: Partial<SuperviseeFormValues> = {
   zipcode: '',
   typeOfSupervisor: '',
   needsMedicalDirector: false,
+  supervisionHoursNeeded: '',
   supervisorOccupationId: '',
   supervisorSpecialtyId: '',
   stateOfLicensure: [],

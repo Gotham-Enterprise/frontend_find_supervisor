@@ -30,6 +30,10 @@ import {
   useSupervisorTypesData,
 } from '@/lib/hooks'
 import {
+  requiresSupervisionHoursNeeded,
+  SUPERVISION_HOURS_NEEDED_OPTIONS,
+} from '@/lib/utils/profile-formatters'
+import {
   filterSuperviseeOccupationOptions,
   getEligibleSupervisorTypes,
   groupSuperviseeOccupationOptions,
@@ -114,6 +118,7 @@ export function SuperviseeProfileEditFields({
   const mdHowSoonLooking = useWatch({ control: form.control, name: 'mdHowSoonLooking' })
   // MD-only profile: the supervision-only preference fields are hidden and skipped.
   const isMdOnly = needsMedicalDirector && !typeOfSupervisorNeeded
+  const showSupervisionHours = requiresSupervisionHoursNeeded(typeOfSupervisorNeeded)
   const { data: specialtyOptions = [] } = useSpecialtiesByOccupation(selectedOccupationId)
   // Full state names ("Alabama") for the credential's state; value stays the abbreviation
   const { data: licensureStateOptions = [] } = useStateNameOptions()
@@ -627,6 +632,19 @@ export function SuperviseeProfileEditFields({
             required
           />
         </div>
+        {showSupervisionHours && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormSelectField
+              control={form.control}
+              name="supervisionHoursNeeded"
+              label="Supervision Hours Needed"
+              options={SUPERVISION_HOURS_NEEDED_OPTIONS}
+              placeholder="Select Hours"
+              isSubmitting={isSubmitting}
+              required
+            />
+          </div>
+        )}
 
         {isMdOnly && mdTimingFields}
       </fieldset>
@@ -797,7 +815,9 @@ export function SuperviseeProfileEditFields({
           name="introduction"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Introduce Yourself (Optional)</FormLabel>
+              <FormLabel>
+                Introduce Yourself <span className="text-destructive">*</span>
+              </FormLabel>
               <FormControl>
                 <Textarea
                   {...field}

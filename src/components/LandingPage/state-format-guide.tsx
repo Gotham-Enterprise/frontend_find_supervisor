@@ -39,8 +39,8 @@ export function StateFormatGuide() {
   const [selected, setSelected] = useState<SelectOption | null>(null)
 
   return (
-    <section id="state-rules" className="scroll-mt-16 bg-muted/30 pt-20 pb-10 sm:pt-24 sm:pb-12">
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+    <section id="state-rules" className="scroll-mt-16 bg-muted/30 py-10 sm:py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8 text-center">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Check Supervision Rules in Your State

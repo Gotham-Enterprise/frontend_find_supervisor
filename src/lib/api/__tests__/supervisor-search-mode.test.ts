@@ -55,6 +55,6 @@ describe('mapApiRowToSupervisorSearchResult — role label', () => {
       { id: '3', fullName: 'Jane LCSW', supervisorType: 'Mental Health Counselors' },
       0,
     )
-    expect(result.supervisorType).toBe('Supervising Mental Health Counselors')
+    expect(result.supervisorType).toBe('Mental Health Counselor Supervisor')
   })
 })

@@ -30,8 +30,8 @@ const features = [
 
 export function KeyFeatures() {
   return (
-    <section id="features" className="scroll-mt-16 bg-background py-20 sm:py-24">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+    <section id="features" className="scroll-mt-16 bg-background py-10 sm:py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <h2 className="mb-12 text-center text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
           Key Features
         </h2>
@@ -59,7 +59,7 @@ export function KeyFeatures() {
                   <div className="mt-1 h-3 w-40 rounded bg-muted-foreground/10" />
                 </div>
                 <div className="space-y-3">
-                  {['First Name', 'Last Name', 'Discipline', 'License Type', 'Email'].map(
+                  {['First Name', 'Last Name', 'Profession', 'License Type', 'Email'].map(
                     (label) => (
                       <div key={label} className="flex flex-col gap-1">
                         <span className="text-[10px] font-medium text-muted-foreground">
