@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useMemo, useState } from 'react'
 
 import { SubscriptionModal } from '@/components/Dashboard/subscription/SubscriptionModal'
+import { TestAccountNoticeDialog } from '@/components/TestAccountNoticeDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DisabledWithTooltip } from '@/components/ui/tooltip'
@@ -27,6 +28,7 @@ import {
   getHireStatusLabel,
   isAcceptedConnectionStatus,
 } from '@/lib/utils/supervision-status'
+import { isTestToLiveInteraction } from '@/lib/utils/test-accounts'
 import type { SuperviseeProfileViewData } from '@/types/supervisee-profile'
 
 import { MakeConnectionModal } from './MakeConnectionModal'
@@ -123,6 +125,7 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
   const [connectionModalOpen, setConnectionModalOpen] = useState(false)
   const [autoOpenDismissed, setAutoOpenDismissed] = useState(false)
   const [planModalOpen, setPlanModalOpen] = useState(false)
+  const [testAccountNoticeOpen, setTestAccountNoticeOpen] = useState(false)
   const { data: conversations } = useConversations()
   const { data: supervisorProfile, isLoading: supervisorProfileLoading } = useSupervisorProfile()
 
@@ -222,6 +225,10 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
       : 'You can message this supervisee once your connection request has been accepted.'
 
   function handleMakeConnectionClick() {
+    if (isTestToLiveInteraction(authUser, user)) {
+      setTestAccountNoticeOpen(true)
+      return
+    }
     if (connectionAccess.allowed) {
       setConnectionModalOpen(true)
       return
@@ -327,6 +334,11 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
         superviseeId={user.id}
         superviseeName={displayName}
         canAccess={connectionAccess.allowed}
+      />
+
+      <TestAccountNoticeDialog
+        open={testAccountNoticeOpen}
+        onOpenChange={setTestAccountNoticeOpen}
       />
 
       <SubscriptionModal

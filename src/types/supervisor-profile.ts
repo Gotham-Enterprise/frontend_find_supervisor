@@ -128,6 +128,8 @@ export interface SupervisorProfileUser extends UserIdentityPreferencesResponse {
   lastName?: string | null
   fullName: string | null
   contactNumber?: string | null
+  /** Internal test account (only other test accounts can see it). */
+  isTestAccount?: boolean
   city: string | null
   state: string | null
   zipcode?: string | null
