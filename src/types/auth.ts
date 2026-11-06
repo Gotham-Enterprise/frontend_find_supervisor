@@ -42,6 +42,8 @@ export interface User extends UserIdentityPreferencesResponse {
   state?: string | null
   emailVerified?: boolean
   status?: string
+  /** Internal test account — can browse live accounts but not interact with them. */
+  isTestAccount?: boolean
   permissions?: UserPermissions | null
   /** Supervisor or supervisee profile object returned by GET /supervision/me */
   profile?: { profilePhotoUrl?: string | null } & Record<string, unknown>
