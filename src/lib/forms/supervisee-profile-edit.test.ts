@@ -5,6 +5,10 @@ import {
   getDefaultSuperviseeProfileFormValues,
   superviseeProfileFormValuesToPayload,
 } from '@/lib/forms/supervisee-profile-edit'
+import {
+  formatSupervisionHoursNeeded,
+  SUPERVISION_HOURS_NEEDED_OPTIONS,
+} from '@/lib/utils/profile-formatters'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 function makeProfile(overrides: Partial<SuperviseeProfileData> = {}): SuperviseeProfileData {
@@ -25,6 +29,7 @@ function makeProfile(overrides: Partial<SuperviseeProfileData> = {}): Supervisee
     budgetRangeEnd: 100,
     completedCount: 0,
     leftCount: 0,
+    supervisionHoursNeeded: '1000_2000',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     occupationId: 12,
@@ -216,34 +221,77 @@ describe('editSuperviseeProfileSchema — supervision type requiredness', () => 
 })
 
 describe('supervisionHoursNeeded — supervisee profile edit round trip', () => {
-  it('loads the stored hours and sends them back for a Mental Health Counselor need', () => {
+  it('loads the stored range and sends it back for a Mental Health Counselor need', () => {
     const defaults = getDefaultSuperviseeProfileFormValues(
-      makeProfile({ supervisionHoursNeeded: 2000 }),
+      makeProfile({ supervisionHoursNeeded: '1000_2000' }),
     )
-    expect(defaults.supervisionHoursNeeded).toBe(2000)
-    expect(superviseeProfileFormValuesToPayload(defaults).supervisionHoursNeeded).toBe(2000)
+    expect(defaults.supervisionHoursNeeded).toBe('1000_2000')
+    expect(superviseeProfileFormValuesToPayload(defaults).supervisionHoursNeeded).toBe('1000_2000')
   })
 
-  it("sends '' when the field is cleared so the backend nulls it", () => {
-    const defaults = getDefaultSuperviseeProfileFormValues(makeProfile())
+  it("sends '' when unset so the backend nulls it", () => {
+    const defaults = getDefaultSuperviseeProfileFormValues(
+      makeProfile({ supervisionHoursNeeded: null }),
+    )
     expect(superviseeProfileFormValuesToPayload(defaults).supervisionHoursNeeded).toBe('')
   })
 
-  it('omits the hours for a non-MHC need', () => {
+  it('sends the hours for physician supervision needs too', () => {
     const defaults = getDefaultSuperviseeProfileFormValues(
       makeProfile({
-        typeOfSupervisorNeeded: ['Collaborating Physicians'],
-        supervisionHoursNeeded: 2000,
+        typeOfSupervisorNeeded: ['Collaborating Physician'],
+        supervisionHoursNeeded: '3000_PLUS',
+      }),
+    )
+    expect(superviseeProfileFormValuesToPayload(defaults).supervisionHoursNeeded).toBe('3000_PLUS')
+  })
+
+  it('omits the hours for a Medical Director-only need', () => {
+    const defaults = getDefaultSuperviseeProfileFormValues(
+      makeProfile({
+        typeOfSupervisorNeeded: ['Medical Director'],
+        supervisionHoursNeeded: '3000_PLUS',
       }),
     )
     expect(superviseeProfileFormValuesToPayload(defaults).supervisionHoursNeeded).toBeUndefined()
   })
+})
 
-  it('rejects zero and fractional hours', () => {
-    const base = getDefaultSuperviseeProfileFormValues(makeProfile())
-    for (const supervisionHoursNeeded of [0, 1.5]) {
-      const result = editSuperviseeProfileSchema.safeParse({ ...base, supervisionHoursNeeded })
-      expect(result.success).toBe(false)
-    }
+describe('supervisionHoursNeeded — required for Mental Health Counselor needs', () => {
+  it('blocks saving an existing MHC profile until a range is picked', () => {
+    const values = getDefaultSuperviseeProfileFormValues(
+      makeProfile({ supervisionHoursNeeded: null }),
+    )
+    const result = editSuperviseeProfileSchema.safeParse(values)
+    expect(result.success).toBe(false)
+    expect(result.error?.issues.some((i) => i.path[0] === 'supervisionHoursNeeded')).toBe(true)
+  })
+
+  it('does not require it for a Medical Director-only profile', () => {
+    const values = getDefaultSuperviseeProfileFormValues(
+      makeProfile({
+        typeOfSupervisorNeeded: ['Medical Director'],
+        supervisionHoursNeeded: null,
+        mdHowSoonLooking: 'WITHIN_1_MONTH',
+        mdMonthlyBudget: 1000,
+      }),
+    )
+    const result = editSuperviseeProfileSchema.safeParse(values)
+    expect(result.error?.issues.some((i) => i.path[0] === 'supervisionHoursNeeded') ?? false).toBe(
+      false,
+    )
+  })
+})
+
+describe('formatSupervisionHoursNeeded', () => {
+  it('maps each range code to its label', () => {
+    expect(
+      SUPERVISION_HOURS_NEEDED_OPTIONS.map((o) => formatSupervisionHoursNeeded(o.value)),
+    ).toEqual(['1,000 or less', '1,000 - 2,000', '2,000 - 3,000', '3,000+'])
+  })
+
+  it('returns an empty string for unset or unknown values', () => {
+    expect(formatSupervisionHoursNeeded(null)).toBe('')
+    expect(formatSupervisionHoursNeeded('2000')).toBe('')
   })
 })

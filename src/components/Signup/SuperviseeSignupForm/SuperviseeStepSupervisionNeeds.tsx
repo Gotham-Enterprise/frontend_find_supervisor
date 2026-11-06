@@ -22,6 +22,11 @@ import { useSpecialtiesByOccupation } from '@/lib/hooks/useSignupOptions'
 import { cn } from '@/lib/utils'
 import { todayLocalISO } from '@/lib/utils/date'
 import {
+  requiresSupervisionHoursNeeded,
+  SUPERVISION_HOURS_NEEDED_OPTIONS,
+  SUPERVISION_HOURS_NEEDED_REQUIRED_MESSAGE,
+} from '@/lib/utils/profile-formatters'
+import {
   getEligibleSupervisorTypes,
   groupSuperviseeOccupationOptions,
   hasCompletedEligibilityFields,
@@ -511,6 +516,20 @@ export function SuperviseeStepSupervisionNeeds({
             isSubmitting={isSubmitting}
             required
           />
+          {requiresSupervisionHoursNeeded(typeOfSupervisor) && (
+            <FormSelectField
+              control={control}
+              name="supervisionHoursNeeded"
+              label="Supervision Hours Needed"
+              rules={{
+                validate: (value) => (value ? true : SUPERVISION_HOURS_NEEDED_REQUIRED_MESSAGE),
+              }}
+              options={SUPERVISION_HOURS_NEEDED_OPTIONS}
+              placeholder="Select Hours"
+              isSubmitting={isSubmitting}
+              required
+            />
+          )}
         </div>
 
         {/* ── Supervision fee — hidden for an MD-only signup; the MD budget lives

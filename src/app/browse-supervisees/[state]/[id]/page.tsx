@@ -34,7 +34,7 @@ import {
   formatCredentialWithState,
   formatHowSoonLooking,
   formatSupervisionFormat,
-  formatSupervisionHours,
+  formatSupervisionHoursNeeded,
 } from '@/lib/utils/profile-formatters'
 import {
   isMedicalDirectorType,
@@ -160,6 +160,7 @@ function SuperviseePublicProfile({
   const hasNonMdNeed = neededTypes.some((name) => !isMedicalDirectorType({ name }))
   const supervisorNeeded = neededTypes.map(supervisionTypeDisplayLabel).join(', ')
 
+  const hoursNeeded = formatSupervisionHoursNeeded(supervisee.supervisionHoursNeeded)
   const timeline = formatHowSoonLooking(supervisee.howSoonLooking, supervisee.lookingDate, {
     emptyFallback: '',
   })
@@ -255,12 +256,7 @@ function SuperviseePublicProfile({
         )}
         {hasNonMdNeed && timeline && <ProfileDetail label="Timeline" value={timeline} />}
         {/* After Timeline so it lands in the column under Availability (two-column flow). */}
-        {supervisee.supervisionHoursNeeded != null && (
-          <ProfileDetail
-            label="Hours Needed"
-            value={formatSupervisionHours(supervisee.supervisionHoursNeeded)}
-          />
-        )}
+        {hoursNeeded && <ProfileDetail label="Hours Needed" value={hoursNeeded} />}
         {genderIdentity && <ProfileDetail label="Gender Identity" value={genderIdentity} />}
         {languages.length > 0 && <ProfileDetail label="Languages" value={languages.join(', ')} />}
       </div>

@@ -11,6 +11,7 @@ import {
 } from '@/lib/forms/identity-preferences'
 import { OTHER_CERTIFYING_BOARD_VALUE } from '@/lib/utils/board-certification'
 import { normalizeUSPhoneNumber } from '@/lib/utils/phone'
+import { requiresSupervisionHoursNeeded } from '@/lib/utils/profile-formatters'
 import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 import { isPhysicianSupervisorType } from '@/lib/utils/supervisor-type'
 
@@ -321,6 +322,10 @@ export function buildSuperviseeFormData(values: SuperviseeFormValues): FormData 
 
   fd.append('preferredFormat', FORMAT_MAP[values.preferredFormat])
   fd.append('availability', values.availability)
+  // Every need except Medical Director (required for them).
+  if (requiresSupervisionHoursNeeded(values.typeOfSupervisor) && values.supervisionHoursNeeded) {
+    fd.append('supervisionHoursNeeded', values.supervisionHoursNeeded)
+  }
   // Backend field: idealSupervisor
   fd.append('idealSupervisor', values.description)
   if (values.introduction?.trim()) fd.append('introduction', values.introduction)

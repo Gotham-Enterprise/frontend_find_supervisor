@@ -1,7 +1,10 @@
 import type { SelectOption } from '@/lib/api/options'
 import { SUPERVISOR_TYPE_QUERY_MAP } from '@/lib/seo/routes'
 import { formatUSPhoneForDisplay } from '@/lib/utils/phone'
-import { supervisionTypeDisplayLabel } from '@/lib/utils/supervisee-eligibility'
+import {
+  isMedicalDirectorType,
+  supervisionTypeDisplayLabel,
+} from '@/lib/utils/supervisee-eligibility'
 
 // ─── Display name ──────────────────────────────────────────────────────────────
 
@@ -432,6 +435,18 @@ export function requiresSupervisionHours(
   return (typeOfSupervisorNeeded?.trim() ?? '') === MHC_SUPERVISOR_TYPE
 }
 
+/**
+ * The profile's "Supervision Hours Needed" applies to every supervision type
+ * except Medical Director (a monthly service, not a count of hours). Separate
+ * from requiresSupervisionHours, which gates the per-hire hours (MHC only).
+ */
+export function requiresSupervisionHoursNeeded(
+  typeOfSupervisorNeeded: string | null | undefined,
+): boolean {
+  const name = typeOfSupervisorNeeded?.trim() ?? ''
+  return name !== '' && !isMedicalDirectorType({ name })
+}
+
 /** Positive whole numbers only — rejects 0, 01, 001, etc. */
 export const SUPERVISION_HOURS_INPUT_PATTERN = /^[1-9]\d*$/
 
@@ -451,6 +466,25 @@ export function parseSupervisionHoursInput(
 export function formatSupervisionHours(value: number | null | undefined): string {
   if (value == null) return ''
   return `${value.toLocaleString('en-US')} hour${value === 1 ? '' : 's'}`
+}
+
+/**
+ * Ranges a supervisee picks for "Supervision Hours Needed" on their profile.
+ * Values match the backend's SUPERVISION_HOURS_NEEDED_VALUES.
+ */
+export const SUPERVISION_HOURS_NEEDED_OPTIONS = [
+  { label: '1,000 or less', value: 'UP_TO_1000' },
+  { label: '1,000 - 2,000', value: '1000_2000' },
+  { label: '2,000 - 3,000', value: '2000_3000' },
+  { label: '3,000+', value: '3000_PLUS' },
+] as const
+
+export const SUPERVISION_HOURS_NEEDED_REQUIRED_MESSAGE =
+  'Please select the supervision hours you need'
+
+/** Display label for a stored range code; '' when unset or unknown. */
+export function formatSupervisionHoursNeeded(value: string | null | undefined): string {
+  return SUPERVISION_HOURS_NEEDED_OPTIONS.find((option) => option.value === value)?.label ?? ''
 }
 
 // ─── Budget range ─────────────────────────────────────────────────────────────

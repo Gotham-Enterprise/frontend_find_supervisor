@@ -51,7 +51,7 @@ export interface UpdateSuperviseeProfilePayload {
   mdIdealDescription?: string
   introduction?: string
   /** Sent as '' to clear the stored value. */
-  supervisionHoursNeeded?: number | ''
+  supervisionHoursNeeded?: string
   uploadProfilePhoto?: File
 }
 
@@ -115,7 +115,7 @@ export async function updateSuperviseeProfile(
   }
   // Same for the optional hours — '' clears the stored value.
   if (supervisionHoursNeeded !== undefined) {
-    fd.append('supervisionHoursNeeded', String(supervisionHoursNeeded))
+    fd.append('supervisionHoursNeeded', supervisionHoursNeeded)
   }
 
   if (budgetRangeStart !== undefined) {

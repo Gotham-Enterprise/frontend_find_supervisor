@@ -14,6 +14,7 @@ const validStep2Values = {
   occupationId: '12',
   specialtyId: '',
   typeOfSupervisor: 'Mental Health Counselors',
+  supervisionHoursNeeded: '1000_2000',
   supervisorOccupationId: 'Licensed Mental Health Counselor Supervisors',
   supervisorSpecialtyId: '',
   preferredFormat: 'virtual',
@@ -58,6 +59,40 @@ describe('supervisee step 2 schema (moved profile fields)', () => {
       howSoonDate: '',
     })
     expect(result.success).toBe(false)
+  })
+})
+
+describe('supervision hours needed (step 2)', () => {
+  it('is required for a Mental Health Counselor need', () => {
+    const result = superviseeStep2Schema.safeParse({
+      ...validStep2Values,
+      supervisionHoursNeeded: '',
+    })
+    expect(result.success).toBe(false)
+    expect(result.error?.issues.some((i) => i.path[0] === 'supervisionHoursNeeded')).toBe(true)
+  })
+
+  it('is required for physician supervision types too', () => {
+    for (const typeOfSupervisor of ['Collaborating Physician', 'Supervising Physician']) {
+      const result = superviseeStep2Schema.safeParse({
+        ...validStep2Values,
+        typeOfSupervisor,
+        supervisionHoursNeeded: '',
+      })
+      expect(result.error?.issues.some((i) => i.path[0] === 'supervisionHoursNeeded')).toBe(true)
+    }
+  })
+
+  it('is not required for a Medical Director-only request', () => {
+    const result = superviseeStep2Schema.safeParse({
+      ...validStep2Values,
+      typeOfSupervisor: '',
+      needsMedicalDirector: true,
+      supervisionHoursNeeded: '',
+    })
+    expect(result.error?.issues.some((i) => i.path[0] === 'supervisionHoursNeeded') ?? false).toBe(
+      false,
+    )
   })
 })
 

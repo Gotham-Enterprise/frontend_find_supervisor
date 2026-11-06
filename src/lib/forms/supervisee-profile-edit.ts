@@ -9,7 +9,11 @@ import {
 } from '@/lib/forms/identity-preferences'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
 import { formatUSPhoneForDisplay, normalizeUSPhoneNumber } from '@/lib/utils/phone'
-import { coerceStringList, requiresSupervisionHours } from '@/lib/utils/profile-formatters'
+import {
+  coerceStringList,
+  requiresSupervisionHoursNeeded,
+  SUPERVISION_HOURS_NEEDED_REQUIRED_MESSAGE,
+} from '@/lib/utils/profile-formatters'
 import {
   isMedicalDirectorType,
   MEDICAL_DIRECTOR_TYPE_NAME,
@@ -68,11 +72,8 @@ export const editSuperviseeProfileSchema = z
     budgetRangeType: z.string(),
     budgetRangeStart: z.preprocess(normalizeNumberFieldInput, z.number().min(0).optional()),
     budgetRangeEnd: z.preprocess(normalizeNumberFieldInput, z.number().min(0).optional()),
-    // Optional — shown only for a Mental Health Counselor need.
-    supervisionHoursNeeded: z.preprocess(
-      normalizeNumberFieldInput,
-      z.number().int('Enter a whole number').min(1, 'Must be at least 1 hour').optional(),
-    ),
+    // Required for every need except Medical Director — enforced in the superRefine below.
+    supervisionHoursNeeded: z.string().optional(),
     // Medical Director need preferences (md* columns) — required only when the
     // checkbox is ticked; enforced in the superRefine below.
     mdPreferredOccupation: z.string(),
@@ -107,6 +108,17 @@ export const editSuperviseeProfileSchema = z
         code: 'custom',
         path: ['typeOfSupervisorNeeded'],
         message: SUPERVISION_TYPE_REQUIRED_MESSAGE,
+      })
+    }
+    // Existing profiles saved without hours must pick a range on their next edit.
+    if (
+      requiresSupervisionHoursNeeded(data.typeOfSupervisorNeeded) &&
+      !data.supervisionHoursNeeded
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['supervisionHoursNeeded'],
+        message: SUPERVISION_HOURS_NEEDED_REQUIRED_MESSAGE,
       })
     }
     if (data.typeOfSupervisorNeeded && !data.superviseeOccupation) {
@@ -212,7 +224,7 @@ export function getDefaultSuperviseeProfileFormValues(
     budgetRangeType: profile.budgetRangeType ?? '',
     budgetRangeStart: profile.budgetRangeStart ?? undefined,
     budgetRangeEnd: profile.budgetRangeEnd ?? undefined,
-    supervisionHoursNeeded: profile.supervisionHoursNeeded ?? undefined,
+    supervisionHoursNeeded: profile.supervisionHoursNeeded ?? '',
     mdPreferredOccupation: profile.mdPreferredOccupation ?? '',
     mdPreferredSpecialty: profile.mdPreferredSpecialty ?? '',
     mdHowSoonLooking: profile.mdHowSoonLooking ?? '',
@@ -279,7 +291,7 @@ export function superviseeProfileFormValuesToPayload(
       : undefined,
     budgetRangeEnd: values.typeOfSupervisorNeeded ? values.budgetRangeEnd : undefined,
     // '' clears a removed value; the backend also clears it when the need is no longer MHC.
-    supervisionHoursNeeded: requiresSupervisionHours(values.typeOfSupervisorNeeded)
+    supervisionHoursNeeded: requiresSupervisionHoursNeeded(values.typeOfSupervisorNeeded)
       ? (values.supervisionHoursNeeded ?? '')
       : undefined,
     // Medical Director preferences — the backend clears the md* columns itself

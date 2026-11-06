@@ -42,6 +42,7 @@ function makeSuperviseeProfile(): SuperviseeProfileData {
     budgetRangeEnd: 100,
     completedCount: 0,
     leftCount: 0,
+    supervisionHoursNeeded: '1000_2000',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     occupationId: 12,
