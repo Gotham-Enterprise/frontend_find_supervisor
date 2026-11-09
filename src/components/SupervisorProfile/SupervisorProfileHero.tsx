@@ -1,6 +1,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { TestAccountNoticeDialog } from '@/components/TestAccountNoticeDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DisabledWithTooltip } from '@/components/ui/tooltip'
@@ -31,6 +32,7 @@ import {
   isApprovedHireStatus,
   isPendingConnectionStatus,
 } from '@/lib/utils/supervision-status'
+import { isTestToLiveInteraction } from '@/lib/utils/test-accounts'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 import { type HireContext, HireSupervisorModal } from './HireSupervisorModal'
@@ -97,6 +99,7 @@ export function SupervisorProfileHero({
   hireContext,
 }: SupervisorProfileHeroProps) {
   const [hireModalOpen, setHireModalOpen] = useState(false)
+  const [testAccountNoticeOpen, setTestAccountNoticeOpen] = useState(false)
   const { user } = useUser()
   const router = useRouter()
   const { data: superviseeProfile } = useSuperviseeProfile()
@@ -269,7 +272,14 @@ export function SupervisorProfileHero({
               {isApprovedHireStatus(profile.hiredInfo?.status) ? 'Hired' : 'Waiting for approval'}
             </span>
           ) : (
-            <Button size="sm" onClick={() => setHireModalOpen(true)}>
+            <Button
+              size="sm"
+              onClick={() =>
+                isTestToLiveInteraction(user, profile.user)
+                  ? setTestAccountNoticeOpen(true)
+                  : setHireModalOpen(true)
+              }
+            >
               {hireContext === 'medical-director'
                 ? 'Hire as Medical Director'
                 : 'Hire as Supervisor'}
@@ -313,6 +323,10 @@ export function SupervisorProfileHero({
         onOpenChange={setHireModalOpen}
         supervisorProfile={profile}
         superviseeProfile={superviseeProfile}
+      />
+      <TestAccountNoticeDialog
+        open={testAccountNoticeOpen}
+        onOpenChange={setTestAccountNoticeOpen}
       />
     </>
   )

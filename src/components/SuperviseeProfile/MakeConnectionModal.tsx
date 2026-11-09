@@ -29,6 +29,7 @@ import {
   isValidUSPhoneNumber,
   normalizeUSPhoneNumber,
 } from '@/lib/utils/phone'
+import { isTestAccountInteractionError } from '@/lib/utils/test-accounts'
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
@@ -95,6 +96,10 @@ function parseConnectionError(error: unknown): string {
   }
   if (backendMsg.toLowerCase().includes('already approved')) {
     return 'Your connection request to this professional was already approved.'
+  }
+  // Test ↔ live is blocked server-side; say so instead of the plan message.
+  if (isTestAccountInteractionError(error)) {
+    return backendMsg || 'Test accounts can only interact with other test accounts.'
   }
   if (status === 403) {
     return 'A platform access plan is required to send connection requests.'
