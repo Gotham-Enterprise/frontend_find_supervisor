@@ -67,8 +67,8 @@ export function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null)
 
   return (
-    <section id="faq" className="scroll-mt-16 bg-background pt-10 pb-20 sm:pt-12 sm:pb-24">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+    <section id="faq" className="scroll-mt-16 bg-background py-10 sm:py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <h2 className="mb-8 text-center text-2xl font-bold uppercase tracking-wide text-foreground sm:text-3xl">
           FAQ
         </h2>

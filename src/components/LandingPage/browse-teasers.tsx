@@ -64,8 +64,8 @@ export async function BrowseTeasers() {
   }
 
   return (
-    <section className="bg-muted/30 py-20 sm:py-24">
-      <div className="mx-auto max-w-6xl space-y-16 px-4 sm:px-6 lg:px-8">
+    <section className="bg-muted/30 py-10 sm:py-12">
+      <div className="mx-auto max-w-7xl space-y-16 px-4 sm:px-6 lg:px-8">
         {supervisors.length > 0 && (
           <div>
             <div className="mb-8 flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left">

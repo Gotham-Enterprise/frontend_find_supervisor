@@ -36,7 +36,7 @@ const STATE_OPTIONS: SelectOption[] = Object.keys(US_STATES)
   .sort((a, b) => a.label.localeCompare(b.label))
 
 /**
- * "Check Ownership Rules in Your State" picker for the /medical-directors index:
+ * "Check Corporate Practice of Medicine Rules in Your State" picker for the /medical-directors index:
  * pick a state to see its Corporate Practice of Medicine card, then jump to
  * that state's Medical Directors. Mirrors the homepage supervision-rules picker.
  */
@@ -50,7 +50,7 @@ export function StateCorporatePracticeChecker() {
     >
       <div className="mb-6 text-center">
         <h2 id="ownership-rules-heading" className="text-2xl font-bold text-foreground">
-          Check Ownership Rules in Your State
+          Check Corporate Practice of Medicine Rules in Your State
         </h2>
         <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
           See whether a non-physician can own a med spa or clinic and hire a Medical Director in

@@ -69,7 +69,7 @@ const FORMAT_PARAM_MAP: Record<string, string> = {
 const ALL_STATE_SLUGS = Object.keys(US_STATES)
 const OTHER_STATE_SLUGS = ALL_STATE_SLUGS.filter((s) => !TOP_STATE_SLUGS.includes(s)).sort()
 
-const PUBLIC_RESULTS_LIMIT = 12
+const PUBLIC_RESULTS_LIMIT = 21
 
 /** Format-guide professions per `type` filter value. */
 const TYPE_FILTER_PROFESSIONS: Record<string, ProfessionGroup[]> = {

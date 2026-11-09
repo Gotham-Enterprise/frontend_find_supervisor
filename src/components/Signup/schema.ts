@@ -9,6 +9,10 @@ import { OTHER_CERTIFYING_BOARD_VALUE } from '@/lib/utils/board-certification'
 import { todayLocalISO } from '@/lib/utils/date'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
 import { isServerAcceptedPhoneNumber } from '@/lib/utils/phone'
+import {
+  requiresSupervisionHoursNeeded,
+  SUPERVISION_HOURS_NEEDED_REQUIRED_MESSAGE,
+} from '@/lib/utils/profile-formatters'
 import { SUPERVISION_TYPE_REQUIRED_MESSAGE } from '@/lib/utils/supervisee-eligibility'
 import {
   applySupervisorMonthlyOnlyFeeRule,
@@ -516,8 +520,17 @@ export const superviseeSchemaObject = accountSchemaBase.extend({
   // supervision type + the MD checkbox); MD-only flows reuse `description`.
   mdIdealDescription: z.string().max(500, 'Must be 500 characters or less').optional(),
 
-  // Optional self introduction (separate from the ideal-supervisor description)
-  introduction: z.string().max(500, 'Must be 500 characters or less').optional(),
+  // Range code of supervised hours still needed — required for every need except
+  // Medical Director (enforced in applySuperviseeHoursNeededRule).
+  supervisionHoursNeeded: z.string().optional(),
+
+  // Required self introduction (separate from the ideal-supervisor description).
+  // Trimmed first so whitespace-only input does not satisfy the minimum.
+  introduction: z
+    .string()
+    .trim()
+    .min(1, 'Please introduce yourself')
+    .max(500, 'Must be 500 characters or less'),
 
   // Step 2 — profile fields (sent to backend as numeric category IDs); collected before
   // `typeOfSupervisor` so the available supervision types can be filtered by eligibility
@@ -562,6 +575,20 @@ function applySuperviseeSupervisionNeedRules(
       code: 'custom',
       path: ['supervisorOccupationId'],
       message: 'Occupation is required',
+    })
+  }
+}
+
+/** Every need except Medical Director must pick a supervision hours range. */
+function applySuperviseeHoursNeededRule(
+  data: { typeOfSupervisor: string; supervisionHoursNeeded?: string },
+  ctx: z.RefinementCtx,
+) {
+  if (requiresSupervisionHoursNeeded(data.typeOfSupervisor) && !data.supervisionHoursNeeded) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['supervisionHoursNeeded'],
+      message: SUPERVISION_HOURS_NEEDED_REQUIRED_MESSAGE,
     })
   }
 }
@@ -654,6 +681,7 @@ function applySuperviseeMdNeedRules(
 export const superviseeSchema = withAccountRules(
   superviseeSchemaObject
     .superRefine(applySuperviseeSupervisionNeedRules)
+    .superRefine(applySuperviseeHoursNeededRule)
     .superRefine(applySuperviseeBudgetRules)
     .superRefine(applySuperviseeMdNeedRules),
 )
@@ -871,6 +899,7 @@ export const superviseeStep2Schema = superviseeSchemaObject
     budgetRange: true,
     monthlyBudget: true,
     availability: true,
+    supervisionHoursNeeded: true,
     mdPreferredOccupationId: true,
     mdPreferredSpecialtyId: true,
     mdHowSoon: true,
@@ -890,6 +919,7 @@ export const superviseeStep2Schema = superviseeSchemaObject
     }
   })
   .superRefine(applySuperviseeSupervisionNeedRules)
+  .superRefine(applySuperviseeHoursNeededRule)
   .superRefine(applySuperviseeBudgetRules)
   .superRefine(applySuperviseeMdNeedRules)
 
@@ -933,6 +963,7 @@ export const SUPERVISEE_SIGNUP_STEP_FIELDS = [
     'howSoon',
     'howSoonDate',
     'availability',
+    'supervisionHoursNeeded',
     'feeType',
     'budgetRange',
     'monthlyBudget',
