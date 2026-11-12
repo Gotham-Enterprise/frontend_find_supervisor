@@ -5,6 +5,10 @@ import { Geist } from 'next/font/google'
 
 import { Providers } from '@/app/providers'
 import {
+  GoogleTagManagerHead,
+  GoogleTagManagerNoScript,
+} from '@/components/analytics/GoogleTagManager'
+import {
   DEFAULT_DESCRIPTION,
   DEFAULT_OG_IMAGE,
   SITE_NAME,
@@ -94,10 +98,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={cn('font-sans', geist.variable)}>
       <head>
+        <GoogleTagManagerHead />
         <style>{`html[data-hash-scroll-pending] body { visibility: hidden; }`}</style>
         <script dangerouslySetInnerHTML={{ __html: HASH_SCROLL_GUARD }} />
       </head>
       <body className="antialiased">
+        <GoogleTagManagerNoScript />
         <Providers>{children}</Providers>
       </body>
     </html>
