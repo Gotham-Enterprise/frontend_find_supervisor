@@ -13,6 +13,7 @@ import {
   superviseeSchema,
 } from '@/components/Signup/schema'
 import { Form } from '@/components/ui/form'
+import { pushGtmEvent, SIGNUP_GTM_EVENT } from '@/lib/analytics/gtm'
 import {
   useCitiesOptions,
   useStatesOptions,
@@ -197,6 +198,7 @@ export function SuperviseeSignupForm({ variant = 'supervisee' }: SuperviseeSignu
 
     signup(values, {
       onSuccess: () => {
+        pushGtmEvent({ event: SIGNUP_GTM_EVENT[variant] })
         showSuccess(
           'Your account has been created. Please check your email to verify your address before logging in.',
         )
