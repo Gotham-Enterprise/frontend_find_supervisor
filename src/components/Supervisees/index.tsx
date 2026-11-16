@@ -8,6 +8,7 @@ import {
   ChevronRight,
   FileSignature,
   FileText,
+  LayoutDashboard,
   MapPin,
   Monitor,
   MoreVertical,
@@ -17,6 +18,7 @@ import {
   Target,
   Users,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
 import { ActivityLogDialog } from '@/components/ActivityLog/ActivityLogDialog'
@@ -643,9 +645,18 @@ function SuperviseeCard({
       new URLSearchParams(window.location.search).get('billing') === hire.id,
   )
   // Signed Medical Director agreement (billed in the app or not): the activity log.
-  const hasActivityLog =
-    ACTIVITY_LOG_ENABLED && isAgreementSigned && hiredListPath(hire) === '/hired-medical-directors'
-  const [activityOpen, setActivityOpen] = useState(false)
+  const isMedicalDirectorHire = hiredListPath(hire) === '/hired-medical-directors'
+  const hasActivityLog = ACTIVITY_LOG_ENABLED && isAgreementSigned && isMedicalDirectorHire
+  // Medical Director hires have a workroom; its tabs replace the Billing /
+  // Activity dialogs on the card (the dialogs stay for deep links and hourly).
+  const workroomHref = isMedicalDirectorHire ? `/medical-director-clients/${hire.id}` : null
+  // Deep link: activity-log reminders point to …?activity=<id> (lazy init, as above).
+  const [activityOpen, setActivityOpen] = useState(
+    () =>
+      hasActivityLog &&
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('activity') === hire.id,
+  )
   // End Supervision offered from the billing dialog after 7 days unpaid.
   const [endForNonPaymentOpen, setEndForNonPaymentOpen] = useState(false)
   // Deep link: session notifications point to /supervisees?sessions=<id> (lazy init, as above).
@@ -825,18 +836,42 @@ function SuperviseeCard({
                   Sessions
                 </Button>
               )}
-              {hasMonthlyBilling && (
-                <Button size="sm" onClick={() => setBillingOpen(true)}>
-                  <Receipt className="size-3.5" aria-hidden />
-                  Billing
-                </Button>
+              {workroomHref && (
+                <Link href={workroomHref} className={buttonVariants({ size: 'sm' })}>
+                  <LayoutDashboard className="size-3.5" aria-hidden />
+                  Workroom
+                </Link>
               )}
-              {hasActivityLog && (
-                <Button variant="outline" size="sm" onClick={() => setActivityOpen(true)}>
-                  <NotebookPen className="size-3.5" aria-hidden />
-                  Activity Log
-                </Button>
-              )}
+              {hasMonthlyBilling &&
+                (workroomHref ? (
+                  <Link
+                    href={`${workroomHref}?tab=billing`}
+                    className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                  >
+                    <Receipt className="size-3.5" aria-hidden />
+                    Billing
+                  </Link>
+                ) : (
+                  <Button size="sm" onClick={() => setBillingOpen(true)}>
+                    <Receipt className="size-3.5" aria-hidden />
+                    Billing
+                  </Button>
+                ))}
+              {hasActivityLog &&
+                (workroomHref ? (
+                  <Link
+                    href={`${workroomHref}?tab=activity`}
+                    className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                  >
+                    <NotebookPen className="size-3.5" aria-hidden />
+                    Activity Log
+                  </Link>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => setActivityOpen(true)}>
+                    <NotebookPen className="size-3.5" aria-hidden />
+                    Activity Log
+                  </Button>
+                ))}
               {hire.agreement?.fileUrl ? (
                 <a
                   href={hire.agreement.fileUrl}
