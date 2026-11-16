@@ -62,8 +62,8 @@ export function HourlyQuoteSummary({
           <p className="pt-1 text-xs text-muted-foreground">
             The supervisee prepays {formatUsdCents(quote.weeklyTotalCents)} at the start of each
             week ({cap} plus a {formatUsdCents(quote.serviceFeeCents)} service fee). You&apos;re
-            paid for the hours you log once they approve the week; unused prepay is refunded to
-            them.
+            paid for the hours you log once they approve the week; unused prepay goes back to their
+            card.
           </p>
         </>
       ) : (
@@ -79,8 +79,8 @@ export function HourlyQuoteSummary({
           />
           <p className="pt-1 text-xs text-muted-foreground">
             You only pay for approved hours: after you review each week&apos;s sessions, any unused
-            prepay is refunded. The service fee covers secure payment processing by Stripe and
-            isn&apos;t refunded.
+            prepay goes back to your card. The service fee covers secure payment processing by
+            Stripe and isn&apos;t returned.
           </p>
         </>
       )}

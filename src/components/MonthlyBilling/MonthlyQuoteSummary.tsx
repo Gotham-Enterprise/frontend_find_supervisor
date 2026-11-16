@@ -67,8 +67,9 @@ export function MonthlyQuoteSummary({
       />
       <p className="pt-1 text-xs text-muted-foreground">
         Charged on the start date, then on the same day each month. If you end the supervision, it
-        stays active until the end of the month you paid for, and that month isn&apos;t refunded.
-        The service fee covers secure payment processing by Stripe and isn&apos;t refunded.
+        stays active until the end of the month you paid for, and that month&apos;s payment
+        isn&apos;t returned. The service fee covers secure payment processing by Stripe and
+        isn&apos;t returned.
       </p>
     </dl>
   )

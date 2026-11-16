@@ -52,7 +52,7 @@ function moneyLine(period: MonthlyPeriod, role: Role, counterpartName: string): 
     const total = formatUsdCents(period.totalCents ?? 0)
     if (period.status === 'SETTLED') {
       return period.refundCents
-        ? `Paid ${total} · ${formatUsdCents(period.refundCents)} refunded after support's review`
+        ? `Paid ${total} · ${formatUsdCents(period.refundCents)} went back to your card after support's review`
         : `Paid ${total}`
     }
     if (period.status === 'DISPUTED')
@@ -69,7 +69,7 @@ function moneyLine(period: MonthlyPeriod, role: Role, counterpartName: string): 
   if (period.status === 'SETTLED') {
     return period.supervisorAmountCents
       ? `You were paid ${payout} (after the platform fee).`
-      : 'Nothing was paid out for this month (support refunded it).'
+      : 'Nothing was paid out for this month (support sent it back to the client).'
   }
   if (period.status === 'DISPUTED') {
     return `${counterpartName} reported a problem. The payment is on hold until Gotham support reviews it.`

@@ -38,7 +38,7 @@ const MONTHLY_SUPERVISOR_FAQS: FaqItem[] = IN_APP_MONTHLY_ENABLED
       {
         question: 'What happens if a monthly supervision is ended?',
         answer:
-          'Whoever ends it, the supervision continues until the end of the month already paid for, and you’re paid for that month as usual. No more months are charged. Your client isn’t refunded for the month they paid for, unless Gotham support decides otherwise on a reported problem.',
+          'Whoever ends it, the supervision continues until the end of the month already paid for, and you’re paid for that month as usual. No more months are charged. Your client doesn’t get the month they paid for back, unless Gotham support decides otherwise on a reported problem.',
       },
       {
         question: 'What if my client’s monthly payment fails?',
@@ -150,7 +150,7 @@ const supervisorFaqs: FaqCategory[] = [
       {
         question: 'How do Supervisees pay me through the app?',
         answer:
-          "Supervision is billed hourly in the app. In each agreement you set your hourly rate, the maximum hours per week (1–40), and optionally the total hours the agreement covers. Your Supervisee saves a card and signs. Each billing week (Monday–Sunday, US Eastern) they prepay the weekly maximum up front. You log your sessions, they review them after the week, and you're paid for the approved hours — any unused prepay is refunded to them.",
+          "Supervision is billed hourly in the app. In each agreement you set your hourly rate, the maximum hours per week (1–40), and optionally the total hours the agreement covers. Your Supervisee saves a card and signs. Each billing week (Monday–Sunday, US Eastern) they prepay the weekly maximum up front. You log your sessions, they review them after the week, and you're paid for the approved hours — any unused prepay goes back to their card.",
       },
       {
         question: 'What do I need before I can send an hourly agreement?',
@@ -399,12 +399,12 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'How does paying my Supervisor work?',
         answer:
-          'You pay your Supervisor through the app. When you sign the agreement you save a card. Each billing week (Monday–Sunday, US Eastern) your card is charged a weekly prepay — the hourly rate × the maximum hours per week, plus a service fee. After the week you review the sessions your Supervisor logged and pay only for the hours you approve; the unused prepay is refunded to your card.',
+          'You pay your Supervisor through the app. When you sign the agreement you save a card. Each billing week (Monday–Sunday, US Eastern) your card is charged a weekly prepay — the hourly rate × the maximum hours per week, plus a service fee. After the week you review the sessions your Supervisor logged and pay only for the hours you approve; the unused prepay goes back to your card.',
       },
       {
         question: 'What is the service fee?',
         answer:
-          'It covers secure card processing by Stripe (2.9% + 30¢ of the charge) and is added to each weekly charge and any late-session charge. It isn’t refunded, because Stripe keeps its processing fee on refunds. You see the exact weekly total before you sign.',
+          'It covers secure card processing by Stripe (2.9% + 30¢ of the charge) and is added to each weekly charge and any late-session charge. It isn’t returned when unused prepay goes back to your card, because Stripe keeps its processing fee. You see the exact weekly total before you sign.',
       },
       {
         question: 'When is my card charged?',
@@ -414,17 +414,17 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'How do I review my sessions?',
         answer:
-          "After each week your Supervisor logs their sessions (by Monday 11:59 PM US Eastern) and you get a notification to review them in the Supervisor's workroom (Timesheet). Approve or dispute by Thursday 11:59 PM US Eastern — if you don't respond, the week is approved automatically. If no sessions were logged, your prepay is refunded in full (minus the service fee).",
+          "After each week your Supervisor logs their sessions (by Monday 11:59 PM US Eastern) and you get a notification to review them in the Supervisor's workroom (Timesheet). Approve or dispute by Thursday 11:59 PM US Eastern — if you don't respond, the week is approved automatically. If no sessions were logged, your whole prepay goes back to your card (the service fee isn't returned).",
       },
       {
         question: 'How do I dispute a week?',
         answer:
-          'Open that Supervisor’s workroom and go to Timesheet. Choose Dispute under Last week (or on the week in Week Details) and explain what’s wrong — you can attach up to 3 images (JPG or PNG, 5 MB each). Gotham support reviews it and decides how many hours are paid; anything not paid is refunded to your card. You’re both notified of the outcome.',
+          'Open that Supervisor’s workroom and go to Timesheet. Choose Dispute under Last week (or on the week in Week Details) and explain what’s wrong — you can attach up to 3 images (JPG or PNG, 5 MB each). Gotham support reviews it and decides how many hours are paid; anything not paid goes back to your card. You’re both notified of the outcome.',
       },
       {
-        question: 'When will I get my refund?',
+        question: 'When does unused prepay go back to my card?',
         answer:
-          'Unused prepay is refunded to the card you paid with as soon as the week is approved (or a dispute is resolved). Your bank usually shows it within 5–10 business days.',
+          'Unused prepay goes back to the card you paid with as soon as the week is approved (or a dispute is resolved). Your bank usually shows it within 5–10 business days.',
       },
       {
         question: 'What if my weekly payment fails?',
@@ -444,19 +444,19 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'What happens if I end a supervision mid-week?',
         answer:
-          "If this week's prepay was already charged, the week is still reviewed — you pay only for approved hours and the rest is refunded. If it hadn't been charged yet, it won't be. There are no more weekly charges after a supervision ends.",
+          "If this week's prepay was already charged, the week is still reviewed — you pay only for approved hours and the rest goes back to your card. If it hadn't been charged yet, it won't be. There are no more weekly charges after a supervision ends.",
       },
       ...(IN_APP_MONTHLY_ENABLED
         ? [
             {
               question: 'How do I pay a Medical Director?',
               answer:
-                'Through the app, monthly. Before signing the agreement you save a card. It’s charged the monthly amount plus a service fee (Stripe processing, not refundable) on the start date and on the same day each month. The platform holds each payment and releases it to your Medical Director 3 days after that month ends. You can see every month under Monthly Billing on the hire, and on your Billing page.',
+                'Through the app, monthly. Before signing the agreement you save a card. It’s charged the monthly amount plus a service fee (Stripe processing, never returned) on the start date and on the same day each month. The platform holds each payment and releases it to your Medical Director 3 days after that month ends. You can see every month under Monthly Billing on the hire, and on your Billing page.',
             },
             {
               question: 'What if I end a monthly supervision?',
               answer:
-                'It stays active until the end of the month you already paid for, and that month isn’t refunded. No more months are charged. The same applies if your Medical Director ends it.',
+                'It stays active until the end of the month you already paid for, and that month’s payment isn’t returned. No more months are charged. The same applies if your Medical Director ends it.',
             },
             {
               question: 'What if my monthly payment fails?',
@@ -466,7 +466,7 @@ const superviseeFaqs: FaqCategory[] = [
             {
               question: 'What if something goes wrong during a month?',
               answer:
-                'Use Report a problem on that month under Monthly Billing, while it runs or within 3 days after it ends. The payment is held and Gotham support reviews it with you both; they decide how much is released and refund the rest to your card.',
+                'Use Report a problem on that month under Monthly Billing, while it runs or within 3 days after it ends. The payment is held and Gotham support reviews it with you both; they decide how much is released and send the rest back to your card.',
             },
           ]
         : [

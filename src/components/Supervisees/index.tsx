@@ -51,6 +51,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { ACTIVITY_LOG_ENABLED, IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import {
+  useHire,
   useHiresList,
   useMyReviews,
   useRemindAgreement,
@@ -82,6 +83,31 @@ import { SendAgreementModal } from './SendAgreementModal'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 10
+
+/**
+ * A billing notification links to …?billing=<hireId>. Each card opens its own
+ * dialog when it's the linked hire; this covers a hire that isn't on the page
+ * being shown (another page, group or search), so the link still lands.
+ */
+function DeepLinkedBillingDialog({ items }: { items: HireListItem[] }) {
+  const [hireId] = useState(() =>
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('billing')
+      : null,
+  )
+  const onPage = hireId != null && items.some((hire) => hire.id === hireId)
+  const { data: hire } = useHire(hireId && !onPage ? hireId : '')
+  const [open, setOpen] = useState(true)
+  if (!hireId || onPage || !hire || !usesInAppMonthlyBilling(hire)) return null
+  return (
+    <MonthlyBillingDialog
+      hireId={hire.id}
+      counterpartName={formatDisplayName(hire.supervisee)}
+      open={open}
+      onOpenChange={setOpen}
+    />
+  )
+}
 
 // Pending requests are handled (accepted/declined) on Supervision Requests, so
 // this page doesn't offer a Pending filter.
@@ -981,6 +1007,7 @@ export function SuperviseesPage({ mode = 'supervisors' }: { mode?: SuperviseesPa
         )
       ) : (
         <>
+          <DeepLinkedBillingDialog items={items} />
           {view === 'list' ? (
             <Card className="gap-0 divide-y divide-border/60 overflow-hidden rounded-xl py-0 shadow-sm">
               <HireListHeader detailLabel="Format" dateLabel="Start date" />

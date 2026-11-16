@@ -133,7 +133,7 @@ function MonthlyPaymentSetup({
     })
   }
 
-  const authorization = `By saving this card, you authorize Find a Supervisor to charge it ${total} on the start date and on the same day each month under your agreement with ${supervisorName}, until the agreement ends. If you end it, supervision continues until the end of the month you paid for, and that month isn't refunded.`
+  const authorization = `By saving this card, you authorize Find a Supervisor to charge it ${total} on the start date and on the same day each month under your agreement with ${supervisorName}, until the agreement ends. If you end it, supervision continues until the end of the month you paid for, and that month's payment isn't returned.`
 
   return (
     <div className="space-y-4">

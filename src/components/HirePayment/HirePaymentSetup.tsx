@@ -49,7 +49,7 @@ function PrepaySummary({ info }: { info: HirePaymentInfo }) {
         ({formatUsdCents(quote.weeklyPrepayCents)}) + {formatUsdCents(quote.serviceFeeCents)}{' '}
         service fee.
         {info.firstPrepayDate && <> First charge on {formatDateOnly(info.firstPrepayDate)}.</>}{' '}
-        Hours you don&apos;t use are refunded after your weekly review.
+        Hours you don&apos;t use go back to your card after your weekly review.
       </p>
     </div>
   )
@@ -167,7 +167,7 @@ export function HirePaymentSetup({
     )
   }
 
-  const authorization = `By saving this card, you authorize Find a Supervisor to charge it ${formatUsdCents(info.quote.weeklyTotalCents)} at the start of each billing week under your agreement with ${supervisorName}. After you review each week's sessions, the unused part of the prepay is refunded to this card.`
+  const authorization = `By saving this card, you authorize Find a Supervisor to charge it ${formatUsdCents(info.quote.weeklyTotalCents)} at the start of each billing week under your agreement with ${supervisorName}. After you review each week's sessions, the unused part of the prepay goes back to this card.`
 
   return (
     <div className="space-y-4">

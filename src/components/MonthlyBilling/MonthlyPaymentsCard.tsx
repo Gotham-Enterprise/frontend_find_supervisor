@@ -52,7 +52,7 @@ export function MonthlyPaymentsCard({ role }: { role: Role }) {
         <CardDescription>
           {role === 'supervisor'
             ? `Paid out ${formatUsdCents(data.totals.paidOutCents ?? 0)} · ${formatUsdCents(data.totals.pendingCents ?? 0)} waiting to be released after each month ends.`
-            : `Charged ${formatUsdCents(data.totals.chargedCents ?? 0)}${data.totals.refundedCents ? ` · ${formatUsdCents(data.totals.refundedCents)} refunded` : ''}.`}
+            : `Charged ${formatUsdCents(data.totals.chargedCents ?? 0)}${data.totals.refundedCents ? ` · ${formatUsdCents(data.totals.refundedCents)} back to your card` : ''}.`}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
