@@ -2,7 +2,7 @@
 
 import { AlertCircle, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 import { useHireSessions } from '@/components/HireSessions/HireSessionsDialog'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,7 @@ import {
   toEasternISODate,
 } from '@/lib/utils/date'
 import { formatUsdCents } from '@/lib/utils/money'
-import type { BillingWeek } from '@/types/sessions'
+import type { BillingWeek, SuperviseeWeekPayment } from '@/types/sessions'
 
 import {
   addDays,
@@ -27,9 +27,17 @@ import {
   monthGrid,
   monthOf,
 } from './dates'
+import { Banner } from './WorkroomOverview'
 
 const WEEKDAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/** Brings the selected week's sessions/payment card (below the calendar) into view. */
+function scrollToWeekDetails() {
+  requestAnimationFrame(() =>
+    document.getElementById('week-details')?.scrollIntoView({ behavior: 'smooth' }),
+  )
+}
 
 type DayMark = 'logged' | 'late' | 'disputed'
 
@@ -142,6 +150,16 @@ export function WorkroomTimesheet({
       onChangeCard,
     })
 
+  // Arriving through a deep link (?week=…, e.g. "Pay now" on Billing) should
+  // land on that week's details, not the top of the page. Only on arrival:
+  // later calendar clicks go through selectWeek.
+  const landedOnWeek = useRef(Boolean(weekParam))
+  useEffect(() => {
+    if (!data || !landedOnWeek.current) return
+    landedOnWeek.current = false
+    scrollToWeekDetails()
+  }, [data])
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -178,6 +196,9 @@ export function WorkroomTimesheet({
         ? thisMonday
         : data.weeks[0].startDate
   const selectedWeek = weeksByMonday.get(selectedMonday) ?? null
+  const selectedPayment: SuperviseeWeekPayment | null =
+    selectedWeek?.payment && 'totalCents' in selectedWeek.payment ? selectedWeek.payment : null
+  const unpaidSelected = selectedPayment?.canPayNow ? selectedPayment : null
   const month = shownMonth ?? monthOf(selectedMonday)
 
   const thisWeek = weeksByMonday.get(thisMonday) ?? null
@@ -191,15 +212,29 @@ export function WorkroomTimesheet({
     params.set('week', mondayOf(date))
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     if (monthOf(date) !== month) setShownMonth(monthOf(date))
-    if (scrollToDetails) {
-      requestAnimationFrame(() =>
-        document.getElementById('week-details')?.scrollIntoView({ behavior: 'smooth' }),
-      )
-    }
+    if (scrollToDetails) scrollToWeekDetails()
   }
 
   return (
     <div className="space-y-6">
+      {unpaidSelected && selectedWeek && (
+        <Banner
+          tone="red"
+          icon={<AlertCircle className="size-4 text-destructive" aria-hidden />}
+          action={
+            <Button size="sm" onClick={scrollToWeekDetails}>
+              Pay now
+            </Button>
+          }
+        >
+          <span className="font-semibold">
+            The payment for {formatWeekRange(selectedWeek.startDate, selectedWeek.endDate)}{' '}
+            didn&apos;t go through.
+          </span>{' '}
+          {unpaidSelected.failureMessage ?? 'Pay now so sessions can keep being logged.'}
+        </Banner>
+      )}
+
       {data.hasPaymentCard === false && (
         <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="flex items-start gap-2 text-sm text-amber-900">
