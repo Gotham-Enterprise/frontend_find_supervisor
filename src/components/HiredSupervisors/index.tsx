@@ -175,13 +175,18 @@ export function HiredSupervisorsPage({ mode = 'supervisors' }: HiredSupervisorsP
   const sessionsLinkId = searchParams.get('sessions')
   const billingLinkId = searchParams.get('billing')
   const hireLinkId = searchParams.get('hire')
+  // `&period=<id>` on a billing link lands on that month in the workroom.
+  const periodLinkId = searchParams.get('period')
   useEffect(() => {
     const listPath = isMedicalDirectors ? '/hired-medical-directors' : '/hired-supervisors'
     if (sessionsLinkId) router.replace(workroomHref(sessionsLinkId, 'timesheet', listPath))
-    else if (billingLinkId) router.replace(workroomHref(billingLinkId, 'billing', listPath))
+    else if (billingLinkId)
+      router.replace(
+        `${workroomHref(billingLinkId, 'billing', listPath)}${periodLinkId ? `&period=${encodeURIComponent(periodLinkId)}` : ''}`,
+      )
     else if (hireLinkId)
       router.replace(`${workroomHref(hireLinkId, undefined, listPath)}?agreement=review`)
-  }, [isMedicalDirectors, sessionsLinkId, billingLinkId, hireLinkId, router])
+  }, [isMedicalDirectors, sessionsLinkId, billingLinkId, hireLinkId, periodLinkId, router])
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [group, setGroup] = useState<HireListGroupFilter>('all')

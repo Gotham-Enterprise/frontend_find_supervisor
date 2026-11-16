@@ -1,7 +1,7 @@
 'use client'
 
 import { AlertCircle, CalendarClock, Flag, MessageSquarePlus } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { cardLabel } from '@/components/HirePayment/HirePaymentSetup'
 import { Badge } from '@/components/ui/badge'
@@ -88,13 +88,28 @@ function PeriodRow({
   role,
   counterpartName,
   hireId,
+  focused = false,
 }: {
   period: MonthlyPeriod
   role: Role
   counterpartName: string
   hireId: string
+  /** The month a deep link points at: scrolled into view and outlined. */
+  focused?: boolean
 }) {
   const { showSuccess, showError } = useUserSnackbar()
+  const rowRef = useRef<HTMLLIElement>(null)
+  useEffect(() => {
+    if (!focused) return
+    // Next frame: dialogs and tabs mount their content a beat after the list.
+    // Focus moves too (without a second scroll), so keyboard and screen-reader
+    // users land on the month as well.
+    const frame = requestAnimationFrame(() => {
+      rowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      rowRef.current?.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [focused])
   const payNow = usePayNowMonthlyPeriod(hireId)
   const approve = useApproveMonthlyPeriod(hireId)
   // Which inline form is open: the client's report, or adding to a disputed month.
@@ -112,7 +127,13 @@ function PeriodRow({
   }
 
   return (
-    <li className="rounded-lg border px-4 py-3">
+    <li
+      ref={rowRef}
+      id={`month-${period.id}`}
+      tabIndex={focused ? -1 : undefined}
+      aria-current={focused ? 'true' : undefined}
+      className={`rounded-lg border px-4 py-3 outline-none ${focused ? 'ring-2 ring-primary/50' : ''}`}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium text-foreground">{period.label}</p>
         <Badge variant="outline" className={`${badge.className} hover:bg-[inherit]`}>
@@ -243,12 +264,14 @@ function BillingBody({
   counterpartName,
   onChangeCard,
   onEndSupervision,
+  focusPeriodId,
 }: {
   billing: HireMonthlyBilling
   hireId: string
   counterpartName: string
   onChangeCard?: () => void
   onEndSupervision?: () => void
+  focusPeriodId?: string | null
 }) {
   const { role, scheduledEnd } = billing
   const months = billing.terms.supervisionMonths
@@ -343,6 +366,7 @@ function BillingBody({
                 role={role}
                 counterpartName={counterpartName}
                 hireId={hireId}
+                focused={period.id === focusPeriodId}
               />
             ))}
           </ul>
@@ -362,6 +386,8 @@ interface MonthlyBillingPanelProps {
   onEndSupervision?: () => void
   /** False while hidden (a closed dialog), so the billing isn't fetched. */
   enabled?: boolean
+  /** From a `?period=` deep link: that month is scrolled into view and outlined. */
+  focusPeriodId?: string | null
 }
 
 /**
@@ -376,6 +402,7 @@ export function MonthlyBillingPanel({
   onChangeCard,
   onEndSupervision,
   enabled = true,
+  focusPeriodId = null,
 }: MonthlyBillingPanelProps) {
   const { data: billing, isLoading, isError, refetch } = useHireMonthlyBilling(hireId, enabled)
 
@@ -405,6 +432,7 @@ export function MonthlyBillingPanel({
       counterpartName={counterpartName}
       onChangeCard={onChangeCard}
       onEndSupervision={onEndSupervision}
+      focusPeriodId={focusPeriodId}
     />
   )
 }
@@ -417,6 +445,7 @@ export function MonthlyBillingDialog({
   onOpenChange,
   onChangeCard,
   onEndSupervision,
+  focusPeriodId,
 }: Omit<MonthlyBillingPanelProps, 'enabled'> & {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -438,6 +467,7 @@ export function MonthlyBillingDialog({
           hireId={hireId}
           counterpartName={counterpartName}
           enabled={open}
+          focusPeriodId={focusPeriodId}
           onChangeCard={
             onChangeCard
               ? () => {

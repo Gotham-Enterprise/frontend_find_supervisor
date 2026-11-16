@@ -1,9 +1,10 @@
 'use client'
 
 import { FilePlus2, FileText, Undo2, X } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { useObjectUrls } from '@/lib/hooks/useObjectUrls'
 import {
   type AttachmentLimits,
   formatFileSize,
@@ -41,11 +42,7 @@ export function ActivityAttachmentsField({
   const [problem, setProblem] = useState<string | null>(null)
   const kept = existing.filter((a) => !removeIds.includes(a.id)).length
   const room = limits.perEntry - kept
-  const previews = useMemo(
-    () => files.map((file) => (isImageType(file.type) ? URL.createObjectURL(file) : null)),
-    [files],
-  )
-  useEffect(() => () => previews.forEach((url) => url && URL.revokeObjectURL(url)), [previews])
+  const previews = useObjectUrls(files, isImageType)
 
   function addFiles(list: FileList | null) {
     if (!list) return
@@ -54,6 +51,14 @@ export function ActivityAttachmentsField({
     onFilesChange(result.files)
     if (inputRef.current) inputRef.current.value = ''
   }
+
+  function removeFile(index: number) {
+    setProblem(null)
+    onFilesChange(files.filter((_, j) => j !== index))
+  }
+
+  const removeButtonClass =
+    'absolute -right-2 -top-2 flex size-6 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
 
   const typeLabel = 'JPG, PNG or PDF'
 
@@ -111,7 +116,7 @@ export function ActivityAttachmentsField({
                   aria-label={`Keep ${attachment.fileName}`}
                   disabled={disabled}
                   onClick={() => onRemoveIdsChange(removeIds.filter((id) => id !== attachment.id))}
-                  className="absolute inset-0 flex items-center justify-center rounded-md text-xs font-medium text-foreground"
+                  className="absolute inset-0 flex items-center justify-center rounded-md text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <span className="inline-flex items-center gap-1 rounded-md border bg-background px-1.5 py-0.5 shadow-sm">
                     <Undo2 className="size-3" aria-hidden />
@@ -124,9 +129,9 @@ export function ActivityAttachmentsField({
                   aria-label={`Remove ${attachment.fileName}`}
                   disabled={disabled}
                   onClick={() => onRemoveIdsChange([...removeIds, attachment.id])}
-                  className="absolute -right-1.5 -top-1.5 rounded-full border bg-background p-0.5 text-muted-foreground shadow-sm hover:text-foreground"
+                  className={removeButtonClass}
                 >
-                  <X className="size-3" />
+                  <X className="size-3.5" />
                 </button>
               )}
               <span className="mt-0.5 block w-24 truncate text-[10px] text-muted-foreground">
@@ -156,10 +161,10 @@ export function ActivityAttachmentsField({
               type="button"
               aria-label={`Remove ${file.name}`}
               disabled={disabled}
-              onClick={() => onFilesChange(files.filter((_, j) => j !== i))}
-              className="absolute -right-1.5 -top-1.5 rounded-full border bg-background p-0.5 text-muted-foreground shadow-sm hover:text-foreground"
+              onClick={() => removeFile(i)}
+              className={removeButtonClass}
             >
-              <X className="size-3" />
+              <X className="size-3.5" />
             </button>
             <span className="mt-0.5 block w-24 truncate text-[10px] text-muted-foreground">
               {formatFileSize(file.size)} · new
@@ -181,7 +186,9 @@ export function ActivityAttachmentsField({
           </li>
         )}
       </ul>
-      {problem && <p className="mt-1 text-xs text-destructive">{problem}</p>}
+      <p role="status" aria-live="polite" className="mt-1 min-h-4 text-xs text-destructive">
+        {problem}
+      </p>
     </div>
   )
 }

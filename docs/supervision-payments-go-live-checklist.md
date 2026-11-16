@@ -89,6 +89,22 @@ Supervisor's future payouts.
 - Connect: Express accounts, US only, `transfers` capability; platform pays
   Stripe fees on transfers.
 - Radar rules reviewed for recurring off-session charges.
+- **Live API key must not be "Limited access"** (seen on all three live
+  secret keys on 2026-11-16). Stripe limits a key that hasn't created
+  transfers or payouts in 180 days: such a key **cannot create transfers**,
+  which is how supervisors and Medical Directors are paid at settlement.
+  Refunds and charges are unaffected. With a limited key, every settlement
+  refunds the supervisee first, then fails at the transfer, is recorded as
+  "Settlement failing" (admin Needs attention) and emails support once; no
+  money is lost, but nobody is paid until the key is fixed. Fix: Dashboard →
+  Developers → API keys → ⋯ on the production key → **Restore access**.
+  Once live, weekly transfers keep the key active. Better: a restricted key
+  (`rk_live_`) with only Customers, PaymentMethods, SetupIntents,
+  PaymentIntents, Refunds, Transfers, Connect accounts/account links,
+  Balance transactions (read) and Events (read); and an **access policy**
+  (server IPs) on it — all live keys currently have none.
+- First live run: one $1 hourly week end to end (prepay charge → partial
+  refund → transfer to a real Express account) before announcing.
 
 ## 5. Operations
 

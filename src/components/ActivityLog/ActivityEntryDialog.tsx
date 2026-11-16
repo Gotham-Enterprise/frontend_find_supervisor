@@ -101,6 +101,9 @@ export function ActivityEntryDialog({
   const isEdit = entry != null
   const isPending = createMutation.isPending || updateMutation.isPending
   const limits = log.attachmentLimits ?? DEFAULT_ATTACHMENT_LIMITS
+  // The entry's current files from the live log (a background refetch may have
+  // changed them since the row was clicked), falling back to the snapshot.
+  const liveEntry = entry ? (log.entries.find((e) => e.id === entry.id) ?? entry) : undefined
   const [files, setFiles] = useState<File[]>([])
   const [removeIds, setRemoveIds] = useState<string[]>([])
 
@@ -256,7 +259,7 @@ export function ActivityEntryDialog({
             />
 
             <ActivityAttachmentsField
-              existing={entry?.attachments ?? []}
+              existing={liveEntry?.attachments ?? []}
               removeIds={removeIds}
               onRemoveIdsChange={setRemoveIds}
               files={files}

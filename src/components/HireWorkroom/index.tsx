@@ -318,6 +318,7 @@ function Workroom({
               onChangeCard={
                 hire.status === 'ACCEPTED' || hire.status === 'ACTIVE' ? changeCard : undefined
               }
+              focusPeriodId={searchParams.get('period')}
             />
           </section>
         )}

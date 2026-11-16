@@ -89,21 +89,29 @@ full prepay refunded, never left charged.
 
 ## 5. The weekly cycle
 
-| When                                              | What happens                                                                                                                                                                                                                             |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Monday 12:00 AM** (or the start date, if later) | The week's prepay is charged to the saved card. It's also charged right away when the agreement is signed or a card is saved, if a charge is already due. The first successful charge moves the hire from Accepted to **In Progress**.   |
-| **During the week**                               | The supervisor logs sessions: 15-minute units, 15 minutes to 8 hours each, notes required. A session can't take the week over its weekly max or the hire over its total hours. Sessions can be edited or deleted while the week is open. |
-| **Following Monday 11:59 PM**                     | Logging deadline. The supervisor can log the current week and last week until then.                                                                                                                                                      |
-| **Tuesday 12:00 AM**                              | The week goes to review. A week with nothing logged is closed at $0 automatically.                                                                                                                                                       |
-| **Until Thursday 11:59 PM**                       | The supervisee **approves** or **disputes**.                                                                                                                                                                                             |
-| **Friday 12:00 AM**                               | Weeks not acted on are **approved automatically** (unless a late entry is still waiting for an answer).                                                                                                                                  |
-| **On approval**                                   | The week **settles**: the supervisor's share is transferred and the unused prepay goes back to the card.                                                                                                                                 |
+| When                                              | What happens                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Monday 12:00 AM** (or the start date, if later) | The week's prepay is charged to the saved card. It's also charged right away when the agreement is signed or a card is saved, if a charge is already due. The first successful charge moves the hire from Accepted to **In Progress**.                                                                                                                                                                                        |
+| **During the week**                               | The supervisor logs sessions: 15-minute units, 15 minutes to 8 hours each, notes required. Never for a date before the agreement started **or before the supervisee signed** (a late signature doesn't reach back, same as monthly billing; this also applies to late entries). A session can't take the week over its weekly max or the hire over its total hours. Sessions can be edited or deleted while the week is open. |
+| **Following Monday 11:59 PM**                     | Logging deadline. The supervisor can log the current week and last week until then.                                                                                                                                                                                                                                                                                                                                           |
+| **Tuesday 12:00 AM**                              | The week goes to review. A week with nothing logged is closed at $0 automatically.                                                                                                                                                                                                                                                                                                                                            |
+| **Until Thursday 11:59 PM**                       | The supervisee **approves** or **disputes**.                                                                                                                                                                                                                                                                                                                                                                                  |
+| **Friday 12:00 AM**                               | Weeks not acted on are **approved automatically** (unless a late entry is still waiting for an answer).                                                                                                                                                                                                                                                                                                                       |
+| **On approval**                                   | The week **settles**: the supervisor's share is transferred and the unused prepay goes back to the card.                                                                                                                                                                                                                                                                                                                      |
 
 The billing job runs every 15 minutes, so each step happens within 15 minutes
 of the times above. It runs in a single process even when the server is
 clustered. If the job was down past a week's review deadline, the week still
 gets a full 3-day review window from when it comes back (it is not approved and
-paid out on the spot).
+paid out on the spot). If it was down for a whole week, the missed week is
+filled in on the next run (looking back up to 4 weeks, never before the
+agreement start, the card being saved or the supervisee's signature): a week
+whose logging deadline has passed is created **closed at $0 with nothing
+charged**, so the supervisor can still request late entries for it within the
+14-day window. A missed week still inside its deadline (a Monday) is left
+alone: the job never prepays a week that is over with nothing logged; logging a
+session into it directly still creates it and charges its prepay as usual. Rows
+that already exist are never changed.
 
 **After settlement.** A refund that fails on Stripe's side (closed card) and a
 chargeback (`charge.dispute.created`) each email Gotham support with the week;
@@ -214,6 +222,12 @@ Dev/QA: `node scripts/supervision_monthly_billing.js tick | list <hireId> | shif
 Tests: `node tests/supervision_monthly_billing.test.js` (monthly) and
 `node tests/supervision_hourly_billing_regression.test.js` (hourly + offline
 monthly must stay unchanged). Deploy: `node scripts/apply_supervision_monthly_billing_release.js`, then `npx prisma generate`.
+Missed weeks + signature bound: `node tests/supervision_week_backfill.test.js`. Deep links:
+`node tests/supervision_deep_links.test.js` — Medical Director notifications and
+emails open the MD workroom (`/medical-director-clients/<hireId>?tab=billing|activity`),
+the supervisee's open their workroom; billing links carry `&period=<id>` so the
+page scrolls to that month (the older `/medical-director-clients?billing=<id>` list
+links keep working). Upload errors: `node tests/supervision_upload_errors.test.js`.
 Activity log: `node tests/supervision_activity_log.test.js` and
 `node tests/supervision_activity_log_attachments.test.js`; deploy
 `node scripts/apply_supervision_activity_log_release.js` and

@@ -92,11 +92,11 @@ const PAGE_SIZE = 10
  * being shown (another page, group or search), so the link still lands.
  */
 function DeepLinkedBillingDialog({ items }: { items: HireListItem[] }) {
-  const [hireId] = useState(() =>
-    typeof window !== 'undefined'
-      ? new URLSearchParams(window.location.search).get('billing')
-      : null,
-  )
+  const [{ hireId, periodId }] = useState(() => {
+    const params =
+      typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+    return { hireId: params?.get('billing') ?? null, periodId: params?.get('period') ?? null }
+  })
   const onPage = hireId != null && items.some((hire) => hire.id === hireId)
   const { data: hire } = useHire(hireId && !onPage ? hireId : '')
   const [open, setOpen] = useState(true)
@@ -107,6 +107,7 @@ function DeepLinkedBillingDialog({ items }: { items: HireListItem[] }) {
       counterpartName={formatDisplayName(hire.supervisee)}
       open={open}
       onOpenChange={setOpen}
+      focusPeriodId={periodId}
     />
   )
 }
@@ -644,6 +645,14 @@ function SuperviseeCard({
       typeof window !== 'undefined' &&
       new URLSearchParams(window.location.search).get('billing') === hire.id,
   )
+  // …and `&period=<id>` lands on that month inside the dialog — once: closing the
+  // dialog forgets it, so reopening it by hand doesn't jump back to that month.
+  const [linkedPeriodId, setLinkedPeriodId] = useState(() =>
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('billing') === hire.id
+      ? new URLSearchParams(window.location.search).get('period')
+      : null,
+  )
   // Signed Medical Director agreement (billed in the app or not): the activity log.
   const isMedicalDirectorHire = hiredListPath(hire) === '/hired-medical-directors'
   const hasActivityLog = ACTIVITY_LOG_ENABLED && isAgreementSigned && isMedicalDirectorHire
@@ -929,8 +938,12 @@ function SuperviseeCard({
             hireId={hire.id}
             counterpartName={superviseeName}
             open={billingOpen}
-            onOpenChange={setBillingOpen}
+            onOpenChange={(open) => {
+              setBillingOpen(open)
+              if (!open) setLinkedPeriodId(null)
+            }}
             onEndSupervision={() => setEndForNonPaymentOpen(true)}
+            focusPeriodId={linkedPeriodId}
           />
           <EndSupervisionDialog
             hire={hire}

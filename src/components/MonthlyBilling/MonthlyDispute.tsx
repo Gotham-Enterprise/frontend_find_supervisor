@@ -1,7 +1,7 @@
 'use client'
 
 import { FilePlus2, FileText, X } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -17,6 +17,7 @@ import {
   useAddMonthlyDisputeEvidence,
   useDisputeMonthlyPeriod,
 } from '@/lib/hooks/useMonthlyBilling'
+import { useObjectUrls } from '@/lib/hooks/useObjectUrls'
 import { formatEasternDateTime } from '@/lib/utils/date'
 import { parseApiError } from '@/lib/utils/error-parser'
 import type {
@@ -75,11 +76,7 @@ function EvidenceFilesField({
   const inputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const max = Math.min(FILES_PER_SUBMISSION, filesLeft)
-  const previews = useMemo(
-    () => files.map((file) => (isImage(file.type) ? URL.createObjectURL(file) : null)),
-    [files],
-  )
-  useEffect(() => () => previews.forEach((url) => url && URL.revokeObjectURL(url)), [previews])
+  const previews = useObjectUrls(files, isImage)
 
   function addFiles(list: FileList | null) {
     if (!list) return

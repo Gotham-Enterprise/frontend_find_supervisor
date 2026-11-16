@@ -307,6 +307,7 @@ function ClientWorkroom({ hire }: { hire: HireListItem }) {
             hireId={hire.id}
             counterpartName={clientName}
             onEndSupervision={() => setEndOpen(true)}
+            focusPeriodId={searchParams.get('period')}
           />
         </div>
       )}
