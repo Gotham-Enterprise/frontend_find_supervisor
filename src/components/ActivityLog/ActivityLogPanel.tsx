@@ -1,6 +1,15 @@
 'use client'
 
-import { Download, Lock, NotebookPen, Pencil, Plus, Trash2 } from 'lucide-react'
+import {
+  Download,
+  FileText,
+  ImageIcon,
+  Lock,
+  NotebookPen,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -8,9 +17,10 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useUserSnackbar } from '@/lib/hooks'
 import { useDeleteActivityEntry, useHireActivityLog } from '@/lib/hooks/useActivityLog'
+import { formatFileSize, isImageType } from '@/lib/utils/activity-attachments'
 import { formatDuration } from '@/lib/utils/date'
 import { parseApiError } from '@/lib/utils/error-parser'
-import type { ActivityEntry, HireActivityLog } from '@/types/activity-log'
+import type { ActivityAttachment, ActivityEntry, HireActivityLog } from '@/types/activity-log'
 
 import { ACTIVITY_TYPE_ICONS, ACTIVITY_TYPE_LABELS } from './activity-types'
 import { ActivityEntryDialog } from './ActivityEntryDialog'
@@ -78,6 +88,24 @@ function groupSummary(entries: ActivityEntry[]): string {
     .join(' · ')
 }
 
+/** One file on an entry, opening in a new tab (the URL is presigned for 24 h). */
+function AttachmentChip({ attachment }: { attachment: ActivityAttachment }) {
+  const Icon = isImageType(attachment.contentType) ? ImageIcon : FileText
+  return (
+    <a
+      href={attachment.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={`${attachment.fileName} · ${formatFileSize(attachment.sizeBytes)}`}
+      className="inline-flex max-w-full items-center gap-1.5 rounded-md border bg-muted/40 px-2 py-1 text-xs text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <Icon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+      <span className="truncate">{attachment.fileName}</span>
+      <span className="shrink-0 text-muted-foreground">{formatFileSize(attachment.sizeBytes)}</span>
+    </a>
+  )
+}
+
 function EntryRow({
   entry,
   onEdit,
@@ -112,6 +140,15 @@ function EntryRow({
           <p className="mt-1 whitespace-pre-line break-words text-sm text-foreground/90">
             {entry.notes}
           </p>
+        )}
+        {entry.attachments?.length > 0 && (
+          <ul className="mt-1.5 flex flex-wrap gap-1.5" aria-label="Attached files">
+            {entry.attachments.map((attachment) => (
+              <li key={attachment.id} className="max-w-full">
+                <AttachmentChip attachment={attachment} />
+              </li>
+            ))}
+          </ul>
         )}
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
           {loggedLater && <span>Logged {shortDate(entry.loggedOn)}</span>}

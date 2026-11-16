@@ -1,7 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 
@@ -20,11 +20,13 @@ import { FormSelectField } from '@/components/ui/form-select-field'
 import { Textarea } from '@/components/ui/textarea'
 import { useUserSnackbar } from '@/lib/hooks'
 import { useCreateActivityEntry, useUpdateActivityEntry } from '@/lib/hooks/useActivityLog'
+import { DEFAULT_ATTACHMENT_LIMITS } from '@/lib/utils/activity-attachments'
 import { formatDuration } from '@/lib/utils/date'
 import { parseApiError } from '@/lib/utils/error-parser'
 import type { ActivityEntry, ActivityType, HireActivityLog } from '@/types/activity-log'
 
 import { ACTIVITY_TYPE_LABELS } from './activity-types'
+import { ActivityAttachmentsField } from './ActivityAttachmentsField'
 
 const NOTES_MAX = 1000
 const UNIT_MINUTES = 15
@@ -72,8 +74,10 @@ type EntryFormValues = z.infer<typeof entrySchema>
 
 /**
  * The Medical Director logs (or edits) one activity for a client: date (this
- * month or last), what it was, and optionally how long, how many charts, and
- * notes. The backend enforces the window and the month locks too.
+ * month or last), what it was, and optionally how long, how many charts,
+ * notes and files (a signed protocol, an agenda). Files are sent with the
+ * entry in one request, so a failed upload saves nothing. The backend
+ * enforces the window, the month locks and the file limits too.
  */
 export function ActivityEntryDialog({
   hireId,
@@ -96,6 +100,9 @@ export function ActivityEntryDialog({
   const updateMutation = useUpdateActivityEntry(hireId)
   const isEdit = entry != null
   const isPending = createMutation.isPending || updateMutation.isPending
+  const limits = log.attachmentLimits ?? DEFAULT_ATTACHMENT_LIMITS
+  const [files, setFiles] = useState<File[]>([])
+  const [removeIds, setRemoveIds] = useState<string[]>([])
 
   const form = useForm<EntryFormValues>({
     resolver: zodResolver(entrySchema),
@@ -119,6 +126,13 @@ export function ActivityEntryDialog({
     })
   }, [open, entry, log.window.latestDate, form])
 
+  /** Closing (any way) forgets the picked files, so the next open starts clean. */
+  function close() {
+    setFiles([])
+    setRemoveIds([])
+    onOpenChange(false)
+  }
+
   const type = useWatch({ control: form.control, name: 'type' })
   const notes = useWatch({ control: form.control, name: 'notes' })
 
@@ -131,6 +145,8 @@ export function ActivityEntryDialog({
       chartCount:
         values.type === 'CHART_REVIEW' && values.chartCount ? Number(values.chartCount) : null,
       notes: values.notes.trim() || null,
+      attachments: files,
+      removeAttachmentIds: removeIds,
     }
     try {
       if (entry) {
@@ -140,14 +156,21 @@ export function ActivityEntryDialog({
         await createMutation.mutateAsync(input)
         showSuccess('Activity logged', { description: `${clientName} can see it in their log.` })
       }
-      onOpenChange(false)
+      close()
     } catch (err) {
       showError(parseApiError(err))
     }
   }
 
   return (
-    <DialogRoot open={open} onOpenChange={(next) => !isPending && onOpenChange(next)}>
+    <DialogRoot
+      open={open}
+      onOpenChange={(next) => {
+        if (isPending) return
+        if (next) onOpenChange(true)
+        else close()
+      }}
+    >
       <DialogContent className="max-h-[90vh] max-w-md">
         <DialogTitle>{isEdit ? 'Edit Activity' : 'Log Activity'}</DialogTitle>
         <p className="mb-4 mt-1 text-sm text-muted-foreground">
@@ -232,17 +255,28 @@ export function ActivityEntryDialog({
               )}
             />
 
+            <ActivityAttachmentsField
+              existing={entry?.attachments ?? []}
+              removeIds={removeIds}
+              onRemoveIdsChange={setRemoveIds}
+              files={files}
+              onFilesChange={setFiles}
+              limits={limits}
+              disabled={isPending}
+            />
+
             <div className="flex justify-end gap-2 pt-1">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={isPending}
-                onClick={() => onOpenChange(false)}
-              >
+              <Button type="button" variant="outline" disabled={isPending} onClick={close}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? 'Saving…' : isEdit ? 'Save Changes' : 'Log Activity'}
+                {isPending
+                  ? files.length > 0
+                    ? 'Uploading…'
+                    : 'Saving…'
+                  : isEdit
+                    ? 'Save Changes'
+                    : 'Log Activity'}
               </Button>
             </div>
           </form>
