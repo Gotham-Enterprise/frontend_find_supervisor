@@ -1,3 +1,4 @@
+import type { UserIdentityPreferencesResponse } from './identity-preferences'
 import type { Subscription, SupervisorOccupation, SupervisorSpecialty } from './supervisor-profile'
 
 export type { Subscription }
@@ -14,7 +15,8 @@ export type LookingTimeline =
 
 export type BudgetRangeType = 'HOURLY' | 'MONTHLY'
 
-export interface SuperviseeProfileUser {
+/** Identity fields follow the same owner/public visibility rules as the supervisor user. */
+export interface SuperviseeProfileUser extends UserIdentityPreferencesResponse {
   id: string
   /** null when the viewing supervisor isn't yet allowed to see contact details */
   email: string | null
@@ -24,6 +26,8 @@ export interface SuperviseeProfileUser {
   lastName?: string | null
   fullName: string | null
   contactNumber?: string | null
+  /** Internal test account (only other test accounts can see it). */
+  isTestAccount?: boolean
   city: string | null
   state: string | null
   zipcode?: string | null
@@ -74,6 +78,9 @@ export interface SuperviseeProfileData {
 
   /** Optional self introduction (separate from idealSupervisor) */
   introduction?: string | null
+
+  /** Total supervised hours still needed for licensure (every need except Medical Director) */
+  supervisionHoursNeeded?: string | null
 
   /** Number of completed supervision sessions */
   completedCount: number

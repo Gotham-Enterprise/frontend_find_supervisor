@@ -93,7 +93,7 @@ describe('STATE_SUPERVISION_RULES', () => {
 describe('resolveFormatGuideTarget', () => {
   it('stays hidden until a State License filter is applied', () => {
     const profile = makeProfile({
-      occupation: 'Associate Clinical Social Worker',
+      occupation: 'Associate Social Worker',
       licensureState: 'CA',
       stateOfLicensure: ['CA'],
     })
@@ -101,7 +101,7 @@ describe('resolveFormatGuideTarget', () => {
   })
 
   it('uses every applied state with the supervisee profession', () => {
-    const profile = makeProfile({ occupation: 'Associate Clinical Social Worker' })
+    const profile = makeProfile({ occupation: 'Associate Social Worker' })
     expect(resolveFormatGuideTarget(profile, ['ny', 'TX', 'NY'])).toEqual({
       states: ['NY', 'TX'],
       profession: 'SOCIAL_WORK',

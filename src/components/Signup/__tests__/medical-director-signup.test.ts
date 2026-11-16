@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { identityPreferenceDefaultValues } from '@/lib/forms/identity-preferences'
+
 import { medicalDirectorDefaultValues, parseSignupRoleFromType } from '../helpers'
 import {
   MEDICAL_DIRECTOR_SIGNUP_STEP_FIELDS,
@@ -293,6 +295,7 @@ describe('medicalDirectorSchema — full form', () => {
   function fullValues(): MedicalDirectorFormValues {
     return {
       ...step2Base(),
+      ...identityPreferenceDefaultValues,
       fullName: 'Dr Test',
       professionalCredentials: '',
       email: 'md@example.com',

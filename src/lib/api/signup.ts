@@ -5,8 +5,13 @@ import {
   type SuperviseeFormValues,
   type SupervisorFormValues,
 } from '@/components/Signup/schema'
+import {
+  appendIdentityPreferencesToFormData,
+  identityPreferencesToPayload,
+} from '@/lib/forms/identity-preferences'
 import { OTHER_CERTIFYING_BOARD_VALUE } from '@/lib/utils/board-certification'
 import { normalizeUSPhoneNumber } from '@/lib/utils/phone'
+import { requiresSupervisionHoursNeeded } from '@/lib/utils/profile-formatters'
 import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 import { isPhysicianSupervisorType } from '@/lib/utils/supervisor-type'
 
@@ -152,6 +157,8 @@ export function buildSupervisorFormData(values: SupervisorRegisterValues): FormD
   // Account
   fd.append('role', 'SUPERVISOR')
   fd.append('fullName', values.fullName)
+  // Optional pronouns / gender identity / languages + visibility flags
+  appendIdentityPreferencesToFormData(fd, identityPreferencesToPayload(values))
   const professionalCredentials = values.professionalCredentials?.trim()
   if (professionalCredentials) fd.append('professionalCredentials', professionalCredentials)
   fd.append('email', values.email)
@@ -245,6 +252,8 @@ export function buildSuperviseeFormData(values: SuperviseeFormValues): FormData 
   // Account
   fd.append('role', 'SUPERVISEE')
   fd.append('fullName', values.fullName)
+  // Optional pronouns / gender identity / languages + visibility flags
+  appendIdentityPreferencesToFormData(fd, identityPreferencesToPayload(values))
   fd.append('email', values.email)
   fd.append('password', values.password)
   fd.append('contactNumber', normalizeUSPhoneNumber(values.contactNumber) ?? values.contactNumber)
@@ -313,6 +322,10 @@ export function buildSuperviseeFormData(values: SuperviseeFormValues): FormData 
 
   fd.append('preferredFormat', FORMAT_MAP[values.preferredFormat])
   fd.append('availability', values.availability)
+  // Every need except Medical Director (required for them).
+  if (requiresSupervisionHoursNeeded(values.typeOfSupervisor) && values.supervisionHoursNeeded) {
+    fd.append('supervisionHoursNeeded', values.supervisionHoursNeeded)
+  }
   // Backend field: idealSupervisor
   fd.append('idealSupervisor', values.description)
   if (values.introduction?.trim()) fd.append('introduction', values.introduction)

@@ -5,6 +5,10 @@ import { useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { TagInput } from '@/components/ui/tag-input'
+import {
+  GENDER_IDENTITY_FILTER_OPTIONS,
+  LANGUAGE_OPTIONS,
+} from '@/lib/constants/identity-preferences'
 import { useOccupationOptions, useStatesOptions } from '@/lib/hooks'
 import { useMergedSpecialtyOptions } from '@/lib/hooks/useMergedSpecialtyOptions'
 
@@ -129,6 +133,31 @@ export function SearchSuperviseeFilters({
                 : 'Select specialty'
           }
           disabled={filters.occupations.length === 0 || specialtiesLoading}
+        />
+      </div>
+
+      <div>
+        <FilterLabel>Gender Identity</FilterLabel>
+        <TagInput
+          options={GENDER_IDENTITY_FILTER_OPTIONS}
+          value={filters.genderIdentities}
+          onChange={(next) => onChange({ ...filters, genderIdentities: next })}
+          placeholder="Select gender identities"
+        />
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Matches supervisees who chose to display this on their profile.
+        </p>
+      </div>
+
+      <div>
+        <FilterLabel>Languages</FilterLabel>
+        <TagInput
+          options={LANGUAGE_OPTIONS}
+          value={filters.languages}
+          onChange={(next) => onChange({ ...filters, languages: next })}
+          placeholder="Select languages"
+          searchable
+          searchPlaceholder="Search languages…"
         />
       </div>
 

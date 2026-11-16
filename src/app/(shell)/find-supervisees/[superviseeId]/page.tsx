@@ -10,7 +10,7 @@ interface SuperviseeProfileRouteProps {
 export async function generateMetadata({ params }: SuperviseeProfileRouteProps) {
   const { superviseeId: _ } = await params
   return {
-    title: 'Supervisee Profile | Find A Supervisor',
+    title: 'Supervisee Profile',
     description: "View this supervisee's supervision needs, credentials, and availability.",
   }
 }

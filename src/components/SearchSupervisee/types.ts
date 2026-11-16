@@ -1,3 +1,4 @@
+import type { PublicIdentityLabels } from '@/lib/utils/identity-display'
 import type { SupervisionFormat } from '@/types/supervisee-profile'
 
 export interface SuperviseeSearchFilters {
@@ -7,6 +8,10 @@ export interface SuperviseeSearchFilters {
   occupations: string[]
   /** Specialty names — cascades from selected occupations */
   specialties: string[]
+  /** Gender identity codes (see GENDER_IDENTITY_FILTER_OPTIONS); only public profiles match */
+  genderIdentities: string[]
+  /** ISO 639 language codes; only profiles that display languages match */
+  languages: string[]
 }
 
 export type { SupervisionFormat }
@@ -37,6 +42,8 @@ export interface SuperviseeSearchResult {
   avatarColor: string
   hireStatusWithCurrentSupervisor: string
   isConnectedWithCurrentSupervisor: boolean
+  /** Pronouns / gender identity / languages the supervisee chose to display. */
+  identity: PublicIdentityLabels
 }
 
 export type SortOption = 'best_match' | 'newest'

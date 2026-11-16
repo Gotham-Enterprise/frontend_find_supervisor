@@ -50,6 +50,8 @@ export function buildSearchUrlParams(input: {
   filters.yearsExperience.forEach((v) => params.append('yrs', v))
   filters.patientPopulation.forEach((v) => params.append('pop', v))
   filters.availability.forEach((v) => params.append('av', v))
+  filters.genderIdentities.forEach((v) => params.append('gi', v))
+  filters.languages.forEach((v) => params.append('lang', v))
 
   if (filters.state.trim()) params.set('st', filters.state.trim())
   if (filters.city.trim()) params.set('city', filters.city.trim())
@@ -79,6 +81,8 @@ export function parseSearchUrlState(params: ParamsReader): SupervisorSearchUrlSt
     yearsExperience: params.getAll('yrs'),
     patientPopulation: params.getAll('pop'),
     availability: params.getAll('av'),
+    genderIdentities: params.getAll('gi'),
+    languages: params.getAll('lang'),
     state: params.get('st')?.trim() ?? '',
     city: params.get('city')?.trim() ?? '',
     radiusMiles,
@@ -103,6 +107,8 @@ export function parseSearchUrlState(params: ParamsReader): SupervisorSearchUrlSt
     'yrs',
     'pop',
     'av',
+    'gi',
+    'lang',
     'st',
     'city',
     'r',

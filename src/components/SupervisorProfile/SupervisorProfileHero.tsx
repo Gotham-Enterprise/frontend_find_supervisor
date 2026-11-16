@@ -1,6 +1,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { TestAccountNoticeDialog } from '@/components/TestAccountNoticeDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DisabledWithTooltip } from '@/components/ui/tooltip'
@@ -16,6 +17,7 @@ import {
 } from '@/lib/hooks'
 import { useCheckConnectionAvailability } from '@/lib/hooks/useConnections'
 import { pickConversation } from '@/lib/utils/chat-rooms'
+import { formatPronouns, getVisiblePronounLabels } from '@/lib/utils/identity-display'
 import {
   formatDisplayName,
   formatNameWithCredentials,
@@ -31,6 +33,7 @@ import {
   isApprovedHireStatus,
   isPendingConnectionStatus,
 } from '@/lib/utils/supervision-status'
+import { isTestToLiveInteraction } from '@/lib/utils/test-accounts'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 import { type HireContext, HireSupervisorModal } from './HireSupervisorModal'
@@ -97,6 +100,7 @@ export function SupervisorProfileHero({
   hireContext,
 }: SupervisorProfileHeroProps) {
   const [hireModalOpen, setHireModalOpen] = useState(false)
+  const [testAccountNoticeOpen, setTestAccountNoticeOpen] = useState(false)
   const { user } = useUser()
   const router = useRouter()
   const { data: superviseeProfile } = useSuperviseeProfile()
@@ -170,6 +174,8 @@ export function SupervisorProfileHero({
     displayName,
     profile.professionalCredentials,
   )
+  // Shown only when the supervisor opted in (the API strips it for other viewers anyway).
+  const pronouns = formatPronouns(getVisiblePronounLabels(profile.user))
   // Profile strings only — the account-level user.occupation/specialty
   // relations are jobseeker-side leftovers that can hold unrelated values
   // (e.g. "Accountant" on a physician), so they are deliberately ignored.
@@ -197,6 +203,11 @@ export function SupervisorProfileHero({
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-bold text-[#181818]">{displayNameWithCredentials}</h1>
+            {pronouns && (
+              <span className="text-sm text-[#6B7280]" aria-label={`Pronouns: ${pronouns}`}>
+                ({pronouns})
+              </span>
+            )}
             {roleBadgeLabels.map((label) => (
               <span
                 key={label}
@@ -266,7 +277,14 @@ export function SupervisorProfileHero({
               {isApprovedHireStatus(profile.hiredInfo?.status) ? 'Hired' : 'Waiting for approval'}
             </span>
           ) : (
-            <Button size="sm" onClick={() => setHireModalOpen(true)}>
+            <Button
+              size="sm"
+              onClick={() =>
+                isTestToLiveInteraction(user, profile.user)
+                  ? setTestAccountNoticeOpen(true)
+                  : setHireModalOpen(true)
+              }
+            >
               {hireContext === 'medical-director'
                 ? 'Hire as Medical Director'
                 : 'Hire as Supervisor'}
@@ -310,6 +328,10 @@ export function SupervisorProfileHero({
         onOpenChange={setHireModalOpen}
         supervisorProfile={profile}
         superviseeProfile={superviseeProfile}
+      />
+      <TestAccountNoticeDialog
+        open={testAccountNoticeOpen}
+        onOpenChange={setTestAccountNoticeOpen}
       />
     </>
   )

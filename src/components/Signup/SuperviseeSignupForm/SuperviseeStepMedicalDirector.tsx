@@ -57,7 +57,7 @@ export function MdPreferredOccupationSelect({
     <FormSelectField
       control={control}
       name="mdPreferredOccupationId"
-      label="Preferred Occupation (optional)"
+      label="Preferred Occupation (Optional)"
       options={options}
       placeholder={
         options.length === 0 && !supervisorTypesLoading
@@ -94,7 +94,7 @@ export function MdPreferredSpecialtySelect({
     <FormSelectField
       control={control}
       name="mdPreferredSpecialtyId"
-      label="Preferred Specialty (optional)"
+      label="Preferred Specialty (Optional)"
       options={options}
       sortOptions
       placeholder={

@@ -8,6 +8,8 @@ function cloneFilters(base: SuperviseeSearchFilters): SuperviseeSearchFilters {
     states: [...base.states],
     occupations: [...base.occupations],
     specialties: [...base.specialties],
+    genderIdentities: [...base.genderIdentities],
+    languages: [...base.languages],
   }
 }
 

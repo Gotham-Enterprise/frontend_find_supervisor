@@ -1,7 +1,10 @@
 import type { SelectOption } from '@/lib/api/options'
 import { SUPERVISOR_TYPE_QUERY_MAP } from '@/lib/seo/routes'
 import { formatUSPhoneForDisplay } from '@/lib/utils/phone'
-import { supervisionTypeDisplayLabel } from '@/lib/utils/supervisee-eligibility'
+import {
+  isMedicalDirectorType,
+  supervisionTypeDisplayLabel,
+} from '@/lib/utils/supervisee-eligibility'
 
 // ─── Display name ──────────────────────────────────────────────────────────────
 
@@ -51,24 +54,61 @@ export function formatCredentialWithState(
   return `${c} (${s})`
 }
 
+/** Leading titles that are not a first name: "Dr. Julie Robinson" → "Dr. Julie R", never "Dr. R". */
+const HONORIFICS = new Set([
+  'dr',
+  'mr',
+  'mrs',
+  'ms',
+  'mx',
+  'miss',
+  'prof',
+  'rev',
+  'fr',
+  'sr',
+  'hon',
+])
+/** Trailing generational suffixes that are not surnames: "Jim Santiano Jr." → "Jim S". */
+const NAME_SUFFIXES = new Set(['jr', 'sr', 'ii', 'iii', 'iv', 'v'])
+
+function normalizeNameToken(token: string): string {
+  return token.replace(/\.$/, '').toLowerCase()
+}
+
 /**
  * Mask a full name to first name + last initial, e.g. "Katie Cruz" → "Katie C".
  * Used to protect a person's identity until they're connected with the viewer.
- * The initial comes from the last token that begins with a letter, so trailing
- * suffixes that aren't surnames (e.g. account numbers: "Jim Santiano 02" → "Jim S")
- * don't leak through. Single-word or empty names are returned unchanged.
+ * A leading honorific is kept ("Dr. Julie Robinson" → "Dr. Julie R") and anything
+ * after a comma (credentials) is ignored. The initial comes from the last token
+ * that begins with a letter and is not a generational suffix, so "Jim Santiano 02"
+ * and "Jim Santiano Jr." → "Jim S". A title followed by a single surname masks that
+ * surname ("Dr. Robinson" → "Dr. R"); a single untitled word is returned unchanged.
+ * Mirrors maskNameToFirstInitial in the backend's supervision_name_privacy.
  */
 export function maskNameToFirstInitial(fullName: string | null | undefined): string {
-  const parts = (fullName ?? '').trim().split(/\s+/).filter(Boolean)
+  const parts = (fullName ?? '').split(',')[0].trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return ''
+
+  const honorifics: string[] = []
+  while (parts.length > 0 && HONORIFICS.has(normalizeNameToken(parts[0]))) {
+    honorifics.push(parts.shift() as string)
+  }
+  const prefix = honorifics.length > 0 ? `${honorifics.join(' ')} ` : ''
+  if (parts.length === 0) return honorifics.join(' ')
+
   const first = parts[0]
   for (let i = parts.length - 1; i >= 1; i--) {
-    const initial = parts[i][0]
-    if (/\p{L}/u.test(initial)) {
-      return `${first} ${initial.toUpperCase()}`
+    const token = parts[i]
+    const initial = token[0]
+    if (/\p{L}/u.test(initial) && !NAME_SUFFIXES.has(normalizeNameToken(token))) {
+      return `${prefix}${first} ${initial.toUpperCase()}`
     }
   }
-  return first
+  // Only one name token left. After a title it is almost certainly a surname.
+  if (honorifics.length > 0 && /\p{L}/u.test(first[0])) {
+    return `${prefix}${first[0].toUpperCase()}`
+  }
+  return `${prefix}${first}`
 }
 
 /**
@@ -234,6 +274,52 @@ export function formatAvailability(availability: string | null | undefined): str
   return AVAILABILITY_LABELS[availability] ?? availability
 }
 
+// ─── Client / patient population ─────────────────────────────────────────────
+
+/**
+ * Mirrors the backend PATIENT_POPULATION_SUGGESTIONS labels so server-rendered
+ * pages and search cards can label codes without fetching the options list.
+ */
+const PATIENT_POPULATION_LABELS: Record<string, string> = {
+  INFANTS_EARLY_CHILDHOOD: 'Infants & Early Childhood (0–5)',
+  CHILDREN: 'Children',
+  ADOLESCENTS: 'Adolescents',
+  YOUNG_ADULTS: 'Young Adults / College Students',
+  ADULTS: 'Adults',
+  OLDER_ADULTS: 'Older Adults (65+)',
+  FAMILIES: 'Families',
+  COUPLES: 'Couples',
+  PARENTS: 'Parents',
+  LGBTQIA_PLUS: 'LGBTQIA+',
+  TRANSGENDER_NONBINARY: 'Transgender & Nonbinary',
+  BIPOC: 'BIPOC / People of Color',
+  IMMIGRANTS_REFUGEES: 'Immigrants & Refugees',
+  FAITH_BASED: 'Faith-Based / Religious Communities',
+  NEURODIVERGENT: 'Neurodivergent',
+  AUTISM_SPECTRUM: 'Autism Spectrum',
+  PEOPLE_WITH_DISABILITIES: 'People with Disabilities',
+  DEAF_HARD_OF_HEARING: 'Deaf & Hard of Hearing',
+  SERIOUS_MENTAL_ILLNESS: 'Serious Mental Illness (SMI)',
+  CO_OCCURRING_SUBSTANCE_USE: 'Co-occurring / Substance Use',
+  VETERANS_MILITARY: 'Veterans & Military Families',
+  FIRST_RESPONDERS: 'First Responders',
+  HEALTHCARE_WORKERS: 'Healthcare Workers',
+  JUSTICE_INVOLVED: 'Justice-Involved / Forensic',
+  FOSTER_CARE_ADOPTION: 'Foster Care & Adoption',
+  PEOPLE_EXPERIENCING_HOMELESSNESS: 'People Experiencing Homelessness',
+}
+
+/** Label for a population code; unknown/legacy codes fall back to Title Case. */
+export function formatPatientPopulation(value: string): string {
+  return (
+    PATIENT_POPULATION_LABELS[value] ??
+    value
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+  )
+}
+
 // ─── Type of supervisor (GET /supervision/options `supervisorType`; same list as signup) ─
 
 /** Stored values from the previous counseling-focused option list and older API shapes. */
@@ -286,7 +372,7 @@ function resolveOneSupervisorTypeLabel(key: string, options: SelectOption[]): st
     LEGACY_SUPERVISOR_TYPE_LABELS[key] ??
     humanizeSupervisorTypeFallback(key)
   // Shared display override so "Mental Health Counselors" reads
-  // "Supervising Mental Health Counselors" everywhere this family renders.
+  // "Mental Health Counselor Supervisor" everywhere this family renders.
   return supervisionTypeDisplayLabel(label)
 }
 
@@ -365,6 +451,18 @@ export function requiresSupervisionHours(
   return (typeOfSupervisorNeeded?.trim() ?? '') === MHC_SUPERVISOR_TYPE
 }
 
+/**
+ * The profile's "Supervision Hours Needed" applies to every supervision type
+ * except Medical Director (a monthly service, not a count of hours). Separate
+ * from requiresSupervisionHours, which gates the per-hire hours (MHC only).
+ */
+export function requiresSupervisionHoursNeeded(
+  typeOfSupervisorNeeded: string | null | undefined,
+): boolean {
+  const name = typeOfSupervisorNeeded?.trim() ?? ''
+  return name !== '' && !isMedicalDirectorType({ name })
+}
+
 /** Positive whole numbers only — rejects 0, 01, 001, etc. */
 export const SUPERVISION_HOURS_INPUT_PATTERN = /^[1-9]\d*$/
 
@@ -383,7 +481,26 @@ export function parseSupervisionHoursInput(
 
 export function formatSupervisionHours(value: number | null | undefined): string {
   if (value == null) return ''
-  return `${value} hour${value === 1 ? '' : 's'}`
+  return `${value.toLocaleString('en-US')} hour${value === 1 ? '' : 's'}`
+}
+
+/**
+ * Ranges a supervisee picks for "Supervision Hours Needed" on their profile.
+ * Values match the backend's SUPERVISION_HOURS_NEEDED_VALUES.
+ */
+export const SUPERVISION_HOURS_NEEDED_OPTIONS = [
+  { label: '1,000 or less', value: 'UP_TO_1000' },
+  { label: '1,000 - 2,000', value: '1000_2000' },
+  { label: '2,000 - 3,000', value: '2000_3000' },
+  { label: '3,000+', value: '3000_PLUS' },
+] as const
+
+export const SUPERVISION_HOURS_NEEDED_REQUIRED_MESSAGE =
+  'Please select the supervision hours you need'
+
+/** Display label for a stored range code; '' when unset or unknown. */
+export function formatSupervisionHoursNeeded(value: string | null | undefined): string {
+  return SUPERVISION_HOURS_NEEDED_OPTIONS.find((option) => option.value === value)?.label ?? ''
 }
 
 // ─── Budget range ─────────────────────────────────────────────────────────────

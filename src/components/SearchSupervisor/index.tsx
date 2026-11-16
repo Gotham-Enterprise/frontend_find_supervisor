@@ -1,9 +1,9 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
-import { SupervisionFormatGuide } from '@/components/SupervisionFormatGuide'
 import type { SupervisorSearchMode } from '@/lib/api/supervisor-search'
 import { useStateNameOptions, useSuperviseeProfile, useSupervisorSearch } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
@@ -15,6 +15,12 @@ import { SearchSupervisorHeader } from './SearchSupervisorHeader'
 import { SearchSupervisorResults } from './SearchSupervisorResults'
 import { buildSearchUrlParams, parseSearchUrlState } from './searchUrlState'
 import type { SortOption, SupervisorSearchFilters, SupervisorSearchResult } from './types'
+
+// The format guide carries every state's rules (~250 KB); load it only once a
+// supervisee applies a State License filter and the card actually renders.
+const SupervisionFormatGuide = dynamic(() =>
+  import('@/components/SupervisionFormatGuide').then((m) => m.SupervisionFormatGuide),
+)
 
 // Client-side sort is only used for experience_asc — all other options are
 // handled server-side via the sortBy API param.

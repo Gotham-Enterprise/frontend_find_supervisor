@@ -9,7 +9,7 @@ import { buttonVariants } from '@/components/ui/button'
 export function HeroSection() {
   return (
     <section id="home" className="relative overflow-hidden bg-hero-bg">
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 pt-20 pb-10 sm:px-6 sm:pt-28 sm:pb-12 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="space-y-6">
             <h1 className="line-clamp-4 text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl lg:text-6xl">
@@ -40,6 +40,12 @@ export function HeroSection() {
                 See How It Works
               </a>
             </div>
+            <p className="text-sm text-muted-foreground">
+              Need a Medical Director for your med spa, clinic, or practice?{' '}
+              <Link href="/medical-directors" className="font-medium text-primary hover:underline">
+                Browse Medical Directors
+              </Link>
+            </p>
           </div>
           <div className="relative flex items-center justify-center lg:justify-end">
             <div className="relative h-96 w-full max-w-xl overflow-hidden lg:h-[28rem] lg:max-w-2xl">

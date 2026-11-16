@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import { CheckoutPage } from '@/components/checkout'
 
 export const metadata: Metadata = {
-  title: 'Checkout | Find A Supervisor',
+  title: 'Checkout',
 }
 
 export default function CheckoutRoutePage() {

@@ -45,14 +45,12 @@ export const SUPERVISEE_ALLOWED_OCCUPATIONS = [
   // Mental health — supervised by a Licensed Mental Health Counselor Supervisor.
   // LPCA (KY) and LPC-A (TX) share the "Licensed Professional Counselor Associate" entry.
   // Counseling
-  'Associate Professional Counselor',
-  'Associate Professional Clinical Counselor',
+  'Associate Mental Health Counselor',
   'Licensed Mental Health Counselor Associate',
   'Licensed Clinical Mental Health Counselor Associate',
   'Licensed Professional Counselor Associate',
   'Provisional Licensed Professional Counselor',
   'Licensed Associate Counselor',
-  'Associate Licensed Counselor',
   'Licensed Associate Professional Counselor',
   'Licensed Graduate Professional Counselor',
   'Licensed Professional Counselor In Training',
@@ -65,8 +63,7 @@ export const SUPERVISEE_ALLOWED_OCCUPATIONS = [
   'Marriage and Family Therapist Intern',
   'Registered Marriage and Family Therapist Intern',
   // Social Work
-  'Associate Clinical Social Worker',
-  'Clinical Social Work Associate',
+  'Associate Social Worker',
   'Licensed Social Worker',
   'Licensed Master Social Worker',
   'Licensed Graduate Social Worker',
@@ -154,7 +151,7 @@ export function groupSuperviseeOccupationOptions<T extends { label: string }>(
  * Needed" dropdown. The stored value stays the backend type name.
  */
 const SUPERVISION_TYPE_DISPLAY_LABELS: Record<string, string> = {
-  'mental health counselors': 'Supervising Mental Health Counselors',
+  'mental health counselors': 'Mental Health Counselor Supervisor',
 }
 
 /**

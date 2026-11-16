@@ -1,3 +1,5 @@
+import type { PublicIdentityLabels } from '@/lib/utils/identity-display'
+
 export interface SupervisorSearchFilters {
   // No supervisor-type filter here: the backend scopes search results to the
   // supervisee's stored supervision needs (typeOfSupervisorNeeded) automatically.
@@ -21,6 +23,10 @@ export interface SupervisorSearchFilters {
   acceptingOnly: boolean
   /** Option values from GET /api/supervision/options?param=availability */
   availability: string[]
+  /** Gender identity codes (see GENDER_IDENTITY_FILTER_OPTIONS); only public profiles match */
+  genderIdentities: string[]
+  /** ISO 639 language codes; only profiles that display languages match */
+  languages: string[]
 }
 
 export type SupervisionFormat = 'VIRTUAL' | 'IN_PERSON' | 'HYBRID'
@@ -45,6 +51,8 @@ export interface SupervisorSearchResult {
   profilePhotoUrl?: string
   initials: string
   avatarColor: string
+  /** Pronouns / gender identity / languages the supervisor chose to display. */
+  identity: PublicIdentityLabels
 }
 
 export type SortOption = 'best_match' | 'most_reviewed' | 'experience_desc' | 'experience_asc'

@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { ResetPasswordPage } from '@/components/ResetPasswordForm'
 
 export const metadata = {
-  title: 'Set New Password | Find A Supervisor',
+  title: 'Set New Password',
   description: 'Set a new password for your Find A Supervisor account.',
 }
 

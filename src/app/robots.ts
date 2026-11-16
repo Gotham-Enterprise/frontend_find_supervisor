@@ -14,6 +14,8 @@ export default function robots(): MetadataRoute.Robots {
           '/',
           '/supervisors',
           '/supervisors/',
+          '/medical-directors',
+          '/medical-directors/',
           '/browse-supervisees',
           '/contact',
           '/contact-us',

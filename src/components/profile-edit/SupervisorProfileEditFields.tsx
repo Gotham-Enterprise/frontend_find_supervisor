@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import { useWatch } from 'react-hook-form'
 
+import { IdentityPreferenceFields } from '@/components/forms/IdentityPreferenceFields'
 import { LicenseEntriesField } from '@/components/forms/LicenseEntriesField'
 import { ProfilePhotoField } from '@/components/profile-photo/ProfilePhotoField'
 import {
@@ -283,6 +284,9 @@ export function SupervisorProfileEditFields({
             )}
           />
         </div>
+        {/* Optional pronouns / gender identity / languages, each with its own
+            public-visibility checkbox (same block as signup). */}
+        <IdentityPreferenceFields control={form.control} isSubmitting={isSubmitting} />
         <FormInputField
           control={form.control}
           name="professionalCredentials"
@@ -432,7 +436,7 @@ export function SupervisorProfileEditFields({
             label="Specialty"
             options={supervisionSpecialtyOptions}
             sortOptions
-            placeholder="Select specialty (optional)"
+            placeholder="Select specialty (Optional)"
             loading={supervisorTypesLoading}
             disabled={supervisorTypesLoading || !supervisorOccupationWatch}
             selectKey={`${supervisorTypeWatch}-${supervisorOccupationWatch}`}
@@ -477,7 +481,7 @@ export function SupervisorProfileEditFields({
           name="licenseDoc"
           render={({ field: { value, onChange, onBlur, ref } }) => (
             <FormItem>
-              <FormLabel>License or Verification Document (optional)</FormLabel>
+              <FormLabel>License or Verification Document (Optional)</FormLabel>
               <FormControl>
                 <UploadFile
                   inputRef={ref}

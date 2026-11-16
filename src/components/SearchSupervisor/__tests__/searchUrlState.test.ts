@@ -17,6 +17,8 @@ const FULL_FILTERS: SupervisorSearchFilters = {
   patientPopulation: ['ADULTS'],
   acceptingOnly: false,
   availability: ['WEEKDAYS'],
+  genderIdentities: ['NON_BINARY'],
+  languages: ['tl', 'es'],
 }
 
 describe('search URL state round trip', () => {

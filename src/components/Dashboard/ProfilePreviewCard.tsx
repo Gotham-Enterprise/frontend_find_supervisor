@@ -22,6 +22,8 @@ export interface ProfilePreviewCardProps {
     name: ReactNode
     subline?: ReactNode
     meta?: ReactNode
+    /** Extra lines under the meta line (e.g. the owner's pronouns / languages). */
+    details?: ReactNode
     badge?: ReactNode
   }
   /** Up to three columns; extra items are ignored. */
@@ -69,6 +71,7 @@ export function ProfilePreviewCard({
             {identity.meta ? (
               <p className="mt-0.5 text-xs text-muted-foreground">{identity.meta}</p>
             ) : null}
+            {identity.details ? <div className="mt-1">{identity.details}</div> : null}
             {identity.badge ? <div className="mt-1">{identity.badge}</div> : null}
           </div>
         </div>

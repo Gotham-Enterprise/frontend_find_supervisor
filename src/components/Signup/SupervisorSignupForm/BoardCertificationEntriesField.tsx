@@ -100,7 +100,7 @@ export function BoardCertificationEntriesField({
             <FormInputField
               control={control}
               name={`boardCertifications.${index}.subspecialty`}
-              label="Subspecialty (optional)"
+              label="Subspecialty (Optional)"
               placeholder="Enter Subspecialty"
               maxLength={200}
               isSubmitting={isSubmitting}

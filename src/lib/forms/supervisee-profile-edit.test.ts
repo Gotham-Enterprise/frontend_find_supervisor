@@ -5,6 +5,10 @@ import {
   getDefaultSuperviseeProfileFormValues,
   superviseeProfileFormValuesToPayload,
 } from '@/lib/forms/supervisee-profile-edit'
+import {
+  formatSupervisionHoursNeeded,
+  SUPERVISION_HOURS_NEEDED_OPTIONS,
+} from '@/lib/utils/profile-formatters'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 function makeProfile(overrides: Partial<SuperviseeProfileData> = {}): SuperviseeProfileData {
@@ -19,11 +23,13 @@ function makeProfile(overrides: Partial<SuperviseeProfileData> = {}): Supervisee
     licensureState: 'TX',
     availability: 'FLEXIBLE',
     idealSupervisor: 'Supportive supervisor with CBT experience.',
+    introduction: 'Pre-licensed counselor completing supervised hours.',
     budgetRangeType: 'HOURLY',
     budgetRangeStart: 0,
     budgetRangeEnd: 100,
     completedCount: 0,
     leftCount: 0,
+    supervisionHoursNeeded: '1000_2000',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     occupationId: 12,
@@ -128,6 +134,24 @@ describe('editSuperviseeProfileSchema — supervision type requiredness', () => 
     expect(editSuperviseeProfileSchema.safeParse(validValues).success).toBe(true)
   })
 
+  it.each([
+    ['empty', ''],
+    ['whitespace-only', '   '],
+  ])('requires an introduction on edit, rejecting %s input', (_label, introduction) => {
+    const result = editSuperviseeProfileSchema.safeParse({ ...validValues, introduction })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.path[0] === 'introduction')
+      expect(issue?.message).toBe('Please introduce yourself')
+    }
+  })
+
+  it('loads an existing profile without an introduction as an empty field the user must fill', () => {
+    const values = getDefaultSuperviseeProfileFormValues(makeProfile({ introduction: '' }))
+    expect(values.introduction).toBe('')
+    expect(editSuperviseeProfileSchema.safeParse(values).success).toBe(false)
+  })
+
   it('accepts a Medical Director-only request — no type or occupation', () => {
     expect(
       editSuperviseeProfileSchema.safeParse({
@@ -193,5 +217,81 @@ describe('editSuperviseeProfileSchema — supervision type requiredness', () => 
     if (!result.success) {
       expect(result.error.issues.map((i) => i.path[0])).toContain('superviseeOccupation')
     }
+  })
+})
+
+describe('supervisionHoursNeeded — supervisee profile edit round trip', () => {
+  it('loads the stored range and sends it back for a Mental Health Counselor need', () => {
+    const defaults = getDefaultSuperviseeProfileFormValues(
+      makeProfile({ supervisionHoursNeeded: '1000_2000' }),
+    )
+    expect(defaults.supervisionHoursNeeded).toBe('1000_2000')
+    expect(superviseeProfileFormValuesToPayload(defaults).supervisionHoursNeeded).toBe('1000_2000')
+  })
+
+  it("sends '' when unset so the backend nulls it", () => {
+    const defaults = getDefaultSuperviseeProfileFormValues(
+      makeProfile({ supervisionHoursNeeded: null }),
+    )
+    expect(superviseeProfileFormValuesToPayload(defaults).supervisionHoursNeeded).toBe('')
+  })
+
+  it('sends the hours for physician supervision needs too', () => {
+    const defaults = getDefaultSuperviseeProfileFormValues(
+      makeProfile({
+        typeOfSupervisorNeeded: ['Collaborating Physician'],
+        supervisionHoursNeeded: '3000_PLUS',
+      }),
+    )
+    expect(superviseeProfileFormValuesToPayload(defaults).supervisionHoursNeeded).toBe('3000_PLUS')
+  })
+
+  it('omits the hours for a Medical Director-only need', () => {
+    const defaults = getDefaultSuperviseeProfileFormValues(
+      makeProfile({
+        typeOfSupervisorNeeded: ['Medical Director'],
+        supervisionHoursNeeded: '3000_PLUS',
+      }),
+    )
+    expect(superviseeProfileFormValuesToPayload(defaults).supervisionHoursNeeded).toBeUndefined()
+  })
+})
+
+describe('supervisionHoursNeeded — required for Mental Health Counselor needs', () => {
+  it('blocks saving an existing MHC profile until a range is picked', () => {
+    const values = getDefaultSuperviseeProfileFormValues(
+      makeProfile({ supervisionHoursNeeded: null }),
+    )
+    const result = editSuperviseeProfileSchema.safeParse(values)
+    expect(result.success).toBe(false)
+    expect(result.error?.issues.some((i) => i.path[0] === 'supervisionHoursNeeded')).toBe(true)
+  })
+
+  it('does not require it for a Medical Director-only profile', () => {
+    const values = getDefaultSuperviseeProfileFormValues(
+      makeProfile({
+        typeOfSupervisorNeeded: ['Medical Director'],
+        supervisionHoursNeeded: null,
+        mdHowSoonLooking: 'WITHIN_1_MONTH',
+        mdMonthlyBudget: 1000,
+      }),
+    )
+    const result = editSuperviseeProfileSchema.safeParse(values)
+    expect(result.error?.issues.some((i) => i.path[0] === 'supervisionHoursNeeded') ?? false).toBe(
+      false,
+    )
+  })
+})
+
+describe('formatSupervisionHoursNeeded', () => {
+  it('maps each range code to its label', () => {
+    expect(
+      SUPERVISION_HOURS_NEEDED_OPTIONS.map((o) => formatSupervisionHoursNeeded(o.value)),
+    ).toEqual(['1,000 or less', '1,000 - 2,000', '2,000 - 3,000', '3,000+'])
+  })
+
+  it('returns an empty string for unset or unknown values', () => {
+    expect(formatSupervisionHoursNeeded(null)).toBe('')
+    expect(formatSupervisionHoursNeeded('2000')).toBe('')
   })
 })

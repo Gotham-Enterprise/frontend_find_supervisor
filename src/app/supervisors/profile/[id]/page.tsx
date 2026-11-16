@@ -1,17 +1,17 @@
 /**
  * Thin resolver for /supervisors/profile/[id].
  *
- * SupervisorCard links here only when it cannot derive a state slug from the
- * supervisor's home state. This route looks the supervisor up and permanently
- * redirects to the canonical /supervisors/[stateSlug]/[id] profile URL, trying
- * the home state first and then each state of licensure. Unknown supervisors
+ * SupervisorCard links here only when it cannot derive a state slug. This
+ * route looks the supervisor up and permanently redirects to the canonical
+ * /supervisors/[stateSlug]/[id] profile URL (see profileStateSlug); Medical
+ * Directors go to /medical-directors/[stateSlug]/[id]. Unknown supervisors
  * (or ones with no resolvable state at all) 404.
  */
 
 import { notFound, permanentRedirect } from 'next/navigation'
 
-import { fetchPublicSupervisorById } from '@/lib/api/public-supervisors'
-import { stateAbbreviationToSlug } from '@/lib/seo/routes'
+import { fetchPublicSupervisorById, publicDirectoryFor } from '@/lib/api/public-supervisors'
+import { profileStateSlug } from '@/lib/seo/routes'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -23,11 +23,10 @@ export default async function SupervisorProfileRedirect({ params }: Props) {
   const supervisor = await fetchPublicSupervisorById(id)
   if (!supervisor) notFound()
 
-  const stateSlug =
-    stateAbbreviationToSlug(supervisor.state) ??
-    supervisor.stateOfLicensure.map(stateAbbreviationToSlug).find(Boolean)
+  const stateSlug = profileStateSlug(supervisor.state, supervisor.stateOfLicensure)
 
   if (!stateSlug) notFound()
 
-  permanentRedirect(`/supervisors/${stateSlug}/${id}`)
+  // Primary Medical Directors resolve straight to /medical-directors (no double hop).
+  permanentRedirect(`${publicDirectoryFor(supervisor)}/${stateSlug}/${id}`)
 }

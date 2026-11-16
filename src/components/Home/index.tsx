@@ -5,6 +5,7 @@ import { HeroSection } from '@/components/LandingPage/hero-section'
 import { HowItWorks } from '@/components/LandingPage/how-it-works'
 import { KeyFeatures } from '@/components/LandingPage/key-features'
 import { ScrollToHash } from '@/components/LandingPage/ScrollToHash'
+import { StateFormatGuide } from '@/components/LandingPage/state-format-guide'
 import { WhySupervisionMatters } from '@/components/LandingPage/why-supervision-matters'
 
 export function HomePage() {
@@ -17,6 +18,7 @@ export function HomePage() {
       <HowItWorks />
       <KeyFeatures />
       <CtaBanner />
+      <StateFormatGuide />
       <FaqSection />
     </>
   )

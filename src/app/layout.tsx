@@ -5,6 +5,10 @@ import { Geist } from 'next/font/google'
 
 import { Providers } from '@/app/providers'
 import {
+  GoogleTagManagerHead,
+  GoogleTagManagerNoScript,
+} from '@/components/analytics/GoogleTagManager'
+import {
   DEFAULT_DESCRIPTION,
   DEFAULT_OG_IMAGE,
   SITE_NAME,
@@ -35,6 +39,8 @@ export const metadata: Metadata = {
     'LPC supervisor',
     'nurse practitioner collaboration',
     'physician assistant supervision',
+    'medical director',
+    'med spa medical director',
   ],
   openGraph: {
     type: 'website',
@@ -47,7 +53,7 @@ export const metadata: Metadata = {
         url: DEFAULT_OG_IMAGE,
         width: 1200,
         height: 630,
-        alt: `${SITE_NAME} — Find licensed healthcare Supervisors, Collaborating Physicians, and Supervising Physicians`,
+        alt: `Find licensed healthcare Supervisors, Collaborating Physicians, Supervising Physicians, and Medical Directors on ${SITE_NAME}`,
       },
     ],
   },
@@ -92,10 +98,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={cn('font-sans', geist.variable)}>
       <head>
+        <GoogleTagManagerHead />
         <style>{`html[data-hash-scroll-pending] body { visibility: hidden; }`}</style>
         <script dangerouslySetInnerHTML={{ __html: HASH_SCROLL_GUARD }} />
       </head>
       <body className="antialiased">
+        <GoogleTagManagerNoScript />
         <Providers>{children}</Providers>
       </body>
     </html>

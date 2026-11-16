@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useMemo, useState } from 'react'
 
 import { SubscriptionModal } from '@/components/Dashboard/subscription/SubscriptionModal'
+import { TestAccountNoticeDialog } from '@/components/TestAccountNoticeDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DisabledWithTooltip } from '@/components/ui/tooltip'
@@ -12,6 +13,7 @@ import { isSupervisorRole } from '@/lib/auth/roles'
 import { useConversations, useSupervisorProfile, useUser } from '@/lib/hooks'
 import { useCheckConnectionAvailability } from '@/lib/hooks/useConnections'
 import { pickConversation } from '@/lib/utils/chat-rooms'
+import { formatPronouns, getVisiblePronounLabels } from '@/lib/utils/identity-display'
 import { getMakeConnectionAccess } from '@/lib/utils/make-connection-access'
 import {
   formatCredentialWithState,
@@ -27,6 +29,7 @@ import {
   getHireStatusLabel,
   isAcceptedConnectionStatus,
 } from '@/lib/utils/supervision-status'
+import { isTestToLiveInteraction } from '@/lib/utils/test-accounts'
 import type { SuperviseeProfileViewData } from '@/types/supervisee-profile'
 
 import { MakeConnectionModal } from './MakeConnectionModal'
@@ -123,6 +126,7 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
   const [connectionModalOpen, setConnectionModalOpen] = useState(false)
   const [autoOpenDismissed, setAutoOpenDismissed] = useState(false)
   const [planModalOpen, setPlanModalOpen] = useState(false)
+  const [testAccountNoticeOpen, setTestAccountNoticeOpen] = useState(false)
   const { data: conversations } = useConversations()
   const { data: supervisorProfile, isLoading: supervisorProfileLoading } = useSupervisorProfile()
 
@@ -133,6 +137,8 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
   const subline = [occupation, specialty].filter(Boolean).join(' · ')
   const roleBadgeLabel =
     formatCredentialWithState(profile.title, profile.licensureState) || 'Supervisee'
+  // Shown only when the supervisee opted in (the API strips it for other viewers anyway).
+  const pronouns = formatPronouns(getVisiblePronounLabels(user))
 
   // One room per hire: open the current hire's room with this supervisee.
   const existingConversation = pickConversation(conversations, (c) => c.superviseeId === user.id)
@@ -221,6 +227,10 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
       : 'You can message this supervisee once your connection request has been accepted.'
 
   function handleMakeConnectionClick() {
+    if (isTestToLiveInteraction(authUser, user)) {
+      setTestAccountNoticeOpen(true)
+      return
+    }
     if (connectionAccess.allowed) {
       setConnectionModalOpen(true)
       return
@@ -253,6 +263,11 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-xl font-bold text-[#181818]">{displayName}</h1>
+          {pronouns && (
+            <span className="text-sm text-[#6B7280]" aria-label={`Pronouns: ${pronouns}`}>
+              ({pronouns})
+            </span>
+          )}
           <span className="rounded-full bg-[#E2F0E8] px-2.5 py-0.5 text-xs font-medium text-[#006D36]">
             {roleBadgeLabel}
           </span>
@@ -321,6 +336,11 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
         superviseeId={user.id}
         superviseeName={displayName}
         canAccess={connectionAccess.allowed}
+      />
+
+      <TestAccountNoticeDialog
+        open={testAccountNoticeOpen}
+        onOpenChange={setTestAccountNoticeOpen}
       />
 
       <SubscriptionModal

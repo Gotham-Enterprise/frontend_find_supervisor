@@ -2,6 +2,7 @@
 
 import { useFormContext, useWatch } from 'react-hook-form'
 
+import { IdentityPreferenceFields } from '@/components/forms/IdentityPreferenceFields'
 import { ProfilePhotoField } from '@/components/profile-photo/ProfilePhotoField'
 import { FormSection } from '@/components/Signup/FormSection'
 import {
@@ -78,13 +79,16 @@ export function SupervisorStepAccount({
           isSubmitting={isSubmitting}
           required
         />
+        {/* Optional pronouns / gender identity / languages, each with its own
+            public-visibility checkbox (collected right after the name). */}
+        <IdentityPreferenceFields control={control} isSubmitting={isSubmitting} inlineValidation />
         <FormInputField
           control={control}
           name="professionalCredentials"
           label={
             <>
               Professional Credentials{' '}
-              <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+              <span className="text-muted-foreground text-xs font-normal">(Optional)</span>
             </>
           }
           rules={supervisorFieldRules('professionalCredentials')}
@@ -224,7 +228,7 @@ export function SupervisorStepAccount({
         name="website"
         label={
           <>
-            Website <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+            Website <span className="text-muted-foreground text-xs font-normal">(Optional)</span>
           </>
         }
         rules={supervisorFieldRules('website')}

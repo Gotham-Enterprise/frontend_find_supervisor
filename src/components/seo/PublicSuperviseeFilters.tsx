@@ -83,6 +83,10 @@ export function PublicSuperviseeFilters({ initialValues }: PublicSuperviseeFilte
       if (next.format) params.set('format', next.format)
       const qs = params.toString()
       router.push(`/browse-supervisees${qs ? `?${qs}` : ''}`, { scroll: false })
+      // New results start from the top. Without this, browser scroll anchoring
+      // keeps the old scroll offset while the heading/hero above the results
+      // changes, tucking the page heading under the sticky header + filter bar.
+      window.scrollTo({ top: 0 })
     },
     [q, state, format, router],
   )
@@ -106,6 +110,7 @@ export function PublicSuperviseeFilters({ initialValues }: PublicSuperviseeFilte
   function clearAll() {
     setQ('')
     router.push('/browse-supervisees', { scroll: false })
+    window.scrollTo({ top: 0 })
   }
 
   return (

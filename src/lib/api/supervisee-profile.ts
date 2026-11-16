@@ -1,3 +1,7 @@
+import {
+  appendIdentityPreferencesToFormData,
+  type IdentityPreferencePayload,
+} from '@/lib/forms/identity-preferences'
 import type { ApiResponse } from '@/types'
 import type { SuperviseeProfileData, SuperviseeProfileViewData } from '@/types/supervisee-profile'
 
@@ -17,6 +21,8 @@ export async function getSuperviseeProfile(userId: string): Promise<SuperviseePr
 
 export interface UpdateSuperviseeProfilePayload {
   fullName?: string
+  /** Pronouns / gender identity / languages + visibility flags — full replace when present. */
+  identity?: IdentityPreferencePayload
   contactNumber?: string
   city?: string
   state?: string
@@ -44,6 +50,8 @@ export interface UpdateSuperviseeProfilePayload {
   mdMonthlyBudget?: number
   mdIdealDescription?: string
   introduction?: string
+  /** Sent as '' to clear the stored value. */
+  supervisionHoursNeeded?: string
   uploadProfilePhoto?: File
 }
 
@@ -65,6 +73,8 @@ export async function updateSuperviseeProfile(
     mdPreferredSpecialty,
     mdMonthlyBudget,
     introduction,
+    supervisionHoursNeeded,
+    identity,
     ...rest
   } = payload
 
@@ -72,6 +82,11 @@ export async function updateSuperviseeProfile(
     if (value !== undefined && value !== null && value !== '') {
       fd.append(key, String(value))
     }
+  }
+
+  // Lists are sent as JSON and the gender fields always present, so clearing persists.
+  if (identity) {
+    appendIdentityPreferencesToFormData(fd, identity)
   }
 
   // Sent even when empty — the backend nulls the stored value for a present-but-empty
@@ -97,6 +112,10 @@ export async function updateSuperviseeProfile(
   // Present-but-empty clears the stored introduction (it is optional and erasable).
   if (introduction !== undefined) {
     fd.append('introduction', introduction)
+  }
+  // Same for the optional hours — '' clears the stored value.
+  if (supervisionHoursNeeded !== undefined) {
+    fd.append('supervisionHoursNeeded', supervisionHoursNeeded)
   }
 
   if (budgetRangeStart !== undefined) {

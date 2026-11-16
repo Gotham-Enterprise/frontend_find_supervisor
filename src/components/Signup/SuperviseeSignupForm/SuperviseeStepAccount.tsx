@@ -2,6 +2,7 @@
 
 import { useFormContext, useWatch } from 'react-hook-form'
 
+import { IdentityPreferenceFields } from '@/components/forms/IdentityPreferenceFields'
 import { ProfilePhotoField } from '@/components/profile-photo/ProfilePhotoField'
 import { FormSection } from '@/components/Signup/FormSection'
 import { type SuperviseeFormValues } from '@/components/Signup/schema'
@@ -71,6 +72,9 @@ export function SuperviseeStepAccount({
           isSubmitting={isSubmitting}
           required
         />
+        {/* Optional pronouns / gender identity / languages, each with its own
+            public-visibility checkbox (collected right after the name). */}
+        <IdentityPreferenceFields control={control} isSubmitting={isSubmitting} inlineValidation />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

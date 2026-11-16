@@ -55,7 +55,7 @@ describe('Physician Assistant eligibility', () => {
   })
 
   it('denies Supervising Physician for other occupations', () => {
-    for (const occupation of ['Nurse Practitioner', 'Associate Clinical Social Worker']) {
+    for (const occupation of ['Nurse Practitioner', 'Associate Social Worker']) {
       expect(isSupervisorTypeEligibleForSupervisee(supervisingPhysician, occupation)).toBe(false)
     }
   })
@@ -199,7 +199,18 @@ describe('hasCompletedEligibilityFields', () => {
   it('requires only the occupation', () => {
     expect(hasCompletedEligibilityFields('')).toBe(false)
     expect(hasCompletedEligibilityFields('   ')).toBe(false)
-    expect(hasCompletedEligibilityFields('Associate Professional Counselor')).toBe(true)
+    expect(hasCompletedEligibilityFields('Licensed Associate Counselor')).toBe(true)
+  })
+})
+
+describe('retired supervisee occupations', () => {
+  it.each([
+    'Associate Professional Counselor',
+    'Associate Professional Clinical Counselor',
+    'Associate Licensed Counselor',
+    'Clinical Social Work Associate',
+  ])('no longer offers %s in the supervisee dropdown', (name) => {
+    expect(filterSuperviseeOccupationOptions([{ label: name, value: '1' }])).toEqual([])
   })
 })
 
@@ -207,17 +218,17 @@ describe('groupSuperviseeOccupationOptions', () => {
   const np = { label: 'Nurse Practitioner', value: '1' }
   const pa = { label: 'Physician Assistant', value: '2' }
   const lsw = { label: 'Licensed Social Worker', value: '3' }
-  const apc = { label: 'Associate Professional Counselor', value: '4' }
+  const lac = { label: 'Licensed Associate Counselor', value: '4' }
 
   it('puts Medical (NP + PA) first, then Mental Health', () => {
-    const groups = groupSuperviseeOccupationOptions([lsw, np, apc, pa])
+    const groups = groupSuperviseeOccupationOptions([lsw, np, lac, pa])
     expect(groups.map((g) => g.label)).toEqual(['Medical', 'Mental Health'])
     expect(groups[0].options).toEqual([np, pa])
-    expect(groups[1].options).toEqual([lsw, apc])
+    expect(groups[1].options).toEqual([lsw, lac])
   })
 
   it('omits empty groups', () => {
-    const groups = groupSuperviseeOccupationOptions([lsw, apc])
+    const groups = groupSuperviseeOccupationOptions([lsw, lac])
     expect(groups.map((g) => g.label)).toEqual(['Mental Health'])
   })
 
@@ -238,7 +249,7 @@ describe('supervisionTypeDisplayLabel', () => {
     expect(supervisionTypeDisplayLabel('Medical Director')).toBe('Medical Director')
     expect(supervisionTypeDisplayLabel('Supervising Physician')).toBe('Supervising Physician')
     expect(supervisionTypeDisplayLabel('Mental Health Counselors')).toBe(
-      'Supervising Mental Health Counselors',
+      'Mental Health Counselor Supervisor',
     )
   })
 
@@ -255,7 +266,7 @@ describe('supervisionTypeDisplayLabel', () => {
 
   it('routes legacy MENTAL_HEALTH_COUNSELORS through the display override', () => {
     expect(supervisionTypeDisplayLabel('MENTAL_HEALTH_COUNSELORS')).toBe(
-      'Supervising Mental Health Counselors',
+      'Mental Health Counselor Supervisor',
     )
   })
 

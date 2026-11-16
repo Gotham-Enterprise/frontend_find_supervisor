@@ -37,6 +37,7 @@ export const AUTH_ROUTE_PREFIXES = [
 export const PUBLIC_INDEXABLE_ROUTES = [
   '/',
   '/supervisors',
+  '/medical-directors',
   '/browse-supervisees',
   '/contact',
   '/contact-us',
@@ -110,6 +111,30 @@ export const US_STATES: Record<string, string> = {
   'district-of-columbia': 'DC',
 }
 
+/** Highest-traffic states, featured first in the "Browse by State" sections. */
+export const TOP_STATE_SLUGS = [
+  'california',
+  'texas',
+  'florida',
+  'new-york',
+  'pennsylvania',
+  'illinois',
+  'ohio',
+  'georgia',
+  'north-carolina',
+  'virginia',
+  'washington',
+  'colorado',
+  'arizona',
+  'massachusetts',
+  'maryland',
+  'michigan',
+  'tennessee',
+  'indiana',
+  'missouri',
+  'minnesota',
+]
+
 /** Reverse map: abbreviation → slug (e.g. "CA" → "california"). Built once at module load. */
 export const STATE_ABBREVIATION_TO_SLUG: Record<string, string> = Object.fromEntries(
   Object.entries(US_STATES).map(([slug, abbr]) => [abbr, slug]),
@@ -124,6 +149,42 @@ export function stateAbbreviationToSlug(abbreviation: string): string | null {
   return STATE_ABBREVIATION_TO_SLUG[abbreviation.toUpperCase()] ?? null
 }
 
+/**
+ * Converts a stored state value — abbreviation ("CA") or full name ("California") —
+ * to its URL slug. Returns null if it is not a recognized US state.
+ */
+export function stateValueToSlug(value: string): string | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const fromAbbreviation = stateAbbreviationToSlug(trimmed)
+  if (fromAbbreviation) return fromAbbreviation
+  const slug = trimmed.toLowerCase().replace(/\s+/g, '-')
+  return isValidStateSlug(slug) ? slug : null
+}
+
+/**
+ * State slug for a public profile URL (/supervisors/[state]/[id],
+ * /browse-supervisees/[state]/[id]) when no state page context applies.
+ * `states` is what the browse state pages filter on: licensed states for
+ * supervisors, the states a supervisee needs supervision in for supervisees.
+ * The URL state is always one of those (so the profile is listed on that state
+ * page), preferring the supervisee's own license state, then the home state
+ * (matching the location shown), then the first listed state. The home state
+ * alone is the last resort. Returns null when nothing resolves to a known state.
+ */
+export function profileStateSlug(
+  homeState: string | null | undefined,
+  states: string[],
+  licenseState?: string | null,
+): string | null {
+  const homeSlug = homeState ? stateValueToSlug(homeState) : null
+  const licenseSlug = licenseState ? stateValueToSlug(licenseState) : null
+  const stateSlugs = states.map(stateValueToSlug).filter((slug): slug is string => slug !== null)
+  if (licenseSlug && stateSlugs.includes(licenseSlug)) return licenseSlug
+  if (homeSlug && stateSlugs.includes(homeSlug)) return homeSlug
+  return stateSlugs[0] ?? homeSlug
+}
+
 /** Returns true if the string looks like a UUID (supervisor ID). */
 export function isUUID(str: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)
@@ -131,10 +192,15 @@ export function isUUID(str: string): boolean {
 
 /** Converts a slug like "new-york" to a display name like "New York". */
 export function stateSlugToDisplayName(slug: string): string {
-  return slug
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
+  return (
+    slug
+      .split('-')
+      // "district-of-columbia" → "District of Columbia"
+      .map((word, i) =>
+        i > 0 && word === 'of' ? word : word.charAt(0).toUpperCase() + word.slice(1),
+      )
+      .join(' ')
+  )
 }
 
 /** Converts a slug to its 2-letter abbreviation, or null if unknown. */
@@ -212,6 +278,9 @@ export type TopLicenseSlug = (typeof TOP_LICENSE_SLUGS_FOR_STATE)[number]
 // Supervisor type slugs (pSEO + URL query params)
 // ---------------------------------------------------------------------------
 
+export const SUPERVISORS_PATH = '/supervisors'
+export const MEDICAL_DIRECTORS_PATH = '/medical-directors'
+
 /**
  * Maps URL query param values to the supervisor type name stored on profiles.
  * Used to convert /supervisors?type=collaborating-physician → filter value.
@@ -220,8 +289,13 @@ export const SUPERVISOR_TYPE_QUERY_MAP: Record<string, string> = {
   'mental-health-counselor': 'Mental Health Counselors',
   'collaborating-physician': 'Collaborating Physician',
   'supervising-physician': 'Supervising Physician',
-  'medical-director': 'Medical Director',
 }
+
+/**
+ * Legacy `/supervisors?type=medical-director` value. Medical Directors have
+ * their own directory now, so this param permanently redirects there.
+ */
+export const LEGACY_MEDICAL_DIRECTOR_TYPE_QUERY = 'medical-director'
 
 /** Reverse map: supervisor type name → URL slug. */
 export const SUPERVISOR_TYPE_TO_SLUG: Record<string, string> = Object.fromEntries(
@@ -236,8 +310,13 @@ export const SUPERVISOR_TYPE_PAGE_SLUGS = [
   'mental-health-counselor-supervisors',
   'collaborating-physicians',
   'supervising-physicians',
-  'medical-directors',
 ] as const
+
+/**
+ * Legacy `/supervisors/[state]/medical-directors` slug — permanently redirects
+ * to `/medical-directors/[state]`.
+ */
+export const LEGACY_MEDICAL_DIRECTOR_TYPE_PAGE_SLUG = 'medical-directors'
 
 export type SupervisorTypePageSlug = (typeof SUPERVISOR_TYPE_PAGE_SLUGS)[number]
 
@@ -246,7 +325,6 @@ export const SUPERVISOR_TYPE_PAGE_SLUG_MAP: Record<SupervisorTypePageSlug, strin
   'mental-health-counselor-supervisors': 'Mental Health Counselors',
   'collaborating-physicians': 'Collaborating Physician',
   'supervising-physicians': 'Supervising Physician',
-  'medical-directors': 'Medical Director',
 }
 
 /** Returns true if the slug is a known supervisor-type pSEO slug. */
@@ -285,7 +363,31 @@ export const SUPERVISOR_TYPE_SLUGS: Array<{
   {
     slug: 'medical-director',
     label: 'Medical Directors',
-    description: 'For healthcare professionals seeking supervision from an MD or DO.',
-    href: '/supervisors?type=medical-director',
+    description: 'For med spas, clinics, and practices that need an MD or DO Medical Director.',
+    href: MEDICAL_DIRECTORS_PATH,
   },
 ]
+
+// ---------------------------------------------------------------------------
+// Public directory paths + canonical profile URLs
+// ---------------------------------------------------------------------------
+
+/** Public directory roots. A profile's directory follows its PRIMARY type. */
+export type PublicDirectoryPath = typeof SUPERVISORS_PATH | typeof MEDICAL_DIRECTORS_PATH
+
+/**
+ * Canonical public profile path: /[directory]/[stateSlug]/[id] (state from
+ * profileStateSlug), or the /[directory]/profile/[id] resolver when no state
+ * slug can be derived.
+ */
+export function publicProfilePath(
+  directory: PublicDirectoryPath,
+  supervisor: { id: string; state: string; stateOfLicensure?: string[] },
+  stateSlug?: string,
+): string {
+  const resolvedStateSlug =
+    stateSlug ?? profileStateSlug(supervisor.state, supervisor.stateOfLicensure ?? [])
+  return resolvedStateSlug
+    ? `${directory}/${resolvedStateSlug}/${supervisor.id}`
+    : `${directory}/profile/${supervisor.id}`
+}

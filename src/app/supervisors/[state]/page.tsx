@@ -26,14 +26,22 @@ import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
 import { getStateFaqs } from '@/lib/seo/faq-data'
 import {
   isValidStateSlug,
+  MEDICAL_DIRECTORS_PATH,
   stateSlugToAbbreviation,
   stateSlugToDisplayName,
   SUPERVISOR_TYPE_PAGE_SLUGS,
+  type SupervisorTypePageSlug,
   US_STATES,
 } from '@/lib/seo/routes'
 
 /** Controls whether the page is indexed based on supervisor count. */
 const MIN_SUPERVISORS_TO_INDEX = 3
+
+const TYPE_LINK_LABELS: Record<SupervisorTypePageSlug, string> = {
+  'mental-health-counselor-supervisors': 'Mental Health Counselor Supervisors',
+  'collaborating-physicians': 'Collaborating Physicians',
+  'supervising-physicians': 'Supervising Physicians',
+}
 
 interface Props {
   params: Promise<{ state: string }>
@@ -67,14 +75,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { supervisors } = await fetchPublicSupervisors({
     stateOfLicensure: stateAbbreviation,
     stateFullName: stateName,
+    searchMode: 'supervisors',
     limit: MIN_SUPERVISORS_TO_INDEX,
   })
 
-  if (supervisors.length < MIN_SUPERVISORS_TO_INDEX) {
-    return { robots: { index: false, follow: true } }
-  }
-
+  // Thin pages keep their real title/description but stay out of the index.
   return buildMetadata({
+    noIndex: supervisors.length < MIN_SUPERVISORS_TO_INDEX,
     title: `Supervisors in ${stateName}`,
     description: `Find licensed healthcare Supervisors, Collaborating Physicians, and Supervising Physicians in ${stateName}. Browse by specialty, occupation, and supervision format. Connect with verified ${stateName} Supervisors on ${SITE_NAME}.`,
     path: `/supervisors/${stateSlug}`,
@@ -98,6 +105,7 @@ export default async function StateSupervisorsPage({ params }: Props) {
   const { supervisors, meta } = await fetchPublicSupervisors({
     stateOfLicensure: stateAbbreviation,
     stateFullName: stateName,
+    searchMode: 'supervisors',
     limit: 20,
   })
 
@@ -142,25 +150,21 @@ export default async function StateSupervisorsPage({ params }: Props) {
         <nav aria-label="Browse by Supervisor type" className="mb-5">
           <p className="mb-2 text-sm font-medium text-foreground">Browse by Supervisor Type</p>
           <div className="flex flex-wrap gap-2">
-            {SUPERVISOR_TYPE_PAGE_SLUGS.map((typeSlug) => {
-              const label =
-                typeSlug === 'mental-health-counselor-supervisors'
-                  ? 'Mental Health Counselor Supervisors'
-                  : typeSlug === 'collaborating-physicians'
-                    ? 'Collaborating Physicians'
-                    : typeSlug === 'supervising-physicians'
-                      ? 'Supervising Physicians'
-                      : 'Medical Directors'
-              return (
-                <Link
-                  key={typeSlug}
-                  href={`/supervisors/${stateSlug}/${typeSlug}`}
-                  className="rounded-full border px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-                >
-                  {label} in {stateName}
-                </Link>
-              )
-            })}
+            {SUPERVISOR_TYPE_PAGE_SLUGS.map((typeSlug) => (
+              <Link
+                key={typeSlug}
+                href={`/supervisors/${stateSlug}/${typeSlug}`}
+                className="rounded-full border px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                {TYPE_LINK_LABELS[typeSlug]} in {stateName}
+              </Link>
+            ))}
+            <Link
+              href={`${MEDICAL_DIRECTORS_PATH}/${stateSlug}`}
+              className="rounded-full border px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              Medical Directors in {stateName}
+            </Link>
           </div>
         </nav>
 
@@ -219,7 +223,7 @@ export default async function StateSupervisorsPage({ params }: Props) {
         {/* FAQ */}
         <FaqSection
           faqs={faqs}
-          heading={`Frequently Asked Questions — Supervision in ${stateName}`}
+          heading={`Frequently Asked Questions About Supervision in ${stateName}`}
         />
 
         {/* Related state links */}
@@ -278,7 +282,7 @@ const SUPERVISOR_TIPS = [
   },
   {
     title: 'Specialty Match',
-    body: 'Look for Supervisors or Collaborating Physicians with experience in your practice area — whether that is mental health, family medicine, psychiatry, or another specialty.',
+    body: 'Look for Supervisors or Collaborating Physicians with experience in your practice area, such as mental health, family medicine, psychiatry, or another specialty.',
   },
   {
     title: 'Supervision Format',

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import { useWatch } from 'react-hook-form'
 
+import { IdentityPreferenceFields } from '@/components/forms/IdentityPreferenceFields'
 import { ProfilePhotoField } from '@/components/profile-photo/ProfilePhotoField'
 import { Checkbox } from '@/components/ui/checkbox'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -28,6 +29,10 @@ import {
   useSuperviseeFormOptions,
   useSupervisorTypesData,
 } from '@/lib/hooks'
+import {
+  requiresSupervisionHoursNeeded,
+  SUPERVISION_HOURS_NEEDED_OPTIONS,
+} from '@/lib/utils/profile-formatters'
 import {
   filterSuperviseeOccupationOptions,
   getEligibleSupervisorTypes,
@@ -113,6 +118,7 @@ export function SuperviseeProfileEditFields({
   const mdHowSoonLooking = useWatch({ control: form.control, name: 'mdHowSoonLooking' })
   // MD-only profile: the supervision-only preference fields are hidden and skipped.
   const isMdOnly = needsMedicalDirector && !typeOfSupervisorNeeded
+  const showSupervisionHours = requiresSupervisionHoursNeeded(typeOfSupervisorNeeded)
   const { data: specialtyOptions = [] } = useSpecialtiesByOccupation(selectedOccupationId)
   // Full state names ("Alabama") for the credential's state; value stays the abbreviation
   const { data: licensureStateOptions = [] } = useStateNameOptions()
@@ -226,7 +232,7 @@ export function SuperviseeProfileEditFields({
       <FormSelectField
         control={form.control}
         name="mdPreferredOccupation"
-        label="Preferred Occupation (optional)"
+        label="Preferred Occupation (Optional)"
         options={mdOccupationOptions}
         placeholder={
           mdOccupationOptions.length === 0 && !supervisorTypesLoading
@@ -243,7 +249,7 @@ export function SuperviseeProfileEditFields({
       <FormSelectField
         control={form.control}
         name="mdPreferredSpecialty"
-        label="Preferred Specialty (optional)"
+        label="Preferred Specialty (Optional)"
         options={mdSpecialtyOptions}
         sortOptions
         placeholder={
@@ -353,6 +359,9 @@ export function SuperviseeProfileEditFields({
             )}
           />
         </div>
+        {/* Optional pronouns / gender identity / languages, each with its own
+            public-visibility checkbox (same block as signup). */}
+        <IdentityPreferenceFields control={form.control} isSubmitting={isSubmitting} />
         <div className="grid gap-4 sm:grid-cols-3">
           <FormSelectField
             control={form.control}
@@ -623,6 +632,19 @@ export function SuperviseeProfileEditFields({
             required
           />
         </div>
+        {showSupervisionHours && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormSelectField
+              control={form.control}
+              name="supervisionHoursNeeded"
+              label="Supervision Hours Needed"
+              options={SUPERVISION_HOURS_NEEDED_OPTIONS}
+              placeholder="Select Hours"
+              isSubmitting={isSubmitting}
+              required
+            />
+          </div>
+        )}
 
         {isMdOnly && mdTimingFields}
       </fieldset>
@@ -793,7 +815,9 @@ export function SuperviseeProfileEditFields({
           name="introduction"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Introduce Yourself (optional)</FormLabel>
+              <FormLabel>
+                Introduce Yourself <span className="text-destructive">*</span>
+              </FormLabel>
               <FormControl>
                 <Textarea
                   {...field}

@@ -1,4 +1,5 @@
 import type { SelectOption } from '@/lib/api/options'
+import { genderIdentityLabel, languageLabel } from '@/lib/constants/identity-preferences'
 
 import type { SuperviseeSearchFilters } from './types'
 
@@ -9,6 +10,8 @@ export {
 } from '../SearchSupervisor/helpers'
 
 export const DEFAULT_FILTERS: SuperviseeSearchFilters = {
+  genderIdentities: [],
+  languages: [],
   states: [],
   occupations: [],
   specialties: [],
@@ -62,6 +65,14 @@ export function getActiveChips(
     chips.push({ key: `spec_${encodeURIComponent(val)}`, label: `Specialty: ${label}` })
   })
 
+  filters.genderIdentities.forEach((val) => {
+    chips.push({ key: `gi_${val}`, label: genderIdentityLabel(val) })
+  })
+
+  filters.languages.forEach((code) => {
+    chips.push({ key: `lang_${code}`, label: `Speaks ${languageLabel(code)}` })
+  })
+
   return chips
 }
 
@@ -73,6 +84,8 @@ export function removeChip(
     states: [...filters.states],
     occupations: [...filters.occupations],
     specialties: [...filters.specialties],
+    genderIdentities: [...filters.genderIdentities],
+    languages: [...filters.languages],
   }
 
   if (chipKey.startsWith('st_')) {
@@ -85,6 +98,12 @@ export function removeChip(
   } else if (chipKey.startsWith('spec_')) {
     const val = decodeURIComponent(chipKey.slice(5))
     next.specialties = next.specialties.filter((x) => x !== val)
+  } else if (chipKey.startsWith('gi_')) {
+    const val = chipKey.slice(3)
+    next.genderIdentities = next.genderIdentities.filter((x) => x !== val)
+  } else if (chipKey.startsWith('lang_')) {
+    const code = chipKey.slice(5)
+    next.languages = next.languages.filter((x) => x !== code)
   }
 
   return next
