@@ -88,8 +88,10 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
     : `/find-supervisors/${hire.supervisorId}?from=hired-supervisors`
 
   const hasRejectionReason = hire.status === 'REJECTED' && Boolean(hire.rejectionReason?.trim())
-  // A monthly hire already ending when its paid month runs out can't be ended again.
-  const endScheduled = hire.scheduledEndAt != null
+  // A monthly hire one side already ended (it runs out with its paid month)
+  // can't be ended again. A fixed term's own end date isn't that: it can
+  // still be ended early.
+  const endScheduled = hire.scheduledEndAt != null && hire.scheduledEndBy !== 'TERM'
   const canCancel = CANCELABLE_STATUSES.includes(hire.status) && !endScheduled
 
   // Agreement: sign while the supervisor's proposal awaits the supervisee's signature

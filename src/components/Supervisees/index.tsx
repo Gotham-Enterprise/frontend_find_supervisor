@@ -466,8 +466,11 @@ function RowActions({
   const [endOpen, setEndOpen] = useState(false)
   const { showSuccess, showError } = useUserSnackbar()
   const remindMutation = useRemindAgreement()
-  // A monthly hire already ending when its paid month runs out can't be ended again.
-  const canEnd = (hire.status === 'ACCEPTED' || hire.status === 'ACTIVE') && !hire.scheduledEndAt
+  // A monthly hire one side already ended (it runs out with its paid month)
+  // can't be ended again; a fixed term's own end date can still be cut short.
+  const canEnd =
+    (hire.status === 'ACCEPTED' || hire.status === 'ACTIVE') &&
+    !(hire.scheduledEndAt && hire.scheduledEndBy !== 'TERM')
 
   const agreementStage = getAgreementStage(hire)
   const canSendAgreement = hire.status === 'ACCEPTED' && agreementStage === 'NOT_SENT'

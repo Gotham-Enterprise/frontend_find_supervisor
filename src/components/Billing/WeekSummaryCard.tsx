@@ -36,6 +36,8 @@ function hoursColon(minutes: number): string {
 }
 
 function rowStatus(row: WeekSummaryRow): { text: string; className: string } {
+  if (row.status === 'SETTLED' && row.prepayStatus === 'CANCELED')
+    return { text: 'Closed · nothing charged', className: 'text-muted-foreground' }
   if (row.status === 'SETTLED') return { text: 'Paid out', className: 'text-primary' }
   if (row.prepayStatus !== 'PAID') return { text: 'Awaiting payment', className: 'text-amber-700' }
   if (row.status === 'DISPUTED') return { text: 'Disputed', className: 'text-destructive' }

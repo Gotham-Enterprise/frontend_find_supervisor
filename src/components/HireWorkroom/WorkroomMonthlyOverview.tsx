@@ -184,8 +184,8 @@ export function WorkroomMonthlyOverview({
         <Banner tone="amber" icon={<CalendarClock className="size-4 text-amber-600" aria-hidden />}>
           {billing.scheduledEnd.by === 'TERM'
             ? `The agreement ends after ${formatDateOnly(billing.scheduledEnd.lastDay)}, when its last month runs out.`
-            : `Supervision ends after ${formatDateOnly(billing.scheduledEnd.lastDay)}, the end of the month already paid for.`}{' '}
-          No more monthly payments will be charged.
+            : `Supervision ends after ${formatDateOnly(billing.scheduledEnd.lastDay)}, the end of the month already paid for.`}
+          {billing.scheduledEnd.by !== 'TERM' && ' No more monthly payments will be charged.'}
         </Banner>
       )}
 

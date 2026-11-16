@@ -25,6 +25,10 @@ const PAGE_SIZE = 10
 
 /** Where the week's money stands, from the supervisor's side, with its next date. */
 function weekStage(week: EarningsWeek): { text: string; className: string } {
+  if (week.status === 'SETTLED' && week.prepayStatus === 'CANCELED') {
+    // Closed at $0: the supervisee never paid and nothing was logged.
+    return { text: 'Closed · unpaid week, nothing logged', className: 'text-muted-foreground' }
+  }
   if (week.status === 'SETTLED') {
     return {
       text: week.settledAt ? `Paid out ${formatEasternDate(week.settledAt)}` : 'Paid out',

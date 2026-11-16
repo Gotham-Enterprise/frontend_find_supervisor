@@ -16,6 +16,8 @@ import {
   syncPayNowBillingWeek,
   updateHireSession,
 } from '@/lib/api/supervision'
+import { hireKeys } from '@/lib/hooks/useHires'
+import { payoutKeys } from '@/lib/hooks/usePayouts'
 import { stripePromise } from '@/lib/stripe/client'
 import type { HireBillingWeeks, HireSessionInput } from '@/types/sessions'
 
@@ -65,7 +67,17 @@ function useBillingWeeksMutation<TVariables>(
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn,
-    onSuccess: (data) => queryClient.setQueryData(hireSessionKeys.weeks(hireId), data),
+    onSuccess: (data) => {
+      queryClient.setQueryData(hireSessionKeys.weeks(hireId), data)
+      // The same change shows elsewhere: the hire's status (first payment
+      // makes it active), the Billing page and the supervisor's earnings.
+      void queryClient.invalidateQueries({ queryKey: hireKeys.all })
+      void queryClient.invalidateQueries({ queryKey: payoutKeys.all })
+      void queryClient.invalidateQueries({
+        queryKey: hireSessionKeys.all,
+        predicate: (query) => query.queryKey[2] !== hireId,
+      })
+    },
     // A rejected change (e.g. the week just closed) means the cached state is stale.
     onError: () => queryClient.invalidateQueries({ queryKey: hireSessionKeys.weeks(hireId) }),
   })

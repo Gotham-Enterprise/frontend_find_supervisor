@@ -17,7 +17,7 @@ All times are **US Eastern** (`America/New_York`). All money is **USD**.
 | Hourly = billed in the app | A hire is billed in the app when the flag is on **and** the supervisor's fee type is not `MONTHLY`. It applies to every supervisor (there is no pilot allowlist).                                                                                                                                                                   |
 | Who decides                | The supervisor's **current** fee type when the agreement is sent, not the snapshot on the hire request. Once signed, the agreement's own terms decide.                                                                                                                                                                              |
 | Monthly                    | Medical Directors are monthly only. Other supervisors can only keep Monthly if their profile was already Monthly (grandfathered). With monthly in-app billing **off**, monthly agreements are **paid outside the app** (no card, no payout account). With it **on**, new monthly agreements are billed in the app — see section 13. |
-| Kill switch                | Turning the backend flag off stops new weeks and new charges. Weeks already in progress still move through review and settlement.                                                                                                                                                                                                   |
+| Kill switch                | Turning the backend flag off stops new weeks, new charges, session logging and late-entry requests. Weeks already in progress still move through review and settlement, and both sides can still see them and the supervisee can still approve or dispute.                                                                          |
 
 ## 2. What has to be in place first
 
@@ -69,6 +69,17 @@ Money flow: the platform charges the supervisee, then transfers the
 supervisor's share to their Stripe Connect account at settlement (separate
 charges and transfers).
 
+**Settlement order and failures.** At settlement the supervisee's unused prepay
+is refunded **first**, then the supervisor's share is transferred, so a missing
+or restricted payout account never holds the refund. If the transfer can't be
+made (e.g. the supervisor closed their Stripe account), the week stays
+Approved and is retried every 15 minutes; the first failure is recorded on the
+week (`settlementFailedAt` / `settlementError`), Gotham support is emailed once,
+and the week shows under **Needs attention** in the admin panel until it
+settles. A week closed at $0 while unpaid whose charge did go through after all
+(e.g. Pay now confirmed in the browser as it closed) is settled as paid with the
+full prepay refunded, never left charged.
+
 ## 5. The weekly cycle
 
 | When                                              | What happens                                                                                                                                                                                                                             |
@@ -82,7 +93,15 @@ charges and transfers).
 | **On approval**                                   | The week **settles**: the supervisor's share is transferred and the unused prepay goes back to the card.                                                                                                                                 |
 
 The billing job runs every 15 minutes, so each step happens within 15 minutes
-of the times above.
+of the times above. It runs in a single process even when the server is
+clustered. If the job was down past a week's review deadline, the week still
+gets a full 3-day review window from when it comes back (it is not approved and
+paid out on the spot).
+
+**After settlement.** A refund that fails on Stripe's side (closed card) and a
+chargeback (`charge.dispute.created`) each email Gotham support with the week;
+nothing is reversed automatically. (Both event types must be enabled on the
+Stripe webhook endpoint.)
 
 **Disputes.** A reason of 10 – 1000 characters and up to 3 images (JPG or PNG,
 5 MB each). The week is frozen and Gotham support is emailed. Support decides
@@ -96,19 +115,23 @@ max), then the week settles. Approving 0 hours returns the full prepay.
 - The supervisee pays with **Pay now** (in the browser, so 3-D Secure works). Pay now uses the hire's current card.
 - **Changing the card** doesn't charge the unpaid week; it clears the old decline message, and the week still needs Pay now.
 - The supervisor can keep logging sessions while the week is unpaid. The week still goes through review, but the supervisor is paid only after it's paid.
-- A card can't be removed while it pays for an active supervision.
+- A card can't be removed while it pays for an active supervision, nor while an ended supervision still owes for an unpaid week the supervisor logged hours into.
+- The supervisee can't cancel or mark completed a supervision while a week with logged hours is unpaid: that week is paid (or disputed and resolved by support) first. With nothing logged, they can.
 - A week that's never paid stays unpaid (shown to admins as needing attention). Later weeks keep billing.
+- An unpaid week with nothing logged closes at $0; it shows to both sides as "Closed · nothing charged" with a $0 cost (nothing was ever charged for it).
 
 ## 7. Late entries
 
 - If the supervisor missed logging a session, they can **request a late entry** within **14 days** after that week ends. Support is emailed.
 - **Gotham support** adds it (or dismisses the request, with a note). The supervisee **approves or rejects** it.
 - If that week was already settled, an approved late session is **charged on its own**: hours × rate plus its own service fee. The supervisor's share is transferred right away.
-- A failed late charge is retried only by support. Late entries waiting for an answer don't expire.
+- A failed late charge is retried only by support (a card decline and any other error — e.g. a removed card — both leave it "failed" with the reason, so **Retry charge** works). Late entries waiting for an answer don't expire.
+- If the charge succeeds but the supervisor's payout can't be made (no payout account), the entry is marked "Payout pending", support is emailed once, and the billing job retries the transfer every 15 minutes.
 
 ## 8. When the total hours are used up
 
 - No new weeks are billed, and sessions over the total are rejected. Logged hours count toward the total, not only approved hours.
+- A rejected session never creates a billing week (the limits are checked before the week row exists), and the supervisor's logging is closed once the hours are used up.
 - The supervision is **not** ended automatically; either side ends it.
 
 ## 9. Ending a supervision
@@ -132,16 +155,19 @@ deadline, then reviewed and settled as usual. There are no other refunds.
 
 ## 11. Reminders
 
-| When                       | Who        | What                                                           |
-| -------------------------- | ---------- | -------------------------------------------------------------- |
-| Friday from 9 AM           | Supervisor | Log this week's sessions (skipped if the week is already full) |
-| Monday from 9 AM           | Supervisor | Logging deadline tonight (only if nothing was logged)          |
-| When a week goes to review | Supervisee | Approve or dispute by Thursday 11:59 PM                        |
-| Daily 9:00 AM              | Supervisee | Sign the agreement (every 2 days while unsigned)               |
-| Daily 9:15 AM              | Supervisor | Send the agreement (2 days after accepting, then every 7 days) |
+| When                       | Who        | What                                                                                              |
+| -------------------------- | ---------- | ------------------------------------------------------------------------------------------------- |
+| Friday from 9 AM           | Supervisor | Log this week's sessions (skipped if the week is already full, or supervision hasn't started yet) |
+| Monday from 9 AM           | Supervisor | Logging deadline tonight (only if nothing was logged and the week can still be logged into)       |
+| When a week goes to review | Supervisee | Approve or dispute by Thursday 11:59 PM                                                           |
+| Daily 9:00 AM              | Supervisee | Sign the agreement (every 2 days while unsigned)                                                  |
+| Daily 9:15 AM              | Supervisor | Send the agreement (2 days after accepting, then every 7 days)                                    |
 
 The manual "Remind to sign" button works once per 24 hours. Every reminder
-respects the user's notification and email settings.
+respects the user's notification and email settings; a user who has never
+opened Settings (no settings row yet) counts as opted in, for every
+notification and email alike. Review, Pay now and payment notifications link
+to the week in question (`?tab=timesheet&week=YYYY-MM-DD`).
 
 ## 12. Platform plan (subscription)
 
@@ -156,21 +182,25 @@ Behind its own flags: backend `SUPERVISION_IN_APP_MONTHLY_ENABLED=true` and
 frontend `NEXT_PUBLIC_IN_APP_MONTHLY_ENABLED=true` (both also need the in-app
 payments flag). Kept apart from hourly billing: its own table
 (`HireMonthlyPeriod`), service, cron and Stripe metadata kind (`hire_monthly`).
+With the backend flag off, no cards are saved and nothing new is charged (Pay
+now included); months already paid still run through their window and release,
+and both sides can still see them, report a problem and release early. Bounced
+refunds and chargebacks on a month email support (see hourly §5).
 
-| Rule                   | Detail                                                                                                                                                                                                                                                                                                                                            |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Which agreements       | New agreements of a supervisor whose fee type is Monthly, while the flag is on. Agreements made before (or with the flag off) stay paid outside the app — they have no platform fee stored.                                                                                                                                                       |
-| Terms                  | Monthly amount $1 – $100,000. Length: **month to month** (until ended) or **1 – 60 months**. Start date can't be in the past. Platform fee locked at proposal (`SUPERVISION_PLATFORM_FEE_BPS`, default 10%).                                                                                                                                      |
-| Before signing         | Supervisor: payout account with payouts enabled. Supervisee: a saved card.                                                                                                                                                                                                                                                                        |
-| Months                 | On the start date's anniversary, US Eastern (Nov 15 → Dec 15 → Jan 15). Counted from the original start date, so a 31st start runs Feb 28 (29), Mar 31, Apr 30. Not prorated. A signature after the start date charges the month that's running, not months already gone.                                                                         |
-| Charge                 | At the start of each month: amount + service fee (⌈(amount + 30¢) ÷ (1 − 2.9%)⌉ − amount, **never refunded**). $1,000 → **$1,030.18**. The first successful charge moves the hire to **In Progress**.                                                                                                                                             |
-| Escrow                 | The platform holds the money. After the month ends, a **3-day window** to report a problem, then it's released: supervisor gets amount − 10% ($1,000 → **$900**). The supervisee can release early (Release now).                                                                                                                                 |
-| Problem reports        | While the month runs or in its 3-day window, reason 10 – 1,000 characters. The money is frozen; support (admin → Monthly Payments) decides how much to release; the rest of the amount is refunded.                                                                                                                                               |
-| Ending (either side)   | With a paid month running: the hire **stays active until that month ends**, no refund, no more charges, then becomes Completed / Canceled. Before any paid month (or while unpaid): ends now, an unpaid month is canceled.                                                                                                                        |
-| Fixed number of months | Scheduled to complete when the last month ends; both sides get a reminder 14 days before.                                                                                                                                                                                                                                                         |
-| Failed charge          | Not retried automatically. Supervisee: Pay now (3-D Secure in the browser). **7-day grace**; reminder 2 days before it ends. After 7 days unpaid the supervisor can end the supervision (immediately; the unpaid month is canceled and not paid out). No new month is charged while one is unpaid; a month paid late still gets its 3-day window. |
-| Reminders              | Renewal notice to the supervisee 3 days before each next charge; grace reminders above; "ends on …" before a fixed term ends.                                                                                                                                                                                                                     |
-| Payout account / cards | The supervisor can't remove the payout account with active monthly hires or paid months not yet released. A card paying for an active monthly hire can't be removed.                                                                                                                                                                              |
+| Rule                   | Detail                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Which agreements       | New agreements of a supervisor whose fee type is Monthly, while the flag is on. Agreements made before (or with the flag off) stay paid outside the app — they have no platform fee stored.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Terms                  | Monthly amount $1 – $100,000. Length: **month to month** (until ended) or **1 – 60 months**. Start date can't be in the past. Platform fee locked at proposal (`SUPERVISION_PLATFORM_FEE_BPS`, default 10%).                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Before signing         | Supervisor: payout account with payouts enabled. Supervisee: a saved card.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Months                 | On the start date's anniversary, US Eastern (Nov 15 → Dec 15 → Jan 15). Counted from the original start date, so a 31st start runs Feb 28 (29), Mar 31, Apr 30. Not prorated. A signature after the start date charges the month that's running, not months already gone.                                                                                                                                                                                                                                                                                                                                                                                   |
+| Charge                 | At the start of each month: amount + service fee (⌈(amount + 30¢) ÷ (1 − 2.9%)⌉ − amount, **never refunded**). $1,000 → **$1,030.18**. The first successful charge moves the hire to **In Progress**.                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Escrow                 | The platform holds the money. After the month ends, a **3-day window** to report a problem, then it's released: supervisor gets amount − 10% ($1,000 → **$900**). The supervisee can release early (Release now).                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Problem reports        | While the month runs or in its 3-day window, reason 10 – 1,000 characters. The money is frozen; support (admin → Monthly Payments) decides how much to release; the rest of the amount is refunded. Both sides are told the outcome (in-app and email). At settlement the client's part is refunded **first**, then the Medical Director's share is transferred; if the transfer can't be made (payout account gone) the month stays Released, support is emailed once, the failure shows on the month in the admin panel, and it's retried every 15 minutes.                                                                                               |
+| Ending (either side)   | With a paid month running: the hire **stays active until that month ends**, no refund, no more charges, then becomes Completed / Canceled. Before any paid month (or while unpaid): ends now, an unpaid month is canceled. If a canceled month's charge turns out to have gone through (Pay now confirmed as the hire ended), it's refunded in full (service fee kept).                                                                                                                                                                                                                                                                                     |
+| Fixed number of months | Scheduled to complete when the last month ends; both sides get a reminder 14 days before. Either side can still end it early. A term that was never paid for lapses as Canceled, not Completed.                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Failed charge          | Not retried automatically. Supervisee: Pay now (3-D Secure in the browser). **7-day grace**; reminder 2 days before it ends. After 7 days unpaid the supervisor can end the supervision (immediately; the unpaid month is canceled and not paid out). The supervisor can't end over a month that hasn't been charged yet. No new month is charged while one is unpaid; a month paid late still gets its 3-day window. A card that's gone at charge time (removed outside the app) counts as a failed payment too, with the same grace and notices. A Pay now left unfinished in the browser is cleared after 10 minutes so the automatic charge still runs. |
+| Reminders              | Renewal notice to the supervisee 3 days before each next charge; grace reminders above; "ends on …" before a fixed term ends.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Payout account / cards | The supervisor can't remove the payout account with active monthly hires or paid months not yet released. A card paying for an active monthly hire can't be removed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 Dev/QA: `node scripts/supervision_monthly_billing.js tick | list <hireId> | shift <hireId> [days] | end-review <periodId> | end-grace <periodId>`.
 Tests: `node tests/supervision_monthly_billing.test.js` (monthly) and

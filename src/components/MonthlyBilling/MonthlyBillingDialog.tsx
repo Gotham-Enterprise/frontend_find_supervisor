@@ -307,8 +307,8 @@ function BillingBody({
           <span>
             {scheduledEnd.by === 'TERM'
               ? `The agreement ends after ${formatDateOnly(scheduledEnd.lastDay)}, when its last month runs out.`
-              : `Supervision ends after ${formatDateOnly(scheduledEnd.lastDay)}, the end of the month already paid for.`}{' '}
-            No more monthly payments will be charged.
+              : `Supervision ends after ${formatDateOnly(scheduledEnd.lastDay)}, the end of the month already paid for.`}
+            {scheduledEnd.by !== 'TERM' && ' No more monthly payments will be charged.'}
           </span>
         </div>
       )}

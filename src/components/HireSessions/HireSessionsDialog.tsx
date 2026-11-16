@@ -438,6 +438,7 @@ function WeekCard({
   onRespondToLate,
   onApprove,
   onDispute,
+  onRequestLateEntry,
 }: {
   week: BillingWeek
   role: HireBillingWeeks['role']
@@ -449,6 +450,8 @@ function WeekCard({
   onRespondToLate: (session: HireSession, approve: boolean) => void
   onApprove: () => void
   onDispute: () => void
+  /** Supervisor, closed week still within the late-entry window */
+  onRequestLateEntry?: () => void
 }) {
   const badge = STATUS_BADGE[week.status]
   return (
@@ -467,6 +470,18 @@ function WeekCard({
         </span>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">{weekStatusText(week, role)}</p>
+      {onRequestLateEntry && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Forgot a session this week?{' '}
+          <button
+            type="button"
+            onClick={onRequestLateEntry}
+            className="font-medium text-primary hover:underline"
+          >
+            Request a late entry
+          </button>
+        </p>
+      )}
       {payment}
       {week.status === 'DISPUTED' && week.disputeReason && (
         <div className="mt-2 rounded-md bg-destructive/5 px-3 py-2 text-xs text-foreground">
@@ -673,6 +688,9 @@ export function useHireSessions({
         onDeleteSession={setDeleting}
         onApprove={() => setApproving(week)}
         onDispute={() => setDisputing(week)}
+        onRequestLateEntry={
+          canRequestLateEntry(week, data.role) ? () => setLateEntryWeek(week) : undefined
+        }
       />
     ) : null
 

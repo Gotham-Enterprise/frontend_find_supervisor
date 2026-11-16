@@ -53,6 +53,10 @@ export const upcomingSessionsKeys = {
 async function invalidateHireRelatedQueries(queryClient: ReturnType<typeof useQueryClient>) {
   await queryClient.invalidateQueries({ queryKey: hireKeys.all })
   await queryClient.invalidateQueries({ queryKey: upcomingSessionsKeys.all })
+  // Ending a monthly (Medical Director) hire changes its billing: scheduled
+  // end, next charge. Same key as monthlyBillingKeys.all in useMonthlyBilling
+  // (not imported: that module imports this one).
+  await queryClient.invalidateQueries({ queryKey: ['supervision', 'monthly-billing'] })
 }
 
 export function useHireSupervisor() {

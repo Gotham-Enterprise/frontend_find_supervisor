@@ -142,7 +142,7 @@ function RowActions({ row }: { row: SuperviseeWeekRow }) {
         confirmLabel="Submit dispute"
         destructive
         isPending={dispute.isPending}
-        confirmDisabled={reason.trim().length === 0}
+        confirmDisabled={reason.trim().length < 10}
         onConfirm={() =>
           dispute.mutate(
             { weekId: row.weekId, reason: reason.trim(), attachments: files },

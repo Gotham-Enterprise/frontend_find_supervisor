@@ -332,6 +332,10 @@ function weekState(week: SuperviseePaymentWeek): { text: string; className: stri
   if (week.prepayStatus === 'FAILED') {
     return { text: "Payment didn't go through", className: 'text-destructive' }
   }
+  if (week.status === 'SETTLED' && week.prepayStatus === 'CANCELED') {
+    // Closed at $0 while unpaid: nothing was ever charged for this week.
+    return { text: 'Closed · nothing charged', className: 'text-muted-foreground' }
+  }
   if (week.status === 'SETTLED') {
     const when = week.settledAt ? ` ${formatEasternDate(week.settledAt)}` : ''
     return { text: `Settled${when}`, className: 'text-muted-foreground' }
@@ -660,7 +664,8 @@ function PaymentHistoryCard() {
                           <span className="text-right">
                             {/* Leads with the week's cost; the full charge is secondary. */}
                             <span className="block text-sm font-semibold tabular-nums text-foreground">
-                              {week.prepayStatus === 'FAILED' ? (
+                              {week.prepayStatus === 'FAILED' ||
+                              week.prepayStatus === 'CANCELED' ? (
                                 'Not charged'
                               ) : (
                                 <>
