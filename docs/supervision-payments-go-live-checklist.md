@@ -106,6 +106,16 @@ Supervisor's future payouts.
 - First live run: one $1 hourly week end to end (prepay charge → partial
   refund → transfer to a real Express account) before announcing.
 
+## 4b. Database release (backend)
+
+- `npm run release:supervision` runs all supervision release scripts in order
+  and `npx prisma generate`. Idempotent; in production it requires
+  `CONFIRM_RELEASE=yes`. If the deploy already ran `prisma db push`, run it
+  anyway: `hire_conversations` has a data step (attach existing conversations
+  to hires, open a room for hires without one) that `db push` cannot do.
+- Never `prisma db push` from a branch against a database that has columns
+  the branch schema lacks (it drops them).
+
 ## 5. Operations
 
 - `SUPPORT_EMAIL` (or the configured support address) is a monitored shared
