@@ -34,6 +34,7 @@ import {
   usePayoutStatusQuery,
   useReactivateSubscription,
   useSupervisorEarnings,
+  useSupervisorProfile,
   useUser,
   useUserSnackbar,
 } from '@/lib/hooks'
@@ -43,6 +44,7 @@ import {
   canResumeSubscription,
   isSubscriptionScheduledForCancellation,
 } from '@/lib/utils/subscription-status'
+import { isMonthlyOnlySupervisorType } from '@/lib/utils/supervisor-type'
 import type { Subscription, SubscriptionStatus } from '@/types/supervisor-profile'
 
 import { EarningsCard } from './EarningsCard'
@@ -515,6 +517,9 @@ function BillingContent() {
     isError,
     refetch,
   } = useCurrentSubscriptionQuery(isSupervisor)
+  // Medical Directors are billed monthly only: no weekly (hourly) earnings to show.
+  const { data: supervisorProfile } = useSupervisorProfile(isSupervisor)
+  const monthlyOnly = isMonthlyOnlySupervisorType(supervisorProfile?.supervisorType ?? '')
 
   const { mutateAsync: cancelSub, isPending: isCanceling } = useCancelSubscription()
   const { mutateAsync: reactivateSub, isPending: isReactivating } = useReactivateSubscription()
@@ -639,12 +644,13 @@ function BillingContent() {
         <BillingError onRetry={() => void refetch()} />
       ) : activeTab === 'earnings' ? (
         // Earnings — one week at a glance, then the main column: weekly
-        // earnings; side column: Stripe payout account.
+        // earnings (hourly; Medical Directors have only the monthly card);
+        // side column: Stripe payout account.
         <div className="flex flex-col gap-6">
-          <WeekSummaryCard />
+          {!monthlyOnly && <WeekSummaryCard />}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
             <div className="flex flex-col gap-6 lg:col-span-3">
-              <EarningsCard />
+              {!monthlyOnly && <EarningsCard />}
               <MonthlyPaymentsCard role="supervisor" />
             </div>
             <div className="flex flex-col gap-6 lg:col-span-2">

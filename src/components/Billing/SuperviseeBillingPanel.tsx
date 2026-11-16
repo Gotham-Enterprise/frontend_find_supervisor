@@ -596,7 +596,7 @@ function PaymentHistoryCard() {
                 <dd className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
                   {formatUsdCents(data.totals.netPaidCents)}
                 </dd>
-                <dd className="text-xs text-muted-foreground">approved hours + service fees</dd>
+                <dd className="text-xs text-muted-foreground">what you&apos;ve paid so far</dd>
               </div>
               <div className="rounded-lg border bg-muted/30 px-4 py-3">
                 <dt className="text-xs text-muted-foreground">Charged to your card</dt>
