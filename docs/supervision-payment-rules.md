@@ -222,9 +222,10 @@ Dev/QA: `node scripts/supervision_monthly_billing.js tick | list <hireId> | shif
 Tests: `node tests/supervision_monthly_billing.test.js` (monthly) and
 `node tests/supervision_hourly_billing_regression.test.js` (hourly + offline
 monthly must stay unchanged). Deploy: `node scripts/apply_supervision_monthly_billing_release.js`, then `npx prisma generate`.
-**Deploy, one command:** `npm run release:supervision` in the backend (runs
-all eight `scripts/apply_supervision_*_release.js` in order, then
-`npx prisma generate`; every step is idempotent). Where schema is deployed
+**Deploy, one command (run by hand, not wired into npm scripts):**
+`node scripts/apply_supervision_release.js && npx prisma generate` in the
+backend (runs all eight `scripts/apply_supervision_*_release.js` in order;
+every step is idempotent). Where schema is deployed
 with `prisma db push`, the push creates the tables/columns; the command is still
 needed once for the data step in `hire_conversations` (attaches existing
 conversations to their hires) and is harmless otherwise.

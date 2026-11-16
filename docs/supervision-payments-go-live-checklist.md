@@ -108,9 +108,9 @@ Supervisor's future payouts.
 
 ## 4b. Database release (backend)
 
-- `npm run release:supervision` runs all supervision release scripts in order
-  and `npx prisma generate`. Idempotent; in production it requires
-  `CONFIRM_RELEASE=yes`. If the deploy already ran `prisma db push`, run it
+- `node scripts/apply_supervision_release.js && npx prisma generate` runs all
+  supervision release scripts in order (manual trigger, on purpose not an npm
+  script). Idempotent; in production it requires `CONFIRM_RELEASE=yes`. If the deploy already ran `prisma db push`, run it
   anyway: `hire_conversations` has a data step (attach existing conversations
   to hires, open a room for hires without one) that `db push` cannot do.
 - Never `prisma db push` from a branch against a database that has columns
@@ -127,3 +127,34 @@ Supervisor's future payouts.
 - Deploy order for the database scripts is in `supervision-payment-rules.md`
   (section "Where it lives"), ending with
   `apply_supervision_settlement_hardening_release.js`.
+
+## 6. Deployment runbook (production)
+
+Order: Stripe live prerequisites (§4) → backend with the three flags **off** →
+admin → frontend with its three `NEXT_PUBLIC_*` flags **off** → database
+release command → verify → flags on (backend first, then frontend).
+
+1. **Backend env:** `STRIPE_SECRET_KEY` (live key that is _not_ "Limited
+   access", or a restricted key with the agreed permissions),
+   `STRIPE_SUPERVISION_WEBHOOK_SECRET`, `STRIPE_SUPERVISION_CONNECT_WEBHOOK_SECRET`,
+   `SUPERVISION_IN_APP_PAYMENTS_ENABLED`, `SUPERVISION_IN_APP_MONTHLY_ENABLED`,
+   `SUPERVISION_ACTIVITY_LOG_ENABLED` (all `false` at first),
+   `SUPERVISION_PLATFORM_FEE_BPS=1000`, `SUPERVISION_SUPPORT_EMAIL`,
+   `ADMIN_FRONTEND_URL`, `CLIENT_URL_PROD_SUPERVISION`, `AWS_BUCKET_NAME`.
+2. **Deploy backend.** If the pipeline runs `prisma db push`, it creates the
+   tables and columns. Then, once, on the host:
+   `CONFIRM_RELEASE=yes node scripts/apply_supervision_release.js && npx prisma generate`
+   (idempotent; still required for the `hire_conversations` data step). Restart.
+   Crons start only in cluster worker 1 / `NODE_APP_INSTANCE=0`.
+3. **Platform Access plan (live):** set `STRIPE_SUPERVISION_PLATFORM_PRICE_ID` /
+   `_PRODUCT_ID` to the live price/product, run `node prisma/seedSupervisionPlanProd.js` once.
+4. **Deploy admin**, then **frontend** (`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_…`,
+   the three `NEXT_PUBLIC_*` flags `false`).
+5. **Turn on and verify:** backend flags → true, restart; frontend flags →
+   true, redeploy. Dashboard test event to both webhook endpoints → 200. A $1
+   live hourly week end to end (prepay → log → approve → transfer + partial
+   refund visible in the Dashboard) and a $1 monthly MD hire. Admin Needs
+   attention empty; cron ticks in the logs.
+6. **Rollback:** flags off (backend + frontend) stops new charges and hides the
+   features; paid weeks/months still review and settle. No schema rollback:
+   every change is expand-only.
