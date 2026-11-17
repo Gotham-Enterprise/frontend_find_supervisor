@@ -147,7 +147,7 @@ export async function removePayoutAccount(): Promise<{ removed: boolean }> {
   return data.data
 }
 
-/** GET /supervision/payments/quote — weekly prepay/payout breakdown for prospective hourly terms. */
+/** GET /supervision/payments/quote — weekly maximum/payout breakdown for prospective hourly terms. */
 export async function getHourlyQuote(
   hourlyRate: number,
   maxHoursPerWeek: number,
@@ -178,7 +178,7 @@ export async function createHirePaymentSetupIntent(
 
 /**
  * PUT /supervision/hires/:hireId/payment/card — saves (or replaces) the card
- * the weekly prepays are charged to. Nothing is charged here.
+ * the weekly charges go to. Nothing is charged here.
  */
 export async function saveHirePaymentMethod(
   hireId: string,
@@ -186,6 +186,23 @@ export async function saveHirePaymentMethod(
 ): Promise<HirePaymentInfo> {
   const { data } = await apiClient.put<ApiResponse<HirePaymentInfo>>(
     `/supervision/hires/${hireId}/payment/card`,
+    { paymentMethodId },
+  )
+  return data.data
+}
+
+/**
+ * PUT /supervision/hires/:hireId/payment/backup-card — sets (a payment method
+ * id) or removes (null) the optional backup card. When the primary card
+ * declines in a charge round, the backup is tried right away in that round.
+ * Nothing is charged here.
+ */
+export async function setHireBackupCard(
+  hireId: string,
+  paymentMethodId: string | null,
+): Promise<HirePaymentInfo> {
+  const { data } = await apiClient.put<ApiResponse<HirePaymentInfo>>(
+    `/supervision/hires/${hireId}/payment/backup-card`,
     { paymentMethodId },
   )
   return data.data
@@ -265,7 +282,7 @@ export async function getSuperviseeWeekSummary(
   return data.data
 }
 
-/** GET /supervision/payments/history/:weekId/receipt — Stripe's receipt page for the prepay. */
+/** GET /supervision/payments/history/:weekId/receipt — Stripe's receipt page for the week's charge. */
 export async function getSuperviseeReceiptUrl(weekId: string): Promise<string> {
   const { data } = await apiClient.get<ApiResponse<{ url: string }>>(
     `/supervision/payments/history/${weekId}/receipt`,

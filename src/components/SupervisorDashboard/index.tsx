@@ -588,9 +588,10 @@ function LegacyMonthlyFeeBanner({ onEditClick }: { onEditClick: () => void }) {
             Set your hourly rate to get paid through Find a Supervisor
           </p>
           <p className="text-sm text-amber-800">
-            Supervision is now billed hourly in the app: supervisees prepay each week and
-            you&apos;re paid for approved hours. Your profile still has a monthly fee, so your
-            agreements are paid outside the app until you switch to Hourly.
+            Supervision is now billed hourly in the app: supervisees are charged each week for the
+            hours you log and you&apos;re paid every Tuesday for the previous week. Your profile
+            still has a monthly fee, so your agreements are paid outside the app until you switch to
+            Hourly.
           </p>
         </div>
       </div>

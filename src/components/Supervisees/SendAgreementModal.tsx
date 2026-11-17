@@ -51,8 +51,9 @@ import type { AgreementSource, HireListItem, ProposeAgreementInput } from '@/typ
 export const MAX_AGREEMENT_DOC_SIZE_BYTES = 5 * 1024 * 1024
 const MAX_AGREEMENT_DOC_SIZE_LABEL = '5 MB'
 
-// Weekly cap bounds. Our own product ceiling, not a Stripe limit: the cap is
-// prepaid as a real charge each week, so it bounds the supervisee's exposure.
+// Weekly cap bounds. Our own product ceiling, not a Stripe limit. The cap is
+// soft (hours over it are logged, flagged on the invoice and still charged), so
+// it frames the supervisee's expected weekly charge rather than bounding it.
 // Mirrored by the backend validator and the quote hook.
 const MIN_HOURS_PER_WEEK = 1
 const MAX_HOURS_PER_WEEK = 40
@@ -80,7 +81,7 @@ function isValidHourlyRate(rate: number | null | undefined): rate is number {
 
 /**
  * Terms are hourly when the hire is billed in-app (flag on, non-monthly
- * fee) — that's what the supervisee's weekly prepays are based on — and monthly
+ * fee) — that's what the supervisee's weekly charges are capped by — and monthly
  * (paid outside the app) otherwise.
  */
 function buildSendAgreementSchema(
@@ -456,7 +457,7 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
     maxHoursPerWeek == null
       ? null
       : maxHoursPerWeek > MAX_HOURS_PER_WEEK
-        ? `Max is ${MAX_HOURS_PER_WEEK} hours per week. The supervisee prepays this cap every week, so it's capped to limit their weekly charge.`
+        ? `Max is ${MAX_HOURS_PER_WEEK} hours per week. The weekly maximum is what you both agree to; hours logged over it are flagged on the supervisee's invoice and they can report a problem.`
         : maxHoursPerWeek < MIN_HOURS_PER_WEEK
           ? `Must be at least ${MIN_HOURS_PER_WEEK} hour.`
           : !Number.isInteger(maxHoursPerWeek)
@@ -797,9 +798,11 @@ export function SendAgreementModal({ open, onOpenChange, hire }: SendAgreementMo
                     )}
 
                     <p className="text-xs text-muted-foreground">
-                      You log each session in the app (in 15-minute units) and are paid for the
-                      hours {superviseeName} approves, up to the weekly max. Payouts go to your bank
-                      account via Stripe.
+                      You log each session in the app (in 15-minute units); {superviseeName} is
+                      charged for the logged hours after each Friday&apos;s cutoff, and you&apos;re
+                      paid every Tuesday for the previous week. The weekly max is what you both
+                      agree to — hours logged over it are flagged on their invoice and they can
+                      report a problem. Payouts go to your bank account via Stripe.
                     </p>
                   </>
                 ) : monthlyInApp ? (

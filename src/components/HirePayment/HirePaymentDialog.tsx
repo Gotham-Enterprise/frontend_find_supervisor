@@ -38,8 +38,9 @@ export function HirePaymentDialog({
               {changeCard ? 'Change payment card' : 'Set up weekly payment'}
             </DialogTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Save the card for your weekly prepays with {supervisorName}. Nothing is charged when
-              you save it.
+              Save the card for your weekly payments with {supervisorName}. Nothing is charged when
+              you save it — each week&apos;s hours are charged after Friday&apos;s cutoff. You can
+              also add an optional backup card.
             </p>
           </>
         }

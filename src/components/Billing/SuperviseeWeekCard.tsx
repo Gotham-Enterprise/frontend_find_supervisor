@@ -19,18 +19,22 @@ import {
   useUserSnackbar,
 } from '@/lib/hooks'
 import {
+  formatCalendarDate,
   formatDuration,
   formatEasternDate,
   formatEasternDateTime,
   formatWeekRange,
 } from '@/lib/utils/date'
 import { parseApiError } from '@/lib/utils/error-parser'
+import { chargeRoundText, MAX_CHARGE_ROUNDS, overCapMinutesOf } from '@/lib/utils/hourly-billing'
 import { formatUsdCents } from '@/lib/utils/money'
 import type { SuperviseeWeekRow } from '@/types/payouts'
 
 import { DisputeAttachmentsField } from '../HireSessions/DisputeAttachmentsField'
+import { OverCapBadge } from '../HireSessions/OverCapBadge'
 
-const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+// Billing weeks run Saturday–Friday (US Eastern).
+const WEEKDAYS = ['S', 'S', 'M', 'T', 'W', 'T', 'F']
 const DISPUTE_REASON_MAX = 1000
 
 /** "2026-10-19" + 7 → "2026-10-26" */
@@ -47,7 +51,13 @@ function hoursColon(minutes: number): string {
 
 function rowStatus(row: SuperviseeWeekRow): { text: string; className: string } {
   if (row.prepayStatus === 'FAILED')
-    return { text: "Payment didn't go through", className: 'text-destructive' }
+    return {
+      text:
+        row.chargeAttempts >= MAX_CHARGE_ROUNDS
+          ? `Payment failed ${chargeRoundText(row.chargeAttempts)} · Pay now`
+          : `Payment failed (${chargeRoundText(row.chargeAttempts)}) · trying again`,
+      className: 'text-destructive',
+    }
   if (row.status === 'SETTLED') {
     return {
       text: `Settled ${row.settledAt ? formatEasternDate(row.settledAt) : ''}`.trim(),
@@ -63,8 +73,10 @@ function rowStatus(row: SuperviseeWeekRow): { text: string; className: string } 
     }
   if (row.status === 'APPROVED')
     return { text: 'Approved · settling', className: 'text-muted-foreground' }
+  if (row.prepayStatus === 'PENDING' && row.status !== 'OPEN')
+    return { text: 'Charging your card', className: 'text-muted-foreground' }
   return {
-    text: `Paid · logging until ${formatEasternDate(row.logDeadlineAt)}`,
+    text: `Logging until ${formatEasternDate(row.logDeadlineAt)} · charged ${formatCalendarDate(row.chargeDate)}`,
     className: 'text-muted-foreground',
   }
 }
@@ -111,7 +123,7 @@ function RowActions({ row }: { row: SuperviseeWeekRow }) {
         open={approving}
         onOpenChange={setApproving}
         title="Approve this week?"
-        description={`${row.supervisorName ?? 'Your supervisor'} will be paid for ${formatDuration(row.billedMinutes)} (${formatUsdCents(row.hoursChargeCents)}).${row.expectedRefundCents > 0 ? ` The unused ${formatUsdCents(row.expectedRefundCents)} goes back to your card.` : ''}`}
+        description={`${row.supervisorName ?? 'Your supervisor'} will be paid for ${formatDuration(row.billedMinutes)} (${formatUsdCents(row.hoursChargeCents)}) on Tuesday.${row.expectedRefundCents > 0 ? ` ${formatUsdCents(row.expectedRefundCents)} goes back to your card.` : ''}`}
         confirmLabel="Approve"
         isPending={approve.isPending}
         onConfirm={() =>
@@ -119,8 +131,7 @@ function RowActions({ row }: { row: SuperviseeWeekRow }) {
             onSuccess: () => {
               setApproving(false)
               showSuccess('Week approved', {
-                description:
-                  'Your supervisor will be paid, and anything unused goes back to your card.',
+                description: 'Your supervisor is paid on Tuesday.',
               })
               void refresh()
             },
@@ -181,8 +192,8 @@ function RowActions({ row }: { row: SuperviseeWeekRow }) {
 /**
  * The supervisee's weekly summary: what the week costs them, the hours each
  * supervisor logged per day, what was charged, and anything that needs
- * them (a week to review, a payment that failed). Weeks are Monday–Sunday,
- * US Eastern.
+ * them (a week to review, a payment that failed). Weeks are Saturday–Friday,
+ * US Eastern; the card is charged after the Friday cutoff.
  */
 export function SuperviseeWeekCard() {
   const [start, setStart] = useState<string | null>(null)
@@ -271,8 +282,9 @@ export function SuperviseeWeekCard() {
             {data.totals.unpaid > 0 && (
               <p className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-foreground">
                 <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />A
-                weekly payment didn&apos;t go through. Tap Pay now so sessions can keep being
-                logged.
+                weekly payment didn&apos;t go through. We try your card (and your backup card, if
+                you added one) in 3 rounds through Sunday afternoon, or tap Pay now to pay it right
+                away. If it&apos;s still unpaid Sunday night, your account goes on hold.
               </p>
             )}
 
@@ -298,16 +310,18 @@ export function SuperviseeWeekCard() {
                 </dd>
                 <dd className="text-xs text-muted-foreground">hours + service fee</dd>
               </div>
-              {/* The unused part is a footnote on the charge, not a figure of its own. */}
+              {/* What goes back to the card is a footnote on the charge, not a figure of its own. */}
               <div className="rounded-lg border bg-muted/30 px-4 py-3">
                 <dt className="text-xs text-muted-foreground">Charged to your card</dt>
                 <dd className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
-                  {formatUsdCents(data.totals.prepaidCents)}
+                  {formatUsdCents(data.totals.chargedCents)}
                 </dd>
                 <dd className="text-xs text-muted-foreground">
                   {data.totals.expectedRefundCents > 0
-                    ? `${data.totals.estimated ? '≈ ' : ''}${formatUsdCents(data.totals.expectedRefundCents)} back for unused hours`
-                    : 'weekly max + service fee'}
+                    ? `${data.totals.estimated ? '≈ ' : ''}${formatUsdCents(data.totals.expectedRefundCents)} back to your card`
+                    : data.totals.chargedCents === 0 && data.totals.estimated
+                      ? "charged after Friday's cutoff"
+                      : 'hours + service fee'}
                 </dd>
               </div>
             </dl>
@@ -315,7 +329,7 @@ export function SuperviseeWeekCard() {
             {data.rows.length === 0 ? (
               <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
                 {data.isCurrentWeek
-                  ? 'No billing weeks yet. Your first weekly payment is charged when a signed hourly agreement starts.'
+                  ? "No billing weeks yet. They start with a signed hourly agreement; your card is charged after each Friday's cutoff for the hours logged."
                   : 'No billing weeks for this week.'}
               </p>
             ) : (
@@ -380,6 +394,12 @@ export function SuperviseeWeekCard() {
                       </div>
 
                       <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+                        {/* Over the agreed max: flagged right beside Approve / Dispute. */}
+                        <OverCapBadge
+                          overCapMinutes={overCapMinutesOf(row.minutes, row.weeklyCapMinutes)}
+                          prominent={row.canReview}
+                          className="mr-auto"
+                        />
                         <RowActions row={row} />
                       </div>
                     </li>

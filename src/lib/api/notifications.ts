@@ -84,6 +84,8 @@ const VALID_NOTIFICATION_TYPES = new Set<NotificationType>([
   'late_session_approved',
   'late_session_rejected',
   'late_entry_request_dismissed',
+  'billing_hold_started',
+  'billing_hold_lifted',
 ])
 
 function normalizeNotificationType(raw: string | undefined): NotificationType {

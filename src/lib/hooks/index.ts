@@ -88,6 +88,7 @@ export {
   useRemovePayoutAccount,
   useRemoveSuperviseeCard,
   useSaveHirePaymentMethod,
+  useSetHireBackupCard,
   useStartPayoutOnboarding,
   useSuperviseeCards,
   useSuperviseePayments,

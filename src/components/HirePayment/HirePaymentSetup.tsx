@@ -1,15 +1,21 @@
 'use client'
 
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
-import { AlertCircle, CheckCircle2, CreditCard, Lock } from 'lucide-react'
+import { AlertCircle, CheckCircle2, CreditCard, Lock, ShieldCheck } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { createHirePaymentSetupIntent } from '@/lib/api/supervision'
-import { useHirePayment, useSaveHirePaymentMethod, useUserSnackbar } from '@/lib/hooks'
+import {
+  useHirePayment,
+  useSaveHirePaymentMethod,
+  useSetHireBackupCard,
+  useUserSnackbar,
+} from '@/lib/hooks'
 import { stripePromise } from '@/lib/stripe/client'
 import { parseApiError } from '@/lib/utils/error-parser'
+import { MAX_CHARGE_ROUNDS } from '@/lib/utils/hourly-billing'
 import { formatUsdCents } from '@/lib/utils/money'
 import { formatDateOnly } from '@/lib/utils/profile-formatters'
 import type { HirePaymentInfo, SavedCard } from '@/types/payouts'
@@ -28,37 +34,38 @@ export function cardLabel(card: SavedCard): string {
 }
 
 /**
- * One-glance weekly charge, kept short so the card form below stays in view
+ * One-glance weekly maximum, kept short so the card form below stays in view
  * (the full breakdown is in the agreement dialog).
  */
-function PrepaySummary({ info }: { info: HirePaymentInfo }) {
+function WeeklyChargeSummary({ info }: { info: HirePaymentInfo }) {
   if (!info.quote) return null
   const { quote } = info
   return (
     <div className="rounded-lg border bg-muted/30 px-4 py-3">
       <div className="flex items-baseline justify-between gap-4">
-        <span className="text-sm font-medium text-foreground">
-          Charged at the start of each week
-        </span>
+        <span className="text-sm font-medium text-foreground">Weekly total at the agreed max</span>
         <span className="text-sm font-semibold tabular-nums text-foreground">
           {formatUsdCents(quote.weeklyTotalCents)}
         </span>
       </div>
       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-        Up to {formatHours(quote.weeklyCapMinutes)} at {formatUsdCents(quote.hourlyRateCents)}/hour
-        ({formatUsdCents(quote.weeklyPrepayCents)}) + {formatUsdCents(quote.serviceFeeCents)}{' '}
-        service fee.
-        {info.firstPrepayDate && <> First charge on {formatDateOnly(info.firstPrepayDate)}.</>}{' '}
-        Hours you don&apos;t use go back to your card after your weekly review.
+        {formatHours(quote.weeklyCapMinutes)} at {formatUsdCents(quote.hourlyRateCents)}/hour (
+        {formatUsdCents(quote.weeklyPrepayCents)}) + {formatUsdCents(quote.serviceFeeCents)} service
+        fee. Your card is charged after each Friday&apos;s cutoff for the hours actually logged,
+        plus a service fee on that amount; hours over the weekly max are flagged on your invoice and
+        you can report a problem.
+        {info.firstChargeDate && (
+          <> First charge on {formatDateOnly(info.firstChargeDate)}, for that week&apos;s hours.</>
+        )}
       </p>
     </div>
   )
 }
 
 /**
- * Supervisee payment step after signing an hourly agreement: pick a saved card
+ * Supervisee payment step before signing an hourly agreement: pick a saved card
  * (e.g. from the platform subscription checkout) or add one. Nothing is
- * charged here — the weekly prepays are charged to this card from the start date.
+ * charged here — each week's hours are charged to this card after the Friday cutoff.
  */
 export function HirePaymentSetup({
   hireId,
@@ -118,12 +125,12 @@ export function HirePaymentSetup({
   if (info.paymentStatus === 'card_saved' && !changingCard) {
     return (
       <div className="space-y-3">
-        <PrepaySummary info={info} />
+        <WeeklyChargeSummary info={info} />
         <div className="flex items-start justify-between gap-4 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
           <div className="flex items-start gap-2">
             <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
             <span>
-              Weekly prepays are charged to{' '}
+              Weekly payments are charged to{' '}
               <span className="font-medium">
                 {info.card ? cardLabel(info.card) : 'your saved card'}
               </span>
@@ -134,6 +141,7 @@ export function HirePaymentSetup({
             Change Card
           </Button>
         </div>
+        <BackupCardSection hireId={hireId} info={info} />
       </div>
     )
   }
@@ -150,16 +158,19 @@ export function HirePaymentSetup({
           setChangingCard(false)
           onSaved?.()
           if (replacing) {
-            // A weekly payment that already failed isn't retried on its own.
+            // Failed weeks keep going through the 3 charge rounds; Pay now charges this card right away.
             showSuccess('Card updated', {
-              description: `Weekly payments now use ${updated.card ? cardLabel(updated.card) : 'this card'}. If a week's payment didn't go through, tap Pay now on that week to pay it with this card.`,
+              description: `Weekly payments now use ${updated.card ? cardLabel(updated.card) : 'this card'}. If a week's payment didn't go through, tap Pay now on that week to pay it with this card right away.`,
             })
             return
           }
+          // Prompt for the optional backup card without blocking the flow.
           showSuccess('Payment card saved!', {
-            description: updated.firstPrepayDate
-              ? `Your first weekly prepay is charged on ${formatDateOnly(updated.firstPrepayDate)}.`
-              : `Your supervision with ${supervisorName} is ready to begin.`,
+            description: `${
+              updated.firstChargeDate
+                ? `Your first weekly payment is charged on ${formatDateOnly(updated.firstChargeDate)}, for the hours logged that week.`
+                : `Your supervision with ${supervisorName} is ready to begin.`
+            } You can add an optional backup card any time under Change card.`,
           })
         },
         onError: (err) => showError(parseApiError(err)),
@@ -167,11 +178,11 @@ export function HirePaymentSetup({
     )
   }
 
-  const authorization = `By saving this card, you authorize Find a Supervisor to charge it ${formatUsdCents(info.quote.weeklyTotalCents)} at the start of each billing week under your agreement with ${supervisorName}. After you review each week's sessions, the unused part of the prepay goes back to this card.`
+  const authorization = `By saving this card, you authorize Find a Supervisor to charge it after each billing week under your agreement with ${supervisorName} for the hours your supervisor logged that week plus a service fee (${formatUsdCents(info.quote.weeklyTotalCents)} at the agreed weekly max of ${formatHours(info.quote.weeklyCapMinutes)}; hours over the max are flagged on your invoice and you can report a problem). If a problem report lowers the hours, the difference for those hours goes back to this card; the service fee isn't returned.`
 
   return (
     <div className="space-y-4">
-      <PrepaySummary info={info} />
+      <WeeklyChargeSummary info={info} />
 
       {/* With no saved cards there is nothing to choose: show the card form directly. */}
       {info.savedCards.length > 0 && (
@@ -222,6 +233,159 @@ export function HirePaymentSetup({
           </div>
         </div>
       )}
+
+      {/* The backup only makes sense once a primary card is saved. */}
+      {info.card && <BackupCardSection hireId={hireId} info={info} />}
+    </div>
+  )
+}
+
+const BACKUP_COPY = `If your card declines when the week is charged, we try the backup right away, in each of the ${MAX_CHARGE_ROUNDS} rounds.`
+
+/**
+ * "Backup card (optional)": below the primary card, pick one of the other saved
+ * cards or add a new one (same SetupIntent flow), with Remove backup. Prompted
+ * for, never required — nothing is charged to it unless the primary card fails.
+ */
+function BackupCardSection({ hireId, info }: { hireId: string; info: HirePaymentInfo }) {
+  const backupMutation = useSetHireBackupCard()
+  const { showSuccess, showError } = useUserSnackbar()
+  const [editing, setEditing] = useState(false)
+  const [selected, setSelected] = useState<string | null>(null)
+
+  const backup = info.backupCard
+  // The primary card can't double as its own backup.
+  const candidates = info.savedCards.filter((card) => card.id !== info.card?.id)
+  const choice = selected ?? candidates.find((c) => c.id !== backup?.id)?.id ?? NEW_CARD
+  const isSaving = backupMutation.isPending
+
+  function setBackup(paymentMethodId: string | null) {
+    backupMutation.mutate(
+      { hireId, paymentMethodId },
+      {
+        onSuccess: (updated) => {
+          setEditing(false)
+          setSelected(null)
+          if (paymentMethodId == null) {
+            showSuccess('Backup card removed', {
+              description: 'Only your primary card is charged from now on.',
+            })
+            return
+          }
+          showSuccess('Backup card saved', {
+            description: `${updated.backupCard ? cardLabel(updated.backupCard) : 'This card'} is tried right away if your primary card declines.`,
+          })
+        },
+        onError: (err) => showError(parseApiError(err)),
+      },
+    )
+  }
+
+  const authorization = `By saving this backup card, you authorize Find a Supervisor to charge it only when your primary card declines for a billing week, for the same amount. ${BACKUP_COPY}`
+
+  return (
+    <div className="rounded-lg border px-4 py-3">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-2 text-sm text-foreground">
+          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <div>
+            <p className="font-medium">Backup card (optional)</p>
+            {backup ? (
+              <p className="text-muted-foreground">{cardLabel(backup)}</p>
+            ) : (
+              <p className="text-xs leading-relaxed text-muted-foreground">{BACKUP_COPY}</p>
+            )}
+          </div>
+        </div>
+        {!editing && (
+          <div className="flex shrink-0 gap-2">
+            {backup && (
+              <Button variant="ghost" size="sm" disabled={isSaving} onClick={() => setBackup(null)}>
+                {isSaving ? 'Removing…' : 'Remove backup'}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isSaving}
+              onClick={() => setEditing(true)}
+            >
+              {backup ? 'Change' : 'Add backup card'}
+            </Button>
+          </div>
+        )}
+      </div>
+      {backup && !editing && (
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{BACKUP_COPY}</p>
+      )}
+
+      {editing && (
+        <div className="mt-3 space-y-3">
+          {candidates.length > 0 && (
+            <div role="radiogroup" aria-label="Backup card" className="space-y-2">
+              {candidates.map((card) => (
+                <PaymentChoice
+                  key={card.id}
+                  checked={choice === card.id}
+                  disabled={isSaving}
+                  onSelect={() => setSelected(card.id)}
+                >
+                  <CreditCard className="size-4 text-muted-foreground" aria-hidden />
+                  {cardLabel(card)}
+                  {card.id === backup?.id && (
+                    <span className="ml-1 text-xs opacity-80">(current backup)</span>
+                  )}
+                </PaymentChoice>
+              ))}
+              <PaymentChoice
+                checked={choice === NEW_CARD}
+                disabled={isSaving}
+                onSelect={() => setSelected(NEW_CARD)}
+              >
+                <CreditCard className="size-4 text-muted-foreground" aria-hidden />
+                Use a new card
+              </PaymentChoice>
+            </div>
+          )}
+
+          {choice === NEW_CARD ? (
+            <>
+              <NewCardForm
+                hireId={hireId}
+                ctaLabel="Save Backup Card"
+                authorization={authorization}
+                isSaving={isSaving}
+                onCardSaved={setBackup}
+              />
+              <Button
+                variant="outline"
+                className="w-full"
+                disabled={isSaving}
+                onClick={() => setEditing(false)}
+              >
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs leading-relaxed text-muted-foreground">{authorization}</p>
+              <div className="flex gap-2">
+                <Button variant="outline" disabled={isSaving} onClick={() => setEditing(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  disabled={isSaving || choice === backup?.id}
+                  onClick={() => setBackup(choice)}
+                >
+                  <Lock className="size-3.5" />
+                  {isSaving ? 'Saving…' : 'Save Backup Card'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -270,7 +434,7 @@ export function NewCardForm({
   authorization: string
   isSaving: boolean
   onCardSaved: (paymentMethodId: string) => void
-  /** Which hire billing the card is for; the hourly weekly prepays by default. */
+  /** Which hire billing the card is for; the hourly weekly charges by default. */
   createSetupIntent?: (hireId: string) => Promise<{ clientSecret: string }>
 }) {
   const [clientSecret, setClientSecret] = useState<string | null>(null)

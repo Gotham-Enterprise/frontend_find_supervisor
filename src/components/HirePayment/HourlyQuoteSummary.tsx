@@ -29,7 +29,9 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
 
 /**
  * Hourly terms breakdown. The supervisor sees what they receive per hour after
- * the platform fee; the supervisee sees the weekly prepay plus the service fee.
+ * the platform fee; the supervisee sees the most a week can cost (weekly max
+ * plus the service fee) — they're charged after each Friday's cutoff for the
+ * hours actually logged.
  */
 export function HourlyQuoteSummary({
   quote,
@@ -60,27 +62,31 @@ export function HourlyQuoteSummary({
             value={formatUsdCents(quote.supervisorWeeklyMaxCents)}
           />
           <p className="pt-1 text-xs text-muted-foreground">
-            The supervisee prepays {formatUsdCents(quote.weeklyTotalCents)} at the start of each
-            week ({cap} plus a {formatUsdCents(quote.serviceFeeCents)} service fee). You&apos;re
-            paid for the hours you log once they approve the week; unused prepay goes back to their
-            card.
+            The supervisee is charged after each Friday&apos;s cutoff for the hours you log, plus a
+            service fee — {formatUsdCents(quote.weeklyTotalCents)} at the agreed weekly max ({cap}{' '}
+            plus a {formatUsdCents(quote.serviceFeeCents)} service fee). Hours over the max are
+            flagged on their invoice, and they can report a problem. You&apos;re paid every Tuesday
+            for the previous week, after they review it.
           </p>
         </>
       ) : (
         <>
           <Row label="Hourly rate" value={formatUsdCents(quote.hourlyRateCents)} />
           <Row label="Max per week" value={cap} />
-          <Row label="Weekly payment" value={formatUsdCents(quote.weeklyPrepayCents)} />
-          <Row label="Service fee" value={formatUsdCents(quote.serviceFeeCents)} />
+          <Row label="Agreed weekly maximum" value={formatUsdCents(quote.weeklyPrepayCents)} />
+          <Row label="Service fee (at the maximum)" value={formatUsdCents(quote.serviceFeeCents)} />
           <Row
-            label="Charged at the start of each week"
+            label="Weekly total at the maximum"
             value={formatUsdCents(quote.weeklyTotalCents)}
             strong
           />
           <p className="pt-1 text-xs text-muted-foreground">
-            You only pay for approved hours: after you review each week&apos;s sessions, any unused
-            prepay goes back to your card. The service fee covers secure payment processing by
-            Stripe and isn&apos;t returned.
+            You pay only for the hours your supervisor logs: your card is charged after each
+            Friday&apos;s cutoff for those hours plus a service fee. The weekly maximum is what you
+            agree to; hours logged over it are flagged on your invoice and you can report a problem.
+            If a problem report lowers the hours, the difference for those hours goes back to your
+            card. The service fee covers secure payment processing by Stripe and isn&apos;t
+            returned.
           </p>
         </>
       )}

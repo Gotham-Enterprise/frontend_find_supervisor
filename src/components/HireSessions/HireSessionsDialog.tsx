@@ -5,10 +5,12 @@ import {
   CalendarClock,
   ChevronDown,
   CreditCard,
+  Lock,
   Pencil,
   Plus,
   Trash2,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -36,6 +38,12 @@ import {
   toEasternISODate,
 } from '@/lib/utils/date'
 import { parseApiError } from '@/lib/utils/error-parser'
+import {
+  chargeFailureText,
+  overTotalText,
+  superviseeHoldText,
+  supervisorHoldText,
+} from '@/lib/utils/hourly-billing'
 import { formatUsdCents } from '@/lib/utils/money'
 import type {
   BillingWeek,
@@ -48,6 +56,7 @@ import type {
 
 import { DisputeAttachmentsField, DisputeAttachmentThumbs } from './DisputeAttachmentsField'
 import { LateEntryRequestDialog } from './LateEntryRequestDialog'
+import { OverCapBadge } from './OverCapBadge'
 import { SessionFormDialog } from './SessionFormDialog'
 
 const DISPUTE_REASON_MIN = 10
@@ -89,32 +98,42 @@ const STATUS_BADGE: Record<BillingWeekStatus, { label: string; className: string
 export function ProgressSummary({ data }: { data: HireBillingWeeks }) {
   const { progress, terms } = data
   const approvedHours = progress.approvedMinutes / 60
+  // The bar is clamped: the total hours are soft and logging can pass them.
   const pct =
     progress.totalMinutes != null && progress.totalMinutes > 0
       ? Math.min((progress.approvedMinutes / progress.totalMinutes) * 100, 100)
       : null
+  const overTotal = progress.totalMinutes != null && progress.loggedMinutes > progress.totalMinutes
   return (
     <div className="rounded-lg border bg-muted/30 px-4 py-3">
       <p className="text-sm font-medium text-foreground">
         {progress.totalMinutes != null
           ? `${approvedHours} of ${progress.totalMinutes / 60} hours approved`
           : `${approvedHours} hours approved`}
+        {overTotal && progress.totalMinutes != null && (
+          <span className="ml-2 font-medium text-amber-700">
+            · {overTotalText(progress.loggedMinutes, progress.totalMinutes)}
+          </span>
+        )}
       </p>
       {pct != null && (
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-          <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+          <div
+            className={`h-full rounded-full ${overTotal ? 'bg-amber-500' : 'bg-primary'}`}
+            style={{ width: `${pct}%` }}
+          />
         </div>
       )}
       <p className="mt-2 text-xs text-muted-foreground">
         {formatDuration(progress.loggedMinutes)} logged in total ·{' '}
-        {formatUsdCents(terms.hourlyRateCents)}/hour · up to{' '}
-        {formatDuration(terms.weeklyCapMinutes)} per week
+        {formatUsdCents(terms.hourlyRateCents)}/hour · {formatDuration(terms.weeklyCapMinutes)} per
+        week agreed
       </p>
       {'netPaidCents' in data.totals && data.totals.chargedCents > 0 && (
         <p className="mt-1 text-xs text-muted-foreground">
           Paid so far: {formatUsdCents(data.totals.netPaidCents)}
           {data.totals.refundedCents > 0 &&
-            ` (${formatUsdCents(data.totals.chargedCents)} charged, ${formatUsdCents(data.totals.refundedCents)} back to your card for unused hours)`}
+            ` (${formatUsdCents(data.totals.chargedCents)} charged, ${formatUsdCents(data.totals.refundedCents)} back to your card)`}
         </p>
       )}
       {'paidOutCents' in data.totals && data.totals.paidOutCents > 0 && (
@@ -131,12 +150,12 @@ function weekStatusText(week: BillingWeek, role: HireBillingWeeks['role']): stri
   switch (week.status) {
     case 'OPEN':
       return role === 'supervisor'
-        ? `Log this week's sessions by ${formatEasternDateTime(week.logDeadlineAt)}.`
-        : `Your supervisor can log sessions until ${formatEasternDateTime(week.logDeadlineAt)}; you'll review them after that.`
+        ? `Log this week's sessions by ${formatEasternDateTime(week.logDeadlineAt)}. Your supervisee is charged for them after that cutoff, and you're paid every Tuesday for the previous week.`
+        : `Your supervisor can log sessions until ${formatEasternDateTime(week.logDeadlineAt)}. Your card is then charged for the hours logged, and you review them over the weekend.`
     case 'IN_REVIEW':
       return role === 'supervisee'
         ? `Review by ${formatEasternDateTime(week.reviewEndsAt)}. If you don't, the week is approved automatically.`
-        : `Waiting for your supervisee's review until ${formatEasternDateTime(week.reviewEndsAt)}; approved automatically after that.`
+        : `Waiting for your supervisee's review until ${formatEasternDateTime(week.reviewEndsAt)}; approved automatically after that, and paid out Tuesday.`
     case 'DISPUTED':
       return 'Disputed — Gotham support will review this week and contact you both.'
     case 'APPROVED':
@@ -325,6 +344,7 @@ function CollapsedWeekRow({
         </Badge>
       </span>
       <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums text-muted-foreground">
+        <OverCapBadge overCapMinutes={week.overCapMinutes} />
         {hours}
         <ChevronDown
           className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
@@ -339,9 +359,14 @@ function isSuperviseePayment(payment: BillingWeek['payment']): payment is Superv
   return payment != null && 'totalCents' in payment
 }
 
-/** The week's money from the viewer's side: prepay, failure + Pay now, payout or refund. */
+/**
+ * The week's money from the viewer's side: the charge after the cutoff (or an
+ * estimate while the week is open), a failed charge + Pay now, the payout, or
+ * what went back to the card.
+ */
 function PaymentLine({
   week,
+  hourlyRateCents,
   hasPaymentCard,
   counterpartName,
   isPaying,
@@ -349,6 +374,7 @@ function PaymentLine({
   onChangeCard,
 }: {
   week: BillingWeek
+  hourlyRateCents: number
   hasPaymentCard: boolean
   counterpartName: string
   isPaying: boolean
@@ -358,6 +384,8 @@ function PaymentLine({
   const payment = week.payment
   if (!payment) return null
   const settled = week.status === 'SETTLED'
+  const chargeDate = formatCalendarDate(payment.chargeDate)
+  const payoutDate = formatCalendarDate(payment.payoutDate)
 
   if (isSuperviseePayment(payment)) {
     const total = formatUsdCents(payment.totalCents)
@@ -372,8 +400,8 @@ function PaymentLine({
           <p className="mt-0.5 text-xs text-muted-foreground">
             {payment.failureMessage ? `${payment.failureMessage} ` : ''}
             {hasPaymentCard
-              ? `Pay the ${total} prepay so ${counterpartName} can be paid for this week.`
-              : `Add a payment card to pay the ${total} prepay for this week.`}
+              ? `${chargeFailureText(payment.chargeAttempts)} ${counterpartName} is paid for this week once the ${total} goes through.`
+              : `Add a payment card to pay the ${total} for this week.`}
           </p>
           <div className="mt-2 flex flex-wrap justify-end gap-2">
             {onChangeCard && (
@@ -394,12 +422,18 @@ function PaymentLine({
     let text: string | null = null
     if (settled && payment.prepayStatus === 'PAID') {
       text = payment.refundCents
-        ? `Paid ${total} · ${formatUsdCents(payment.refundCents)} refunded for unused hours`
+        ? `Paid ${total} · ${formatUsdCents(payment.refundCents)} went back to your card after the review`
         : `Paid ${total}`
     } else if (payment.prepayStatus === 'PAID') {
-      text = `Charged ${total}${payment.paidAt ? ` on ${formatEasternDate(payment.paidAt)}` : ''}; anything unused goes back to your card after the review.`
+      text = `Charged ${total}${payment.paidAt ? ` on ${formatEasternDate(payment.paidAt)}` : ''} for ${formatDuration(week.loggedMinutes)}. If a problem report lowers the hours, the difference goes back to your card.`
+    } else if (payment.prepayStatus === 'PENDING' && week.status === 'OPEN') {
+      const soFar = Math.round((week.loggedMinutes / 60) * hourlyRateCents)
+      text =
+        week.loggedMinutes > 0
+          ? `About ${formatUsdCents(soFar)} + service fee for ${formatDuration(week.loggedMinutes)} so far · charged after Friday's cutoff (${chargeDate}).`
+          : `Nothing logged yet · charged after Friday's cutoff (${chargeDate}) for the hours logged, or nothing if none.`
     } else if (payment.prepayStatus === 'PENDING') {
-      text = `${total} prepay is charged on ${formatCalendarDate(payment.prepayDueDate)}.`
+      text = `Charging ${total} to your card for this week.`
     } else if (payment.prepayStatus === 'CANCELED') {
       text = 'Nothing was charged for this week.'
     }
@@ -409,8 +443,9 @@ function PaymentLine({
   if (payment.unpaid) {
     return (
       <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-        Unpaid week — {counterpartName}&apos;s prepay hasn&apos;t gone through yet. You can keep
-        logging sessions; you&apos;re paid for approved hours once the week is paid.
+        Unpaid week — {counterpartName}&apos;s payment for this week hasn&apos;t gone through yet.
+        We&apos;re retrying their card, and they can pay any time; you&apos;re paid for the approved
+        hours once it goes through.
       </p>
     )
   }
@@ -422,7 +457,20 @@ function PaymentLine({
     )
   }
   if (!settled && payment.prepayStatus === 'PAID') {
-    return <p className="mt-1 text-xs text-muted-foreground">Prepaid by {counterpartName}.</p>
+    return (
+      <p className="mt-1 text-xs text-muted-foreground">
+        Charged to {counterpartName}
+        {payment.paidAt ? ` on ${formatEasternDate(payment.paidAt)}` : ''} · paid to you{' '}
+        {payoutDate}.
+      </p>
+    )
+  }
+  if (!settled && payment.prepayStatus === 'PENDING' && week.status === 'OPEN') {
+    return (
+      <p className="mt-1 text-xs text-muted-foreground">
+        Charged to {counterpartName} after Friday&apos;s cutoff · paid to you {payoutDate}.
+      </p>
+    )
   }
   return null
 }
@@ -465,7 +513,8 @@ function WeekCard({
             {badge.label}
           </Badge>
         </div>
-        <span className="text-xs tabular-nums text-muted-foreground">
+        <span className="flex items-center gap-2 text-xs tabular-nums text-muted-foreground">
+          <OverCapBadge overCapMinutes={week.overCapMinutes} />
           {formatDuration(week.loggedMinutes)} / {formatDuration(week.weeklyCapMinutes)}
         </span>
       </div>
@@ -536,13 +585,24 @@ function WeekCard({
       )}
 
       {week.canReview && (
-        <div className="mt-3 flex justify-end gap-2 border-t pt-3">
-          <Button variant="outline" size="sm" onClick={onDispute}>
-            Dispute
-          </Button>
-          <Button size="sm" onClick={onApprove}>
-            Approve
-          </Button>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+          {/* The over-max flag sits right beside the decision: this is where the supervisee can push back. */}
+          {week.overCapMinutes > 0 ? (
+            <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-amber-900">
+              <OverCapBadge overCapMinutes={week.overCapMinutes} prominent />
+              <span>Approve if it&apos;s right, or report a problem.</span>
+            </div>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={onDispute}>
+              Dispute
+            </Button>
+            <Button size="sm" onClick={onApprove}>
+              Approve
+            </Button>
+          </div>
         </div>
       )}
     </section>
@@ -565,7 +625,7 @@ export function useHireSessions({
   /** The other party: the supervisee for supervisors, the supervisor for supervisees. */
   counterpartName: string
   enabled: boolean
-  /** Supervisee only: opens the payment dialog to add or change the prepay card. */
+  /** Supervisee only: opens the payment dialog to add or change the card the weeks are charged to. */
   onChangeCard?: () => void
 }) {
   const { data, isLoading, isError, refetch } = useHireBillingWeeks(hireId, enabled)
@@ -675,6 +735,7 @@ export function useHireSessions({
         payment={
           <PaymentLine
             week={week}
+            hourlyRateCents={data.terms.hourlyRateCents}
             hasPaymentCard={data.hasPaymentCard ?? false}
             counterpartName={counterpartName}
             isPaying={payingWeekId === week.id}
@@ -758,7 +819,7 @@ export function useHireSessions({
             ? `Approve ${formatDuration(approving.loggedMinutes)} for ${formatWeekRange(approving.startDate, approving.endDate)}?`
             : ''
         }
-        description={`${counterpartName} is paid for the approved hours, and anything unused goes back to your card. This can't be undone.`}
+        description={`${counterpartName} is paid for these hours on Tuesday. This can't be undone.`}
         confirmLabel="Approve"
         isPending={approveMutation.isPending}
         onConfirm={handleApprove}
@@ -837,7 +898,7 @@ export function HireSessionsDialog({
   counterpartName: string
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** Supervisee only: opens the payment dialog to add or change the prepay card. */
+  /** Supervisee only: opens the payment dialog to add or change the card the weeks are charged to. */
   onChangeCard?: () => void
 }) {
   const [showEarlier, setShowEarlier] = useState(false)
@@ -864,6 +925,9 @@ export function HireSessionsDialog({
         }
       : undefined,
   })
+  // The week holding the supervisee's account, when it belongs to this hire
+  // (the hold is account-wide, so it may be a week of another hire).
+  const heldWeek = data?.weeks.find((w) => w.id === data.holdWeekId) ?? null
 
   return (
     <>
@@ -905,8 +969,39 @@ export function HireSessionsDialog({
               </div>
             ) : (
               <>
+                {data.superviseeOnHold && (
+                  <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-foreground">
+                    <Lock className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
+                    <div className="min-w-0 flex-1">
+                      {data.role === 'supervisor' ? (
+                        <p>{supervisorHoldText(counterpartName)}</p>
+                      ) : (
+                        <>
+                          <p className="font-semibold">
+                            {superviseeHoldText(heldWeek?.startDate ?? null)}
+                          </p>
+                          {heldWeek ? (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Tap Pay now on {formatWeekRange(heldWeek.startDate, heldWeek.endDate)}{' '}
+                              below to lift the hold.
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Pay the unpaid week on your{' '}
+                              <Link href="/billing" className="font-medium text-primary underline">
+                                Billing page
+                              </Link>{' '}
+                              to lift the hold.
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {data.role === 'supervisor' &&
                   !data.canLog &&
+                  !data.superviseeOnHold &&
                   data.hasPaymentCard !== false &&
                   toEasternISODate() < data.terms.startDate && (
                     <div className="flex items-start gap-2 rounded-lg border bg-muted/30 px-4 py-3 text-sm text-foreground">
@@ -918,13 +1013,15 @@ export function HireSessionsDialog({
                         <span className="font-semibold">
                           Session logging opens on {formatCalendarDate(data.terms.startDate)}
                         </span>
-                        , the agreement start date. The first weekly prepay is charged that day; you
-                        can log sessions from then on.
+                        , the agreement start date. You can log sessions from then on; your
+                        supervisee is charged for the logged hours after each Friday&apos;s cutoff,
+                        and you&apos;re paid every Tuesday for the previous week.
                       </p>
                     </div>
                   )}
                 {data.role === 'supervisor' &&
                   !data.canLog &&
+                  !data.superviseeOnHold &&
                   data.hasPaymentCard !== false &&
                   toEasternISODate() >= data.terms.startDate &&
                   data.weeks[0] &&
@@ -965,7 +1062,7 @@ export function HireSessionsDialog({
                             {counterpartName} hasn&apos;t set up payment yet.
                           </span>{' '}
                           Billing weeks and session logging start once they save a card for the
-                          weekly prepays. We&apos;ve reminded them.
+                          weekly payments. We&apos;ve reminded them.
                         </>
                       ) : (
                         <>

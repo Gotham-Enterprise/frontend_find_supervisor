@@ -15,6 +15,7 @@ import {
   removePayoutAccount,
   removeSuperviseeCard,
   saveHirePaymentMethod,
+  setHireBackupCard,
 } from '@/lib/api/supervision'
 
 import { hireKeys } from './useHires'
@@ -131,7 +132,7 @@ export function useRemovePayoutAccount() {
   })
 }
 
-/** Weekly prepay/payout breakdown for prospective hourly terms (dollars, hours). */
+/** Weekly maximum/payout breakdown for prospective hourly terms (dollars, hours). */
 export function useHourlyQuote(
   hourlyRate: number | null | undefined,
   maxHoursPerWeek: number | null | undefined,
@@ -176,6 +177,34 @@ export function useSaveHirePaymentMethod() {
     },
     // The billing weeks show the payment state (and Pay now uses the new card),
     // so refresh them too, along with the payment history.
+    onSettled: async (_data, _error, { hireId }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: hireKeys.all }),
+        queryClient.invalidateQueries({ queryKey: hireSessionKeys.weeks(hireId) }),
+        queryClient.invalidateQueries({ queryKey: payoutKeys.all }),
+      ])
+    },
+  })
+}
+
+/**
+ * Sets (`paymentMethodId`) or removes (`null`) the hire's optional backup card.
+ * Refreshes the same queries as saving the primary card: the Billing page's
+ * card list shows "Backup for …", and the billing weeks' retry copy depends on it.
+ */
+export function useSetHireBackupCard() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ hireId, paymentMethodId }: { hireId: string; paymentMethodId: string | null }) =>
+      setHireBackupCard(hireId, paymentMethodId),
+    onSuccess: (data, { hireId }) => {
+      queryClient.setQueryData(payoutKeys.hirePayment(hireId), data)
+    },
+    // A card added through the SetupIntent is on the customer even when saving
+    // it as the backup fails, so refresh the saved-card list for the retry.
+    onError: async (_error, { hireId }) => {
+      await queryClient.invalidateQueries({ queryKey: payoutKeys.hirePayment(hireId) })
+    },
     onSettled: async (_data, _error, { hireId }) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: hireKeys.all }),

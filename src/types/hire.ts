@@ -124,7 +124,7 @@ export interface AgreementRecord {
   /** Hours the agreement covers; null = until ended. */
   totalHours: number | null
   platformFeeBps: number | null
-  /** Weekly prepay/payout breakdown for hourly agreements. */
+  /** Weekly maximum/payout breakdown for hourly agreements. */
   quote: HourlyQuote | null
   supervisorSignatureName: string
   supervisorSignedAt: string
@@ -210,7 +210,7 @@ export interface HireListItem {
   supervisionMonths: number | null
   monthlyAmount: string | null
   transactionFeePct: string | null
-  /** Set once the supervisee saves the card for an hourly agreement's weekly prepays. */
+  /** Set once the supervisee saves the card for an hourly agreement's weekly invoices. */
   paymentMethodSavedAt: string | null
   /**
    * In-app monthly billing: a canceled or ended hire keeps running until its

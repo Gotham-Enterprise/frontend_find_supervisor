@@ -8,16 +8,20 @@ Drafts below are starting points for legal review, not final language.
 
 **Payments through the platform.** Supervision fees agreed between a Supervisor
 (including Medical Directors) and a Supervisee may be paid through Find a
-Supervisor. Weekly agreements are prepaid at the start of each billing week
-(Monday–Sunday, US Eastern) for the agreed maximum hours; after the Supervisee
-reviews the week, only approved hours are kept and any unused prepay goes back
-to the card. Monthly agreements are charged on the start date and the same day
+Supervisor. Hourly agreements are billed after the work: the Supervisor logs
+sessions during the billing week (Saturday–Friday, US Eastern), the Supervisee's
+card is charged for the logged hours after the Friday 11:59 PM cutoff, the
+Supervisee reviews through Monday, and the Supervisor is paid on Tuesday. If a
+problem report lowers the hours, the difference goes back to the card. Nothing
+is charged for a week with no sessions. If a weekly charge can't be collected
+after the Supervisee's cards have been tried through Sunday, the Supervisee's
+account is placed on hold (no new sessions on their contracts, no new hire
+requests or agreements) until the week is paid. Monthly agreements are charged on the start date and the same day
 each month; the platform holds each payment and releases it to the Medical
 Director three days after the month ends unless a problem is reported.
 
 **Service fee.** Each charge includes a service fee that covers card processing.
-It is not returned when unused prepay or a disputed amount goes back to the
-card.
+It is not returned when a disputed amount goes back to the card.
 
 **Platform fee.** Find a Supervisor keeps a platform fee (currently 10%) from
 the amount earned by the Supervisor. The percentage is fixed when the agreement
@@ -103,8 +107,9 @@ Supervisor's future payouts.
   PaymentIntents, Refunds, Transfers, Connect accounts/account links,
   Balance transactions (read) and Events (read); and an **access policy**
   (server IPs) on it — all live keys currently have none.
-- First live run: one $1 hourly week end to end (prepay charge → partial
-  refund → transfer to a real Express account) before announcing.
+- First live run: one $1 hourly week end to end (log → Friday cutoff charge →
+  review → Tuesday transfer to a real Express account, plus one disputed week
+  with a partial refund) before announcing.
 
 ## 4b. Database release (backend)
 
@@ -152,8 +157,9 @@ release command → verify → flags on (backend first, then frontend).
    the three `NEXT_PUBLIC_*` flags `false`).
 5. **Turn on and verify:** backend flags → true, restart; frontend flags →
    true, redeploy. Dashboard test event to both webhook endpoints → 200. A $1
-   live hourly week end to end (prepay → log → approve → transfer + partial
-   refund visible in the Dashboard) and a $1 monthly MD hire. Admin Needs
+   live hourly week end to end (log → cutoff charge → approve → Tuesday
+   transfer; a disputed week's partial refund visible in the Dashboard) and a
+   $1 monthly MD hire. Admin Needs
    attention empty; cron ticks in the logs.
 6. **Rollback:** flags off (backend + frontend) stops new charges and hides the
    features; paid weeks/months still review and settle. No schema rollback:

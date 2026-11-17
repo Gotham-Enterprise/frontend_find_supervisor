@@ -16,6 +16,8 @@ import {
   FileSignature,
   Flag,
   Landmark,
+  Lock,
+  LockOpen,
   MessageCircle,
   MinusCircle,
   RotateCcw,
@@ -136,6 +138,12 @@ const TYPE_CONFIG: Record<NotificationType, TypeConfig> = {
     iconColor: 'text-muted-foreground',
     iconBg: 'bg-muted',
   },
+  billing_hold_started: {
+    icon: Lock,
+    iconColor: 'text-destructive',
+    iconBg: 'bg-destructive/10',
+  },
+  billing_hold_lifted: { icon: LockOpen, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50' },
 }
 
 /** Label shown after the user takes an inline CTA action */

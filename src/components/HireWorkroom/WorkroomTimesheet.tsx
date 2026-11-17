@@ -1,11 +1,13 @@
 'use client'
 
-import { AlertCircle, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react'
+import { AlertCircle, ChevronLeft, ChevronRight, CreditCard, Lock } from 'lucide-react'
+import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 import { useHireSessions } from '@/components/HireSessions/HireSessionsDialog'
-import { Button } from '@/components/ui/button'
+import { OverCapBadge } from '@/components/HireSessions/OverCapBadge'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import {
@@ -14,6 +16,7 @@ import {
   formatWeekRange,
   toEasternISODate,
 } from '@/lib/utils/date'
+import { chargeFailureText, overTotalText, superviseeHoldText } from '@/lib/utils/hourly-billing'
 import { formatUsdCents } from '@/lib/utils/money'
 import type { BillingWeek, SuperviseeWeekPayment } from '@/types/sessions'
 
@@ -23,13 +26,14 @@ import {
   formatDayRow,
   formatHrs,
   formatMonth,
-  mondayOf,
   monthGrid,
   monthOf,
+  weekStartOf,
 } from './dates'
 import { Banner } from './WorkroomOverview'
 
-const WEEKDAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+// Billing weeks run Saturday–Friday (US Eastern).
+const WEEKDAY_HEADERS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 /** Brings the selected week's sessions/payment card (below the calendar) into view. */
@@ -117,7 +121,7 @@ function lastWeekNote(week: BillingWeek): string {
     case 'DISPUTED':
       return 'Disputed · with Gotham support'
     default:
-      return 'Approved'
+      return week.status === 'SETTLED' ? 'Settled' : 'Approved · supervisor paid Tuesday'
   }
 }
 
@@ -183,33 +187,40 @@ export function WorkroomTimesheet({
   }
 
   const today = toEasternISODate()
-  const thisMonday = mondayOf(today)
-  const weeksByMonday = new Map(data.weeks.map((w) => [w.startDate, w]))
+  const thisWeekStart = weekStartOf(today)
+  const weeksByStart = new Map(data.weeks.map((w) => [w.startDate, w]))
   const days = dayTotals(data.weeks)
   const cap = data.terms.weeklyCapMinutes
 
   // Selected week: the linked one, else this week, else the latest billed week.
-  const selectedMonday =
+  const selectedWeekStart =
     weekParam && ISO_DATE.test(weekParam)
-      ? mondayOf(weekParam)
-      : weeksByMonday.has(thisMonday) || data.weeks.length === 0
-        ? thisMonday
+      ? weekStartOf(weekParam)
+      : weeksByStart.has(thisWeekStart) || data.weeks.length === 0
+        ? thisWeekStart
         : data.weeks[0].startDate
-  const selectedWeek = weeksByMonday.get(selectedMonday) ?? null
+  const selectedWeek = weeksByStart.get(selectedWeekStart) ?? null
   const selectedPayment: SuperviseeWeekPayment | null =
     selectedWeek?.payment && 'totalCents' in selectedWeek.payment ? selectedWeek.payment : null
   const unpaidSelected = selectedPayment?.canPayNow ? selectedPayment : null
-  const month = shownMonth ?? monthOf(selectedMonday)
+  const month = shownMonth ?? monthOf(selectedWeekStart)
 
-  const thisWeek = weeksByMonday.get(thisMonday) ?? null
-  const lastWeek = weeksByMonday.get(addDays(thisMonday, -7)) ?? null
+  const thisWeek = weeksByStart.get(thisWeekStart) ?? null
+  const lastWeek = weeksByStart.get(addDays(thisWeekStart, -7)) ?? null
   const lastSessionDate = [...days.keys()].sort().at(-1) ?? null
   const totals = 'netPaidCents' in data.totals ? data.totals : null
+  // The week holding the account, when it's one of this hire's (the hold is
+  // account-wide, so it may belong to another supervisor's workroom).
+  const heldWeek = data.superviseeOnHold
+    ? (data.weeks.find((w) => w.id === data.holdWeekId) ?? null)
+    : null
+  const overTotal =
+    data.progress.totalMinutes != null && data.progress.loggedMinutes > data.progress.totalMinutes
 
   function selectWeek(date: string, { scrollToDetails = false } = {}) {
     const params = new URLSearchParams(window.location.search)
     params.set('tab', 'timesheet')
-    params.set('week', mondayOf(date))
+    params.set('week', weekStartOf(date))
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     if (monthOf(date) !== month) setShownMonth(monthOf(date))
     if (scrollToDetails) scrollToWeekDetails()
@@ -217,6 +228,32 @@ export function WorkroomTimesheet({
 
   return (
     <div className="space-y-6">
+      {data.superviseeOnHold && (
+        <Banner
+          tone="red"
+          icon={<Lock className="size-4 text-destructive" aria-hidden />}
+          action={
+            heldWeek ? (
+              <Button
+                size="sm"
+                onClick={() => selectWeek(heldWeek.startDate, { scrollToDetails: true })}
+              >
+                Pay now
+              </Button>
+            ) : (
+              <Link href="/billing" className={buttonVariants({ size: 'sm' })}>
+                Pay now
+              </Link>
+            )
+          }
+        >
+          <span className="font-semibold">{superviseeHoldText(heldWeek?.startDate ?? null)}</span>{' '}
+          {heldWeek
+            ? 'The hold lifts the moment the week is paid.'
+            : 'The unpaid week is with another supervisor; pay it from your Billing page and the hold lifts right away.'}
+        </Banner>
+      )}
+
       {unpaidSelected && selectedWeek && (
         <Banner
           tone="red"
@@ -231,7 +268,8 @@ export function WorkroomTimesheet({
             The payment for {formatWeekRange(selectedWeek.startDate, selectedWeek.endDate)}{' '}
             didn&apos;t go through.
           </span>{' '}
-          {unpaidSelected.failureMessage ?? 'Pay now so sessions can keep being logged.'}
+          {unpaidSelected.failureMessage ? `${unpaidSelected.failureMessage} ` : ''}
+          {chargeFailureText(unpaidSelected.chargeAttempts)}
         </Banner>
       )}
 
@@ -260,6 +298,9 @@ export function WorkroomTimesheet({
         </StatTile>
         <StatTile label="This week" value={formatHrs(thisWeek?.loggedMinutes ?? 0)}>
           of {formatHrs(cap)} weekly max
+          {thisWeek && thisWeek.overCapMinutes > 0 && (
+            <OverCapBadge overCapMinutes={thisWeek.overCapMinutes} className="ml-2" />
+          )}
         </StatTile>
         <StatTile label="Last week" value={lastWeek ? formatHrs(lastWeek.loggedMinutes) : '—'}>
           {lastWeek ? (
@@ -269,6 +310,12 @@ export function WorkroomTimesheet({
                 <span className="block">
                   Review by {formatEasternDateTime(lastWeek.reviewEndsAt)}
                 </span>
+                {/* Over the agreed max: the flag goes right beside Approve / Dispute. */}
+                {lastWeek.overCapMinutes > 0 && (
+                  <span className="mt-1 block">
+                    <OverCapBadge overCapMinutes={lastWeek.overCapMinutes} prominent />
+                  </span>
+                )}
                 <span className="mt-1 flex items-center gap-3">
                   <button
                     type="button"
@@ -294,7 +341,12 @@ export function WorkroomTimesheet({
                 </span>
               </>
             ) : (
-              lastWeekNote(lastWeek)
+              <>
+                {lastWeekNote(lastWeek)}
+                {lastWeek.overCapMinutes > 0 && (
+                  <OverCapBadge overCapMinutes={lastWeek.overCapMinutes} className="ml-2" />
+                )}
+              </>
             )
           ) : (
             'No billing week'
@@ -304,6 +356,11 @@ export function WorkroomTimesheet({
           {data.progress.totalMinutes != null
             ? `${formatHrs(data.progress.approvedMinutes)} approved of ${formatHrs(data.progress.totalMinutes)}`
             : `${formatHrs(data.progress.approvedMinutes)} approved`}
+          {overTotal && data.progress.totalMinutes != null && (
+            <span className="block font-medium text-amber-700">
+              {overTotalText(data.progress.loggedMinutes, data.progress.totalMinutes)}
+            </span>
+          )}
           {totals && totals.chargedCents > 0 && (
             <span className="block">Paid so far: {formatUsdCents(totals.netPaidCents)}</span>
           )}
@@ -345,7 +402,7 @@ export function WorkroomTimesheet({
               </div>
               <div className="space-y-1">
                 {monthGrid(month).map((week) => {
-                  const isSelected = week[0] === selectedMonday
+                  const isSelected = week[0] === selectedWeekStart
                   return (
                     <div
                       key={week[0]}
@@ -397,10 +454,10 @@ export function WorkroomTimesheet({
             {/* Selected week, hours per day */}
             <div className="min-w-0">
               <p className="mb-2 text-base font-semibold text-foreground">
-                {formatWeekRange(selectedMonday, addDays(selectedMonday, 6))}
+                {formatWeekRange(selectedWeekStart, addDays(selectedWeekStart, 6))}
               </p>
               <ul className="divide-y border-y">
-                {Array.from({ length: 7 }, (_, i) => addDays(selectedMonday, i)).map((date) => {
+                {Array.from({ length: 7 }, (_, i) => addDays(selectedWeekStart, i)).map((date) => {
                   const minutes = days.get(date)?.minutes ?? 0
                   const pct = cap > 0 ? Math.min((minutes / cap) * 100, 100) : 0
                   return (
@@ -442,7 +499,7 @@ export function WorkroomTimesheet({
             renderWeekCard(selectedWeek)
           ) : (
             <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-              {selectedMonday < mondayOf(data.terms.startDate)
+              {selectedWeekStart < weekStartOf(data.terms.startDate)
                 ? `Supervision starts ${formatCalendarDate(data.terms.startDate)}.`
                 : 'No billing week for these dates.'}
             </p>

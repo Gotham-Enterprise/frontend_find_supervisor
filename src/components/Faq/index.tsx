@@ -150,7 +150,7 @@ const supervisorFaqs: FaqCategory[] = [
       {
         question: 'How do Supervisees pay me through the app?',
         answer:
-          "Supervision is billed hourly in the app. In each agreement you set your hourly rate, the maximum hours per week (1–40), and optionally the total hours the agreement covers. Your Supervisee saves a card and signs. Each billing week (Monday–Sunday, US Eastern) they prepay the weekly maximum up front. You log your sessions, they review them after the week, and you're paid for the approved hours — any unused prepay goes back to their card.",
+          "Supervision is billed hourly in the app. In each agreement you set your hourly rate, the maximum hours per week (1–40), and optionally the total hours the agreement covers. Your Supervisee saves a card and signs. Each billing week (Saturday–Friday, US Eastern) you log your sessions; after the Friday cutoff their card is charged for the hours you logged plus a service fee. The weekly maximum is what you agreed to; hours logged over it are flagged on the invoice and your Supervisee can report a problem. They review the week over the weekend, and you're paid every Tuesday for the previous week.",
       },
       {
         question: 'What do I need before I can send an hourly agreement?',
@@ -160,12 +160,12 @@ const supervisorFaqs: FaqCategory[] = [
       {
         question: 'How do I log sessions?',
         answer:
-          "Open Sessions on your Supervisee's card under My Supervisees. Log each session in 15-minute increments — you can't go over the weekly maximum or the agreement's total hours. You can log during the week and until Monday 11:59 PM (US Eastern) after it ends, and edit or delete sessions while the week is still open. We remind you on Friday and again on Monday if nothing is logged.",
+          "Open Sessions on your Supervisee's card under My Supervisees. Log each session in 15-minute increments (up to 8 hours each). You can log past the weekly maximum or the agreement's total hours, but those hours are flagged to your Supervisee on the invoice and they can report a problem. You can log Monday to Friday until the Friday 11:59 PM (US Eastern) cutoff, and edit or delete sessions while the week is still open. Weekend sessions count toward the following week. We email you Friday morning if the week isn’t full yet.",
       },
       {
         question: 'When do I get paid?',
         answer:
-          "Right after your Supervisee approves the week's sessions — or automatically when their 3-day review ends (Thursday 11:59 PM US Eastern). You receive the approved hours × your hourly rate, minus the platform fee, and get a \"You've Been Paid\" notification and email. Stripe then deposits it to your bank on your payout schedule, usually within 2 business days, and we notify you when it's deposited.",
+          "Every Tuesday for the previous week. Your Supervisee reviews the week Saturday through Monday 11:59 PM (US Eastern) — if they don't respond, it's approved automatically. You receive the approved hours × your hourly rate, minus the platform fee, and get a \"You've Been Paid\" notification and email. Stripe then deposits it to your bank on your payout schedule, usually within 2 business days, and we notify you when it's deposited.",
       },
       {
         question: 'What fees do I pay?',
@@ -200,7 +200,12 @@ const supervisorFaqs: FaqCategory[] = [
       {
         question: 'What happens if a supervision ends mid-week?',
         answer:
-          "If that week's prepay was already charged, you can still log the week's sessions until its deadline, and the week is reviewed and paid out as usual. If it hadn't been charged yet, it's canceled. No new weeks are billed after a supervision ends.",
+          "That week's sessions are still charged to your Supervisee after the Friday cutoff, reviewed, and paid out on Tuesday as usual. If nothing was logged, nothing is charged. No new weeks are billed after a supervision ends.",
+      },
+      {
+        question: "What happens if my Supervisee's account is on hold?",
+        answer:
+          "If a Supervisee's weekly payment is still unpaid on Sunday at 11:59 PM (US Eastern) after our three charge rounds, their account goes on hold. While it's on hold you can't log new sessions for them (on any of their agreements), and they can't start new supervisions — but messaging stays open, so you can still talk. You'll get a notification when the hold starts and when it lifts, which happens the moment they pay the week. Weeks already charged are reviewed and paid out as usual.",
       },
     ],
   },
@@ -399,37 +404,47 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'How does paying my Supervisor work?',
         answer:
-          'You pay your Supervisor through the app. When you sign the agreement you save a card. Each billing week (Monday–Sunday, US Eastern) your card is charged a weekly prepay — the hourly rate × the maximum hours per week, plus a service fee. After the week you review the sessions your Supervisor logged and pay only for the hours you approve; the unused prepay goes back to your card.',
+          "You pay your Supervisor through the app. When you sign the agreement you save a card; nothing is charged then. Each billing week (Saturday–Friday, US Eastern) your Supervisor logs their sessions, and right after the Friday 11:59 PM cutoff your card is charged for the hours they logged plus a service fee. The weekly maximum in your agreement is what you agreed to; hours logged over it are flagged on your invoice and you can report a problem. You review the sessions over the weekend; if a problem report lowers the hours, the difference for those hours goes back to your card (the service fee isn't returned).",
       },
       {
         question: 'What is the service fee?',
         answer:
-          'It covers secure card processing by Stripe (2.9% + 30¢ of the charge) and is added to each weekly charge and any late-session charge. It isn’t returned when unused prepay goes back to your card, because Stripe keeps its processing fee. You see the exact weekly total before you sign.',
+          "It covers secure card processing by Stripe (2.9% + 30¢ of the charge) and is added to each weekly charge and any late-session charge. It’s calculated on the hours actually charged, so a lighter week costs less. If a problem report lowers the hours, only the difference for those hours goes back to your card — the service fee isn't returned, because Stripe keeps its processing fee. You see the weekly total at the agreed maximum before you sign.",
       },
       {
         question: 'When is my card charged?',
         answer:
-          "Your first prepay is charged on the agreement's start date (right away if that's today), then every Monday at 12:00 AM US Eastern. Saving or changing a card doesn't charge anything on its own.",
+          "Right after each Friday's 11:59 PM (US Eastern) cutoff, for the hours your Supervisor logged that week. If nothing was logged, nothing is charged. The first charge comes after the Friday of the week your agreement starts in. Saving or changing a card doesn't charge anything on its own.",
       },
       {
         question: 'How do I review my sessions?',
         answer:
-          "After each week your Supervisor logs their sessions (by Monday 11:59 PM US Eastern) and you get a notification to review them in the Supervisor's workroom (Timesheet). Approve or dispute by Thursday 11:59 PM US Eastern — if you don't respond, the week is approved automatically. If no sessions were logged, your whole prepay goes back to your card (the service fee isn't returned).",
+          "Your Supervisor logs their sessions by Friday 11:59 PM (US Eastern). Once the week closes you get a notification to review them in the Supervisor's workroom (Timesheet). Approve or report a problem by Monday 11:59 PM US Eastern — if you don't respond, the week is approved automatically and your Supervisor is paid on Tuesday.",
       },
       {
         question: 'How do I dispute a week?',
         answer:
-          'Open that Supervisor’s workroom and go to Timesheet. Choose Dispute under Last week (or on the week in Week Details) and explain what’s wrong — you can attach up to 3 images (JPG or PNG, 5 MB each). Gotham support reviews it and decides how many hours are paid; anything not paid goes back to your card. You’re both notified of the outcome.',
+          'Open that Supervisor’s workroom and go to Timesheet. Choose Dispute under Last week (or on the week in Week Details) and explain what’s wrong — you can attach up to 3 images (JPG or PNG, 5 MB each). Gotham support reviews it and decides how many hours are paid; if that lowers the hours, the difference for those hours goes back to your card (the service fee isn’t returned). You’re both notified of the outcome.',
       },
       {
-        question: 'When does unused prepay go back to my card?',
+        question: 'When does money go back to my card?',
         answer:
-          'Unused prepay goes back to the card you paid with as soon as the week is approved (or a dispute is resolved). Your bank usually shows it within 5–10 business days.',
+          'Only when a problem report lowers the hours for a week you were already charged for. The difference for those hours goes back to the card you paid with as soon as the dispute is resolved; the service fee isn’t returned. Your bank usually shows it within 5–10 business days.',
       },
       {
         question: 'What if my weekly payment fails?',
         answer:
-          "You'll get a notification and an email. Update your card if needed, then tap Pay now in the Supervisor's workroom (Overview or Timesheet) or on your Billing page. Failed payments aren't retried automatically, and your Supervisor is paid for the week only after it's paid.",
+          "You'll get a notification and an email. We try again automatically in 3 rounds: right after the Friday cutoff, Saturday evening and Sunday afternoon (US Eastern). In each round we charge your card and, if it declines and you've added a backup card, try the backup right away. You can also update your card and tap Pay now at any time in the Supervisor's workroom (Overview or Timesheet) or on your Billing page — after the third round that's the only way to pay. If the week is still unpaid Sunday at 11:59 PM, your account goes on hold until it's paid. Your Supervisor is paid for the week only after it's paid.",
+      },
+      {
+        question: 'Can I add a backup card?',
+        answer:
+          "Yes, and it's optional. When you set up or change the card for a supervision (Set up payment / Change card on the Supervisor's card or workroom), add a backup card below the primary one — pick another saved card or add a new one. If your card declines when the week is charged, we try the backup right away, in each of the 3 rounds. You can remove the backup at any time; nothing is ever charged to it unless your primary card fails.",
+      },
+      {
+        question: 'What does it mean that my account is on hold?',
+        answer:
+          "A week's payment was still unpaid on Sunday at 11:59 PM (US Eastern) after our three charge rounds. While your account is on hold, your Supervisors can't log new sessions on any of your agreements, and you can't send new hire requests or sign new agreements. Messaging stays open. The hold lifts automatically the moment the unpaid week is paid — update your card if needed and tap Pay now on that week (Billing page, or the Supervisor's workroom). You get a notification and an email when the hold starts and when it lifts.",
       },
       {
         question: 'How do I change or remove a card?',
@@ -444,7 +459,7 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'What happens if I end a supervision mid-week?',
         answer:
-          "If this week's prepay was already charged, the week is still reviewed — you pay only for approved hours and the rest goes back to your card. If it hadn't been charged yet, it won't be. There are no more weekly charges after a supervision ends.",
+          "This week's sessions are still charged after the Friday cutoff and reviewed as usual. If nothing was logged, nothing is charged. There are no more weekly charges after a supervision ends.",
       },
       ...(IN_APP_MONTHLY_ENABLED
         ? [

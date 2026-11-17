@@ -1,10 +1,13 @@
 /**
- * Billing week of an hourly hire (Mon–Sun, US Eastern):
- * - OPEN: the supervisor can log sessions until the Monday 11:59 PM ET deadline
- * - IN_REVIEW: the supervisee approves or disputes within 3 days
+ * Billing week of an hourly hire (Sat–Fri, US Eastern; sessions are logged
+ * Mon–Fri, and weekend sessions belong to the week whose Mon–Fri follows):
+ * - OPEN: the supervisor can log sessions until the Friday 11:59 PM ET cutoff;
+ *   right after it the supervisee's card is charged the logged hours + service fee
+ * - IN_REVIEW: the supervisee approves or reports a problem Saturday–Monday 11:59 PM ET
  * - DISPUTED: frozen until Gotham support resolves it
  * - APPROVED: by the supervisee, automatically, or by support
- * - SETTLED: supervisor paid, unused prepay refunded
+ * - SETTLED: supervisor paid (Tuesday); if a dispute lowered the hours, the
+ *   difference went back to the supervisee's card
  */
 export type BillingWeekStatus = 'OPEN' | 'IN_REVIEW' | 'DISPUTED' | 'APPROVED' | 'SETTLED'
 
@@ -48,22 +51,35 @@ export interface LateEntryRequest {
   resolutionNote: string | null
 }
 
-/** The week's money, as each side sees it. */
+/**
+ * The week's money, as each side sees it. `prepayStatus` keeps its name but
+ * describes the post-pay invoice: PENDING = not charged yet (week still open),
+ * PAID = charged, FAILED = charge failed (retried daily, or Pay now),
+ * CANCELED = nothing charged (no hours logged).
+ */
 interface BillingWeekPaymentBase {
   prepayStatus: PrepayStatus
-  /** Eastern YYYY-MM-DD the prepay is charged: the week's Monday, or the agreement start if later. */
-  prepayDueDate: string
+  /** Eastern YYYY-MM-DD the invoice is charged: the Saturday after the week's Friday cutoff. */
+  chargeDate: string
+  /** Eastern YYYY-MM-DD the supervisor is paid: the Tuesday after the review window. */
+  payoutDate: string
   paidAt: string | null
   settledAt: string | null
-  /** Due but not paid (declined, or no card yet) — sessions can still be logged. */
+  /** Closed and not paid (charge failed, or no card) — Pay now is available to the supervisee. */
   unpaid: boolean
 }
 
 export interface SuperviseeWeekPayment extends BillingWeekPaymentBase {
-  /** Weekly cap at the hourly rate + service fee */
+  /** Logged hours at the rate (hours over the soft weekly max included); 0 while OPEN */
+  amountCents: number
+  /** Service fee on `amountCents` */
+  serviceFeeCents: number
+  /** Invoice total: `amountCents` + `serviceFeeCents`; 0 while OPEN */
   totalCents: number
+  /** Automatic charge rounds so far (max 3; each round tries the card, then the backup card) */
+  chargeAttempts: number
   failureMessage: string | null
-  /** Unused prepay refunded after the review */
+  /** Back to the card after a problem report lowered the hours */
   refundCents: number | null
   canPayNow: boolean
 }
@@ -84,14 +100,24 @@ export interface DisputeAttachment {
 
 export interface BillingWeek {
   id: string
-  /** Monday, YYYY-MM-DD (Eastern) */
+  /** Saturday, YYYY-MM-DD (Eastern) */
   startDate: string
-  /** Sunday, YYYY-MM-DD (Eastern) */
+  /** Friday, YYYY-MM-DD (Eastern) */
   endDate: string
+  /** Eastern YYYY-MM-DD the invoice is charged (the Saturday after the cutoff) */
+  chargeDate: string
+  /** Eastern YYYY-MM-DD the supervisor is paid (the following Tuesday) */
+  payoutDate: string
   status: BillingWeekStatus
   prepayStatus: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELED'
   weeklyCapMinutes: number
   loggedMinutes: number
+  /**
+   * Minutes logged beyond the weekly max (0 when within). The max is soft:
+   * such hours are logged, flagged to the supervisee on the invoice, charged
+   * and paid out like any other unless the supervisee reports a problem.
+   */
+  overCapMinutes: number
   logDeadlineAt: string
   reviewEndsAt: string
   approvedMinutes: number | null
@@ -112,7 +138,7 @@ export interface BillingWeek {
 export interface HireBillingWeeks {
   role: 'supervisor' | 'supervisee'
   /**
-   * Whether the weekly prepays have a card to charge. Until the supervisee saves
+   * Whether the weekly invoices have a card to charge. Until the supervisee saves
    * one, no billing weeks are created and the supervisor can't log sessions.
    */
   hasPaymentCard: boolean | null
@@ -128,11 +154,26 @@ export interface HireBillingWeeks {
     totalHours: number | null
   }
   progress: {
+    /** Can exceed `totalMinutes`: the agreement's total hours are soft, like the weekly max. */
     loggedMinutes: number
     approvedMinutes: number
     totalMinutes: number | null
   }
+  /**
+   * False before the start date, outside an open week, without a payment card,
+   * or while the supervisee's account is on hold (`superviseeOnHold`). Hours
+   * used up or a full week no longer turn it false.
+   */
   canLog: boolean
+  /**
+   * The supervisee's account is on hold: a week was still unpaid Sunday 11:59 PM
+   * ET after the three charge rounds. No sessions can be logged on any of their
+   * hires until that week (`holdWeekId`, which may belong to another hire) is
+   * paid; messaging stays open. Lifts the moment the week is paid.
+   */
+  superviseeOnHold: boolean
+  holdSince: string | null
+  holdWeekId: string | null
   /** Dates (YYYY-MM-DD, Eastern) the supervisor can log for right now. */
   loggable: { from: string; to: string } | null
   /** Newest first */
@@ -154,7 +195,7 @@ export interface WeekSummaryRow {
   sessionsPath: string
   status: BillingWeekStatus
   prepayStatus: PrepayStatus
-  /** Monday … Sunday */
+  /** Saturday … Friday */
   days: WeekSummaryDay[]
   minutes: number
   billedMinutes: number
@@ -167,9 +208,9 @@ export interface WeekSummaryRow {
 }
 
 export interface SupervisorWeekSummary {
-  /** Monday, YYYY-MM-DD (Eastern) */
+  /** Saturday, YYYY-MM-DD (Eastern) */
   startDate: string
-  /** Sunday, YYYY-MM-DD (Eastern) */
+  /** Friday, YYYY-MM-DD (Eastern) */
   endDate: string
   isCurrentWeek: boolean
   hasPrevious: boolean
@@ -228,9 +269,11 @@ export interface EarningsWeek {
   approvedMinutes: number | null
   approvedBy: BillingWeekApprovedBy | null
   paidOutCents: number
-  /** Estimate for a prepaid week still in progress */
+  /** Expected net payout for any week with hours that hasn't settled (an estimate while open) */
   pendingCents: number
   settledAt: string | null
+  /** Minutes logged beyond the weekly max, when the API reports it (0 or absent when within). */
+  overCapMinutes?: number
   // Breakdown: the paid (or, until settled, logged) hours at the rate, less the platform fee
   hourlyRateCents: number
   platformFeeBps: number
@@ -242,8 +285,12 @@ export interface EarningsWeek {
   estimated: boolean
   lateEntries: EarningsLateEntry[]
   // Timeline
-  prepaidAt: string | null
-  prepayFailureMessage: string | null
+  /** Eastern YYYY-MM-DD the supervisee is charged (Saturday after the cutoff) */
+  chargeDate: string
+  /** Eastern YYYY-MM-DD the payout goes out (the following Tuesday) */
+  payoutDate: string
+  chargedAt: string | null
+  chargeFailureMessage: string | null
   logDeadlineAt: string
   reviewEndsAt: string
   approvedAt: string | null

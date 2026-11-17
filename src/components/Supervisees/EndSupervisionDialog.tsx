@@ -149,9 +149,9 @@ function EndSupervisionBody({
 
       {billedInApp && (
         <p className="rounded-lg border bg-muted/40 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-          No new weekly payments are charged after this. If this week&apos;s prepay was already
-          paid, you can still log this week&apos;s sessions until Monday 11:59 PM (US Eastern), and
-          you&apos;re paid for the hours {superviseeName} approves.
+          No new weeks are billed after this. This week&apos;s sessions are still charged to{' '}
+          {superviseeName} after Friday&apos;s cutoff, and you&apos;re paid Tuesday for the hours
+          they approve.
         </p>
       )}
 

@@ -3,6 +3,7 @@
 import { ChevronDown, Download, Wallet } from 'lucide-react'
 import { useState } from 'react'
 
+import { OverCapBadge } from '@/components/HireSessions/OverCapBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -26,8 +27,8 @@ const PAGE_SIZE = 10
 /** Where the week's money stands, from the supervisor's side, with its next date. */
 function weekStage(week: EarningsWeek): { text: string; className: string } {
   if (week.status === 'SETTLED' && week.prepayStatus === 'CANCELED') {
-    // Closed at $0: the supervisee never paid and nothing was logged.
-    return { text: 'Closed · unpaid week, nothing logged', className: 'text-muted-foreground' }
+    // Closed at $0: nothing was logged, so nothing was charged.
+    return { text: 'Closed · nothing logged, nothing charged', className: 'text-muted-foreground' }
   }
   if (week.status === 'SETTLED') {
     return {
@@ -35,23 +36,28 @@ function weekStage(week: EarningsWeek): { text: string; className: string } {
       className: 'text-primary',
     }
   }
-  if (week.prepayStatus !== 'PAID') {
+  if (week.status === 'OPEN') {
+    return {
+      text: `Logging until ${formatEasternDate(week.logDeadlineAt)}`,
+      className: 'text-muted-foreground',
+    }
+  }
+  if (week.prepayStatus === 'FAILED') {
     return { text: "Awaiting your supervisee's payment", className: 'text-amber-700' }
+  }
+  if (week.prepayStatus !== 'PAID') {
+    // Closed, between the Friday cutoff and the charge.
+    return { text: 'Charging your supervisee', className: 'text-muted-foreground' }
   }
   if (week.status === 'DISPUTED') {
     return { text: 'Disputed · with Gotham support', className: 'text-destructive' }
   }
+  const payout = `Paid ${formatCalendarDate(week.payoutDate)}`
   if (week.status === 'APPROVED') {
-    return { text: 'Approved · paying out', className: 'text-muted-foreground' }
-  }
-  if (week.status === 'IN_REVIEW') {
-    return {
-      text: `Under review until ${formatEasternDate(week.reviewEndsAt)}`,
-      className: 'text-muted-foreground',
-    }
+    return { text: `Approved · ${payout}`, className: 'text-muted-foreground' }
   }
   return {
-    text: `Logging until ${formatEasternDate(week.logDeadlineAt)}`,
+    text: `Under review until ${formatEasternDate(week.reviewEndsAt)} · ${payout}`,
     className: 'text-muted-foreground',
   }
 }
@@ -89,11 +95,19 @@ const LATE_CHARGE_TEXT: Record<EarningsWeek['lateEntries'][number]['chargeStatus
 function WeekDetails({ week }: { week: EarningsWeek }) {
   const feePercent = week.platformFeeBps / 100
   const timeline: { label: string; value: string }[] = []
-  if (week.prepaidAt)
-    timeline.push({ label: 'Prepaid by your supervisee', value: formatEasternDate(week.prepaidAt) })
-  else if (week.prepayStatus === 'FAILED')
-    timeline.push({ label: 'Prepay', value: "Didn't go through; your supervisee was asked to pay" })
   timeline.push({ label: 'Logging deadline', value: formatEasternDateTime(week.logDeadlineAt) })
+  if (week.chargedAt)
+    timeline.push({ label: 'Charged to your supervisee', value: formatEasternDate(week.chargedAt) })
+  else if (week.prepayStatus === 'FAILED')
+    timeline.push({
+      label: 'Charge',
+      value: "Didn't go through; we're retrying your supervisee's card",
+    })
+  else if (week.prepayStatus === 'PENDING')
+    timeline.push({
+      label: 'Charged to your supervisee',
+      value: formatCalendarDate(week.chargeDate),
+    })
   if (week.disputedAt)
     timeline.push({ label: 'Disputed', value: formatEasternDate(week.disputedAt) })
   if (week.approvedAt) {
@@ -105,6 +119,8 @@ function WeekDetails({ week }: { week: EarningsWeek }) {
     timeline.push({ label: 'Review ends', value: formatEasternDateTime(week.reviewEndsAt) })
   }
   if (week.settledAt) timeline.push({ label: 'Paid out', value: formatEasternDate(week.settledAt) })
+  else if (week.prepayStatus !== 'CANCELED')
+    timeline.push({ label: 'Paid out', value: formatCalendarDate(week.payoutDate) })
 
   return (
     <div className="grid gap-4 border-t bg-muted/20 px-4 py-3 sm:grid-cols-2">
@@ -135,7 +151,8 @@ function WeekDetails({ week }: { week: EarningsWeek }) {
         </dl>
         {week.estimated && week.approvedMinutes == null && (
           <p className="mt-1.5 text-xs text-muted-foreground">
-            Based on the hours logged so far; your supervisee approves them after the week.
+            Based on the hours logged so far; your supervisee reviews them after Friday&apos;s
+            cutoff and you&apos;re paid every Tuesday for the previous week.
           </p>
         )}
         {week.lateEntries.length > 0 && (
@@ -216,7 +233,7 @@ function MonthlyTable({ months }: { months: EarningsMonth[] }) {
 
 /**
  * In-app earnings across all hourly hires: what was paid out per billing week
- * (after the platform fee), an estimate for prepaid weeks still in progress,
+ * (after the platform fee), an estimate for weeks still in progress,
  * a per-supervisee summary, the last months, and a CSV export.
  */
 export function EarningsCard() {
@@ -267,7 +284,8 @@ export function EarningsCard() {
             <div>
               <CardTitle>Supervision Earnings</CardTitle>
               <CardDescription className="mt-0.5">
-                Weekly payouts for sessions your supervisees approved, after the platform fee.
+                Paid every Tuesday for the previous week&apos;s approved sessions, after the
+                platform fee.
               </CardDescription>
             </div>
           </div>
@@ -370,7 +388,8 @@ export function EarningsCard() {
 
             {data.items.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No earnings yet. Weeks show up here once your supervisees&apos; prepays go through.
+                No earnings yet. Weeks show up here once you log sessions under a signed hourly
+                agreement.
               </p>
             ) : (
               <ul className="divide-y rounded-lg border">
@@ -394,12 +413,16 @@ export function EarningsCard() {
                               · {week.superviseeName ?? 'Supervisee'}
                             </span>
                           </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDuration(week.billedMinutes)}
-                            {week.approvedMinutes != null && week.approvedMinutes !== week.minutes
-                              ? ` of ${formatDuration(week.minutes)} logged`
-                              : ''}{' '}
-                            · <span className={stage.className}>{stage.text}</span>
+                          <p className="flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground">
+                            <span>
+                              {formatDuration(week.billedMinutes)}
+                              {week.approvedMinutes != null && week.approvedMinutes !== week.minutes
+                                ? ` of ${formatDuration(week.minutes)} logged`
+                                : ''}{' '}
+                              · <span className={stage.className}>{stage.text}</span>
+                            </span>
+                            {/* Hours over the agreed weekly max are still paid unless the supervisee reports a problem. */}
+                            <OverCapBadge overCapMinutes={week.overCapMinutes ?? 0} />
                           </p>
                         </div>
                         <span className="flex shrink-0 items-center gap-2">

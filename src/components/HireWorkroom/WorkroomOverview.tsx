@@ -1,21 +1,36 @@
 'use client'
 
-import { AlertCircle, CalendarClock, CreditCard, FileSignature, Hourglass } from 'lucide-react'
+import {
+  AlertCircle,
+  CalendarClock,
+  CreditCard,
+  FileSignature,
+  Hourglass,
+  Lock,
+} from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
+import { OverCapBadge } from '@/components/HireSessions/OverCapBadge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import { useHireBillingWeeks } from '@/lib/hooks'
-import { formatEasternDateTime, formatWeekRange, toEasternISODate } from '@/lib/utils/date'
+import {
+  formatCalendarDate,
+  formatEasternDate,
+  formatEasternDateTime,
+  formatWeekRange,
+  toEasternISODate,
+} from '@/lib/utils/date'
 import { hiredListPath, workroomHref } from '@/lib/utils/hire-workroom'
+import { chargeFailureText, overTotalText, superviseeHoldText } from '@/lib/utils/hourly-billing'
 import { formatUsdCents } from '@/lib/utils/money'
 import { formatDateOnly } from '@/lib/utils/profile-formatters'
 import type { HireListItem } from '@/types/hire'
 import type { BillingWeek, SuperviseeWeekPayment } from '@/types/sessions'
 
-import { formatHrs, mondayOf } from './dates'
+import { formatHrs, weekStartOf } from './dates'
 
 export function Banner({
   tone,
@@ -79,9 +94,10 @@ function payment(week: BillingWeek): SuperviseeWeekPayment | null {
 }
 
 /**
- * Upwork's contract overview, adapted to weekly prepays: what this week costs
- * so far, the rate, and the hours against the weekly max — plus whatever the
- * supervisee needs to do now (sign, set up payment, review a week, pay).
+ * Upwork's contract overview, adapted to post-pay billing weeks: what this
+ * week costs so far, the rate, and the hours against the weekly max — plus
+ * whatever the supervisee needs to do now (sign, set up payment, review a
+ * week, pay a failed charge).
  */
 export function WorkroomOverview({
   hire,
@@ -104,8 +120,8 @@ export function WorkroomOverview({
   const timesheetHref = workroomHref(hire.id, 'timesheet', hiredListPath(hire))
   const weekHref = (week: BillingWeek) => `${timesheetHref}&week=${week.startDate}`
 
-  const thisMonday = mondayOf(toEasternISODate())
-  const thisWeek = data?.weeks.find((w) => w.startDate === thisMonday) ?? null
+  const thisWeekStart = weekStartOf(toEasternISODate())
+  const thisWeek = data?.weeks.find((w) => w.startDate === thisWeekStart) ?? null
   const toReview = data?.weeks.filter((w) => w.canReview) ?? []
   const unpaid = data?.weeks.filter((w) => payment(w)?.canPayNow) ?? []
   const rateCents = data?.terms.hourlyRateCents ?? hire.agreement?.hourlyRateCents ?? 0
@@ -113,9 +129,32 @@ export function WorkroomOverview({
   const thisWeekPayment = thisWeek ? payment(thisWeek) : null
   const thisWeekCostCents = Math.round((rateCents * (thisWeek?.loggedMinutes ?? 0)) / 60)
   const line = statusLine(hire, supervisorName)
+  // The week holding the account, when it's one of this hire's (the hold is account-wide).
+  const heldWeek = data?.superviseeOnHold
+    ? (data.weeks.find((w) => w.id === data.holdWeekId) ?? null)
+    : null
 
   return (
     <div className="space-y-4">
+      {data?.superviseeOnHold && (
+        <Banner
+          tone="red"
+          icon={<Lock className="size-4 text-destructive" aria-hidden />}
+          action={
+            <Link
+              href={heldWeek ? weekHref(heldWeek) : '/billing'}
+              className={buttonVariants({ size: 'sm' })}
+            >
+              Pay now
+            </Link>
+          }
+        >
+          <span className="font-semibold">{superviseeHoldText(heldWeek?.startDate ?? null)}</span>{' '}
+          {heldWeek
+            ? 'The hold lifts the moment the week is paid.'
+            : 'The unpaid week is with another supervisor; pay it from your Billing page and the hold lifts right away.'}
+        </Banner>
+      )}
       {canSignAgreement && (
         <Banner
           tone="amber"
@@ -178,7 +217,8 @@ export function WorkroomOverview({
           <span className="font-semibold">
             The payment for {formatWeekRange(week.startDate, week.endDate)} didn&apos;t go through.
           </span>{' '}
-          {payment(week)?.failureMessage ?? 'Pay now so sessions can keep being logged.'}
+          {payment(week)?.failureMessage ? `${payment(week)?.failureMessage} ` : ''}
+          {chargeFailureText(payment(week)?.chargeAttempts ?? 1)}
         </Banner>
       ))}
 
@@ -194,9 +234,9 @@ export function WorkroomOverview({
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {thisWeekPayment?.paidAt
-                  ? `${formatUsdCents(thisWeekPayment.totalCents)} was charged at the start of the week. You pay only for the hours you approve; anything unused goes back to your card.`
+                  ? `${formatUsdCents(thisWeekPayment.totalCents)} was charged on ${formatEasternDate(thisWeekPayment.paidAt)} for the hours logged. If a problem report lowers the hours, the difference goes back to your card; the service fee isn't returned.`
                   : thisWeekPayment
-                    ? `${formatUsdCents(thisWeekPayment.totalCents)} is charged for this week. You pay only for the hours you approve.`
+                    ? `Charged after Friday's cutoff (${formatCalendarDate(thisWeekPayment.chargeDate)}) for the hours logged, plus a service fee. Hours over the agreed weekly max are flagged on the invoice, and you can report a problem.`
                     : 'Billing starts with the first week of supervision.'}
               </p>
             </div>
@@ -213,6 +253,9 @@ export function WorkroomOverview({
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
                 of {formatHrs(capMinutes)} weekly max
+                {thisWeek && thisWeek.overCapMinutes > 0 && (
+                  <OverCapBadge overCapMinutes={thisWeek.overCapMinutes} className="ml-2" />
+                )}
               </p>
             </div>
             <Link href={timesheetHref} className={buttonVariants({ className: 'md:self-center' })}>
@@ -236,11 +279,17 @@ export function WorkroomOverview({
             <p className="text-sm tabular-nums text-muted-foreground">
               {formatHrs(data.progress.approvedMinutes)} approved of{' '}
               {formatHrs(data.progress.totalMinutes)}
+              {/* The total is soft: logging can pass it, so the bar clamps at full and says so. */}
+              {data.progress.loggedMinutes > data.progress.totalMinutes && (
+                <span className="ml-2 font-medium text-amber-700">
+                  · {overTotalText(data.progress.loggedMinutes, data.progress.totalMinutes)}
+                </span>
+              )}
             </p>
           </div>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
             <div
-              className="h-full rounded-full bg-primary"
+              className={`h-full rounded-full ${data.progress.loggedMinutes > data.progress.totalMinutes ? 'bg-amber-500' : 'bg-primary'}`}
               style={{
                 width: `${Math.min((data.progress.approvedMinutes / data.progress.totalMinutes) * 100, 100)}%`,
               }}

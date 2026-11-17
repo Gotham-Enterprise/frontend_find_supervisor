@@ -47,7 +47,7 @@ export function formatCalendarDate(isoDate: string): string {
   })
 }
 
-/** "Oct 12–18" or "Oct 26 – Nov 1" for a Monday–Sunday billing week. */
+/** "Oct 12–18" or "Oct 26 – Nov 1" for a Saturday–Friday billing week. */
 export function formatWeekRange(startDate: string, endDate: string): string {
   const month = (d: string) =>
     calendarDate(d).toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })

@@ -69,8 +69,8 @@ function useBillingWeeksMutation<TVariables>(
     mutationFn,
     onSuccess: (data) => {
       queryClient.setQueryData(hireSessionKeys.weeks(hireId), data)
-      // The same change shows elsewhere: the hire's status (first payment
-      // makes it active), the Billing page and the supervisor's earnings.
+      // The same change shows elsewhere: the hire's status, the Billing page
+      // and the supervisor's earnings.
       void queryClient.invalidateQueries({ queryKey: hireKeys.all })
       void queryClient.invalidateQueries({ queryKey: payoutKeys.all })
       void queryClient.invalidateQueries({

@@ -4,16 +4,19 @@ import { CalendarRange, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
+import { OverCapBadge } from '@/components/HireSessions/OverCapBadge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import { useSupervisorWeekSummary } from '@/lib/hooks'
 import { formatDuration, formatWeekRange } from '@/lib/utils/date'
+import { overCapMinutesOf } from '@/lib/utils/hourly-billing'
 import { formatUsdCents } from '@/lib/utils/money'
 import type { WeekSummaryRow } from '@/types/sessions'
 
-const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+// Billing weeks run Saturday–Friday (US Eastern).
+const WEEKDAYS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']
 const TOP_SUPERVISEES = 5
 
 /** "2026-10-19" + 7 → "2026-10-26" */
@@ -39,17 +42,21 @@ function rowStatus(row: WeekSummaryRow): { text: string; className: string } {
   if (row.status === 'SETTLED' && row.prepayStatus === 'CANCELED')
     return { text: 'Closed · nothing charged', className: 'text-muted-foreground' }
   if (row.status === 'SETTLED') return { text: 'Paid out', className: 'text-primary' }
-  if (row.prepayStatus !== 'PAID') return { text: 'Awaiting payment', className: 'text-amber-700' }
+  if (row.status === 'OPEN') return { text: 'Logging open', className: 'text-muted-foreground' }
+  if (row.prepayStatus === 'FAILED')
+    return { text: 'Awaiting payment', className: 'text-amber-700' }
+  if (row.prepayStatus !== 'PAID') return { text: 'Charging', className: 'text-muted-foreground' }
   if (row.status === 'DISPUTED') return { text: 'Disputed', className: 'text-destructive' }
-  if (row.status === 'APPROVED') return { text: 'Approved', className: 'text-muted-foreground' }
-  if (row.status === 'IN_REVIEW') return { text: 'In review', className: 'text-muted-foreground' }
-  return { text: 'Logging open', className: 'text-muted-foreground' }
+  if (row.status === 'APPROVED')
+    return { text: 'Approved · paid Tuesday', className: 'text-muted-foreground' }
+  return { text: 'In review · paid Tuesday', className: 'text-muted-foreground' }
 }
 
 /**
  * One week across all hourly hires, Upwork-style: totals, the top supervisees
  * by pay, and an hours-per-day grid with a row per supervisee. Weeks are
- * Monday–Sunday in US Eastern time.
+ * Saturday–Friday in US Eastern time; sessions are logged Mon–Fri and the
+ * supervisor is paid every Tuesday for the previous week.
  */
 export function WeekSummaryCard() {
   // null = the current week
@@ -216,7 +223,7 @@ export function WeekSummaryCard() {
             {data.rows.length === 0 ? (
               <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
                 {data.isCurrentWeek
-                  ? 'No billing summary yet. It starts once a supervisee prepays their week.'
+                  ? 'No billing summary yet. It starts once you log sessions under a signed hourly agreement.'
                   : 'No billing summary for this week.'}
               </p>
             ) : (
@@ -278,6 +285,16 @@ export function WeekSummaryCard() {
                           ))}
                           <td className="px-3 py-2.5 text-right tabular-nums text-foreground">
                             {hoursColon(row.minutes)}
+                            {row.minutes > row.weeklyCapMinutes && (
+                              <span className="block">
+                                <OverCapBadge
+                                  overCapMinutes={overCapMinutesOf(
+                                    row.minutes,
+                                    row.weeklyCapMinutes,
+                                  )}
+                                />
+                              </span>
+                            )}
                             {row.billedMinutes !== row.minutes && (
                               <span className="block text-xs text-muted-foreground">
                                 {hoursColon(row.billedMinutes)} paid

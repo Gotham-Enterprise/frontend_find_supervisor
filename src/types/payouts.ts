@@ -78,10 +78,11 @@ export interface StripeLink {
 }
 
 /**
- * Hourly terms breakdown (integer cents). Each billing week the supervisee
- * prepays `weeklyTotalCents` (weekly cap at the hourly rate + service fee);
- * after the review the supervisor receives approved hours × rate minus the
- * platform fee, and the unused prepay is refunded (the service fee is not).
+ * Hourly terms breakdown (integer cents). `weeklyTotalCents` (weekly cap at the
+ * hourly rate + service fee) is the MOST a billing week can cost: after the
+ * Friday cutoff the supervisee is charged the hours actually logged plus the
+ * service fee, and the supervisor receives approved hours × rate minus the
+ * platform fee.
  */
 export interface HourlyQuote {
   hourlyRateCents: number
@@ -108,8 +109,10 @@ export interface SavedCard {
 
 /** GET /supervision/payments/cards — the supervisee's saved cards (Billing page). */
 export interface SuperviseeSavedCard extends SavedCard {
-  /** Active hires whose weekly prepays are charged to this card; non-empty = can't remove. */
+  /** Active hires whose weekly invoices are charged to this card; non-empty = can't remove. */
   inUseBy: { hireId: string; supervisorName: string | null }[]
+  /** Active hires this card is the backup for; removing it just clears those backups. */
+  backupFor: { hireId: string; supervisorName: string | null }[]
 }
 
 export interface SuperviseeCards {
@@ -137,8 +140,9 @@ export interface SuperviseePaymentWeek {
   startDate: string
   endDate: string
   status: 'OPEN' | 'IN_REVIEW' | 'DISPUTED' | 'APPROVED' | 'SETTLED'
+  /** PENDING = not charged yet (week open), PAID = charged, FAILED = charge failed, CANCELED = nothing charged */
   prepayStatus: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELED'
-  /** Prepay (cap + service fee) plus any charged late sessions. */
+  /** Invoice (hours + service fee) plus any charged late sessions. */
   chargedCents: number
   serviceFeeCents: number
   refundCents: number | null
@@ -147,15 +151,18 @@ export interface SuperviseePaymentWeek {
   failureMessage: string | null
   paidAt: string | null
   settledAt: string | null
-  // Breakdown: the prepay, what the (approved or, until then, logged) hours cost, the refund
+  // Breakdown: the invoiced hours, what the (approved or, until then, logged) hours cost,
+  // and what goes back to the card if a problem report lowered the hours
   hourlyRateCents: number
   weeklyCapMinutes: number
   loggedMinutes: number
   billedMinutes: number
+  /** Invoiced hours amount (estimated from logged hours while OPEN) */
   prepayAmountCents: number
+  /** Invoice total: hours + service fee */
   totalCents: number
   hoursChargeCents: number
-  /** Actual once settled, otherwise what the logged hours would leave unused */
+  /** Actual once settled, otherwise the difference the current hours would send back */
   expectedRefundCents: number
   /** Hours + service fee + late sessions: what the week costs in the end */
   costCents: number
@@ -163,7 +170,12 @@ export interface SuperviseePaymentWeek {
   estimated: boolean
   lateEntries: SuperviseeLateCharge[]
   // Timeline + actions
-  prepayDueDate: string
+  /** Eastern YYYY-MM-DD the invoice is charged (the Saturday after the Friday cutoff) */
+  chargeDate: string
+  /** Eastern YYYY-MM-DD the supervisor is paid (the following Tuesday) */
+  payoutDate: string
+  /** Automatic charge rounds so far (max 3; each round tries the card, then the backup card) */
+  chargeAttempts: number
   logDeadlineAt: string
   reviewEndsAt: string
   approvedAt: string | null
@@ -183,6 +195,14 @@ export interface SuperviseePayments {
     chargedThisMonthCents: number
     refundedThisMonthCents: number
   }
+  /**
+   * Account hold: a week still unpaid Sunday 11:59 PM ET after the three charge
+   * rounds. Supervisors can't log sessions, and the supervisee can't send hire
+   * requests or sign agreements, until `holdWeekId` is paid (Pay now lifts it).
+   */
+  onHold: boolean
+  holdSince: string | null
+  holdWeekId: string | null
   totalCount: number
   page: number
   limit: number
@@ -192,7 +212,7 @@ export interface SuperviseePayments {
 /** GET /supervision/payments/history/week — one week across the supervisee's hires. */
 export interface SuperviseeWeekRow extends SuperviseePaymentWeek {
   weekId: string
-  /** Monday … Sunday */
+  /** Saturday … Friday */
   days: { minutes: number; lateMinutes: number }[]
   minutes: number
   sessions: number
@@ -208,7 +228,7 @@ export interface SuperviseeWeekSummary {
     minutes: number
     sessions: number
     supervisors: number
-    prepaidCents: number
+    chargedCents: number
     hoursChargeCents: number
     expectedRefundCents: number
     costCents: number
@@ -223,11 +243,20 @@ export interface SuperviseeWeekSummary {
 export interface HirePaymentInfo {
   paymentStatus: HirePaymentStatus
   quote: HourlyQuote | null
-  /** Eastern YYYY-MM-DD the first prepay is charged: the start date, or today if that has passed. */
-  firstPrepayDate: string | null
+  /** Eastern YYYY-MM-DD of the first charge: the Saturday after the cutoff of the week the agreement starts in. */
+  firstChargeDate: string | null
   supervisorPayoutsReady: boolean
-  /** The card the weekly prepays are charged to (supervisee only). */
+  /** The card the weekly invoices are charged to (supervisee only). */
   card: SavedCard | null
+  /**
+   * Optional second card (supervisee only). When the primary card declines in a
+   * charge round, the backup is tried right away in that same round.
+   */
+  backupCard: SavedCard | null
   /** Only populated for the supervisee (payer). */
   savedCards: SavedCard[]
+  /** Account hold from an unpaid week; see HireBillingWeeks.superviseeOnHold. */
+  superviseeOnHold: boolean
+  holdSince: string | null
+  holdWeekId: string | null
 }

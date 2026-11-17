@@ -98,7 +98,7 @@ function SignAgreementSection({
 }: {
   hire: HireListItem
   onOpenChange: (open: boolean) => void
-  /** Hourly agreements: the weekly-prepay card must be saved before signing. */
+  /** Hourly agreements: the card the weekly charges go to must be saved before signing. */
   cardRequired: boolean
   /** The supervisee already has cards on file, so step 1 is picking one, not adding one. */
   hasSavedCards: boolean
@@ -335,9 +335,10 @@ export function AgreementBody({
               {showSignForm && hire.paymentMethodSavedAt == null && (
                 <p className="mt-2 text-xs text-muted-foreground">
                   {hasSavedCards
-                    ? `Choose which saved card pays for your weekly prepays with ${formatDisplayName(hire.supervisor)}.`
-                    : 'Save the card for your weekly prepays first.'}{' '}
-                  Nothing is charged until the agreement is signed and the first week starts.
+                    ? `Choose which saved card pays for your weekly payments with ${formatDisplayName(hire.supervisor)}.`
+                    : 'Save the card for your weekly payments first.'}{' '}
+                  Nothing is charged now — each week&apos;s logged hours are charged after
+                  Friday&apos;s cutoff.
                 </p>
               )}
               {hire.paymentMethodSavedAt ? (

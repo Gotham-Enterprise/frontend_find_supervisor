@@ -10,7 +10,9 @@ export type NotificationType =
   | 'agreement_sent'
   | 'agreement_signed'
   | 'agreement_reminder'
-  // In-app hourly billing (weekly prepays, session review, payouts)
+  // In-app hourly billing (weekly charges after the Friday cutoff, session review, Tuesday payouts).
+  // prepay_* keep their names: prepay_paid = week charged, prepay_failed = weekly payment
+  // didn't go through, prepay_refunded = week settled with the difference back on the card.
   | 'completed_hire'
   | 'supervision_ended'
   | 'prepay_paid'
@@ -28,6 +30,9 @@ export type NotificationType =
   | 'late_session_approved'
   | 'late_session_rejected'
   | 'late_entry_request_dismissed'
+  // Account hold: a week still unpaid Sunday night after the 3 charge rounds (both sides notified).
+  | 'billing_hold_started'
+  | 'billing_hold_lifted'
 
 export type NotificationFilter = 'unread' | 'read'
 

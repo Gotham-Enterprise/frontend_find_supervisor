@@ -7,6 +7,7 @@ import {
   CreditCard,
   Download,
   ExternalLink,
+  Lock,
   Plus,
   Receipt,
   RefreshCw,
@@ -15,6 +16,7 @@ import {
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
+import { OverCapBadge } from '@/components/HireSessions/OverCapBadge'
 import { SuperviseeRouteGuard } from '@/components/Layout/SuperviseeRouteGuard'
 import { MonthlyPaymentsCard } from '@/components/MonthlyBilling/MonthlyPaymentsCard'
 import { Badge } from '@/components/ui/badge'
@@ -43,6 +45,13 @@ import {
   toEasternISODate,
 } from '@/lib/utils/date'
 import { parseApiError } from '@/lib/utils/error-parser'
+import {
+  chargeFailureText,
+  chargeRoundText,
+  MAX_CHARGE_ROUNDS,
+  overCapMinutesOf,
+  superviseeHoldText,
+} from '@/lib/utils/hourly-billing'
 import { formatUsdCents } from '@/lib/utils/money'
 import type { SuperviseePaymentWeek, SuperviseeSavedCard } from '@/types/payouts'
 
@@ -252,6 +261,8 @@ function SavedCardsCard() {
           <ul className="divide-y rounded-lg border">
             {cards.map((card) => {
               const inUse = card.inUseBy.length > 0
+              // A backup card can be removed: the backend just clears those backups.
+              const backupFor = card.backupFor ?? []
               const expiry = cardExpiry(card)
               return (
                 <li key={card.id} className="flex items-center justify-between gap-4 px-4 py-3">
@@ -268,6 +279,15 @@ function SavedCardsCard() {
                             .join(', ')}
                         </>
                       )}
+                      {backupFor.length > 0 && (
+                        <>
+                          {expiry || inUse ? ' · ' : ''}
+                          Backup for{' '}
+                          {backupFor
+                            .map((hire) => hire.supervisorName ?? 'a supervisor')
+                            .join(', ')}
+                        </>
+                      )}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
@@ -279,6 +299,15 @@ function SavedCardsCard() {
                         In use
                       </Badge>
                     )}
+                    {backupFor.map((hire) => (
+                      <Badge
+                        key={hire.hireId}
+                        variant="outline"
+                        className="border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-50"
+                      >
+                        Backup for {hire.supervisorName ?? 'a supervisor'}
+                      </Badge>
+                    ))}
                     <Button
                       variant="ghost"
                       size="icon-sm"
@@ -313,7 +342,11 @@ function SavedCardsCard() {
         title="Remove this card?"
         description={
           removing
-            ? `${cardLabel(removing)} will be removed from your account. You can add it again later.`
+            ? `${cardLabel(removing)} will be removed from your account.${
+                (removing.backupFor ?? []).length > 0
+                  ? ` It's the backup card for ${removing.backupFor.map((h) => h.supervisorName ?? 'a supervisor').join(', ')}; that backup is cleared.`
+                  : ''
+              } You can add it again later.`
             : ''
         }
         confirmLabel="Remove card"
@@ -330,7 +363,13 @@ function SavedCardsCard() {
 /** Where the week stands for the payer, with the date that matters next. */
 function weekState(week: SuperviseePaymentWeek): { text: string; className: string } {
   if (week.prepayStatus === 'FAILED') {
-    return { text: "Payment didn't go through", className: 'text-destructive' }
+    return {
+      text:
+        week.chargeAttempts >= MAX_CHARGE_ROUNDS
+          ? `Payment failed ${chargeRoundText(week.chargeAttempts)} · Pay now`
+          : `Payment failed (${chargeRoundText(week.chargeAttempts)}) · trying again`,
+      className: 'text-destructive',
+    }
   }
   if (week.status === 'SETTLED' && week.prepayStatus === 'CANCELED') {
     // Closed at $0 while unpaid: nothing was ever charged for this week.
@@ -349,8 +388,10 @@ function weekState(week: SuperviseePaymentWeek): { text: string; className: stri
     }
   if (week.status === 'APPROVED')
     return { text: 'Approved · settling', className: 'text-muted-foreground' }
+  if (week.prepayStatus === 'PENDING' && week.status !== 'OPEN')
+    return { text: 'Charging your card', className: 'text-muted-foreground' }
   return {
-    text: `Paid · logging until ${formatEasternDate(week.logDeadlineAt)}`,
+    text: `Logging until ${formatEasternDate(week.logDeadlineAt)} · charged ${formatCalendarDate(week.chargeDate)}`,
     className: 'text-muted-foreground',
   }
 }
@@ -396,18 +437,20 @@ function ReceiptButton({ weekId }: { weekId: string }) {
 
 /** The week's money from the payer's side, its timeline, and what they can do about it. */
 function WeekDetails({ week }: { week: SuperviseePaymentWeek }) {
-  const prepaid = week.prepayStatus === 'PAID'
+  const charged = week.prepayStatus === 'PAID'
   const latePaid = week.lateEntries.filter((l) => l.chargeStatus === 'PAID')
   const lateCents = latePaid.reduce((sum, l) => sum + l.totalCents, 0)
 
   const timeline: { label: string; value: string }[] = []
+  timeline.push({ label: 'Logging deadline', value: formatEasternDateTime(week.logDeadlineAt) })
   if (week.paidAt) timeline.push({ label: 'Charged', value: formatEasternDate(week.paidAt) })
   else if (week.prepayStatus === 'FAILED')
     timeline.push({
       label: 'Payment',
-      value: `Didn't go through${week.failedAt ? ` ${formatEasternDate(week.failedAt)}` : ''}`,
+      value: `Didn't go through${week.failedAt ? ` ${formatEasternDate(week.failedAt)}` : ''} (${chargeRoundText(week.chargeAttempts)})`,
     })
-  timeline.push({ label: 'Logging deadline', value: formatEasternDateTime(week.logDeadlineAt) })
+  else if (week.prepayStatus === 'PENDING')
+    timeline.push({ label: 'Charged', value: formatCalendarDate(week.chargeDate) })
   if (week.disputedAt)
     timeline.push({ label: 'Disputed', value: formatEasternDate(week.disputedAt) })
   if (week.approvedAt) {
@@ -456,20 +499,34 @@ function WeekDetails({ week }: { week: SuperviseePaymentWeek }) {
         </dl>
         {week.estimated && week.approvedMinutes == null && (
           <p className="mt-1.5 text-xs text-muted-foreground">
-            Based on the hours logged so far; you approve them after the week.
+            Based on the hours logged so far; your card is charged for them after Friday&apos;s
+            cutoff, and you review them over the weekend.
           </p>
         )}
-        {prepaid && (
+        {charged && (
           <p className="mt-1.5 text-xs text-muted-foreground">
-            {formatUsdCents(week.totalCents)} was charged at the start of the week (
-            {formatDuration(week.weeklyCapMinutes)} max + service fee).{' '}
+            {formatUsdCents(week.totalCents)} was charged
+            {week.paidAt ? ` on ${formatEasternDate(week.paidAt)}` : ''} for{' '}
+            {formatDuration(week.loggedMinutes)} logged + service fee.{' '}
             {week.status === 'SETTLED'
               ? week.refundCents
-                ? `The unused ${formatUsdCents(week.refundCents)} went back to your card${week.settledAt ? ` on ${formatEasternDate(week.settledAt)}` : ''}.`
-                : 'All of it was used.'
+                ? `${formatUsdCents(week.refundCents)} went back to your card${week.settledAt ? ` on ${formatEasternDate(week.settledAt)}` : ''} after the review lowered the hours. The service fee isn't returned.`
+                : null
               : week.expectedRefundCents > 0
-                ? `${week.estimated ? 'About ' : ''}${formatUsdCents(week.expectedRefundCents)} for unused hours goes back to your card after the review.`
-                : null}
+                ? `${week.estimated ? 'About ' : ''}${formatUsdCents(week.expectedRefundCents)} for the hours goes back to your card once the week settles. The service fee isn't returned.`
+                : "If a problem report lowers the hours, the difference for those hours goes back to your card. The service fee isn't returned."}
+          </p>
+        )}
+        {week.prepayStatus === 'PENDING' && week.status === 'OPEN' && (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {week.loggedMinutes > 0
+              ? `About ${formatUsdCents(week.totalCents)} for ${formatDuration(week.loggedMinutes)} so far · charged after Friday's cutoff (${formatCalendarDate(week.chargeDate)}).`
+              : `Nothing logged yet · charged after Friday's cutoff (${formatCalendarDate(week.chargeDate)}) for the hours logged, or nothing if none.`}
+          </p>
+        )}
+        {week.prepayStatus === 'FAILED' && (
+          <p className="mt-1.5 text-xs text-destructive">
+            {chargeFailureText(week.chargeAttempts)}
           </p>
         )}
         {latePaid.length > 0 && (
@@ -557,7 +614,8 @@ function PaymentHistoryCard() {
             <div>
               <CardTitle>Payment History</CardTitle>
               <CardDescription className="mt-0.5">
-                Weekly payments across all your supervisors. You pay only for the hours you approve.
+                Weekly payments across all your supervisors. Your card is charged after each
+                Friday&apos;s cutoff for the hours logged.
               </CardDescription>
             </div>
           </div>
@@ -609,7 +667,7 @@ function PaymentHistoryCard() {
                 </dd>
                 {data.totals.refundedCents > 0 && (
                   <dd className="text-xs text-muted-foreground">
-                    {formatUsdCents(data.totals.refundedCents)} back for unused hours
+                    {formatUsdCents(data.totals.refundedCents)} back to your card
                   </dd>
                 )}
               </div>
@@ -620,7 +678,7 @@ function PaymentHistoryCard() {
                 </dd>
                 {data.totals.refundedThisMonthCents > 0 && (
                   <dd className="text-xs text-muted-foreground">
-                    {formatUsdCents(data.totals.refundedThisMonthCents)} back for unused hours
+                    {formatUsdCents(data.totals.refundedThisMonthCents)} back to your card
                   </dd>
                 )}
               </div>
@@ -628,7 +686,8 @@ function PaymentHistoryCard() {
 
             {data.items.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No payments yet. Weeks show up here once your first weekly payment goes through.
+                No payments yet. Weeks show up here once a supervisor logs sessions under a signed
+                hourly agreement.
               </p>
             ) : (
               <ul className="divide-y rounded-lg border">
@@ -651,10 +710,19 @@ function PaymentHistoryCard() {
                               · {week.supervisorName ?? 'Supervisor'}
                             </span>
                           </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDuration(week.billedMinutes)}
-                            {week.approvedMinutes != null ? ' approved' : ' logged'} ·{' '}
-                            <span className={state.className}>{state.text}</span>
+                          <p className="flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground">
+                            <span>
+                              {formatDuration(week.billedMinutes)}
+                              {week.approvedMinutes != null ? ' approved' : ' logged'} ·{' '}
+                              <span className={state.className}>{state.text}</span>
+                            </span>
+                            <OverCapBadge
+                              overCapMinutes={overCapMinutesOf(
+                                week.loggedMinutes,
+                                week.weeklyCapMinutes,
+                              )}
+                              prominent={week.canReview}
+                            />
                           </p>
                           {week.failureMessage && (
                             <p className="text-xs text-destructive">{week.failureMessage}</p>
@@ -677,6 +745,11 @@ function PaymentHistoryCard() {
                             {week.prepayStatus === 'PAID' && (
                               <span className="block text-xs tabular-nums text-muted-foreground">
                                 {week.estimated ? 'your cost so far' : 'your cost'}
+                              </span>
+                            )}
+                            {week.prepayStatus === 'PENDING' && (
+                              <span className="block text-xs tabular-nums text-muted-foreground">
+                                {week.status === 'OPEN' ? 'so far · not charged yet' : 'charging'}
                               </span>
                             )}
                           </span>
@@ -725,6 +798,43 @@ function PaymentHistoryCard() {
   )
 }
 
+// ─── Account hold ─────────────────────────────────────────────────────────────
+
+/**
+ * Red banner while a week left unpaid after the three charge rounds holds the
+ * account. Pay now goes to that week's sessions (the hold lifts the moment it's
+ * paid); when the week isn't on the first history page, the row below has it.
+ */
+function HoldBanner() {
+  const { data } = useSuperviseePayments(1, IN_APP_PAYMENTS_ENABLED)
+  if (!data?.onHold) return null
+  const heldWeek = data.items.find((week) => week.id === data.holdWeekId) ?? null
+  return (
+    <div
+      role="alert"
+      className="flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <p className="flex items-start gap-2 text-sm text-foreground">
+        <Lock className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
+        <span>
+          <span className="font-semibold">{superviseeHoldText(heldWeek?.startDate ?? null)}</span>{' '}
+          {heldWeek
+            ? 'The hold lifts the moment the week is paid.'
+            : 'Find the unpaid week in Payment History below and tap Pay now; the hold lifts the moment it’s paid.'}
+        </span>
+      </p>
+      {heldWeek && (
+        <Link
+          href={heldWeek.sessionsPath}
+          className={buttonVariants({ size: 'sm', className: 'shrink-0' })}
+        >
+          Pay now
+        </Link>
+      )}
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function SuperviseeBillingContent() {
@@ -737,6 +847,7 @@ function SuperviseeBillingContent() {
 
       {IN_APP_PAYMENTS_ENABLED ? (
         <div className="flex flex-col gap-6">
+          <HoldBanner />
           <SuperviseeWeekCard />
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
             <div className="flex flex-col gap-6 lg:col-span-3">

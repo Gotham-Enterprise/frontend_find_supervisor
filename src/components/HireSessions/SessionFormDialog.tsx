@@ -1,7 +1,8 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useMemo } from 'react'
+import { AlertTriangle } from 'lucide-react'
+import { useEffect } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 
@@ -42,15 +43,24 @@ const sessionSchema = z.object({
 
 type SessionFormValues = z.infer<typeof sessionSchema>
 
-/** The billing week (Mon–Sun) a date falls in, if it has a row yet. */
+/** The billing week (Sat–Fri) a date falls in, if it has a row yet. */
 function weekForDate(weeks: BillingWeek[], date: string): BillingWeek | undefined {
   return weeks.find((w) => w.startDate <= date && date <= w.endDate)
 }
 
+/** All 15-minute durations up to the per-session maximum. */
+const DURATION_OPTIONS = Array.from({ length: MAX_SESSION_MINUTES / UNIT_MINUTES }, (_, i) => {
+  const minutes = (i + 1) * UNIT_MINUTES
+  return { value: String(minutes), label: formatDuration(minutes) }
+})
+
 /**
  * Supervisor logs (or edits) one supervision session: date, duration in
- * 15-minute units up to the weekly max, and notes. The backend enforces the
- * weekly max, total hours and logging window too.
+ * 15-minute units, and notes. The weekly max and the agreement's total hours
+ * are soft: a session that takes the week (or the agreement) over them is still
+ * logged — it's flagged to the supervisee on the invoice, who can report a
+ * problem — so the form warns but never blocks. The backend enforces the
+ * logging window.
  */
 export function SessionFormDialog({
   hireId,
@@ -89,25 +99,24 @@ export function SessionFormDialog({
   }, [open, session, loggable?.to, form])
 
   const sessionDate = useWatch({ control: form.control, name: 'sessionDate' })
+  const durationValue = useWatch({ control: form.control, name: 'durationMinutes' })
   const notes = useWatch({ control: form.control, name: 'notes' })
+  const chosenMinutes = Number(durationValue) || 0
 
-  // Time left in the chosen date's week (this session's own time counts as free when editing it).
+  // Where the chosen date's week would land with this session (its own time
+  // counts as free when editing it), against the soft weekly max.
   const week = sessionDate ? weekForDate(data.weeks, sessionDate) : undefined
-  const ownMinutes =
+  const ownWeekMinutes =
     session && week?.sessions.some((s) => s.id === session.id) ? session.durationMinutes : 0
-  const leftMinutes = Math.max(cap - (week?.loggedMinutes ?? 0) + ownMinutes, 0)
+  const weekAfter = (week?.loggedMinutes ?? 0) - ownWeekMinutes + chosenMinutes
+  const leftMinutes = Math.max(cap - ((week?.loggedMinutes ?? 0) - ownWeekMinutes), 0)
+  const overCap = sessionDate && weekAfter > cap ? weekAfter - cap : 0
 
-  // One session is capped at MAX_SESSION_MINUTES (and at what's left in the
-  // week) so the list stays short; a longer day is logged as two entries.
-  const maxSessionMinutes = Math.min(MAX_SESSION_MINUTES, cap, Math.max(leftMinutes, UNIT_MINUTES))
-  const durationOptions = useMemo(
-    () =>
-      Array.from({ length: maxSessionMinutes / UNIT_MINUTES }, (_, i) => {
-        const minutes = (i + 1) * UNIT_MINUTES
-        return { value: String(minutes), label: formatDuration(minutes) }
-      }),
-    [maxSessionMinutes],
-  )
+  // Same for the agreement's total hours (an edited session is already counted in the total).
+  const totalMinutes = data.progress.totalMinutes
+  const totalAfter = data.progress.loggedMinutes - (session?.durationMinutes ?? 0) + chosenMinutes
+  const overTotal =
+    totalMinutes != null && totalAfter > totalMinutes ? totalAfter - totalMinutes : 0
 
   async function onSubmit(values: SessionFormValues) {
     const input = {
@@ -137,8 +146,9 @@ export function SessionFormDialog({
         <DialogTitle>{isEdit ? 'Edit Session' : 'Log a Session'}</DialogTitle>
         <p className="mb-4 mt-1 text-sm text-muted-foreground">
           Log each session in 15-minute units (up to {formatDuration(MAX_SESSION_MINUTES)} per
-          session, {formatDuration(cap)} per week). Each week&apos;s sessions can be logged until
-          Monday 11:59 PM ET.
+          session). The agreed weekly max is {formatDuration(cap)}; hours over it are flagged on
+          your supervisee&apos;s invoice. Each week&apos;s sessions can be logged until Friday 11:59
+          PM ET.
         </p>
 
         <Form {...form}>
@@ -160,16 +170,42 @@ export function SessionFormDialog({
                 name="durationMinutes"
                 label="Duration"
                 required
-                options={durationOptions}
+                options={DURATION_OPTIONS}
                 placeholder="Select duration"
                 isSubmitting={isPending}
               />
             </div>
-            {sessionDate && (
+            {sessionDate && overCap === 0 && overTotal === 0 && (
               <p className="-mt-2 text-xs text-muted-foreground">
                 {leftMinutes > 0
-                  ? `${formatDuration(leftMinutes)} left in this week.`
-                  : 'This week has reached its weekly max.'}
+                  ? `${formatDuration(leftMinutes)} left under this week's max.`
+                  : "This week is at its weekly max; anything more is flagged on your supervisee's invoice."}
+              </p>
+            )}
+            {overCap > 0 && (
+              <p
+                role="status"
+                className="-mt-2 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+              >
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-600" aria-hidden />
+                <span>
+                  This takes the week over the agreed max of {formatDuration(cap)} (by{' '}
+                  {formatDuration(overCap)}). Your supervisee will see it on the invoice and can
+                  report a problem.
+                </span>
+              </p>
+            )}
+            {overTotal > 0 && totalMinutes != null && (
+              <p
+                role="status"
+                className="-mt-2 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+              >
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-600" aria-hidden />
+                <span>
+                  This takes the agreement past its {formatDuration(totalMinutes)} total (by{' '}
+                  {formatDuration(overTotal)}). Your supervisee will see it on the invoice and can
+                  report a problem.
+                </span>
               </p>
             )}
 

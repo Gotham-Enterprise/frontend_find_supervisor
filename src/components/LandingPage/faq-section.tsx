@@ -59,17 +59,17 @@ const faqs = [
   {
     question: 'How do supervision payments work?',
     answer:
-      "Supervision is billed hourly through the app. The Supervisee saves a card when signing the agreement and prepays each week's maximum hours up front. After the week, they review the sessions the Supervisor logged and pay only for approved hours — the unused prepay is refunded to their card. Medical Directors, who work on monthly retainers, are paid directly outside the app.",
+      "Supervision is billed hourly through the app. The Supervisee saves a card when signing the agreement; the agreement sets an hourly rate and a weekly maximum. Each week the Supervisor logs their sessions, and after the Friday cutoff the Supervisee's card is charged for the hours logged plus a service fee. The weekly maximum is what both agreed to; hours logged over it are flagged on the invoice and the Supervisee can report a problem. The Supervisee reviews the week over the weekend, and the Supervisor is paid every Tuesday for the previous week. Medical Directors, who work on monthly retainers, are paid directly outside the app.",
   },
   {
     question: 'What fees are involved in supervision payments?',
     answer:
-      "Supervisees pay a service fee on each weekly charge that covers secure card processing by Stripe (2.9% + 30¢); it isn't refunded. Supervisors pay a platform fee (currently 10%) that's deducted from what they earn. Both are shown before the agreement is signed. The Supervisor's Platform Access subscription is separate.",
+      "Supervisees pay a service fee on each weekly charge that covers secure card processing by Stripe (2.9% + 30¢); it's calculated on the hours actually charged and isn't returned if a problem report lowers the hours. Supervisors pay a platform fee (currently 10%) that's deducted from what they earn. Both are shown before the agreement is signed. The Supervisor's Platform Access subscription is separate.",
   },
   {
     question: 'What if a session is logged incorrectly?',
     answer:
-      'Supervisees review every week before it is paid out. They can approve it or dispute it with an explanation and screenshots, and Gotham support reviews disputes and decides how many hours are paid. Anything not paid is refunded to the Supervisee.',
+      "Supervisees review every week before it is paid out. They can approve it or dispute it with an explanation and screenshots, and Gotham support reviews disputes and decides how many hours are paid. If that lowers the hours, the difference for those hours goes back to the Supervisee's card; the service fee isn't returned.",
   },
   {
     question: 'How do Supervisors get paid?',

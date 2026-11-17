@@ -101,7 +101,7 @@ export function useHireActions(hire: HireListItem, options: UseHireActionsOption
     agreementStage === 'AWAITING_SIGNATURE'
   const hasAgreement = hire.agreement != null
   const isAgreementSigned = hasAgreement && agreementStage === 'SIGNED'
-  // Hourly agreement whose card for the weekly prepays isn't saved yet. The
+  // Hourly agreement whose card for the weekly charges isn't saved yet. The
   // card comes before the signature, so this covers the pending-signature stage too.
   // In-app monthly agreements (Medical Director retainers) need the card first too.
   const monthlyBilled = usesInAppMonthlyBilling(hire)

@@ -18,9 +18,12 @@ export function addDays(isoDate: string, days: number): string {
   return iso(d)
 }
 
-/** The Monday of the Monday–Sunday week containing the date. */
-export function mondayOf(isoDate: string): string {
-  const weekday = (utc(isoDate).getUTCDay() + 6) % 7 // Mon = 0 … Sun = 6
+/**
+ * The Saturday that starts the Saturday–Friday billing week containing the
+ * date. A weekend session belongs to the week whose Mon–Fri follows it.
+ */
+export function weekStartOf(isoDate: string): string {
+  const weekday = (utc(isoDate).getUTCDay() + 1) % 7 // Sat = 0 … Fri = 6
   return addDays(isoDate, -weekday)
 }
 
@@ -45,10 +48,10 @@ export function formatMonth(month: string): string {
   })
 }
 
-/** Monday-first weeks (7 dates each) covering the whole month, padded with the neighbours' days. */
+/** Saturday-first billing weeks (7 dates each) covering the whole month, padded with the neighbours' days. */
 export function monthGrid(month: string): string[][] {
   const first = `${month}-01`
-  let day = mondayOf(first)
+  let day = weekStartOf(first)
   const weeks: string[][] = []
   do {
     const week = Array.from({ length: 7 }, (_, i) => addDays(day, i))
