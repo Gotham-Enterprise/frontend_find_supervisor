@@ -50,6 +50,19 @@ export function useSubscriptionPlansQuery(enabled: boolean) {
   })
 }
 
+/**
+ * Name of the paid plan the viewer would upgrade to (the API already scopes
+ * the list to their audience, e.g. Medical Directors get their own plan).
+ * Falls back to the general plan's name until the list loads.
+ */
+export function useUpgradePlanName(): string {
+  const { data } = useSubscriptionPlansQuery(true)
+  const paid = data
+    ?.filter((p) => p.isActive !== false && p.priceInCents > 0)
+    .sort((a, b) => a.priceInCents - b.priceInCents)[0]
+  return paid?.name?.trim() || 'Find a Supervisor Platform Access'
+}
+
 export function useCurrentSubscriptionQuery(enabled: boolean) {
   return useQuery({
     queryKey: subscriptionKeys.current(),
