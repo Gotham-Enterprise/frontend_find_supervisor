@@ -24,6 +24,8 @@ export interface SubscriptionPlan {
   transactionFeePct?: number | null
   durationMonths?: number | null
   isActive: boolean
+  /** Who the paid plan is offered to; the API already filters by the viewer's audience. */
+  audience?: 'GENERAL' | 'MEDICAL_DIRECTOR'
   stripePriceId?: string | null
   stripeProductId?: string | null
   createdAt?: string
