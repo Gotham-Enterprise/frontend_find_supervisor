@@ -59,10 +59,11 @@ export function NotFoundContent({ secondaryLink, standalone = true }: NotFoundCo
         <div className="mx-auto flex h-16 max-w-6xl items-center px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2 font-semibold text-foreground">
             <Image
-              src="/logo.png"
+              src="/logo.svg"
               alt="Gotham Enterprises LTD"
-              width={120}
+              width={144}
               height={32}
+              unoptimized
               className="h-8 w-auto"
             />
           </Link>

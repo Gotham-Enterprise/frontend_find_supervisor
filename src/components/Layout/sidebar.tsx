@@ -92,7 +92,8 @@ const navItems = [
   },
   { label: 'Messages', href: '/messages', icon: MessageCircle },
   { label: 'Reviews', href: '/reviews', icon: Star, supervisorOnly: true },
-  { label: 'Billing & Invoices', href: '/billing', icon: CreditCard, supervisorOnly: true },
+  { label: 'Billing', href: '/billing', icon: CreditCard, supervisorOnly: true },
+  { label: 'Billing', href: '/billing', icon: CreditCard, superviseeOnly: true },
   { label: 'Settings', href: '/settings', icon: Settings },
 ] as const
 
@@ -160,10 +161,11 @@ export function Sidebar() {
         className="flex h-[60px] shrink-0 items-center border-b border-border px-6"
       >
         <Image
-          src="/logo.png"
+          src="/logo.svg"
           alt="Gotham Enterprises LTD"
-          width={120}
+          width={144}
           height={32}
+          unoptimized
           className="h-8 w-auto"
         />
       </a>

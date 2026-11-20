@@ -2,14 +2,15 @@
 
 import type { ReactNode } from 'react'
 
-import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
+import { formatHours } from '@/components/HirePayment/HourlyQuoteSummary'
 import { Separator } from '@/components/ui/separator'
 import { useSuperviseeFormOptions } from '@/lib/hooks'
+import { formatUsdCents } from '@/lib/utils/money'
 import {
   formatAvailability,
   formatBudgetRange,
   formatDate,
-  formatDisplayName,
+  formatDateOnly,
   formatFeeAmount,
   formatSupervisionFormat,
   formatSupervisionHours,
@@ -58,15 +59,20 @@ function Field({ label, value, multiline }: { label: string; value: string; mult
 
 function FieldList({
   fields,
+  wide = false,
 }: {
   fields: Array<{ label: string; value: string; multiline?: boolean }>
+  /** Two columns on wider screens; long text still spans the full width. */
+  wide?: boolean
 }) {
   const visible = fields.filter((f) => isSpecified(f.value))
   if (visible.length === 0) return null
   return (
-    <div className="space-y-3">
+    <div className={wide ? 'grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2' : 'space-y-3'}>
       {visible.map((f) => (
-        <Field key={f.label} label={f.label} value={f.value} multiline={f.multiline} />
+        <div key={f.label} className={wide && f.multiline ? 'sm:col-span-2' : undefined}>
+          <Field label={f.label} value={f.value} multiline={f.multiline} />
+        </div>
       ))}
     </div>
   )
@@ -80,20 +86,23 @@ function SectionTitle({ children }: { children: ReactNode }) {
   )
 }
 
-interface HireRequestDetailsDialogProps {
-  hire: HireListItem
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
-
-export function HireRequestDetailsDialog({
+/**
+ * Everything about the hire request — what was requested, the supervisor
+ * snapshot, and the agreement timeline. Shown in the request details dialog
+ * and on the workroom's Contract details tab.
+ */
+export function HireRequestDetailsBody({
   hire,
-  open,
-  onOpenChange,
-}: HireRequestDetailsDialogProps) {
+  showStatus = true,
+  wide = false,
+}: {
+  hire: HireListItem
+  showStatus?: boolean
+  /** Full-width page layout: fields in two columns. */
+  wide?: boolean
+}) {
   const { supervisorTypes } = useSuperviseeFormOptions()
   const supervisorTypeOptions = supervisorTypes.data ?? []
-  const supervisorName = formatDisplayName(hire.supervisor)
   const licenseStates =
     hire.supervisorStateLicense?.length > 0 ? hire.supervisorStateLicense.join(', ') : UNSPECIFIED
 
@@ -118,7 +127,7 @@ export function HireRequestDetailsDialog({
     },
     {
       label: 'Preferred start date',
-      value: displayText(hire.preferredStartDate, formatDate(hire.preferredStartDate)),
+      value: displayText(hire.preferredStartDate, formatDateOnly(hire.preferredStartDate)),
     },
     ...(hire.supervisionHours != null
       ? [
@@ -187,16 +196,40 @@ export function HireRequestDetailsDialog({
           },
         ]
       : []),
-    { label: 'Supervision start', value: displayText(hire.startDate, formatDate(hire.startDate)) },
-    { label: 'Supervision end', value: displayText(hire.endDate, formatDate(hire.endDate)) },
     {
-      label: 'Planned duration (months)',
-      value: hire.supervisionMonths != null ? String(hire.supervisionMonths) : UNSPECIFIED,
+      label: 'Supervision start',
+      value: displayText(hire.startDate, formatDateOnly(hire.startDate)),
     },
-    {
-      label: 'Monthly amount',
-      value: displayText(hire.monthlyAmount, hire.monthlyAmount ?? undefined),
-    },
+    { label: 'Supervision end', value: displayText(hire.endDate, formatDateOnly(hire.endDate)) },
+    // Hourly (in-app billed) hires show the agreement's hourly terms; others the monthly ones.
+    ...(hire.agreement?.hourlyRateCents != null && hire.agreement.weeklyCapMinutes != null
+      ? [
+          { label: 'Hourly rate', value: formatUsdCents(hire.agreement.hourlyRateCents) },
+          { label: 'Max per week', value: formatHours(hire.agreement.weeklyCapMinutes) },
+          {
+            label: 'Length',
+            value:
+              hire.agreement.totalHours != null
+                ? `${formatHours(hire.agreement.totalHours * 60)} total`
+                : 'Ongoing',
+          },
+          {
+            label: 'Payment card',
+            value: hire.paymentMethodSavedAt
+              ? `Saved ${formatDate(hire.paymentMethodSavedAt)}`
+              : 'Not set up yet',
+          },
+        ]
+      : [
+          {
+            label: 'Planned duration (months)',
+            value: hire.supervisionMonths != null ? String(hire.supervisionMonths) : UNSPECIFIED,
+          },
+          {
+            label: 'Monthly amount',
+            value: displayText(hire.monthlyAmount, hire.monthlyAmount ?? undefined),
+          },
+        ]),
     {
       label: 'Transaction fee',
       value: displayText(hire.transactionFeePct, hire.transactionFeePct ?? undefined),
@@ -221,58 +254,48 @@ export function HireRequestDetailsDialog({
   const hasAgreement = agreementFields.some((f) => isSpecified(f.value))
 
   return (
-    <DialogRoot open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[min(85vh,780px)] max-w-2xl overflow-y-auto p-0 sm:max-w-2xl">
-        <div className="border-b border-border px-6 pb-4 pr-12 pt-6">
-          <DialogTitle className="pr-10 text-lg">Request details</DialogTitle>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Full information for this hire request
-          </p>
-          <p className="mt-3 text-sm font-medium text-foreground">{supervisorName}</p>
+    <div className="space-y-6">
+      {showStatus && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">Status</span>
+          <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
         </div>
+      )}
 
-        <div className="space-y-6 px-6 py-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground">Status</span>
-            <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
+      {hasRequested && (
+        <div>
+          <SectionTitle>What you requested</SectionTitle>
+          <div className="mt-3">
+            <FieldList fields={requestedFields} wide={wide} />
           </div>
-
-          {hasRequested && (
-            <div>
-              <SectionTitle>What you requested</SectionTitle>
-              <div className="mt-3">
-                <FieldList fields={requestedFields} />
-              </div>
-            </div>
-          )}
-
-          {hasRequested && hasSnapshot && <Separator />}
-
-          {hasSnapshot && (
-            <div>
-              <SectionTitle>Supervisor snapshot (at request)</SectionTitle>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Captured when you submitted this request; may differ from the supervisor’s current
-                profile.
-              </p>
-              <div className="mt-3">
-                <FieldList fields={snapshotFields} />
-              </div>
-            </div>
-          )}
-
-          {(hasRequested || hasSnapshot) && hasAgreement && <Separator />}
-
-          {hasAgreement && (
-            <div>
-              <SectionTitle>Agreement & timeline</SectionTitle>
-              <div className="mt-3">
-                <FieldList fields={agreementFields} />
-              </div>
-            </div>
-          )}
         </div>
-      </DialogContent>
-    </DialogRoot>
+      )}
+
+      {hasRequested && hasSnapshot && <Separator />}
+
+      {hasSnapshot && (
+        <div>
+          <SectionTitle>Supervisor snapshot (at request)</SectionTitle>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Captured when you submitted this request; may differ from the supervisor’s current
+            profile.
+          </p>
+          <div className="mt-3">
+            <FieldList fields={snapshotFields} wide={wide} />
+          </div>
+        </div>
+      )}
+
+      {(hasRequested || hasSnapshot) && hasAgreement && <Separator />}
+
+      {hasAgreement && (
+        <div>
+          <SectionTitle>Agreement & timeline</SectionTitle>
+          <div className="mt-3">
+            <FieldList fields={agreementFields} wide={wide} />
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

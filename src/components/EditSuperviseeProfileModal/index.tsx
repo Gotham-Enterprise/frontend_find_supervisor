@@ -73,9 +73,10 @@ export function EditSuperviseeProfileModal({
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogTitle className="mb-4">Edit Supervisee Profile</DialogTitle>
-
+      <DialogContent
+        className="max-w-2xl max-h-[90vh]"
+        header={<DialogTitle>Edit Supervisee Profile</DialogTitle>}
+      >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <SuperviseeProfileEditFields

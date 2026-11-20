@@ -429,7 +429,7 @@ function SubscribedCard({
                 </Button>
               )}
               <Link
-                href="/billing"
+                href="/billing?tab=subscription"
                 className={
                   isCanceling
                     ? 'mt-2 flex w-full items-center justify-center rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-950 transition-colors hover:bg-amber-100/80'

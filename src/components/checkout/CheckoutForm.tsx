@@ -2,22 +2,17 @@
 
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import type { StripeElementsOptions } from '@stripe/stripe-js'
-import { loadStripe } from '@stripe/stripe-js'
 import { AlertCircle, CheckCircle2, Lock, ShieldCheck } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { purchaseSubscription } from '@/lib/api/supervision'
 import { useCheckoutPlanFromUrl } from '@/lib/hooks/useCheckoutPlanFromUrl'
+import { stripePromise } from '@/lib/stripe/client'
 import { parseApiError } from '@/lib/utils/error-parser'
 import { formatBillingCycleSuffix, formatPlanPriceFromCents } from '@/lib/utils/plan-formatting'
 import { isSafeInternalPath } from '@/lib/utils/safe-redirect'
 import type { SubscriptionPlan } from '@/types/supervisor-profile'
-
-// Stripe publishable key — safe to expose in client code.
-// loadStripe is called lazily so the module can load even when the key is absent.
-const STRIPE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ''
-const stripePromise = STRIPE_KEY ? loadStripe(STRIPE_KEY) : null
 
 // ─── Loading skeleton ─────────────────────────────────────────────────────────
 

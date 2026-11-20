@@ -142,9 +142,9 @@ export function SuperviseeMyProfileSection() {
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
+      {/* The page title is in the top bar; only its description here. */}
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">My Profile</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Keep your supervision goals and contact details up to date—the same data as your dashboard
           profile.
         </p>

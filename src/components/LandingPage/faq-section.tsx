@@ -54,7 +54,32 @@ const faqs = [
   {
     question: 'What is the difference between the Free Plan and Platform Access?',
     answer:
-      'Every Supervisor starts on the Find a Supervisor Free Plan. It lets you receive and view supervisee requests, see which supervisees are interested in you, appear in search results with a basic profile listing, and get platform notifications for new activity. Upgrading to Find a Supervisor Platform Access unlocks accepting supervisee requests, full messaging with supervisees, viewing supervisee contact details where applicable, improved discoverability and profile exposure, and the full set of Supervisor platform tools.',
+      'Every Supervisor starts on the Find a Supervisor Free Plan. It lets you receive and view Supervisee requests, see which Supervisees are interested in you, appear in search results with a basic profile listing, and get platform notifications for new activity. Upgrading to Find a Supervisor Platform Access unlocks accepting Supervisee requests, full messaging with Supervisees, viewing Supervisee contact details where applicable, improved discoverability and profile exposure, and the full set of Supervisor platform tools.',
+  },
+  {
+    question: 'How do supervision payments work?',
+    answer:
+      "Supervision is billed hourly through the app. The Supervisee saves a card when signing the agreement; the agreement sets an hourly rate and a weekly maximum. Each week the Supervisor logs their sessions, and after the Friday cutoff the Supervisee's card is charged for the hours logged plus a service fee. The weekly maximum is what both agreed to; hours logged over it are flagged on the invoice and the Supervisee can report a problem. The Supervisee reviews the week over the weekend, and the Supervisor is paid every Tuesday for the previous week. Medical Directors, who work on monthly retainers, are paid directly outside the app.",
+  },
+  {
+    question: 'What fees are involved in supervision payments?',
+    answer:
+      "Supervisees pay a service fee on each weekly charge that covers secure card processing by Stripe (2.9% + 30¢); it's calculated on the hours actually charged and isn't returned if a problem report lowers the hours. Supervisors pay a platform fee (currently 10%) that's deducted from what they earn. Both are shown before the agreement is signed. The Supervisor's Platform Access subscription is separate.",
+  },
+  {
+    question: 'What if a session is logged incorrectly?',
+    answer:
+      "Supervisees review every week before it is paid out. They can approve it or dispute it with an explanation and screenshots, and Gotham support reviews disputes and decides how many hours are paid. If that lowers the hours, the difference for those hours goes back to the Supervisee's card; the service fee isn't returned.",
+  },
+  {
+    question: 'How do Supervisors get paid?',
+    answer:
+      "Supervisors set up a payout account through Stripe (US bank accounts) from their Billing page. Once a week's sessions are approved, their earnings minus the platform fee are sent to their payout account, and Stripe deposits them to their bank — usually within 2 business days.",
+  },
+  {
+    question: 'Are payments secure?',
+    answer:
+      'Yes. All payments and payouts are processed by Stripe. Find a Supervisor never stores full card numbers or bank and identity details.',
   },
   {
     question: 'How is this different from traditional supervision matching?',

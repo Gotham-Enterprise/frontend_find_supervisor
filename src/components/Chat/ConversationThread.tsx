@@ -1,20 +1,23 @@
 'use client'
 
 import { AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { isSuperviseeRole } from '@/lib/auth/roles'
 import { useUser } from '@/lib/hooks'
 import {
+  MESSAGES_PAGE_SIZE,
   useConversationMessages,
   useConversations,
+  useLoadEarlierMessages,
   useMarkConversationRead,
   useSendMessage,
 } from '@/lib/hooks/useChat'
 import { useSupervisionChatSocket } from '@/lib/hooks/useSupervisionChatSocket'
 import { cn } from '@/lib/utils'
+import { contractLabel, sharesSeveralRooms } from '@/lib/utils/chat-rooms'
 
 import { ChatEmptyState } from './ChatEmptyState'
 import { MessageBubble } from './MessageBubble'
@@ -23,7 +26,10 @@ import { TypingIndicator } from './TypingIndicator'
 
 interface ConversationThreadProps {
   conversationId: string
-  onBack: () => void
+  /** Mobile back to the conversation list; left out where there's no list (a hire's workroom). */
+  onBack?: () => void
+  /** Leave out the name/status header where the page already shows them (a hire's workroom). */
+  hideHeader?: boolean
 }
 
 function MessagesSkeleton() {
@@ -38,7 +44,11 @@ function MessagesSkeleton() {
   )
 }
 
-export function ConversationThread({ conversationId, onBack }: ConversationThreadProps) {
+export function ConversationThread({
+  conversationId,
+  onBack,
+  hideHeader = false,
+}: ConversationThreadProps) {
   const { user } = useUser()
   const isSupervisee = isSuperviseeRole(user?.role)
 
@@ -58,18 +68,21 @@ export function ConversationThread({ conversationId, onBack }: ConversationThrea
 
   // isSupervisor=true signals the socket hook to immediately render new incoming
   // messages as locked (preview-only) without waiting for the backend override.
-  const { joinConversation, sendTyping, typingUsers, messagingStatus } = useSupervisionChatSocket({
-    isSupervisor: !isSupervisee && locked,
-    currentUserId: user?.id,
-  })
+  const { joinConversation, leaveConversation, sendTyping, typingUsers, messagingStatus } =
+    useSupervisionChatSocket({
+      isSupervisor: !isSupervisee && locked,
+      currentUserId: user?.id,
+    })
 
   // Bottom-of-list ref for auto-scroll
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  // Join socket room when this thread opens
+  // Join the socket room while this thread is open, and leave it when it closes
+  // (otherwise the shared socket keeps getting every room's events).
   useEffect(() => {
     joinConversation(conversationId)
-  }, [conversationId, joinConversation])
+    return () => leaveConversation(conversationId)
+  }, [conversationId, joinConversation, leaveConversation])
 
   // Mark as read exactly once per conversationId — fire as soon as messages first arrive.
   // Using a ref (not state) so the flag update never causes a re-render.
@@ -84,10 +97,43 @@ export function ConversationThread({ conversationId, onBack }: ConversationThrea
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, messages])
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to the bottom when a message is added at the end (sent or
+  // received) — not when earlier messages are loaded at the top.
+  const lastMessageId = messages?.at(-1)?.id
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages?.length])
+  }, [lastMessageId])
+
+  // "Load earlier messages": pages back from the oldest message shown, keeping
+  // the reader's place when the older ones are inserted above.
+  const listRef = useRef<HTMLDivElement>(null)
+  const restoreScrollRef = useRef<{ height: number; top: number } | null>(null)
+  const [noEarlierFor, setNoEarlierFor] = useState<string | null>(null)
+  const loadEarlier = useLoadEarlierMessages(conversationId)
+  const hasEarlier =
+    (messages?.length ?? 0) >= MESSAGES_PAGE_SIZE && noEarlierFor !== conversationId
+  function handleLoadEarlier() {
+    const oldest = messages?.[0]
+    const el = listRef.current
+    if (!oldest || !el) return
+    restoreScrollRef.current = { height: el.scrollHeight, top: el.scrollTop }
+    loadEarlier.mutate(oldest.id, {
+      onSuccess: (older) => {
+        if (older.length < MESSAGES_PAGE_SIZE) setNoEarlierFor(conversationId)
+      },
+      onError: () => {
+        restoreScrollRef.current = null
+      },
+    })
+  }
+  const firstMessageId = messages?.[0]?.id
+  useLayoutEffect(() => {
+    const el = listRef.current
+    const restore = restoreScrollRef.current
+    if (!el || !restore) return
+    el.scrollTop = el.scrollHeight - restore.height + restore.top
+    restoreScrollRef.current = null
+  }, [firstMessageId])
 
   const handleSend = useCallback(
     (body: string) => {
@@ -114,6 +160,12 @@ export function ConversationThread({ conversationId, onBack }: ConversationThrea
     ? other.fullName || [other.firstName, other.lastName].filter(Boolean).join(' ')
     : 'Loading…'
 
+  // One room per hire: name the hire when this person shares several rooms with the viewer.
+  const roomLabel =
+    conversation && conversations && sharesSeveralRooms(conversations, conversation)
+      ? contractLabel(conversation.hire)
+      : null
+
   const hireStatus = conversation?.hire?.status ?? null
   const hireCompletedAt = conversation?.hire?.completedAt ?? null
   const isPending = hireStatus === 'PENDING' || (hireStatus === 'REVIEWED' && !hireCompletedAt)
@@ -139,60 +191,65 @@ export function ConversationThread({ conversationId, onBack }: ConversationThrea
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-white px-4">
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label="Back to conversations"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted md:hidden"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-
-        {other && (
-          <UserAvatar
-            className="shrink-0"
-            size="sm"
-            src={other.profilePhotoUrl}
-            name={otherDisplayName}
-            showPresence
-            userId={other.id}
-            presenceRingClassName="ring-white"
-          />
-        )}
-
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">{otherDisplayName}</p>
-          {hireStatus && (
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
-              {isSupervisee ? 'Supervisor' : 'Supervisee'}
-              {hireStatus === 'PENDING' && (
-                <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-px text-[10px] font-semibold text-amber-700">
-                  Request Pending
-                </span>
-              )}
-              {hireStatus === 'REVIEWED' && !hireCompletedAt && (
-                <span className="ml-1.5 rounded-full bg-blue-100 px-1.5 py-px text-[10px] font-semibold text-blue-700">
-                  Reviewed
-                </span>
-              )}
-              {hireStatus === 'ACCEPTED' && (
-                <span className="ml-1.5 rounded-full bg-green-100 px-1.5 py-px text-[10px] font-semibold text-green-700">
-                  Accepted
-                </span>
-              )}
-              {hireStatus === 'ACTIVE' && (
-                <span className="ml-1.5 rounded-full bg-blue-100 px-1.5 py-px text-[10px] font-semibold text-blue-700">
-                  Active
-                </span>
-              )}
-            </p>
+      {!hideHeader && (
+        <div className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-white px-4">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              aria-label="Back to conversations"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted md:hidden"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
           )}
+
+          {other && (
+            <UserAvatar
+              className="shrink-0"
+              size="sm"
+              src={other.profilePhotoUrl}
+              name={otherDisplayName}
+              showPresence
+              userId={other.id}
+              presenceRingClassName="ring-white"
+            />
+          )}
+
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">{otherDisplayName}</p>
+            {hireStatus && (
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                {isSupervisee ? 'Supervisor' : 'Supervisee'}
+                {hireStatus === 'PENDING' && (
+                  <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-px text-[10px] font-semibold text-amber-700">
+                    Request Pending
+                  </span>
+                )}
+                {hireStatus === 'REVIEWED' && !hireCompletedAt && (
+                  <span className="ml-1.5 rounded-full bg-blue-100 px-1.5 py-px text-[10px] font-semibold text-blue-700">
+                    Viewed
+                  </span>
+                )}
+                {hireStatus === 'ACCEPTED' && (
+                  <span className="ml-1.5 rounded-full bg-green-100 px-1.5 py-px text-[10px] font-semibold text-green-700">
+                    Accepted
+                  </span>
+                )}
+                {hireStatus === 'ACTIVE' && (
+                  <span className="ml-1.5 rounded-full bg-blue-100 px-1.5 py-px text-[10px] font-semibold text-blue-700">
+                    In Progress
+                  </span>
+                )}
+                {roomLabel && <span className="ml-1.5">· {roomLabel}</span>}
+              </p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={listRef} className="flex-1 overflow-y-auto">
         {isLoading ? (
           <MessagesSkeleton />
         ) : isError ? (
@@ -222,6 +279,20 @@ export function ConversationThread({ conversationId, onBack }: ConversationThrea
           />
         ) : (
           <div className="flex flex-col gap-3 p-4">
+            {hasEarlier && (
+              <button
+                type="button"
+                onClick={handleLoadEarlier}
+                disabled={loadEarlier.isPending}
+                className="self-center rounded-full border bg-white px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-60"
+              >
+                {loadEarlier.isPending
+                  ? 'Loading…'
+                  : loadEarlier.isError
+                    ? "Couldn't load — try again"
+                    : 'Load earlier messages'}
+              </button>
+            )}
             {messages.map((message) => (
               <MessageBubble
                 key={message.id}

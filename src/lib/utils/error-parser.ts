@@ -10,6 +10,11 @@ interface BackendErrorBody {
 function humanize(raw: string): string {
   const lower = raw.toLowerCase()
 
+  // Account-hold refusals (hire requests, agreement signing) are written for the
+  // user and name the unpaid week; show them verbatim so the generic rewrites
+  // below (e.g. "location") can't swallow them.
+  if (lower.startsWith('your account is on hold')) return raw
+
   if (lower.includes('contact number already exists')) {
     return 'That phone number is already in use. Please enter a different contact number.'
   }

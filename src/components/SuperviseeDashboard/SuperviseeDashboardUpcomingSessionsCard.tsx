@@ -94,7 +94,7 @@ export function SuperviseeDashboardUpcomingSessionsCard({
   const sessionTypeLabel =
     FORMAT_LABELS[next.preferredFormat ?? ''] ?? next.preferredFormat ?? 'Supervision'
   const statusLabel =
-    next.status === 'ACTIVE' ? 'Active' : next.status === 'ACCEPTED' ? 'Accepted' : next.status
+    next.status === 'ACTIVE' ? 'In Progress' : next.status === 'ACCEPTED' ? 'Accepted' : next.status
   const whenLabel = formatUpcomingSessionDisplay(next.upcomingSessionDate)
 
   return (
@@ -186,7 +186,7 @@ export function SuperviseeDashboardUpcomingSessionsCard({
                   </div>
                   <div className="flex items-center gap-2 sm:shrink-0">
                     <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-xs">
-                      {hire.status === 'ACTIVE' ? 'Active' : 'Accepted'}
+                      {hire.status === 'ACTIVE' ? 'In Progress' : 'Accepted'}
                     </Badge>
                     <Link
                       href={`/find-supervisors/${hire.supervisorId}`}
