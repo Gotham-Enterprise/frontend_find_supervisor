@@ -5,7 +5,7 @@ import {
   getProfessionGroupForOccupation,
   type ProfessionGroup,
 } from '@/lib/constants/supervision-professions'
-import { formatPatientPopulation } from '@/lib/utils/profile-formatters'
+import { formatPatientPopulation, formatWeeklyHoursAvailable } from '@/lib/utils/profile-formatters'
 import {
   isMedicalDirectorType,
   resolveSupervisorTypeCode,
@@ -32,6 +32,7 @@ export const DEFAULT_FILTERS: SupervisorSearchFilters = {
   patientPopulation: [],
   acceptingOnly: true,
   availability: [],
+  weeklyHoursAvailable: [],
   genderIdentities: [],
   languages: [],
 }
@@ -117,6 +118,10 @@ export function getActiveChips(
     chips.push({ key: `av_${encodeURIComponent(val)}`, label })
   })
 
+  filters.weeklyHoursAvailable.forEach((val) => {
+    chips.push({ key: `wh_${val}`, label: formatWeeklyHoursAvailable(val) || val })
+  })
+
   if (filters.radiusMiles !== RADIUS_DEFAULT) {
     chips.push({ key: 'radiusMiles', label: `Within ${filters.radiusMiles} miles` })
   }
@@ -172,6 +177,7 @@ export function removeChip(
     yearsExperience: [...filters.yearsExperience],
     patientPopulation: [...filters.patientPopulation],
     availability: [...filters.availability],
+    weeklyHoursAvailable: [...filters.weeklyHoursAvailable],
     genderIdentities: [...filters.genderIdentities],
     languages: [...filters.languages],
   }
@@ -190,6 +196,9 @@ export function removeChip(
   } else if (chipKey.startsWith('av_')) {
     const val = decodeURIComponent(chipKey.slice(3))
     next.availability = next.availability.filter((x) => x !== val)
+  } else if (chipKey.startsWith('wh_')) {
+    const val = chipKey.slice(3)
+    next.weeklyHoursAvailable = next.weeklyHoursAvailable.filter((x) => x !== val)
   } else if (chipKey.startsWith('ye_')) {
     const val = decodeURIComponent(chipKey.slice(3))
     next.yearsExperience = next.yearsExperience.filter((x) => x !== val)

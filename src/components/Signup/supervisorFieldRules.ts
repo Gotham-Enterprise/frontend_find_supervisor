@@ -11,6 +11,10 @@ import {
 } from '@/components/Signup/schema'
 import { OTHER_CERTIFYING_BOARD_VALUE } from '@/lib/utils/board-certification'
 import { todayLocalISO } from '@/lib/utils/date'
+import {
+  requiresWeeklyHoursAvailable,
+  WEEKLY_HOURS_AVAILABLE_REQUIRED_MESSAGE,
+} from '@/lib/utils/profile-formatters'
 import { isPhysicianSupervisorType, isValidPhysicianDegreeType } from '@/lib/utils/supervisor-type'
 
 /**
@@ -36,6 +40,11 @@ export function supervisorFieldRules<N extends keyof SupervisorFormValues>(name:
           return 'Add at least one certification'
         }
         return true
+      }
+
+      if (name === 'weeklyHoursAvailable') {
+        if (!requiresWeeklyHoursAvailable(supervisorType)) return true
+        return String(value ?? '').trim() ? true : WEEKLY_HOURS_AVAILABLE_REQUIRED_MESSAGE
       }
 
       const fieldSchema = supervisorSchemaObject.shape[name] as ZodTypeAny | undefined

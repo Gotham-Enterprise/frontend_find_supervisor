@@ -41,6 +41,10 @@ import {
   useSupervisorTypesData,
 } from '@/lib/hooks'
 import {
+  requiresWeeklyHoursAvailable,
+  WEEKLY_HOURS_AVAILABLE_OPTIONS,
+} from '@/lib/utils/profile-formatters'
+import {
   isMedicalDirectorType,
   resolveSupervisorTypeCode,
   supervisionTypeDisplayLabel,
@@ -713,6 +717,19 @@ export function SupervisorProfileEditFields({
             emptySentinel={{ value: '__none__', label: 'None' }}
           />
         </div>
+        {requiresWeeklyHoursAvailable(supervisorTypeWatch) && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormSelectField
+              control={form.control}
+              name="weeklyHoursAvailable"
+              label="Hours Available Weekly"
+              required
+              options={WEEKLY_HOURS_AVAILABLE_OPTIONS}
+              placeholder="Select Hours"
+              isSubmitting={isSubmitting}
+            />
+          </div>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
           <FormSelectField
             control={form.control}

@@ -50,6 +50,8 @@ export interface UpdateSupervisorProfilePayload {
   patientPopulation?: string[]
   supervisionFormat?: string
   availability?: string
+  /** "Hours Available Weekly" range code; omitted for Medical Directors. */
+  weeklyHoursAvailable?: string
   acceptingSupervisees?: boolean
   describeYourself?: string
   supervisionFeeType?: string

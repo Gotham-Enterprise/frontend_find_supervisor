@@ -17,6 +17,7 @@ const FULL_FILTERS: SupervisorSearchFilters = {
   patientPopulation: ['ADULTS'],
   acceptingOnly: false,
   availability: ['WEEKDAYS'],
+  weeklyHoursAvailable: ['11_20', '31_PLUS'],
   genderIdentities: ['NON_BINARY'],
   languages: ['tl', 'es'],
 }

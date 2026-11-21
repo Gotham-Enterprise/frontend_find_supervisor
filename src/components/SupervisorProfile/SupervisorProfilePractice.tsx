@@ -1,7 +1,11 @@
 import { ExternalLinkIcon } from 'lucide-react'
 
 import type { SelectOption } from '@/lib/api/options'
-import { formatSupervisionFormat, resolveOptionLabel } from '@/lib/utils/profile-formatters'
+import {
+  formatSupervisionFormat,
+  formatWeeklyHoursAvailable,
+  resolveOptionLabel,
+} from '@/lib/utils/profile-formatters'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 interface SupervisorProfilePracticeProps {
@@ -24,8 +28,10 @@ export function SupervisorProfilePractice({
 }: SupervisorProfilePracticeProps) {
   const availabilityLabel = resolveOptionLabel(profile.availability, availabilityOptions)
   const formatLabel = formatSupervisionFormat(profile.supervisionFormat)
+  const weeklyHoursLabel = formatWeeklyHoursAvailable(profile.weeklyHoursAvailable)
 
-  const hasAnyContent = profile.supervisionFormat || profile.availability || profile.website
+  const hasAnyContent =
+    profile.supervisionFormat || profile.availability || weeklyHoursLabel || profile.website
 
   if (!hasAnyContent) return null
 
@@ -35,6 +41,7 @@ export function SupervisorProfilePractice({
       <div>
         {profile.supervisionFormat && <Row label="Supervision Format">{formatLabel}</Row>}
         {profile.availability && <Row label="Availability">{availabilityLabel}</Row>}
+        {weeklyHoursLabel && <Row label="Hours Available Weekly">{weeklyHoursLabel}</Row>}
         {profile.website && (
           <Row label="Website">
             <a

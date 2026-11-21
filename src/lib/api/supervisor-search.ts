@@ -162,6 +162,10 @@ export function buildSupervisorSearchParams(
   appendCommaSeparated(params, 'yearsOfExperience', filters.yearsExperience)
   appendCommaSeparated(params, 'patientPopulation', filters.patientPopulation)
   appendCommaSeparated(params, 'availability', filters.availability)
+  // Medical Directors don't track weekly hours — never narrow MD results by it.
+  if (searchMode !== 'medical-directors') {
+    appendCommaSeparated(params, 'weeklyHoursAvailable', filters.weeklyHoursAvailable)
+  }
   // Identity filters — the API only matches profiles that made the block public
   appendCommaSeparated(params, 'genderIdentity', filters.genderIdentities)
   appendCommaSeparated(params, 'languages', filters.languages)
