@@ -494,10 +494,10 @@ export function formatSupervisionHoursNeeded(value: string | null | undefined): 
  * Values match the backend's WEEKLY_HOURS_AVAILABLE_VALUES.
  */
 export const WEEKLY_HOURS_AVAILABLE_OPTIONS = [
-  { label: '5-10 hrs', value: '5_10' },
-  { label: '11-20 hrs', value: '11_20' },
-  { label: '21-30 hrs', value: '21_30' },
-  { label: '31-40+ hrs', value: '31_PLUS' },
+  { label: '5-10 hours', value: '5_10' },
+  { label: '11-20 hours', value: '11_20' },
+  { label: '21-30 hours', value: '21_30' },
+  { label: '31-40+ hours', value: '31_PLUS' },
 ] as const
 
 export const WEEKLY_HOURS_AVAILABLE_REQUIRED_MESSAGE = 'Please select your hours available weekly'
