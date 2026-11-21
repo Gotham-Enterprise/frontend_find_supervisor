@@ -23,6 +23,8 @@ export interface SupervisorSearchFilters {
   acceptingOnly: boolean
   /** Option values from GET /api/supervision/options?param=availability */
   availability: string[]
+  /** "Hours Available Weekly" range codes (see WEEKLY_HOURS_AVAILABLE_OPTIONS); supervisors mode only */
+  weeklyHoursAvailable: string[]
   /** Gender identity codes (see GENDER_IDENTITY_FILTER_OPTIONS); only public profiles match */
   genderIdentities: string[]
   /** ISO 639 language codes; only profiles that display languages match */

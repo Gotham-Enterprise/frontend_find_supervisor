@@ -11,7 +11,9 @@ import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
 import { isServerAcceptedPhoneNumber } from '@/lib/utils/phone'
 import {
   requiresSupervisionHoursNeeded,
+  requiresWeeklyHoursAvailable,
   SUPERVISION_HOURS_NEEDED_REQUIRED_MESSAGE,
+  WEEKLY_HOURS_AVAILABLE_REQUIRED_MESSAGE,
 } from '@/lib/utils/profile-formatters'
 import { SUPERVISION_TYPE_REQUIRED_MESSAGE } from '@/lib/utils/supervisee-eligibility'
 import {
@@ -210,6 +212,8 @@ export const supervisorSchemaObject = accountSchemaBase.extend({
     message: 'Please select a supervision format',
   }),
   availability: z.string().min(1, 'Availability is required'),
+  // Required for every type except Medical Director — applySupervisorWeeklyHoursRule.
+  weeklyHoursAvailable: z.string(),
   acceptingNewSupervisees: z.boolean(),
   professionalSummary: z
     .string()
@@ -247,10 +251,25 @@ export const supervisorSchemaObject = accountSchemaBase.extend({
     .refine((val) => val === true, 'You must agree to the Terms of Service'),
 })
 
+/** Every supervisor type except Medical Director must pick a weekly hours range. */
+export function applySupervisorWeeklyHoursRule(
+  data: { supervisorType: string; weeklyHoursAvailable?: string },
+  ctx: z.RefinementCtx,
+) {
+  if (requiresWeeklyHoursAvailable(data.supervisorType) && !data.weeklyHoursAvailable) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['weeklyHoursAvailable'],
+      message: WEEKLY_HOURS_AVAILABLE_REQUIRED_MESSAGE,
+    })
+  }
+}
+
 export const supervisorSchema = withAccountRules(
   supervisorSchemaObject
     .superRefine(applySupervisorPhysicianRules)
-    .superRefine(applySupervisorMonthlyOnlyFeeRule),
+    .superRefine(applySupervisorMonthlyOnlyFeeRule)
+    .superRefine(applySupervisorWeeklyHoursRule),
 )
 
 // ─── Medical Director schema ──────────────────────────────────────────────────
@@ -734,6 +753,7 @@ export const supervisorStep3Schema = supervisorSchemaObject
     patientPopulation: true,
     supervisionFormat: true,
     availability: true,
+    weeklyHoursAvailable: true,
     acceptingNewSupervisees: true,
     supervisionFeeType: true,
     supervisionFeeAmount: true,
@@ -743,6 +763,7 @@ export const supervisorStep3Schema = supervisorSchemaObject
     agreedToTerms: true,
   })
   .superRefine(applySupervisorMonthlyOnlyFeeRule)
+  .superRefine(applySupervisorWeeklyHoursRule)
 
 export const SUPERVISOR_SIGNUP_STEP_SCHEMAS = [
   supervisorStep1Schema,
@@ -781,6 +802,7 @@ export const SUPERVISOR_SIGNUP_STEP_FIELDS = [
     'patientPopulation',
     'supervisionFormat',
     'availability',
+    'weeklyHoursAvailable',
     'acceptingNewSupervisees',
     'supervisionFeeType',
     'supervisionFeeAmount',

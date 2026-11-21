@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  createEditSupervisorProfileSchema,
   getDefaultSupervisorProfileFormValues,
   supervisorProfileFormValuesToPayload,
 } from '@/lib/forms/supervisor-profile-edit'
+import {
+  formatWeeklyHoursAvailable,
+  WEEKLY_HOURS_AVAILABLE_OPTIONS,
+} from '@/lib/utils/profile-formatters'
 import type { SupervisorProfileData } from '@/types/supervisor-profile'
 
 function makeProfile(overrides: Partial<SupervisorProfileData> = {}): SupervisorProfileData {
@@ -209,5 +214,65 @@ describe('Medical Director profile edit — offerings and board certifications',
     })
     expect('offerings' in payload).toBe(false)
     expect('boardCertifications' in payload).toBe(false)
+  })
+})
+
+describe('weeklyHoursAvailable — edit supervisor profile form', () => {
+  const weeklyHoursIssues = (profile: SupervisorProfileData, weeklyHoursAvailable: string) => {
+    const defaults = getDefaultSupervisorProfileFormValues(profile)
+    const result = createEditSupervisorProfileSchema(profile).safeParse({
+      ...defaults,
+      weeklyHoursAvailable,
+    })
+    return result.success
+      ? []
+      : result.error.issues.filter((issue) => issue.path[0] === 'weeklyHoursAvailable')
+  }
+
+  it('loads the stored range, or empty for existing profiles without one', () => {
+    expect(
+      getDefaultSupervisorProfileFormValues(makeProfile({ weeklyHoursAvailable: '11_20' }))
+        .weeklyHoursAvailable,
+    ).toBe('11_20')
+    expect(getDefaultSupervisorProfileFormValues(makeProfile()).weeklyHoursAvailable).toBe('')
+  })
+
+  it('requires a range for supervisors (existing users must pick one on save)', () => {
+    const profile = makeProfile({ supervisorType: 'Mental Health Counselors' })
+    expect(weeklyHoursIssues(profile, '')).toHaveLength(1)
+    expect(weeklyHoursIssues(profile, 'bogus')).toHaveLength(1)
+    expect(weeklyHoursIssues(profile, '21_30')).toHaveLength(0)
+  })
+
+  it('does not require it for Medical Directors', () => {
+    const profile = makeProfile({ supervisorType: 'Medical Director' })
+    expect(weeklyHoursIssues(profile, '')).toHaveLength(0)
+  })
+
+  it('sends the range for supervisors and omits it for Medical Directors', () => {
+    const supervisorDefaults = getDefaultSupervisorProfileFormValues(
+      makeProfile({ supervisorType: 'Mental Health Counselors', weeklyHoursAvailable: '5_10' }),
+    )
+    expect(supervisorProfileFormValuesToPayload(supervisorDefaults).weeklyHoursAvailable).toBe(
+      '5_10',
+    )
+
+    const mdDefaults = getDefaultSupervisorProfileFormValues(
+      makeProfile({ supervisorType: 'Medical Director', weeklyHoursAvailable: '5_10' }),
+    )
+    expect(supervisorProfileFormValuesToPayload(mdDefaults).weeklyHoursAvailable).toBeUndefined()
+  })
+})
+
+describe('formatWeeklyHoursAvailable', () => {
+  it('labels every option and returns empty for unset/unknown values', () => {
+    expect(WEEKLY_HOURS_AVAILABLE_OPTIONS.map((o) => formatWeeklyHoursAvailable(o.value))).toEqual([
+      '5-10 hours',
+      '11-20 hours',
+      '21-30 hours',
+      '31-40+ hours',
+    ])
+    expect(formatWeeklyHoursAvailable(null)).toBe('')
+    expect(formatWeeklyHoursAvailable('40_PLUS')).toBe('')
   })
 })

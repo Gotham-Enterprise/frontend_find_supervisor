@@ -309,6 +309,7 @@ describe('medicalDirectorSchema — full form', () => {
       patientPopulation: ['Adults'],
       supervisionFormat: 'virtual',
       availability: 'Flexible',
+      weeklyHoursAvailable: '',
       acceptingNewSupervisees: true,
       professionalSummary: 'A professional summary longer than twenty characters.',
       describeYourself: 'A self description longer than twenty characters.',
