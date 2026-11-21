@@ -119,43 +119,28 @@ export function SupervisorStepPracticeDetails({
           />
         )}
 
-        <FormField
-          control={control}
-          name="supervisionFormat"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Supervision Format <span className="text-destructive">*</span>
-              </FormLabel>
-              <FormControl>
-                <FormatSelector
-                  value={field.value}
-                  onChange={(v) => {
-                    field.onChange(v)
-                    clearErrors(field.name)
-                  }}
-                  disabled={isSubmitting}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormSelectField
+          <FormField
             control={control}
-            name="availability"
-            label="Availability"
-            rules={supervisorFieldRules('availability')}
-            options={availabilityOptions}
-            placeholder="Select Availability"
-            loading={availabilityLoading}
-            required
-            itemToStringLabel={(val) =>
-              availabilityOptions.find((o) => o.value === val)?.label ?? String(val ?? '')
-            }
-            isSubmitting={isSubmitting}
+            name="supervisionFormat"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Supervision Format <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <FormatSelector
+                    value={field.value}
+                    onChange={(v) => {
+                      field.onChange(v)
+                      clearErrors(field.name)
+                    }}
+                    disabled={isSubmitting}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
           <FormField
             control={control}
@@ -184,8 +169,22 @@ export function SupervisorStepPracticeDetails({
           />
         </div>
 
-        {showWeeklyHours && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormSelectField
+            control={control}
+            name="availability"
+            label="Availability"
+            rules={supervisorFieldRules('availability')}
+            options={availabilityOptions}
+            placeholder="Select Availability"
+            loading={availabilityLoading}
+            required
+            itemToStringLabel={(val) =>
+              availabilityOptions.find((o) => o.value === val)?.label ?? String(val ?? '')
+            }
+            isSubmitting={isSubmitting}
+          />
+          {showWeeklyHours && (
             <FormSelectField
               control={control}
               name="weeklyHoursAvailable"
@@ -200,8 +199,8 @@ export function SupervisorStepPracticeDetails({
               }
               isSubmitting={isSubmitting}
             />
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormSelectField

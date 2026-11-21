@@ -267,10 +267,10 @@ describe('weeklyHoursAvailable — edit supervisor profile form', () => {
 describe('formatWeeklyHoursAvailable', () => {
   it('labels every option and returns empty for unset/unknown values', () => {
     expect(WEEKLY_HOURS_AVAILABLE_OPTIONS.map((o) => formatWeeklyHoursAvailable(o.value))).toEqual([
-      '5-10 hrs',
-      '11-20 hrs',
-      '21-30 hrs',
-      '31-40+ hrs',
+      '5-10 hours',
+      '11-20 hours',
+      '21-30 hours',
+      '31-40+ hours',
     ])
     expect(formatWeeklyHoursAvailable(null)).toBe('')
     expect(formatWeeklyHoursAvailable('40_PLUS')).toBe('')
