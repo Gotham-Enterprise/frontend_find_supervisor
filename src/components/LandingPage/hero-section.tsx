@@ -13,13 +13,11 @@ export function HeroSection() {
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="space-y-6">
             <h1 className="line-clamp-4 text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl lg:text-6xl">
-              Find the Right <span className="text-primary">Supervisor</span> to Guide Your
-              Professional Journey
+              Find a Clinical <span className="text-primary">Supervisor</span>
             </h1>
             <p className="max-w-lg text-lg text-muted-foreground">
-              Connect with Licensed Health Counselor Supervisors, Collaborating Physicians, and
-              Supervising Physicians who support your professional growth, compliance, and long-term
-              success.
+              Connect with Licensed Mental Health Supervisors to Complete Your Supervision Hours to
+              Become Fully Licensed
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Link href="/supervisors" className={buttonVariants({ size: 'lg' })}>
