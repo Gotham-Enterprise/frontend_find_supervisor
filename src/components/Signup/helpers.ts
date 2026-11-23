@@ -48,6 +48,7 @@ export const supervisorDefaultValues: Partial<SupervisorFormValues> = {
   patientPopulation: [],
   supervisionFormat: 'virtual',
   availability: '',
+  weeklyHoursAvailable: '',
   acceptingNewSupervisees: true,
   professionalSummary: '',
   describeYourself: '',

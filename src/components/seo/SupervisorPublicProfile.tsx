@@ -10,6 +10,7 @@ import {
   formatFeeType,
   formatNameWithCredentials,
   formatPatientPopulation,
+  formatWeeklyHoursAvailable,
   getSupervisorTypeDisplayLabels,
 } from '@/lib/utils/profile-formatters'
 
@@ -111,6 +112,12 @@ export function SupervisorPublicProfile({
         {supervisor.specialty && <ProfileDetail label="Specialty" value={supervisor.specialty} />}
         {supervisor.availability && (
           <ProfileDetail label="Availability" value={formatAvailability(supervisor.availability)} />
+        )}
+        {formatWeeklyHoursAvailable(supervisor.weeklyHoursAvailable) && (
+          <ProfileDetail
+            label="Hours Available Weekly"
+            value={formatWeeklyHoursAvailable(supervisor.weeklyHoursAvailable)}
+          />
         )}
         {genderIdentity && <ProfileDetail label="Gender Identity" value={genderIdentity} />}
         {languages.length > 0 && <ProfileDetail label="Languages" value={languages.join(', ')} />}

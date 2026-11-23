@@ -112,9 +112,8 @@ export function EditSupervisorProfileModal({
                 </Button>
               </div>
               {submitCount > 0 && !isValid && (
-                <p className="mt-2 text-right text-sm text-destructive">
-                  Please complete the highlighted fields — Save jumps to the first one (often a
-                  license entry that needs confirmation).
+                <p className="mt-2 text-sm text-destructive">
+                  Some required fields are missing. Please review the highlighted fields above.
                 </p>
               )}
             </div>

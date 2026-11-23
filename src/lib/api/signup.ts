@@ -11,7 +11,10 @@ import {
 } from '@/lib/forms/identity-preferences'
 import { OTHER_CERTIFYING_BOARD_VALUE } from '@/lib/utils/board-certification'
 import { normalizeUSPhoneNumber } from '@/lib/utils/phone'
-import { requiresSupervisionHoursNeeded } from '@/lib/utils/profile-formatters'
+import {
+  requiresSupervisionHoursNeeded,
+  requiresWeeklyHoursAvailable,
+} from '@/lib/utils/profile-formatters'
 import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 import { isPhysicianSupervisorType } from '@/lib/utils/supervisor-type'
 
@@ -211,6 +214,10 @@ export function buildSupervisorFormData(values: SupervisorRegisterValues): FormD
   values.patientPopulation.forEach((p) => fd.append('patientPopulation', p))
   fd.append('supervisionFormat', FORMAT_MAP[values.supervisionFormat])
   fd.append('availability', values.availability)
+  // Every supervisor type except Medical Director (required for them).
+  if (requiresWeeklyHoursAvailable(values.supervisorType) && values.weeklyHoursAvailable) {
+    fd.append('weeklyHoursAvailable', values.weeklyHoursAvailable)
+  }
   // Backend field: acceptingSupervisees (not acceptingNewSupervisees)
   fd.append('acceptingSupervisees', String(values.acceptingNewSupervisees))
   fd.append('describeYourself', values.describeYourself)

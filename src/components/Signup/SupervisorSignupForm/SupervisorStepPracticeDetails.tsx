@@ -25,6 +25,10 @@ import { Switch } from '@/components/ui/switch'
 import { TagInput } from '@/components/ui/tag-input'
 import { Textarea } from '@/components/ui/textarea'
 import type { SelectOption } from '@/lib/api/options'
+import {
+  requiresWeeklyHoursAvailable,
+  WEEKLY_HOURS_AVAILABLE_OPTIONS,
+} from '@/lib/utils/profile-formatters'
 import { isMonthlyOnlySupervisorType } from '@/lib/utils/supervisor-type'
 
 const supervisionFeeSelectOptions: SelectOption[] = supervisionFeeTypeOptions.map((o) => ({
@@ -62,6 +66,8 @@ export function SupervisorStepPracticeDetails({
   // A plain Medical Director (no clinical-supervision offering) has no patient population.
   const showPatientPopulation =
     !isMedicalDirector || offerSupervisingPhysician || offerCollaboratingPhysician
+
+  const showWeeklyHours = !isMedicalDirector && requiresWeeklyHoursAvailable(supervisorTypeValue)
 
   const monthlyFeeOnly = isMonthlyOnlySupervisorType(supervisorTypeValue)
   const feeTypeOptions = monthlyFeeOnly
@@ -113,43 +119,28 @@ export function SupervisorStepPracticeDetails({
           />
         )}
 
-        <FormField
-          control={control}
-          name="supervisionFormat"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Supervision Format <span className="text-destructive">*</span>
-              </FormLabel>
-              <FormControl>
-                <FormatSelector
-                  value={field.value}
-                  onChange={(v) => {
-                    field.onChange(v)
-                    clearErrors(field.name)
-                  }}
-                  disabled={isSubmitting}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormSelectField
+          <FormField
             control={control}
-            name="availability"
-            label="Availability"
-            rules={supervisorFieldRules('availability')}
-            options={availabilityOptions}
-            placeholder="Select Availability"
-            loading={availabilityLoading}
-            required
-            itemToStringLabel={(val) =>
-              availabilityOptions.find((o) => o.value === val)?.label ?? String(val ?? '')
-            }
-            isSubmitting={isSubmitting}
+            name="supervisionFormat"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Supervision Format <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <FormatSelector
+                    value={field.value}
+                    onChange={(v) => {
+                      field.onChange(v)
+                      clearErrors(field.name)
+                    }}
+                    disabled={isSubmitting}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
           <FormField
             control={control}
@@ -176,6 +167,39 @@ export function SupervisorStepPracticeDetails({
               </FormItem>
             )}
           />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormSelectField
+            control={control}
+            name="availability"
+            label="Availability"
+            rules={supervisorFieldRules('availability')}
+            options={availabilityOptions}
+            placeholder="Select Availability"
+            loading={availabilityLoading}
+            required
+            itemToStringLabel={(val) =>
+              availabilityOptions.find((o) => o.value === val)?.label ?? String(val ?? '')
+            }
+            isSubmitting={isSubmitting}
+          />
+          {showWeeklyHours && (
+            <FormSelectField
+              control={control}
+              name="weeklyHoursAvailable"
+              label="Hours Available Weekly"
+              rules={supervisorFieldRules('weeklyHoursAvailable')}
+              options={WEEKLY_HOURS_AVAILABLE_OPTIONS}
+              placeholder="Select Hours"
+              required
+              itemToStringLabel={(val) =>
+                WEEKLY_HOURS_AVAILABLE_OPTIONS.find((o) => o.value === val)?.label ??
+                String(val ?? '')
+              }
+              isSubmitting={isSubmitting}
+            />
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

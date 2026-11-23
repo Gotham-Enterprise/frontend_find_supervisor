@@ -29,6 +29,11 @@ import {
 } from '@/lib/utils/board-certification'
 import { normalizeNumberFieldInput } from '@/lib/utils/number-input'
 import { formatUSPhoneForDisplay, normalizeUSPhoneNumber } from '@/lib/utils/phone'
+import {
+  requiresWeeklyHoursAvailable,
+  WEEKLY_HOURS_AVAILABLE_OPTIONS,
+  WEEKLY_HOURS_AVAILABLE_REQUIRED_MESSAGE,
+} from '@/lib/utils/profile-formatters'
 import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 import {
   isMonthlyOnlySupervisorType,
@@ -112,6 +117,9 @@ const editSupervisorProfileFieldsSchema = z.object({
     .string()
     .min(1, 'Availability is required')
     .refine((s) => !isEmptySelect(s), { message: 'Availability is required' }),
+  // Required for every type except Medical Director — see the superRefine in
+  // createEditSupervisorProfileSchema. Existing profiles pick one on next save.
+  weeklyHoursAvailable: z.string(),
   acceptingSupervisees: z.boolean().optional(),
   describeYourself: z
     .string()
@@ -205,6 +213,19 @@ export function createEditSupervisorProfileSchema(profile: SupervisorProfileData
         path: ['certification'],
         message: 'Add at least one certification',
       })
+    }
+
+    if (requiresWeeklyHoursAvailable(data.supervisorType)) {
+      const validRange = WEEKLY_HOURS_AVAILABLE_OPTIONS.some(
+        (option) => option.value === data.weeklyHoursAvailable,
+      )
+      if (!validRange) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['weeklyHoursAvailable'],
+          message: WEEKLY_HOURS_AVAILABLE_REQUIRED_MESSAGE,
+        })
+      }
     }
 
     if (isMonthlyOnlySupervisorType(data.supervisorType) && data.supervisionFeeType !== 'MONTHLY') {
@@ -418,6 +439,7 @@ export function getDefaultSupervisorProfileFormValues(
     patientPopulation: profile.patientPopulation ?? [],
     supervisionFormat: profile.supervisionFormat ?? '',
     availability: profile.availability ?? '',
+    weeklyHoursAvailable: profile.weeklyHoursAvailable ?? '',
     acceptingSupervisees: profile.acceptingSupervisees,
     describeYourself: profile.describeYourself ?? '',
     professionalSummary: profile.professionalSummary ?? '',
@@ -467,6 +489,9 @@ export function supervisorProfileFormValuesToPayload(
     patientPopulation: values.patientPopulation,
     supervisionFormat: values.supervisionFormat || undefined,
     availability: values.availability || undefined,
+    weeklyHoursAvailable: requiresWeeklyHoursAvailable(values.supervisorType)
+      ? values.weeklyHoursAvailable || undefined
+      : undefined,
     acceptingSupervisees: values.acceptingSupervisees,
     describeYourself: values.describeYourself || undefined,
     professionalSummary: values.professionalSummary || undefined,

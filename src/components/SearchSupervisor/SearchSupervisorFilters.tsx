@@ -26,6 +26,7 @@ import {
   useSupervisorFormOptions,
   useSupervisorTypesData,
 } from '@/lib/hooks'
+import { WEEKLY_HOURS_AVAILABLE_OPTIONS } from '@/lib/utils/profile-formatters'
 import { isMedicalDirectorType } from '@/lib/utils/supervisee-eligibility'
 
 import { ActiveFilterChips } from './ActiveFilterChips'
@@ -42,6 +43,10 @@ import {
   YEARS_OF_EXPERIENCE_OPTIONS,
 } from './helpers'
 import type { SupervisorSearchFilters } from './types'
+
+const WEEKLY_HOURS_AVAILABLE_FILTER_OPTIONS: SelectOption[] = WEEKLY_HOURS_AVAILABLE_OPTIONS.map(
+  (o) => ({ value: o.value, label: o.label }),
+)
 
 /** `SelectItem` cannot use `value=""`; this value means no location filter. */
 const LOCATION_FILTER_NONE = '__none__'
@@ -507,6 +512,19 @@ export function SearchSupervisorFilters({
             searchPlaceholder="Search languages…"
           />
         </div>
+
+        {/* Medical Directors don't track weekly hours. */}
+        {!isMedicalDirectors && (
+          <div>
+            <FilterLabel>Hours Available Weekly</FilterLabel>
+            <TagInput
+              options={WEEKLY_HOURS_AVAILABLE_FILTER_OPTIONS}
+              value={filters.weeklyHoursAvailable}
+              onChange={(v) => set('weeklyHoursAvailable', v)}
+              placeholder="Select hours…"
+            />
+          </div>
+        )}
 
         <div>
           <FilterLabel>Availability</FilterLabel>
