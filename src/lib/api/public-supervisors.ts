@@ -61,6 +61,8 @@ export interface PublicSupervisorSummary {
   supervisionFormat: string
   /** Availability code, e.g. 'WEEKDAYS' | 'EVENINGS' | 'FLEXIBLE'. Empty when unset. */
   availability: string
+  /** "Hours Available Weekly" range code, e.g. '11_20'. Empty when unset / Medical Director. */
+  weeklyHoursAvailable: string
   stateOfLicensure: string[]
   certification: string[]
   /** Client population codes, e.g. 'ADULTS' | 'CHILDREN' | 'ADOLESCENTS' | 'FAMILIES'. */
@@ -190,6 +192,7 @@ function parseRow(row: Record<string, unknown>): PublicSupervisorSummary {
     acceptingSupervisees: Boolean(row.acceptingSupervisees),
     supervisionFormat: String(row.supervisionFormat ?? ''),
     availability: String(row.availability ?? ''),
+    weeklyHoursAvailable: String(row.weeklyHoursAvailable ?? ''),
     stateOfLicensure: Array.isArray(row.stateOfLicensure) ? (row.stateOfLicensure as string[]) : [],
     certification: Array.isArray(row.certification) ? (row.certification as string[]) : [],
     patientPopulation: Array.isArray(row.patientPopulation)

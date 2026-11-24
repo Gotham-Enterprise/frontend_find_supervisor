@@ -51,6 +51,7 @@ import { getOwnIdentitySummary } from '@/lib/utils/identity-display'
 import {
   formatNameWithCredentials,
   formatSupervisorTypeWithOfferings,
+  requiresWeeklyHoursAvailable,
   resolveOptionLabels,
 } from '@/lib/utils/profile-formatters'
 import { getAgreementStage } from '@/lib/utils/supervision-status'
@@ -93,6 +94,11 @@ function getSupervisorProfileCompletionChecks(profile: SupervisorProfileData): b
 
   const hasFee = Boolean(profile.supervisionFeeAmount)
 
+  // Medical Directors don't track weekly hours.
+  const hasWeeklyHours =
+    !requiresWeeklyHoursAvailable(profile.supervisorType) ||
+    Boolean(profile.weeklyHoursAvailable?.trim())
+
   const hasBio =
     Boolean(profile.professionalSummary?.trim()) || Boolean(profile.describeYourself?.trim())
 
@@ -112,6 +118,7 @@ function getSupervisorProfileCompletionChecks(profile: SupervisorProfileData): b
     Boolean(profile.yearsOfExperience?.trim()),
     Boolean(profile.supervisionFormat),
     Boolean(profile.availability?.trim()),
+    hasWeeklyHours,
     hasFee,
     hasBio,
     (profile.certification?.length ?? 0) > 0,
@@ -219,6 +226,7 @@ function getChecklist(
 ): ChecklistStep[] {
   const detailsDone = !!(
     profile.availability &&
+    (!requiresWeeklyHoursAvailable(profile.supervisorType) || profile.weeklyHoursAvailable) &&
     profile.supervisionFeeAmount &&
     profile.supervisionFormat
   )

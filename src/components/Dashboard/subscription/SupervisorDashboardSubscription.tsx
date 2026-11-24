@@ -13,6 +13,7 @@ import {
   shouldShowSupervisionPremiumSubscriptionCard,
 } from '@/lib/constants/supervision-dashboard-plans'
 import { useReactivateSubscription, useUserSnackbar } from '@/lib/hooks'
+import { useUpgradePlanName } from '@/lib/hooks/useSubscriptionPlans'
 import { parseApiError } from '@/lib/utils/error-parser'
 import { isSubscriptionScheduledForCancellationFields } from '@/lib/utils/subscription-status'
 import type { SubscriptionPlan, SubscriptionStatus } from '@/types/supervisor-profile'
@@ -150,6 +151,7 @@ function SupervisorFreePlanEnrolledCard({
   const [modalOpen, setModalOpen] = useState(false)
   const freeFeatures = SUPERVISOR_FEATURES.filter((f) => !f.premium)
   const premiumFeatures = SUPERVISOR_FEATURES.filter((f) => f.premium)
+  const upgradePlanName = useUpgradePlanName()
 
   const openModal = () => {
     if (onOpenChoosePlanModal) onOpenChoosePlanModal()
@@ -208,8 +210,7 @@ function SupervisorFreePlanEnrolledCard({
               <p className="mt-1 text-sm font-semibold text-foreground">{planName}</p>
               <p className="mt-3 text-sm font-semibold text-foreground">Unlock Premium Features</p>
               <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                Move to Find a Supervisor Platform Access when you&apos;re ready for the full
-                supervisor experience.
+                Move to {upgradePlanName} when you&apos;re ready for the full supervisor experience.
               </p>
 
               <button

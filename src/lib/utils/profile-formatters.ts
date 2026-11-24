@@ -503,6 +503,32 @@ export function formatSupervisionHoursNeeded(value: string | null | undefined): 
   return SUPERVISION_HOURS_NEEDED_OPTIONS.find((option) => option.value === value)?.label ?? ''
 }
 
+// ─── Hours available weekly (supervisor) ─────────────────────────────────────
+
+/**
+ * Ranges a supervisor picks for "Hours Available Weekly" on their profile.
+ * Values match the backend's WEEKLY_HOURS_AVAILABLE_VALUES.
+ */
+export const WEEKLY_HOURS_AVAILABLE_OPTIONS = [
+  { label: '5-10 hours', value: '5_10' },
+  { label: '11-20 hours', value: '11_20' },
+  { label: '21-30 hours', value: '21_30' },
+  { label: '31-40+ hours', value: '31_PLUS' },
+] as const
+
+export const WEEKLY_HOURS_AVAILABLE_REQUIRED_MESSAGE = 'Please select your hours available weekly'
+
+/** Every supervisor type except Medical Director (a monthly service, not hours). */
+export function requiresWeeklyHoursAvailable(supervisorType: string | null | undefined): boolean {
+  const name = supervisorType?.trim() ?? ''
+  return name !== '' && !isMedicalDirectorType({ name })
+}
+
+/** Display label for a stored range code; '' when unset or unknown. */
+export function formatWeeklyHoursAvailable(value: string | null | undefined): string {
+  return WEEKLY_HOURS_AVAILABLE_OPTIONS.find((option) => option.value === value)?.label ?? ''
+}
+
 // ─── Budget range ─────────────────────────────────────────────────────────────
 
 const BUDGET_TYPE_SUFFIX: Record<string, string> = {
