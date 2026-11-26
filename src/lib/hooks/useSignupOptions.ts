@@ -13,10 +13,14 @@ import { useOccupations } from '@/lib/hooks/useCategories'
 // Options rarely change — cache for 10 minutes
 const STALE_TIME = 10 * 60 * 1000
 
-function useSignupOption(param: OptionsParam) {
+function useSignupOption(
+  param: OptionsParam,
+  select?: (options: SelectOption[]) => SelectOption[],
+) {
   return useQuery<SelectOption[]>({
     queryKey: ['signup-options', param],
     queryFn: () => fetchOptions(param),
+    select,
     staleTime: STALE_TIME,
   })
 }
@@ -25,8 +29,12 @@ export function useCertificateOptions() {
   return useSignupOption('certificate')
 }
 
+/** Alphabetical — the API returns these in age order, which reads as random in a long list. */
+const sortByLabel = (options: SelectOption[]) =>
+  [...options].sort((a, b) => a.label.localeCompare(b.label))
+
 export function usePatientPopulationOptions() {
-  return useSignupOption('patientPopulation')
+  return useSignupOption('patientPopulation', sortByLabel)
 }
 
 export function useLicenseTypeOptions() {

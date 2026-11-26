@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form } from '@/components/ui/form'
 import { Skeleton } from '@/components/ui/skeleton'
+import { getSupervisorRoleProfileCopy } from '@/lib/constants/supervision-plan-features'
 import { useUserSnackbar } from '@/lib/contexts/UserSnackbarContext'
 import {
   createEditSupervisorProfileSchema,
@@ -138,6 +139,7 @@ function SupervisorMyProfileEditor({
 export function SupervisorMyProfileSection() {
   const { user } = useUser()
   const { data: profile, isLoading, isError, refetch } = useSupervisorProfile()
+  const roleCopy = getSupervisorRoleProfileCopy(profile?.supervisorType)
 
   const enrichedProfile = useMemo(() => {
     if (!profile || !user?.id) return null
@@ -161,14 +163,14 @@ export function SupervisorMyProfileSection() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">My Profile</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Update the details supervisees see on your profile. Changes use the same information as
-          your dashboard.
+          Update the details {roleCopy.counterpartPlural} see on your profile. Changes use the same
+          information as your dashboard.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Supervisor Profile</CardTitle>
+          <CardTitle className="text-base">{roleCopy.profileTitle}</CardTitle>
           <CardDescription>
             Fields match your dashboard editor. Save applies your updates immediately.
           </CardDescription>

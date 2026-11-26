@@ -8,10 +8,13 @@ import {
   getSubscriptionPlans,
   reactivateSubscription,
 } from '@/lib/api/supervision'
+import {
+  getSupervisionRoleKind,
+  type SupervisionRoleKind,
+} from '@/lib/constants/supervision-plan-features'
 import { useUser } from '@/lib/contexts/UserContext'
+import { supervisorProfileKeys, useSupervisorProfile } from '@/lib/hooks/useSupervisorProfile'
 import type { Subscription, SubscriptionPlan } from '@/types/supervisor-profile'
-
-import { supervisorProfileKeys } from './useSupervisorProfile'
 
 export const subscriptionKeys = {
   all: ['supervision', 'subscription'] as const,
@@ -55,6 +58,16 @@ export function useSubscriptionPlansQuery(enabled: boolean) {
  * the list to their audience, e.g. Medical Directors get their own plan).
  * Falls back to the general plan's name until the list loads.
  */
+/**
+ * Supervisor / Medical Director / Preceptor — picks the wording of the plan
+ * feature lists. Reads the viewer's own supervisor profile; 'supervisor' until
+ * it loads (and for supervisees, who never see these cards).
+ */
+export function useSupervisionRoleKind(): SupervisionRoleKind {
+  const { data } = useSupervisorProfile()
+  return getSupervisionRoleKind(data?.supervisorType)
+}
+
 export function useUpgradePlanName(): string {
   const { data } = useSubscriptionPlansQuery(true)
   const paid = data

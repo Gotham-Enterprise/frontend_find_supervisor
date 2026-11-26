@@ -129,6 +129,7 @@ export function SuperviseeDashboardContent({
 
       {/* Upcoming Sessions — full width */}
       <SuperviseeDashboardUpcomingSessionsCard
+        isPreceptee={isPreceptee}
         sessions={upcomingSessions}
         isLoading={isUpcomingSessionsLoading}
         isError={isUpcomingSessionsError}
@@ -168,7 +169,11 @@ export function SuperviseeDashboardContent({
           )}
         </div>
         <div className="lg:col-span-2">
-          <SuperviseeDashboardActiveRequests hires={pendingHires} isError={isHiresError} />
+          <SuperviseeDashboardActiveRequests
+            hires={pendingHires}
+            isError={isHiresError}
+            isPreceptee={isPreceptee}
+          />
         </div>
       </div>
 

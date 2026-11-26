@@ -648,6 +648,14 @@ export function applySuperviseePrecepteeRules(
       path: ['expectedGraduation'],
       message: 'Expected graduation is required',
     })
+  } else if (data.expectedGraduation.trim() < todayLocalISO()) {
+    // ISO yyyy-mm-dd strings compare lexicographically; a student still in a
+    // program graduates today or later.
+    ctx.addIssue({
+      code: 'custom',
+      path: ['expectedGraduation'],
+      message: 'Expected graduation must be today or later',
+    })
   }
   if (data.clinicalHoursRequired == null) {
     ctx.addIssue({
@@ -715,6 +723,14 @@ function applySuperviseeBudgetRules(
 ) {
   // Supervision-only fields — hidden (and skipped) for an MD-only signup.
   if (!data.typeOfSupervisor) return
+  // Preceptorships are hourly only for now.
+  if (isPrecepteeSignup(data) && data.feeType !== 'hourly') {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['feeType'],
+      message: 'Only the Hourly fee type is available for preceptorships',
+    })
+  }
   if (data.feeType === 'hourly' && !data.budgetRange) {
     ctx.addIssue({
       code: 'custom',

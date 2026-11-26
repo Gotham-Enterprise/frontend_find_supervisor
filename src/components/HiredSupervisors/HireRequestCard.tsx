@@ -83,12 +83,15 @@ interface HireRequestCardProps {
   existingReview?: Review
   /** Rendered on Hired Medical Directors — profile links + back links target the MD routes. */
   isMedicalDirectors?: boolean
+  /** Rendered on Hired Preceptors — profile links + back links target the preceptor routes. */
+  isPreceptors?: boolean
 }
 
 export function HireRequestCard({
   hire,
   existingReview,
   isMedicalDirectors = false,
+  isPreceptors = false,
 }: HireRequestCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   // Deep link: agreement notifications/emails point to the hired list with
@@ -141,7 +144,9 @@ export function HireRequestCard({
   // the profile page where to go back to (the two hired lists are separate pages).
   const profileHref = isMedicalDirectors
     ? `/find-medical-directors/${hire.supervisorId}?from=hired-medical-directors`
-    : `/find-supervisors/${hire.supervisorId}?from=hired-supervisors`
+    : isPreceptors
+      ? `/find-preceptors/${hire.supervisorId}?from=hired-preceptors`
+      : `/find-supervisors/${hire.supervisorId}?from=hired-supervisors`
 
   // Agreement: sign while the supervisor's proposal awaits the supervisee's signature
   const agreementStage = getAgreementStage(hire)

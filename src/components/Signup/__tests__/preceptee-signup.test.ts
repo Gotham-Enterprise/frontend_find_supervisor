@@ -96,6 +96,20 @@ describe('superviseeStep2Schema — preceptee (student) flow', () => {
     expect(paths).toEqual(expect.arrayContaining(['supervisorOccupationId', 'budgetRange']))
   })
 
+  it('allows hourly only for preceptorships (for now)', () => {
+    const paths = issuePaths(
+      superviseeStep2Schema.safeParse({
+        ...validPrecepteeStep2Values,
+        feeType: 'monthly',
+        monthlyBudget: 500,
+      }),
+    )
+    expect(paths).toContain('feeType')
+    expect(issuePaths(superviseeStep2Schema.safeParse(validPrecepteeStep2Values))).not.toContain(
+      'feeType',
+    )
+  })
+
   it('rejects a rotation end before its start and non-whole / out-of-range hours', () => {
     expect(
       issuePaths(

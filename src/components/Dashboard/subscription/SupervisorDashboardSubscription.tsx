@@ -12,31 +12,19 @@ import {
   isSupervisionFreeTierSubscription,
   shouldShowSupervisionPremiumSubscriptionCard,
 } from '@/lib/constants/supervision-dashboard-plans'
+import {
+  getFreePlanFeatures,
+  getPremiumPlanFeatures,
+  getSupervisionRoleCopy,
+} from '@/lib/constants/supervision-plan-features'
 import { useReactivateSubscription, useUserSnackbar } from '@/lib/hooks'
-import { useUpgradePlanName } from '@/lib/hooks/useSubscriptionPlans'
+import { useSupervisionRoleKind, useUpgradePlanName } from '@/lib/hooks/useSubscriptionPlans'
 import { parseApiError } from '@/lib/utils/error-parser'
 import { isSubscriptionScheduledForCancellationFields } from '@/lib/utils/subscription-status'
 import type { SubscriptionPlan, SubscriptionStatus } from '@/types/supervisor-profile'
 
 import { FreeFeatureRow, LockedFeatureRow, PremiumFeaturesDivider } from './SubscriptionFeatureRows'
 import { SubscriptionModal } from './SubscriptionModal'
-
-interface FeatureItem {
-  label: string
-  premium: boolean
-}
-
-const SUPERVISOR_FEATURES: FeatureItem[] = [
-  { label: 'Receive and view supervisee requests', premium: false },
-  { label: 'See visibility into interested supervisees', premium: false },
-  { label: 'Basic profile listing in search', premium: false },
-  { label: 'Platform notifications for new activity', premium: false },
-  { label: 'Accept supervisee requests', premium: true },
-  { label: 'Full messaging with supervisees', premium: true },
-  { label: 'View supervisee contact details where applicable', premium: true },
-  { label: 'Improved discoverability and profile exposure', premium: true },
-  { label: 'Unlock full supervisor platform tools', premium: true },
-]
 
 function formatBillingDate(iso: string | null | undefined): string {
   if (!iso) return '—'
@@ -49,8 +37,10 @@ function formatBillingDate(iso: string | null | undefined): string {
 
 function UnsubscribedCard({ onOpenChoosePlanModal }: { onOpenChoosePlanModal?: () => void }) {
   const [modalOpen, setModalOpen] = useState(false)
-  const freeFeatures = SUPERVISOR_FEATURES.filter((f) => !f.premium)
-  const premiumFeatures = SUPERVISOR_FEATURES.filter((f) => f.premium)
+  const roleKind = useSupervisionRoleKind()
+  const roleCopy = getSupervisionRoleCopy(roleKind)
+  const freeFeatures = getFreePlanFeatures(roleKind)
+  const premiumFeatures = getPremiumPlanFeatures(roleKind)
 
   const openModal = () => {
     if (onOpenChoosePlanModal) onOpenChoosePlanModal()
@@ -69,8 +59,8 @@ function UnsubscribedCard({ onOpenChoosePlanModal }: { onOpenChoosePlanModal?: (
             <div>
               <CardTitle className="text-base font-semibold">Supervisor subscription</CardTitle>
               <p className="mt-0.5 text-sm text-muted-foreground">
-                Upgrade to reach supervisees with messaging, stronger visibility, and full platform
-                tools.
+                Upgrade to reach {roleCopy.counterpartPlural} with messaging, stronger visibility,
+                and full platform tools.
               </p>
             </div>
           </div>
@@ -149,8 +139,10 @@ function SupervisorFreePlanEnrolledCard({
   onOpenChoosePlanModal?: () => void
 }) {
   const [modalOpen, setModalOpen] = useState(false)
-  const freeFeatures = SUPERVISOR_FEATURES.filter((f) => !f.premium)
-  const premiumFeatures = SUPERVISOR_FEATURES.filter((f) => f.premium)
+  const roleKind = useSupervisionRoleKind()
+  const roleCopy = getSupervisionRoleCopy(roleKind)
+  const freeFeatures = getFreePlanFeatures(roleKind)
+  const premiumFeatures = getPremiumPlanFeatures(roleKind)
   const upgradePlanName = useUpgradePlanName()
 
   const openModal = () => {
@@ -172,8 +164,8 @@ function SupervisorFreePlanEnrolledCard({
                 You&apos;re on the free plan
               </CardTitle>
               <p className="mt-0.5 text-sm text-muted-foreground">
-                Basic supervisor tools are included. Upgrade for messaging, richer visibility, and
-                full platform access.
+                Basic {roleCopy.roleNounLower} tools are included. Upgrade for messaging, richer
+                visibility, and full platform access.
               </p>
             </div>
           </div>
@@ -210,7 +202,8 @@ function SupervisorFreePlanEnrolledCard({
               <p className="mt-1 text-sm font-semibold text-foreground">{planName}</p>
               <p className="mt-3 text-sm font-semibold text-foreground">Unlock Premium Features</p>
               <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                Move to {upgradePlanName} when you&apos;re ready for the full supervisor experience.
+                Move to {upgradePlanName} when you&apos;re ready for the full{' '}
+                {roleCopy.roleNounLower} experience.
               </p>
 
               <button
@@ -242,6 +235,8 @@ function SubscribedCard({
   /** User canceled renewal but Stripe keeps access until current period end */
   cancelAtPeriodEnd?: boolean
 }) {
+  const roleKind = useSupervisionRoleKind()
+  const roleCopy = getSupervisionRoleCopy(roleKind)
   const isCanceling = !!cancelAtPeriodEnd
   const { mutateAsync: reactivateSub, isPending: isReactivating } = useReactivateSubscription()
   const { showSuccess, showError } = useUserSnackbar()
@@ -314,7 +309,7 @@ function SubscribedCard({
               <p className="mt-0.5 text-sm text-muted-foreground">
                 {isCanceling
                   ? `Your renewal is turned off. You keep full premium access until ${nextBillingDate === '—' ? 'the end of your billing period' : nextBillingDate}, with no further charges after that.`
-                  : 'You have access to premium supervisor features including messaging, visibility, and platform tools.'}
+                  : `You have access to premium ${roleCopy.roleNounLower} features including messaging, visibility, and platform tools.`}
               </p>
             </div>
           </div>
@@ -343,9 +338,11 @@ function SubscribedCard({
                 Included in your plan
               </p>
               <ul className="space-y-2.5">
-                {SUPERVISOR_FEATURES.map((f) => (
-                  <FreeFeatureRow key={f.label} label={f.label} />
-                ))}
+                {[...getFreePlanFeatures(roleKind), ...getPremiumPlanFeatures(roleKind)].map(
+                  (f) => (
+                    <FreeFeatureRow key={f.label} label={f.label} />
+                  ),
+                )}
               </ul>
             </div>
 
@@ -464,7 +461,9 @@ function LapsedCard({
   onOpenChoosePlanModal?: () => void
 }) {
   const [modalOpen, setModalOpen] = useState(false)
-  const premiumFeatures = SUPERVISOR_FEATURES.filter((f) => f.premium)
+  const roleKind = useSupervisionRoleKind()
+  const freeFeatures = getFreePlanFeatures(roleKind)
+  const premiumFeatures = getPremiumPlanFeatures(roleKind)
 
   const openModal = () => {
     if (onOpenChoosePlanModal) onOpenChoosePlanModal()
@@ -502,7 +501,7 @@ function LapsedCard({
                 Features you had access to
               </p>
               <ul className="space-y-2.5">
-                {SUPERVISOR_FEATURES.filter((f) => !f.premium).map((f) => (
+                {freeFeatures.map((f) => (
                   <FreeFeatureRow key={f.label} label={f.label} />
                 ))}
               </ul>

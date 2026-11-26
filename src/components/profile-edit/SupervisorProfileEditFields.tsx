@@ -46,12 +46,14 @@ import {
 } from '@/lib/utils/profile-formatters'
 import {
   isMedicalDirectorType,
+  isPreceptorType,
   resolveSupervisorTypeCode,
   supervisionTypeDisplayLabel,
   SUPERVISOR_TYPE_CODES,
 } from '@/lib/utils/supervisee-eligibility'
 import {
   getSupervisorCredentialSelectOptions,
+  isHourlyOnlySupervisorType,
   isMonthlyOnlySupervisorType,
   isPhysicianSupervisorType,
   PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE,
@@ -127,19 +129,26 @@ export function SupervisorProfileEditFields({
     useWatch({ control: form.control, name: 'offerCollaboratingPhysician' }) ?? false
   const boardCertified = useWatch({ control: form.control, name: 'boardCertified' }) ?? false
 
-  // Medical Director profiles cannot switch type (dedicated signup path);
-  // conversely no other profile may switch INTO Medical Director from edit.
+  // Medical Director and Preceptor profiles cannot switch type (dedicated
+  // signup paths, no dual roles); conversely no other profile may switch INTO
+  // either of them from edit.
   const isMedicalDirectorProfile = isMedicalDirectorType({
     name: profile.supervisorType ?? '',
   })
+  const isPreceptorProfile = isPreceptorType({ name: profile.supervisorType ?? '' })
+  const isTypeLocked = isMedicalDirectorProfile || isPreceptorProfile
 
   const supervisorTypeOptions = useMemo<SelectOption[]>(
     () =>
       supervisorTypesData
-        .filter((t) => isMedicalDirectorProfile || !isMedicalDirectorType(t))
+        .filter(
+          (t) =>
+            (isMedicalDirectorProfile || !isMedicalDirectorType(t)) &&
+            (isPreceptorProfile || !isPreceptorType(t)),
+        )
         // Labels use the shared display override; the stored value stays the type name.
         .map((t) => ({ label: supervisionTypeDisplayLabel(t.name), value: t.name })),
-    [supervisorTypesData, isMedicalDirectorProfile],
+    [supervisorTypesData, isMedicalDirectorProfile, isPreceptorProfile],
   )
 
   const medicalDirectorType = useMemo(
@@ -207,16 +216,23 @@ export function SupervisorProfileEditFields({
   }
 
   const monthlyFeeOnly = isMonthlyOnlySupervisorType(supervisorTypeWatch)
+  const hourlyFeeOnly = isHourlyOnlySupervisorType(supervisorTypeWatch)
   const feeTypeOptions = monthlyFeeOnly
     ? SUPERVISOR_PROFILE_FEE_TYPE_OPTIONS.filter((o) => o.value === 'MONTHLY')
-    : SUPERVISOR_PROFILE_FEE_TYPE_OPTIONS
+    : hourlyFeeOnly
+      ? SUPERVISOR_PROFILE_FEE_TYPE_OPTIONS.filter((o) => o.value === 'HOURLY')
+      : SUPERVISOR_PROFILE_FEE_TYPE_OPTIONS
   const supervisionFeeTypeWatch = useWatch({ control: form.control, name: 'supervisionFeeType' })
   useEffect(() => {
     if (monthlyFeeOnly && supervisionFeeTypeWatch !== 'MONTHLY') {
       form.setValue('supervisionFeeType', 'MONTHLY', { shouldValidate: false })
       form.clearErrors('supervisionFeeType')
     }
-  }, [monthlyFeeOnly, supervisionFeeTypeWatch, form])
+    if (hourlyFeeOnly && supervisionFeeTypeWatch !== 'HOURLY') {
+      form.setValue('supervisionFeeType', 'HOURLY', { shouldValidate: false })
+      form.clearErrors('supervisionFeeType')
+    }
+  }, [monthlyFeeOnly, hourlyFeeOnly, supervisionFeeTypeWatch, form])
 
   return (
     <div className="space-y-6">
@@ -379,7 +395,7 @@ export function SupervisorProfileEditFields({
             options={supervisorTypeOptions}
             placeholder={supervisorTypesLoading ? 'Loading…' : 'Select supervisor type'}
             loading={supervisorTypesLoading}
-            disabled={isMedicalDirectorProfile}
+            disabled={isTypeLocked}
             isSubmitting={isSubmitting}
             emptySentinel={{ value: '__none__', label: 'None' }}
             onValueChange={() => {
@@ -397,9 +413,10 @@ export function SupervisorProfileEditFields({
               ])
             }}
           />
-          {isMedicalDirectorProfile ? (
+          {isTypeLocked ? (
             <p className="mt-1 text-xs text-muted-foreground">
-              The supervisor type cannot be changed for Medical Directors.
+              The supervisor type cannot be changed for{' '}
+              {isPreceptorProfile ? 'Preceptors' : 'Medical Directors'}.
             </p>
           ) : null}
         </div>

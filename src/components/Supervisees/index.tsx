@@ -130,36 +130,60 @@ function SuperviseesSkeleton() {
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
-function SuperviseesEmpty({ tab, isMdClients }: { tab: TabStatus; isMdClients: boolean }) {
-  const messages: Record<TabStatus, { title: string; body: string }> = isMdClients
-    ? {
-        ALL: {
-          title: 'No medical director clients yet',
-          body: 'Once someone hires you as their Medical Director and you accept, they will appear here.',
-        },
-        ACCEPTED: {
-          title: 'No accepted clients',
-          body: 'Clients whose requests you have accepted will appear here.',
-        },
-        COMPLETED: {
-          title: 'No completed engagements',
-          body: 'Engagements that have been marked as completed will appear here.',
-        },
-      }
-    : {
-        ALL: {
-          title: 'No supervisees yet',
-          body: 'Once supervisees request your supervision and you accept, they will appear here.',
-        },
-        ACCEPTED: {
-          title: 'No accepted supervisees',
-          body: 'Supervisees whose requests you have accepted will appear here.',
-        },
-        COMPLETED: {
-          title: 'No completed supervisions',
-          body: 'Supervisions that have been marked as completed will appear here.',
-        },
-      }
+function SuperviseesEmpty({
+  tab,
+  isMdClients,
+  isPreceptor = false,
+}: {
+  tab: TabStatus
+  isMdClients: boolean
+  isPreceptor?: boolean
+}) {
+  const precepteeMessages: Record<TabStatus, { title: string; body: string }> = {
+    ALL: {
+      title: 'No preceptees yet',
+      body: 'Once students request a rotation with you and you accept, they will appear here.',
+    },
+    ACCEPTED: {
+      title: 'No accepted preceptees',
+      body: 'Students whose requests you have accepted will appear here.',
+    },
+    COMPLETED: {
+      title: 'No completed rotations',
+      body: 'Rotations that have been marked as completed will appear here.',
+    },
+  }
+  const messages: Record<TabStatus, { title: string; body: string }> = isPreceptor
+    ? precepteeMessages
+    : isMdClients
+      ? {
+          ALL: {
+            title: 'No medical director clients yet',
+            body: 'Once someone hires you as their Medical Director and you accept, they will appear here.',
+          },
+          ACCEPTED: {
+            title: 'No accepted clients',
+            body: 'Clients whose requests you have accepted will appear here.',
+          },
+          COMPLETED: {
+            title: 'No completed engagements',
+            body: 'Engagements that have been marked as completed will appear here.',
+          },
+        }
+      : {
+          ALL: {
+            title: 'No supervisees yet',
+            body: 'Once supervisees request your supervision and you accept, they will appear here.',
+          },
+          ACCEPTED: {
+            title: 'No accepted supervisees',
+            body: 'Supervisees whose requests you have accepted will appear here.',
+          },
+          COMPLETED: {
+            title: 'No completed supervisions',
+            body: 'Supervisions that have been marked as completed will appear here.',
+          },
+        }
   const { title, body } = messages[tab]
 
   return (
@@ -586,10 +610,12 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export type SuperviseesPageMode = 'supervisors' | 'medical-directors'
+export type SuperviseesPageMode = 'supervisors' | 'medical-directors' | 'preceptors'
 
 export function SuperviseesPage({ mode = 'supervisors' }: { mode?: SuperviseesPageMode }) {
   const isMdClients = mode === 'medical-directors'
+  // /preceptees: the same list scoped to hires made for the Preceptor role.
+  const isPreceptor = mode === 'preceptors'
   const [activeTab, setActiveTab] = useState<TabStatus>('ACCEPTED')
   const [page, setPage] = useState(1)
 
@@ -604,7 +630,7 @@ export function SuperviseesPage({ mode = 'supervisors' }: { mode?: SuperviseesPa
     apiLimit,
     apiStatus,
     // Scoped by the role they hired this supervisor for (hire snapshot)
-    isMdClients ? 'medicalDirectors' : 'supervisors',
+    isMdClients ? 'medicalDirectors' : isPreceptor ? 'preceptors' : 'supervisors',
   )
   // Reviews received by the authenticated supervisor (role-scoped on the backend),
   // joined to hires client-side — same pattern as the supervisee's /hired-supervisors page.
@@ -644,12 +670,18 @@ export function SuperviseesPage({ mode = 'supervisors' }: { mode?: SuperviseesPa
     <div className="space-y-6">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          {isMdClients ? 'Medical Director Clients' : 'My Supervisees'}
+          {isMdClients
+            ? 'Medical Director Clients'
+            : isPreceptor
+              ? 'My Preceptees'
+              : 'My Supervisees'}
         </h2>
         <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
           {isMdClients
             ? 'Everyone who has hired you as their Medical Director is listed here. Use the tabs to filter by status, and open the menu on any card to view full profile and engagement details.'
-            : 'Everyone who has requested your supervision is listed here. Use the tabs to filter by status, and open the menu on any card to view full profile and supervision details.'}
+            : isPreceptor
+              ? 'Every student who has requested a rotation with you is listed here. Use the tabs to filter by status, and open the menu on any card to view full profile and rotation details.'
+              : 'Everyone who has requested your supervision is listed here. Use the tabs to filter by status, and open the menu on any card to view full profile and supervision details.'}
         </p>
       </div>
 
@@ -657,7 +689,7 @@ export function SuperviseesPage({ mode = 'supervisors' }: { mode?: SuperviseesPa
       <div
         className="flex flex-wrap gap-2"
         role="tablist"
-        aria-label="Filter supervisees by status"
+        aria-label={isPreceptor ? 'Filter preceptees by status' : 'Filter supervisees by status'}
       >
         {TABS.map((tab) => (
           <button
@@ -683,7 +715,7 @@ export function SuperviseesPage({ mode = 'supervisors' }: { mode?: SuperviseesPa
       ) : isError ? (
         <SuperviseesError />
       ) : items.length === 0 ? (
-        <SuperviseesEmpty tab={activeTab} isMdClients={isMdClients} />
+        <SuperviseesEmpty tab={activeTab} isMdClients={isMdClients} isPreceptor={isPreceptor} />
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

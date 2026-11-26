@@ -593,9 +593,12 @@ function StatusCards({
 function SetupChecklist({
   profile,
   onOpenChoosePlanModal,
+  onEditProfileClick,
 }: {
   profile: SupervisorProfileData
   onOpenChoosePlanModal: () => void
+  /** "Start →" on the profile-details step opens the Edit Profile modal. */
+  onEditProfileClick: () => void
 }) {
   const steps = getChecklist(profile)
   const doneCount = steps.filter((s) => s.status === 'done').length
@@ -649,12 +652,13 @@ function SetupChecklist({
                     </span>
                   )}
                   {step.status === 'current' && !step.choosePlanAction && !step.adminReviewStep && (
-                    <Link
-                      href="/dashboard"
+                    <button
+                      type="button"
+                      onClick={onEditProfileClick}
                       className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground"
                     >
                       Start →
-                    </Link>
+                    </button>
                   )}
                   {step.status === 'upcoming' && (
                     <span className="shrink-0 text-xs text-muted-foreground">Upcoming</span>
@@ -1112,6 +1116,7 @@ export function SupervisorDashboard() {
             <SetupChecklist
               profile={enrichedProfile}
               onOpenChoosePlanModal={() => setChoosePlanModalOpen(true)}
+              onEditProfileClick={() => setEditModalOpen(true)}
             />
           </div>
           <div className="lg:col-span-2">

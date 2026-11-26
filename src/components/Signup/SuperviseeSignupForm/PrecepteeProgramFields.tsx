@@ -137,7 +137,11 @@ export function PrecepteeProgramFields({ isSubmitting }: PrecepteeProgramFieldsP
           name="expectedGraduation"
           label="Expected Graduation"
           required
+          min={today}
           isSubmitting={isSubmitting}
+          validate={(value) =>
+            value && value < today ? 'Expected graduation must be today or later' : true
+          }
         />
         <FormInputField
           control={control}

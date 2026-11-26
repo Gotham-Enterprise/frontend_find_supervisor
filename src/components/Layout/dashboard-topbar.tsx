@@ -17,6 +17,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { isSupervisorRole } from '@/lib/auth/roles'
 import { useLogout, useUser } from '@/lib/hooks'
+import { useSuperviseeProfile } from '@/lib/hooks/useSuperviseeProfile'
+import { useSupervisorProfile } from '@/lib/hooks/useSupervisorProfile'
+import { isMedicalDirectorType, isPreceptorType } from '@/lib/utils/supervisee-eligibility'
 
 /**
  * Route-to-title map for the topbar page title.
@@ -29,9 +32,11 @@ const PAGE_TITLES: Array<{ prefix: string; title: string }> = [
   { prefix: '/find-medical-directors', title: 'Find Medical Directors' },
   { prefix: '/find-preceptors', title: 'Find Preceptors' },
   { prefix: '/supervisees', title: 'Supervisees' },
+  { prefix: '/preceptees', title: 'Preceptees' },
   { prefix: '/medical-director-clients', title: 'Medical Director Clients' },
   { prefix: '/hired-supervisors', title: 'Hired Supervisors' },
   { prefix: '/hired-medical-directors', title: 'Hired Medical Directors' },
+  { prefix: '/hired-preceptors', title: 'Hired Preceptors' },
   { prefix: '/supervision-requests', title: 'Supervision Requests' },
   { prefix: '/connections/received', title: 'Connection Requests' },
   { prefix: '/connections/sent', title: 'Sent Connections' },
@@ -67,8 +72,43 @@ export function DashboardTopbar() {
   const photoUrl = (user?.profile?.profilePhotoUrl ?? user?.profilePhotoUrl ?? '').trim()
   const [imgError, setImgError] = useState(false)
 
-  const sectionLabel = isSupervisorRole(user?.role) ? 'Supervisor Portal' : 'Supervisee Portal'
-  const pageTitle = resolvePageTitle(pathname)
+  // Portal label follows the product the account is on: Medical Directors and
+  // Preceptors are "supervisors" in the data model only, students are
+  // "supervisees" with a Preceptor need. Falls back to the generic label until
+  // the profile loads.
+  const isSupervisor = isSupervisorRole(user?.role)
+  const { data: supervisorProfile } = useSupervisorProfile(isSupervisor)
+  const { data: superviseeProfile } = useSuperviseeProfile(!!user && !isSupervisor)
+  const sectionLabel = (() => {
+    if (isSupervisor) {
+      const name = supervisorProfile?.supervisorType ?? ''
+      if (isMedicalDirectorType({ name })) return 'Medical Director Portal'
+      if (isPreceptorType({ name })) return 'Preceptor Portal'
+      return 'Supervisor Portal'
+    }
+    const needs = superviseeProfile?.typeOfSupervisorNeeded ?? []
+    if (needs.some((name) => isPreceptorType({ name }))) return 'Preceptee Portal'
+    return 'Supervisee Portal'
+  })()
+  // Preceptors and preceptees reuse the supervisor/supervisee pages; only the
+  // titles change ("My Preceptees" lives at /supervisees, "Hired Preceptors"
+  // at /hired-supervisors).
+  const isPreceptorAccount =
+    isSupervisor && isPreceptorType({ name: supervisorProfile?.supervisorType ?? '' })
+  const isPrecepteeAccount =
+    !isSupervisor &&
+    (superviseeProfile?.typeOfSupervisorNeeded ?? []).some((name) => isPreceptorType({ name }))
+  const pageTitle = (() => {
+    const base = resolvePageTitle(pathname)
+    if (isPreceptorAccount) {
+      if (pathname.startsWith('/find-supervisees')) return 'Browse Preceptees'
+      if (pathname.startsWith('/supervision-requests')) return 'Preceptee Requests'
+    }
+    if (isPrecepteeAccount && pathname.startsWith('/supervision-requests')) {
+      return 'Preceptor Requests'
+    }
+    return base
+  })()
 
   return (
     <header className="flex h-[60px] shrink-0 items-center justify-between border-b border-border bg-white px-8">

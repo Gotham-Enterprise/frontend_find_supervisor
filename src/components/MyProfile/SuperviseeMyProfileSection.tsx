@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { type Resolver, useForm } from 'react-hook-form'
 
 import { SuperviseeProfileEditFields } from '@/components/profile-edit/SuperviseeProfileEditFields'
+import { isPrecepteeProfile } from '@/components/SuperviseeDashboard/SuperviseeDashboardUtils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form } from '@/components/ui/form'
@@ -131,6 +132,7 @@ function SuperviseeMyProfileEditor({
 export function SuperviseeMyProfileSection() {
   const { user } = useUser()
   const { data: profile, isLoading, isError, refetch } = useSuperviseeProfile()
+  const isPreceptee = isPrecepteeProfile(profile)
 
   if (isLoading) {
     return <SuperviseeMyProfileSkeleton />
@@ -145,14 +147,16 @@ export function SuperviseeMyProfileSection() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">My Profile</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Keep your supervision goals and contact details up to date—the same data as your dashboard
-          profile.
+          Keep your {isPreceptee ? 'rotation' : 'supervision'} goals and contact details up to
+          date—the same data as your dashboard profile.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Supervisee profile</CardTitle>
+          <CardTitle className="text-base">
+            {isPreceptee ? 'Preceptee profile' : 'Supervisee profile'}
+          </CardTitle>
           <CardDescription>
             Fields match your dashboard editor. Save applies your updates immediately.
           </CardDescription>

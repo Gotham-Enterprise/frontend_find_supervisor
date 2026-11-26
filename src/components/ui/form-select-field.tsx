@@ -138,8 +138,17 @@ export function FormSelectField<
   const resolvedPlaceholder = loading ? loadingPlaceholder : (placeholder ?? 'Select…')
   const mergedDisabled = Boolean(disabled || isSubmitting)
 
+  // Alphabetical, with the catch-all ("Other" / "Others") pinned to the end.
+  const isCatchAll = (label: string) => /^others?$/i.test(label.trim())
   const sortByLabel = (list: readonly SelectOption[]) =>
-    sortOptions ? [...list].sort((a, b) => a.label.localeCompare(b.label)) : [...list]
+    sortOptions
+      ? [...list].sort((a, b) => {
+          const aOther = isCatchAll(a.label)
+          const bOther = isCatchAll(b.label)
+          if (aOther !== bOther) return aOther ? 1 : -1
+          return a.label.localeCompare(b.label)
+        })
+      : [...list]
 
   // Base UI grouped-items shape ({ value, items }); empty groups are dropped up front,
   // and the flattened list backs the selected-value lookup.

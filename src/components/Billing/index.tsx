@@ -26,33 +26,24 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { isSupervisorRole } from '@/lib/auth/roles'
 import { isSupervisionFreeTierSubscription } from '@/lib/constants/supervision-dashboard-plans'
 import {
+  getFreePlanFeatures,
+  getPremiumPlanFeatures,
+  getSupervisionRoleCopy,
+} from '@/lib/constants/supervision-plan-features'
+import {
   useCancelSubscription,
   useCurrentSubscriptionQuery,
   useReactivateSubscription,
   useUser,
   useUserSnackbar,
 } from '@/lib/hooks'
-import { useUpgradePlanName } from '@/lib/hooks/useSubscriptionPlans'
+import { useSupervisionRoleKind, useUpgradePlanName } from '@/lib/hooks/useSubscriptionPlans'
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
   canResumeSubscription,
   isSubscriptionScheduledForCancellation,
 } from '@/lib/utils/subscription-status'
 import type { Subscription, SubscriptionStatus } from '@/types/supervisor-profile'
-
-// ─── Feature list shared with the dashboard upgrade cards ─────────────────────
-
-const SUPERVISOR_FEATURES = [
-  { label: 'Receive and view supervisee requests', premium: false },
-  { label: 'See visibility into interested supervisees', premium: false },
-  { label: 'Basic profile listing in search', premium: false },
-  { label: 'Platform notifications for new activity', premium: false },
-  { label: 'Accept supervisee requests', premium: true },
-  { label: 'Full messaging with supervisees', premium: true },
-  { label: 'View supervisee contact details where applicable', premium: true },
-  { label: 'Improved discoverability and profile exposure', premium: true },
-  { label: 'Unlock full supervisor platform tools', premium: true },
-]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -191,8 +182,10 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 function FreePlanUpgradeCard({ planName }: { planName: string }) {
   const [modalOpen, setModalOpen] = useState(false)
   const upgradePlanName = useUpgradePlanName()
-  const freeFeatures = SUPERVISOR_FEATURES.filter((f) => !f.premium)
-  const premiumFeatures = SUPERVISOR_FEATURES.filter((f) => f.premium)
+  const roleKind = useSupervisionRoleKind()
+  const roleCopy = getSupervisionRoleCopy(roleKind)
+  const freeFeatures = getFreePlanFeatures(roleKind)
+  const premiumFeatures = getPremiumPlanFeatures(roleKind)
 
   return (
     <>
@@ -208,8 +201,8 @@ function FreePlanUpgradeCard({ planName }: { planName: string }) {
                 You&apos;re on the free plan
               </CardTitle>
               <p className="mt-0.5 text-sm text-muted-foreground">
-                Basic supervisor tools are included. Upgrade for messaging, richer visibility, and
-                full platform access.
+                Basic {roleCopy.roleNounLower} tools are included. Upgrade for messaging, richer
+                visibility, and full platform access.
               </p>
             </div>
           </div>
@@ -246,7 +239,8 @@ function FreePlanUpgradeCard({ planName }: { planName: string }) {
               <p className="mt-1 text-sm font-semibold text-foreground">{planName}</p>
               <p className="mt-3 text-sm font-semibold text-foreground">Unlock Premium Features</p>
               <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                Move to {upgradePlanName} when you&apos;re ready for the full supervisor experience.
+                Move to {upgradePlanName} when you&apos;re ready for the full{' '}
+                {roleCopy.roleNounLower} experience.
               </p>
 
               <button
@@ -272,8 +266,10 @@ function FreePlanUpgradeCard({ planName }: { planName: string }) {
 
 function NoSubscriptionUpgradeCard() {
   const [modalOpen, setModalOpen] = useState(false)
-  const freeFeatures = SUPERVISOR_FEATURES.filter((f) => !f.premium)
-  const premiumFeatures = SUPERVISOR_FEATURES.filter((f) => f.premium)
+  const roleKind = useSupervisionRoleKind()
+  const roleCopy = getSupervisionRoleCopy(roleKind)
+  const freeFeatures = getFreePlanFeatures(roleKind)
+  const premiumFeatures = getPremiumPlanFeatures(roleKind)
 
   return (
     <>
@@ -285,10 +281,12 @@ function NoSubscriptionUpgradeCard() {
               <Star className="size-4 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-base font-semibold">Supervisor subscription</CardTitle>
+              <CardTitle className="text-base font-semibold capitalize">
+                {roleCopy.roleNounLower} subscription
+              </CardTitle>
               <p className="mt-0.5 text-sm text-muted-foreground">
-                Upgrade to reach supervisees with messaging, stronger visibility, and full platform
-                tools.
+                Upgrade to reach {roleCopy.counterpartPlural} with messaging, stronger visibility,
+                and full platform tools.
               </p>
             </div>
           </div>

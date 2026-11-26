@@ -16,6 +16,8 @@ const FORMAT_LABELS: Record<string, string> = {
 }
 
 interface SuperviseeDashboardUpcomingSessionsCardProps {
+  /** Preceptee (student) dashboard: links go to the preceptor pages. */
+  isPreceptee?: boolean
   sessions: UpcomingSessionItem[]
   isLoading: boolean
   isError: boolean
@@ -27,7 +29,10 @@ export function SuperviseeDashboardUpcomingSessionsCard({
   isLoading,
   isError,
   onRetry,
+  isPreceptee = false,
 }: SuperviseeDashboardUpcomingSessionsCardProps) {
+  const findHref = isPreceptee ? '/find-preceptors' : '/find-supervisors'
+  const hiredHref = isPreceptee ? '/hired-preceptors' : '/hired-supervisors'
   if (isLoading) {
     return (
       <Card>
@@ -77,7 +82,7 @@ export function SuperviseeDashboardUpcomingSessionsCard({
             supervisors from Hired Supervisors.
           </p>
           <Link
-            href="/find-supervisors"
+            href={findHref}
             className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
           >
             <Search className="size-4" />
@@ -104,10 +109,7 @@ export function SuperviseeDashboardUpcomingSessionsCard({
           <CardTitle className="text-base font-semibold">Upcoming Sessions</CardTitle>
           <p className="text-sm text-muted-foreground">Your next scheduled supervision sessions</p>
         </div>
-        <Link
-          href="/hired-supervisors"
-          className="text-sm font-medium text-primary hover:underline"
-        >
+        <Link href={hiredHref} className="text-sm font-medium text-primary hover:underline">
           View all →
         </Link>
       </CardHeader>
@@ -155,7 +157,7 @@ export function SuperviseeDashboardUpcomingSessionsCard({
 
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
-              href={`/find-supervisors/${next.supervisorId}?from=dashboard`}
+              href={`${findHref}/${next.supervisorId}?from=dashboard`}
               className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
             >
               View Details
@@ -189,7 +191,7 @@ export function SuperviseeDashboardUpcomingSessionsCard({
                       {hire.status === 'ACTIVE' ? 'Active' : 'Accepted'}
                     </Badge>
                     <Link
-                      href={`/find-supervisors/${hire.supervisorId}`}
+                      href={`${findHref}/${hire.supervisorId}`}
                       className="text-xs font-medium text-primary hover:underline"
                     >
                       View →

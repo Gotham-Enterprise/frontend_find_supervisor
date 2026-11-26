@@ -117,7 +117,7 @@ export async function hireSupervisor(payload: HireSupervisorRequestInput): Promi
 }
 
 /** GET /api/supervision/hires — paginated hire list for the authenticated user (supervisor or supervisee). */
-export type HiresListMode = 'supervisors' | 'medicalDirectors'
+export type HiresListMode = 'supervisors' | 'medicalDirectors' | 'preceptors'
 
 export async function listHires(
   page = 1,

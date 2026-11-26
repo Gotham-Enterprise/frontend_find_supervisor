@@ -47,6 +47,7 @@ const BACK_LINK_CONFIG: Record<string, { href: string; label: string }> = {
     href: '/hired-medical-directors',
     label: 'Back to Hired Medical Directors',
   },
+  'hired-preceptors': { href: '/hired-preceptors', label: 'Back to Hired Preceptors' },
   'received-connections': { href: '/connections/received', label: 'Back to Connection Requests' },
 }
 

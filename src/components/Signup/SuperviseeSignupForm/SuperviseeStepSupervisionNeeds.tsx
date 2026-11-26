@@ -609,8 +609,13 @@ export function SuperviseeStepSupervisionNeeds({
               name="feeType"
               label="Fee Type"
               rules={superviseeFieldRules('feeType')}
-              options={superviseeFeeTypeOptions}
-              placeholder="Select Fee Type"
+              // Preceptorships are hourly only for now.
+              options={
+                isPreceptee
+                  ? superviseeFeeTypeOptions.filter((o) => o.value === 'hourly')
+                  : superviseeFeeTypeOptions
+              }
+              placeholder={isPreceptee ? 'Hourly' : 'Select Fee Type'}
               isSubmitting={isSubmitting}
               required
               onValueChange={() => {

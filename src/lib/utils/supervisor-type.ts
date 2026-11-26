@@ -36,6 +36,16 @@ export function isMonthlyOnlySupervisorType(supervisorType: string): boolean {
 export const MONTHLY_ONLY_FEE_TYPE_MESSAGE =
   'Only the Monthly fee type is available for this supervisor type.'
 
+/** Supervisor types restricted to the HOURLY supervision fee type (Preceptors, for now). */
+export const HOURLY_ONLY_SUPERVISOR_TYPES = [PRECEPTOR_SUPERVISOR_TYPE] as const
+
+export function isHourlyOnlySupervisorType(supervisorType: string): boolean {
+  return (HOURLY_ONLY_SUPERVISOR_TYPES as readonly string[]).includes(supervisorType.trim())
+}
+
+export const HOURLY_ONLY_FEE_TYPE_MESSAGE =
+  'Only the Hourly fee type is available for this supervisor type.'
+
 export const PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE =
   'Certifications are not required for Collaborating Physicians, Supervising Physicians, or Medical Directors.'
 
@@ -171,6 +181,18 @@ function applySupervisorMonthlyOnlyFeeRule(
       code: 'custom',
       path: ['supervisionFeeType'],
       message: MONTHLY_ONLY_FEE_TYPE_MESSAGE,
+    })
+  }
+  if (
+    data.supervisorType &&
+    isHourlyOnlySupervisorType(data.supervisorType) &&
+    data.supervisionFeeType &&
+    data.supervisionFeeType !== 'HOURLY'
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['supervisionFeeType'],
+      message: HOURLY_ONLY_FEE_TYPE_MESSAGE,
     })
   }
 }

@@ -56,6 +56,8 @@ function ActiveRequestSkeleton() {
 }
 
 interface SuperviseeDashboardActiveRequestsProps {
+  /** Preceptee (student) dashboard: links go to the preceptor pages. */
+  isPreceptee?: boolean
   hires: HireListItem[]
   isError: boolean
 }
@@ -63,23 +65,25 @@ interface SuperviseeDashboardActiveRequestsProps {
 export function SuperviseeDashboardActiveRequests({
   hires,
   isError,
+  isPreceptee = false,
 }: SuperviseeDashboardActiveRequestsProps) {
+  const findHref = isPreceptee ? '/find-preceptors' : '/find-supervisors'
+  const hiredHref = isPreceptee ? '/hired-preceptors' : '/hired-supervisors'
   if (isError) {
     return (
       <Card className="flex flex-col">
         <CardHeader className="border-b pb-3">
           <CardTitle className="text-base font-semibold">Active Requests</CardTitle>
-          <p className="text-sm text-muted-foreground">Supervisors you&apos;ve reached out to</p>
+          <p className="text-sm text-muted-foreground">
+            {isPreceptee ? 'Preceptors' : 'Supervisors'} you&apos;ve reached out to
+          </p>
         </CardHeader>
         <CardContent className="flex flex-1 flex-col items-center justify-center py-10 text-center">
           <AlertCircle className="mb-2 size-8 text-destructive/50" />
           <p className="text-sm text-muted-foreground">
             Could not load your requests. Please try again later.
           </p>
-          <Link
-            href="/find-supervisors"
-            className="mt-2 text-sm font-medium text-primary hover:underline"
-          >
+          <Link href={findHref} className="mt-2 text-sm font-medium text-primary hover:underline">
             Find a supervisor →
           </Link>
         </CardContent>
@@ -92,15 +96,14 @@ export function SuperviseeDashboardActiveRequests({
       <Card className="flex flex-col">
         <CardHeader className="border-b pb-3">
           <CardTitle className="text-base font-semibold">Active Requests</CardTitle>
-          <p className="text-sm text-muted-foreground">Supervisors you&apos;ve reached out to</p>
+          <p className="text-sm text-muted-foreground">
+            {isPreceptee ? 'Preceptors' : 'Supervisors'} you&apos;ve reached out to
+          </p>
         </CardHeader>
         <CardContent className="flex flex-1 flex-col items-center justify-center py-10 text-center">
           <MessageCircle className="mb-2 size-8 text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">No active requests yet.</p>
-          <Link
-            href="/find-supervisors"
-            className="mt-2 text-sm font-medium text-primary hover:underline"
-          >
+          <Link href={findHref} className="mt-2 text-sm font-medium text-primary hover:underline">
             Find a supervisor →
           </Link>
         </CardContent>
@@ -113,12 +116,11 @@ export function SuperviseeDashboardActiveRequests({
       <CardHeader className="flex flex-row items-center justify-between border-b pb-3">
         <div>
           <CardTitle className="text-base font-semibold">Active Requests</CardTitle>
-          <p className="text-sm text-muted-foreground">Supervisors you&apos;ve reached out to</p>
+          <p className="text-sm text-muted-foreground">
+            {isPreceptee ? 'Preceptors' : 'Supervisors'} you&apos;ve reached out to
+          </p>
         </div>
-        <Link
-          href="/hired-supervisors"
-          className="text-sm font-medium text-primary hover:underline"
-        >
+        <Link href={hiredHref} className="text-sm font-medium text-primary hover:underline">
           View all →
         </Link>
       </CardHeader>

@@ -61,7 +61,7 @@ const navItems = [
   },
   {
     label: 'Hired Preceptors',
-    href: '/hired-supervisors',
+    href: '/hired-preceptors',
     icon: Briefcase,
     superviseeOnly: true,
     requiresPreceptorNeed: true,
@@ -91,7 +91,7 @@ const navItems = [
   },
   {
     label: 'My Preceptees',
-    href: '/supervisees',
+    href: '/preceptees',
     icon: UserCheck,
     supervisorOnly: true,
     requiresPreceptorRole: true,

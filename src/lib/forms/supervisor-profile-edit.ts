@@ -36,6 +36,8 @@ import {
 } from '@/lib/utils/profile-formatters'
 import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 import {
+  HOURLY_ONLY_FEE_TYPE_MESSAGE,
+  isHourlyOnlySupervisorType,
   isMonthlyOnlySupervisorType,
   isPhysicianSupervisorType,
   isValidPhysicianDegreeType,
@@ -233,6 +235,13 @@ export function createEditSupervisorProfileSchema(profile: SupervisorProfileData
         code: z.ZodIssueCode.custom,
         path: ['supervisionFeeType'],
         message: MONTHLY_ONLY_FEE_TYPE_MESSAGE,
+      })
+    }
+    if (isHourlyOnlySupervisorType(data.supervisorType) && data.supervisionFeeType !== 'HOURLY') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['supervisionFeeType'],
+        message: HOURLY_ONLY_FEE_TYPE_MESSAGE,
       })
     }
 

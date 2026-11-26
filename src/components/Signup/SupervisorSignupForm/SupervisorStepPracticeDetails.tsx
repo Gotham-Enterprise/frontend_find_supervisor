@@ -29,7 +29,10 @@ import {
   requiresWeeklyHoursAvailable,
   WEEKLY_HOURS_AVAILABLE_OPTIONS,
 } from '@/lib/utils/profile-formatters'
-import { isMonthlyOnlySupervisorType } from '@/lib/utils/supervisor-type'
+import {
+  isHourlyOnlySupervisorType,
+  isMonthlyOnlySupervisorType,
+} from '@/lib/utils/supervisor-type'
 
 const supervisionFeeSelectOptions: SelectOption[] = supervisionFeeTypeOptions.map((o) => ({
   value: o.value,
@@ -73,16 +76,23 @@ export function SupervisorStepPracticeDetails({
   const showWeeklyHours = !isMedicalDirector && requiresWeeklyHoursAvailable(supervisorTypeValue)
 
   const monthlyFeeOnly = isMonthlyOnlySupervisorType(supervisorTypeValue)
+  const hourlyFeeOnly = isHourlyOnlySupervisorType(supervisorTypeValue)
   const feeTypeOptions = monthlyFeeOnly
     ? supervisionFeeSelectOptions.filter((o) => o.value === 'MONTHLY')
-    : supervisionFeeSelectOptions
+    : hourlyFeeOnly
+      ? supervisionFeeSelectOptions.filter((o) => o.value === 'HOURLY')
+      : supervisionFeeSelectOptions
 
   useEffect(() => {
     if (monthlyFeeOnly && supervisionFeeTypeValue !== 'MONTHLY') {
       setValue('supervisionFeeType', 'MONTHLY', { shouldValidate: false })
       clearErrors('supervisionFeeType')
     }
-  }, [monthlyFeeOnly, supervisionFeeTypeValue, setValue, clearErrors])
+    if (hourlyFeeOnly && supervisionFeeTypeValue !== 'HOURLY') {
+      setValue('supervisionFeeType', 'HOURLY', { shouldValidate: false })
+      clearErrors('supervisionFeeType')
+    }
+  }, [monthlyFeeOnly, hourlyFeeOnly, supervisionFeeTypeValue, setValue, clearErrors])
 
   return (
     <>
@@ -212,7 +222,9 @@ export function SupervisorStepPracticeDetails({
             label="Fee Type"
             rules={supervisorFieldRules('supervisionFeeType')}
             options={feeTypeOptions}
-            placeholder={monthlyFeeOnly ? 'Monthly' : 'Hourly or Monthly'}
+            placeholder={
+              monthlyFeeOnly ? 'Monthly' : hourlyFeeOnly ? 'Hourly' : 'Hourly or Monthly'
+            }
             isSubmitting={isSubmitting}
             required
           />
@@ -319,7 +331,7 @@ export function SupervisorStepPracticeDetails({
                   {isMedicalDirector
                     ? 'prospective supervisees and individuals seeking a medical director'
                     : isPreceptor
-                      ? 'a prospective preceptee (student)'
+                      ? 'a prospective preceptee'
                       : 'a prospective supervisee'}{' '}
                   via email, messages on{' '}
                   <span className="font-semibold text-primary">Gotham Enterprises Ltd</span>, SMS

@@ -8,6 +8,7 @@ import { SupervisorProfileEditFields } from '@/components/profile-edit/Superviso
 import { Button } from '@/components/ui/button'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
 import { Form } from '@/components/ui/form'
+import { getSupervisorRoleProfileCopy } from '@/lib/constants/supervision-plan-features'
 import { useUser } from '@/lib/contexts/UserContext'
 import { useUserSnackbar } from '@/lib/contexts/UserSnackbarContext'
 import {
@@ -81,7 +82,9 @@ export function EditSupervisorProfileModal({
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogTitle className="mb-4">Edit Supervisor Profile</DialogTitle>
+        <DialogTitle className="mb-4">
+          {getSupervisorRoleProfileCopy(profile.supervisorType).editTitle}
+        </DialogTitle>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

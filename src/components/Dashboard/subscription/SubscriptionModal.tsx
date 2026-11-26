@@ -13,8 +13,13 @@ import {
   sortPlans,
 } from '@/lib/constants/subscription-plans'
 import {
+  getFreePlanFeatures,
+  getPremiumPlanFeatures,
+} from '@/lib/constants/supervision-plan-features'
+import {
   useCurrentSubscriptionQuery,
   useSubscriptionPlansQuery,
+  useSupervisionRoleKind,
 } from '@/lib/hooks/useSubscriptionPlans'
 import { cn } from '@/lib/utils'
 import {
@@ -27,22 +32,6 @@ import {
   planMatchesSubscription,
   resolveCurrentChoosablePlan,
 } from '@/lib/utils/subscription-plan-resolution'
-
-/** Fallback features shown on the free plan card if the API returns none. */
-const FREE_PLAN_FALLBACK_FEATURES = [
-  'Receive and view supervisee requests',
-  'Basic profile listing in search',
-  'Platform notifications for new activity',
-]
-
-/** Fallback features shown on paid plan cards if the API returns none. */
-const PAID_PLAN_FALLBACK_FEATURES = [
-  'Accept supervisee requests',
-  'Full messaging with supervisees',
-  'View supervisee contact details',
-  'Improved discoverability and profile exposure',
-  'Unlock full supervisor platform tools',
-]
 
 interface SubscriptionModalProps {
   open: boolean
@@ -71,6 +60,7 @@ export function SubscriptionModal({
     error: plansErrorObj,
     refetch: refetchPlans,
   } = useSubscriptionPlansQuery(open)
+  const roleKind = useSupervisionRoleKind()
 
   const {
     data: currentSubscription,
@@ -190,9 +180,12 @@ export function SubscriptionModal({
             const isCurrentActivePlan =
               (isThisCurrent && resolution.isActivePaid) || (isThisCurrent && isFree)
 
+            // Fallbacks (API returned no features) are worded for the viewer's role.
             const features = planFeatures(
               plan,
-              isFree ? FREE_PLAN_FALLBACK_FEATURES : PAID_PLAN_FALLBACK_FEATURES,
+              (isFree ? getFreePlanFeatures(roleKind) : getPremiumPlanFeatures(roleKind)).map(
+                (f) => f.label,
+              ),
             )
 
             return (

@@ -50,7 +50,34 @@ function HiredSupervisorsCardsSkeleton() {
 
 // ─── Empty state ───────────────────────────────────────────────────────────────
 
-function HiredSupervisorsEmpty({ isMedicalDirectors = false }: { isMedicalDirectors?: boolean }) {
+function HiredSupervisorsEmpty({
+  isMedicalDirectors = false,
+  isPreceptors = false,
+}: {
+  isMedicalDirectors?: boolean
+  isPreceptors?: boolean
+}) {
+  if (isPreceptors) {
+    return (
+      <Card className="border-dashed shadow-sm">
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10">
+            <Briefcase className="size-7 text-primary" aria-hidden />
+          </div>
+          <p className="text-base font-semibold text-foreground">No hired preceptors yet</p>
+          <p className="mt-2 max-w-sm text-sm leading-relaxed text-foreground/80">
+            Browse available preceptors and send a rotation request to get started.
+          </p>
+          <Link
+            href="/find-preceptors"
+            className={buttonVariants({ size: 'default', className: 'mt-6' })}
+          >
+            Find a Preceptor
+          </Link>
+        </div>
+      </Card>
+    )
+  }
   return (
     <Card className="border-dashed shadow-sm">
       <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -151,18 +178,19 @@ function Pagination({
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 interface HiredSupervisorsPageProps {
-  /** 'medical-directors' renders the Hired Medical Directors page. */
-  mode?: 'supervisors' | 'medical-directors'
+  /** 'medical-directors' renders Hired Medical Directors; 'preceptors' renders Hired Preceptors. */
+  mode?: 'supervisors' | 'medical-directors' | 'preceptors'
 }
 
 export function HiredSupervisorsPage({ mode = 'supervisors' }: HiredSupervisorsPageProps) {
   const isMedicalDirectors = mode === 'medical-directors'
+  const isPreceptors = mode === 'preceptors'
   const [page, setPage] = useState(1)
   const { data, isLoading, isError } = useHiresList(
     page,
     PAGE_SIZE,
     undefined,
-    isMedicalDirectors ? 'medicalDirectors' : 'supervisors',
+    isMedicalDirectors ? 'medicalDirectors' : isPreceptors ? 'preceptors' : 'supervisors',
   )
   const { data: reviewsData } = useMyReviews(0)
 
@@ -180,11 +208,13 @@ export function HiredSupervisorsPage({ mode = 'supervisors' }: HiredSupervisorsP
   return (
     <div className="space-y-8">
       <div className="space-y-2">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">Your hire requests</h2>
+        <h2 className="text-xl font-semibold tracking-tight text-foreground">
+          {isPreceptors ? 'Your rotation requests' : 'Your hire requests'}
+        </h2>
         <p className="mt-2 max-w-2xl text-base leading-relaxed text-muted-foreground">
-          Everyone you&apos;ve asked to supervise you is listed here. Each card shows format, fee,
-          and current status. Open the menu to view a supervisor&apos;s profile, see full request
-          details, or take other actions.
+          {isPreceptors
+            ? "Every preceptor you've asked to host your rotation is listed here. Each card shows format, fee, and current status. Open the menu to view a preceptor's profile, see full request details, or take other actions."
+            : "Everyone you've asked to supervise you is listed here. Each card shows format, fee, and current status. Open the menu to view a supervisor's profile, see full request details, or take other actions."}
         </p>
       </div>
 
@@ -193,7 +223,10 @@ export function HiredSupervisorsPage({ mode = 'supervisors' }: HiredSupervisorsP
       ) : isError ? (
         <HiredSupervisorsError />
       ) : items.length === 0 ? (
-        <HiredSupervisorsEmpty isMedicalDirectors={isMedicalDirectors} />
+        <HiredSupervisorsEmpty
+          isMedicalDirectors={isMedicalDirectors}
+          isPreceptors={isPreceptors}
+        />
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -203,6 +236,7 @@ export function HiredSupervisorsPage({ mode = 'supervisors' }: HiredSupervisorsP
                 hire={hire}
                 existingReview={reviewsByHireId.get(hire.id)}
                 isMedicalDirectors={isMedicalDirectors}
+                isPreceptors={isPreceptors}
               />
             ))}
           </div>

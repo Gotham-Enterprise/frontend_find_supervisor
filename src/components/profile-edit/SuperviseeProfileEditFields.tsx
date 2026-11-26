@@ -770,7 +770,7 @@ export function SuperviseeProfileEditFields({
           box reveals the MD-specific required fields (md* columns). MD-only
           profiles do not render this section at all — their MD fields live in
           the Medical Director Preferences section above, in signup order. ── */}
-      {!isMdOnly && (
+      {!isMdOnly && !isPreceptee && (
         <fieldset className="space-y-4">
           <legend className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Medical Director Needs
