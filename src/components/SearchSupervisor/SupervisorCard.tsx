@@ -16,7 +16,7 @@ import type { SupervisorSearchResult } from './types'
 interface SupervisorCardProps {
   supervisor: SupervisorSearchResult
   /** Detail route base — the MD page links to its own detail route. */
-  profileBasePath?: '/find-supervisors' | '/find-medical-directors'
+  profileBasePath?: '/find-supervisors' | '/find-medical-directors' | '/find-preceptors'
 }
 
 export function SupervisorCard({

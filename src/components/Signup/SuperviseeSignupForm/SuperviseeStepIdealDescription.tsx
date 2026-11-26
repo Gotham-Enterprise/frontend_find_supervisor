@@ -30,6 +30,7 @@ export function SuperviseeStepIdealDescription({
   medicalDirectorSection,
 }: SuperviseeStepIdealDescriptionProps) {
   const isNeedMedicalDirector = variant === 'need-medical-director'
+  const isPreceptee = variant === 'preceptee'
   const { control } = useFormContext<SuperviseeFormValues>()
   const descriptionValue = useWatch({ control, name: 'description' }) ?? ''
   const typeOfSupervisor = useWatch({ control, name: 'typeOfSupervisor' }) ?? ''
@@ -39,7 +40,15 @@ export function SuperviseeStepIdealDescription({
 
   return (
     <>
-      <FormSection title={describesMedicalDirector ? 'Ideal Medical Director' : 'Ideal Supervisor'}>
+      <FormSection
+        title={
+          describesMedicalDirector
+            ? 'Ideal Medical Director'
+            : isPreceptee
+              ? 'Ideal Preceptor'
+              : 'Ideal Supervisor'
+        }
+      >
         <FormField
           control={control}
           name="description"
@@ -49,14 +58,20 @@ export function SuperviseeStepIdealDescription({
               <FormLabel>
                 {describesMedicalDirector
                   ? 'Description of Ideal Medical Director'
-                  : 'Description of Ideal Supervisor'}{' '}
+                  : isPreceptee
+                    ? 'Description of Ideal Preceptor'
+                    : 'Description of Ideal Supervisor'}{' '}
                 <span className="text-destructive">*</span>
               </FormLabel>
               <FormControl>
                 <Textarea
                   rows={4}
                   placeholder={
-                    describesMedicalDirector ? undefined : 'Describe Your Ideal Supervisor…'
+                    describesMedicalDirector
+                      ? undefined
+                      : isPreceptee
+                        ? 'Describe your ideal preceptor and placement…'
+                        : 'Describe Your Ideal Supervisor…'
                   }
                   maxLength={500}
                   disabled={isSubmitting}

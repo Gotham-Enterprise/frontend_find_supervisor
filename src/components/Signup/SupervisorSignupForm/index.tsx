@@ -5,6 +5,7 @@ import { useForm, useFormState, useWatch } from 'react-hook-form'
 
 import {
   medicalDirectorDefaultValues,
+  preceptorDefaultValues,
   supervisorSignupDefaultValues,
 } from '@/components/Signup/helpers'
 import {
@@ -29,6 +30,7 @@ import {
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
   isMedicalDirectorType,
+  isPreceptorType,
   supervisionTypeDisplayLabel,
 } from '@/lib/utils/supervisee-eligibility'
 import { validateAddressForSignup } from '@/lib/utils/validate-address'
@@ -45,15 +47,19 @@ import { type SupervisorSignupStepIndex, validateSupervisorStep } from './valida
 
 const LAST_STEP: SupervisorSignupStepIndex = 2
 
-export type SupervisorSignupVariant = 'supervisor' | 'medical-director'
+export type SupervisorSignupVariant = 'supervisor' | 'medical-director' | 'preceptor'
 
 type SupervisorSignupFormProps = {
-  /** 'medical-director' presets the supervisor type and adds the offerings step-2 UI. */
+  /**
+   * 'medical-director' presets the supervisor type and adds the offerings step-2 UI;
+   * 'preceptor' presets the Preceptor type (license-type path, optional certifications).
+   */
   variant?: SupervisorSignupVariant
 }
 
 export function SupervisorSignupForm({ variant = 'supervisor' }: SupervisorSignupFormProps) {
   const isMedicalDirector = variant === 'medical-director'
+  const isPreceptor = variant === 'preceptor'
   const fullSchema = isMedicalDirector ? medicalDirectorSchema : supervisorSchema
   const stepSchemas = isMedicalDirector
     ? MEDICAL_DIRECTOR_SIGNUP_STEP_SCHEMAS
@@ -86,15 +92,20 @@ export function SupervisorSignupForm({ variant = 'supervisor' }: SupervisorSignu
 
   const { data: supervisorTypesData = [], isLoading: supervisorTypesLoading } =
     useSupervisorTypesData()
-  // Medical Director has its own dedicated signup path — keep it out of the
-  // regular flow's dropdown (the full hierarchy stays available for cascades).
-  // Labels use the shared display override; the stored value stays the type name.
+  // Medical Director and Preceptor have their own dedicated signup paths — keep
+  // them out of the regular flow's dropdown (the full hierarchy stays available
+  // for cascades). Labels use the shared display override; the stored value
+  // stays the type name.
   const supervisorTypeOptions = supervisorTypesData
-    .filter((t) => !isMedicalDirectorType(t))
+    .filter((t) => !isMedicalDirectorType(t) && !isPreceptorType(t))
     .map((t) => ({ label: supervisionTypeDisplayLabel(t.name), value: t.name }))
 
   const form = useForm<MedicalDirectorFormValues>({
-    defaultValues: isMedicalDirector ? medicalDirectorDefaultValues : supervisorSignupDefaultValues,
+    defaultValues: isMedicalDirector
+      ? medicalDirectorDefaultValues
+      : isPreceptor
+        ? preceptorDefaultValues
+        : supervisorSignupDefaultValues,
     shouldUnregister: false,
     mode: 'onTouched',
     reValidateMode: 'onChange',
@@ -245,6 +256,7 @@ export function SupervisorSignupForm({ variant = 'supervisor' }: SupervisorSignu
         {step === 0 && (
           <SupervisorStepAccount
             isMedicalDirector={isMedicalDirector}
+            isPreceptor={isPreceptor}
             stateOptions={stateOptions}
             cityOptions={cityOptions}
             statesLoading={statesLoading}
@@ -265,6 +277,7 @@ export function SupervisorSignupForm({ variant = 'supervisor' }: SupervisorSignu
           ) : (
             <SupervisorStepLicenseCredentials
               supervisorTypeOptions={supervisorTypeOptions}
+              hideSupervisorType={isPreceptor}
               supervisorTypesData={supervisorTypesData}
               certificateOptions={certificateOptions}
               stateOptions={stateOptions}
@@ -281,6 +294,7 @@ export function SupervisorSignupForm({ variant = 'supervisor' }: SupervisorSignu
             availabilityLoading={availabilityLoading}
             isSubmitting={isSubmitting}
             isMedicalDirector={isMedicalDirector}
+            isPreceptor={isPreceptor}
           />
         )}
 
@@ -293,7 +307,13 @@ export function SupervisorSignupForm({ variant = 'supervisor' }: SupervisorSignu
           isSubmitting={isSubmitting}
           isValidatingAddress={isValidatingAddress}
           canSubmit={canSubmit}
-          submitLabel={isMedicalDirector ? 'Sign Up as Medical Director →' : undefined}
+          submitLabel={
+            isMedicalDirector
+              ? 'Sign Up as Medical Director →'
+              : isPreceptor
+                ? 'Sign Up as Preceptor →'
+                : undefined
+          }
         />
       </form>
     </Form>

@@ -5,10 +5,12 @@ import {
 } from '@/lib/utils/identity-display'
 import {
   formatCredentialWithState,
+  formatDate,
   formatLocation,
   resolveOptionLabels,
   resolveSupervisorTypeLabel,
 } from '@/lib/utils/profile-formatters'
+import { isPreceptorType } from '@/lib/utils/supervisee-eligibility'
 import type { SuperviseeProfileViewData } from '@/types/supervisee-profile'
 
 interface SuperviseeProfileProfessionalProps {
@@ -71,8 +73,19 @@ export function SuperviseeProfileProfessional({
   const genderIdentity = getVisibleGenderIdentityLabel(user)
   const languages = getVisibleLanguageLabels(user)
 
+  // Preceptee (student) profiles carry program details instead of a credential.
+  const isPreceptee = (profile.typeOfSupervisorNeeded ?? []).some((name) =>
+    isPreceptorType({ name }),
+  )
+  const rotationWindow = [profile.rotationStartDate, profile.rotationEndDate]
+    .map((value) => (value ? formatDate(value) : ''))
+    .filter(Boolean)
+    .join(' to ')
+
   const hasContent =
     profile.title ||
+    profile.schoolName ||
+    profile.degreeProgram ||
     occupation ||
     specialty ||
     genderIdentity ||
@@ -92,8 +105,21 @@ export function SuperviseeProfileProfessional({
             {formatCredentialWithState(profile.title, profile.licensureState)}
           </Row>
         )}
-        {occupation && <Row label="Occupation">{occupation}</Row>}
-        {specialty && <Row label="Specialty">{specialty}</Row>}
+        {profile.schoolName && <Row label="School / University">{profile.schoolName}</Row>}
+        {profile.degreeProgram && <Row label="Degree Program">{profile.degreeProgram}</Row>}
+        {profile.expectedGraduation && (
+          <Row label="Expected Graduation">{formatDate(profile.expectedGraduation)}</Row>
+        )}
+        {profile.clinicalHoursRequired != null && profile.clinicalHoursRequired > 0 && (
+          <Row label="Clinical Hours Required">
+            {profile.clinicalHoursRequired.toLocaleString('en-US')} hours
+          </Row>
+        )}
+        {rotationWindow && <Row label="Rotation Window">{rotationWindow}</Row>}
+        {occupation && (
+          <Row label={isPreceptee ? 'Program / Discipline' : 'Occupation'}>{occupation}</Row>
+        )}
+        {specialty && <Row label={isPreceptee ? 'Rotation Focus' : 'Specialty'}>{specialty}</Row>}
         {genderIdentity && <Row label="Gender Identity">{genderIdentity}</Row>}
         {languages.length > 0 && (
           <Row label="Languages">
@@ -101,10 +127,12 @@ export function SuperviseeProfileProfessional({
           </Row>
         )}
         {supervisorTypes !== 'N/A' && (
-          <Row label="Type of Supervisor Needed">{supervisorTypes}</Row>
+          <Row label={isPreceptee ? 'Looking For' : 'Type of Supervisor Needed'}>
+            {supervisorTypes}
+          </Row>
         )}
         {statesOfLicensure.length > 0 && (
-          <Row label="States of Licensure">
+          <Row label={isPreceptee ? 'Rotation States' : 'States of Licensure'}>
             <TagRow
               values={statesOfLicensure}
               displayValues={licensureLabels}

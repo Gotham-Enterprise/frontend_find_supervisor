@@ -9,7 +9,10 @@ import {
   STATE_SUPERVISION_RULES,
 } from '@/lib/constants/state-supervision-rules'
 import { US_STATES } from '@/lib/seo/routes'
-import { SUPERVISEE_ALLOWED_OCCUPATIONS } from '@/lib/utils/supervisee-eligibility'
+import {
+  isPrecepteeOccupation,
+  SUPERVISEE_ALLOWED_OCCUPATIONS,
+} from '@/lib/utils/supervisee-eligibility'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 import { resolveFormatGuideTarget } from '../helpers'
@@ -44,11 +47,20 @@ describe('getProfessionGroupForOccupation', () => {
     expect(getProfessionGroupForOccupation(null)).toBeNull()
   })
 
-  it('covers every supervisee occupation on the allowlist', () => {
+  it('covers every licensed supervisee occupation on the allowlist', () => {
+    // Students (preceptee occupations) have no state format guide — rotations
+    // are governed by the program, not by licensure supervision rules.
     const uncovered = SUPERVISEE_ALLOWED_OCCUPATIONS.filter(
-      (name) => !getProfessionGroupForOccupation(name),
+      (name) => !isPrecepteeOccupation(name) && !getProfessionGroupForOccupation(name),
     )
     expect(uncovered).toEqual([])
+  })
+
+  it('maps no student (preceptee) occupation to a profession group', () => {
+    const mapped = SUPERVISEE_ALLOWED_OCCUPATIONS.filter(
+      (name) => isPrecepteeOccupation(name) && getProfessionGroupForOccupation(name),
+    )
+    expect(mapped).toEqual([])
   })
 })
 

@@ -3,6 +3,7 @@ import { SUPERVISOR_TYPE_QUERY_MAP } from '@/lib/seo/routes'
 import { formatUSPhoneForDisplay } from '@/lib/utils/phone'
 import {
   isMedicalDirectorType,
+  isPreceptorType,
   supervisionTypeDisplayLabel,
 } from '@/lib/utils/supervisee-eligibility'
 
@@ -437,14 +438,16 @@ export function requiresSupervisionHours(
 
 /**
  * The profile's "Supervision Hours Needed" applies to every supervision type
- * except Medical Director (a monthly service, not a count of hours). Separate
- * from requiresSupervisionHours, which gates the per-hire hours (MHC only).
+ * except Medical Director (a monthly service, not a count of hours) and
+ * Preceptor (students record the program's clinical hours in
+ * clinicalHoursRequired instead). Separate from requiresSupervisionHours,
+ * which gates the per-hire hours (MHC only).
  */
 export function requiresSupervisionHoursNeeded(
   typeOfSupervisorNeeded: string | null | undefined,
 ): boolean {
   const name = typeOfSupervisorNeeded?.trim() ?? ''
-  return name !== '' && !isMedicalDirectorType({ name })
+  return name !== '' && !isMedicalDirectorType({ name }) && !isPreceptorType({ name })
 }
 
 /** Positive whole numbers only — rejects 0, 01, 001, etc. */

@@ -25,6 +25,18 @@ const COPY = {
       'New Medical Directors join regularly. Create a free account to get matched and message them directly.',
     emptyCta: 'Create Free Account',
   },
+  preceptor: {
+    noun: 'Preceptor',
+    signupHref: '/signup?type=preceptee',
+    loginHref: '/login?redirect=/find-preceptors',
+    moreBody: (total: number) =>
+      `Sign up free to browse all ${total} matching Preceptors, filter by discipline, specialty, format, and more.`,
+    moreCta: 'Sign up to see all results',
+    emptyHeading: 'Looking for more Preceptors?',
+    emptyBody:
+      'New Preceptors join regularly. Create a free student account to get matched and message them directly.',
+    emptyCta: 'Create Free Student Account',
+  },
   supervisee: {
     noun: 'Supervisee',
     signupHref: '/signup?type=supervisor',

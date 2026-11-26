@@ -26,6 +26,21 @@ describe('buildSupervisorSearchParams — searchMode', () => {
     expect(
       buildSupervisorSearchParams({ ...baseInput, searchMode: 'medical-directors' }).searchMode,
     ).toBe('medicalDirectors')
+    expect(buildSupervisorSearchParams({ ...baseInput, searchMode: 'preceptors' }).searchMode).toBe(
+      'preceptors',
+    )
+  })
+
+  it('keeps the weekly-hours filter on the preceptors page (only Medical Directors drop it)', () => {
+    const filters = { ...DEFAULT_FILTERS, weeklyHoursAvailable: ['11_20'] }
+    expect(
+      buildSupervisorSearchParams({ ...baseInput, filters, searchMode: 'preceptors' })
+        .weeklyHoursAvailable,
+    ).toBe('11_20')
+    expect(
+      'weeklyHoursAvailable' in
+        buildSupervisorSearchParams({ ...baseInput, filters, searchMode: 'medical-directors' }),
+    ).toBe(false)
   })
 })
 

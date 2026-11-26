@@ -15,6 +15,7 @@ export const PRIVATE_ROUTE_PREFIXES = [
   '/supervisor/dashboard',
   '/my-profile',
   '/hired-supervisors',
+  '/find-preceptors',
   '/supervision-requests',
   '/supervisees',
   '/reviews',
@@ -38,6 +39,7 @@ export const PUBLIC_INDEXABLE_ROUTES = [
   '/',
   '/supervisors',
   '/medical-directors',
+  '/preceptors',
   '/browse-supervisees',
   '/contact',
   '/contact-us',
@@ -280,6 +282,22 @@ export type TopLicenseSlug = (typeof TOP_LICENSE_SLUGS_FOR_STATE)[number]
 
 export const SUPERVISORS_PATH = '/supervisors'
 export const MEDICAL_DIRECTORS_PATH = '/medical-directors'
+/** Preceptors (clinical placements for students) have their own directory, like Medical Directors. */
+export const PRECEPTORS_PATH = '/preceptors'
+
+/**
+ * /preceptors?discipline=<slug> → preceptor occupation name (the PRECEPTOR
+ * supervisor-type hierarchy; keep in sync with PRECEPTOR_OCCUPATIONS).
+ */
+export const PRECEPTOR_DISCIPLINE_SLUG_MAP: Record<string, string> = {
+  'nurse-practitioner': 'Nurse Practitioner',
+  physician: 'Physician',
+  'physical-therapist': 'Physical Therapist',
+  pharmacist: 'Pharmacist',
+  dentist: 'Dentist',
+  'occupational-therapist': 'Occupational Therapist',
+  'speech-language-pathologist': 'Speech Language Pathologist',
+}
 
 /**
  * Maps URL query param values to the supervisor type name stored on profiles.
@@ -366,6 +384,12 @@ export const SUPERVISOR_TYPE_SLUGS: Array<{
     description: 'For med spas, clinics, and practices that need an MD or DO Medical Director.',
     href: MEDICAL_DIRECTORS_PATH,
   },
+  {
+    slug: 'preceptor',
+    label: 'Preceptors',
+    description: 'For NP, PA, PT, dental, OT, SLP, and pharmacy students who need clinical hours.',
+    href: PRECEPTORS_PATH,
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -373,7 +397,10 @@ export const SUPERVISOR_TYPE_SLUGS: Array<{
 // ---------------------------------------------------------------------------
 
 /** Public directory roots. A profile's directory follows its PRIMARY type. */
-export type PublicDirectoryPath = typeof SUPERVISORS_PATH | typeof MEDICAL_DIRECTORS_PATH
+export type PublicDirectoryPath =
+  | typeof SUPERVISORS_PATH
+  | typeof MEDICAL_DIRECTORS_PATH
+  | typeof PRECEPTORS_PATH
 
 /**
  * Canonical public profile path: /[directory]/[stateSlug]/[id] (state from

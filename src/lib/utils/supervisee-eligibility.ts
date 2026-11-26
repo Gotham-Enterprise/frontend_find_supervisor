@@ -13,6 +13,7 @@ export const SUPERVISOR_TYPE_CODES = {
   SUPERVISING_PHYSICIAN: 'SUPERVISING_PHYSICIAN',
   MENTAL_HEALTH_COUNSELORS: 'MENTAL_HEALTH_COUNSELORS',
   MEDICAL_DIRECTOR: 'MEDICAL_DIRECTOR',
+  PRECEPTOR: 'PRECEPTOR',
 } as const
 
 /** Fallback when hierarchy entries carry only a display name. */
@@ -22,7 +23,51 @@ const SUPERVISOR_TYPE_NAME_TO_CODE: Record<string, string> = {
   'mental health counselors': SUPERVISOR_TYPE_CODES.MENTAL_HEALTH_COUNSELORS,
   'supervising mental health counselor': SUPERVISOR_TYPE_CODES.MENTAL_HEALTH_COUNSELORS,
   'medical director': SUPERVISOR_TYPE_CODES.MEDICAL_DIRECTOR,
+  preceptor: SUPERVISOR_TYPE_CODES.PRECEPTOR,
 }
+
+/** Display name of the Preceptor type as seeded in the backend. */
+export const PRECEPTOR_TYPE_NAME = 'Preceptor'
+
+/**
+ * Preceptor occupations (SupervisorOccupation rows under the PRECEPTOR type).
+ * Physician Assistants are deliberately not preceptors (product decision, 2026-11-24).
+ */
+export const PRECEPTOR_OCCUPATIONS = {
+  NURSE_PRACTITIONER: 'Nurse Practitioner',
+  PHYSICIAN: 'Physician',
+  PHYSICAL_THERAPIST: 'Physical Therapist',
+  PHARMACIST: 'Pharmacist',
+  DENTIST: 'Dentist',
+  OCCUPATIONAL_THERAPIST: 'Occupational Therapist',
+  SPEECH_LANGUAGE_PATHOLOGIST: 'Speech Language Pathologist',
+} as const
+
+/**
+ * Preceptee (student) occupations → the preceptor occupations that may host their
+ * rotation. Students are college/program enrollees completing required field hours;
+ * names carry "Student" so they never collide with the licensed "Nurse Practitioner" /
+ * "Physician Assistant" supervisee occupations. Mirrors the backend matrix.
+ */
+export const PRECEPTEE_OCCUPATION_MATRIX: Record<string, readonly string[]> = {
+  'Nurse Practitioner Student': [
+    PRECEPTOR_OCCUPATIONS.NURSE_PRACTITIONER,
+    PRECEPTOR_OCCUPATIONS.PHYSICIAN,
+  ],
+  'Physician Assistant Student': [
+    PRECEPTOR_OCCUPATIONS.PHYSICIAN,
+    PRECEPTOR_OCCUPATIONS.NURSE_PRACTITIONER,
+  ],
+  'Physical Therapy Student': [PRECEPTOR_OCCUPATIONS.PHYSICAL_THERAPIST],
+  'Physical Therapist Assistant Student': [PRECEPTOR_OCCUPATIONS.PHYSICAL_THERAPIST],
+  'Dental Hygiene Student': [PRECEPTOR_OCCUPATIONS.DENTIST],
+  'Dental Assistant Student': [PRECEPTOR_OCCUPATIONS.DENTIST],
+  'Occupational Therapy Assistant Student': [PRECEPTOR_OCCUPATIONS.OCCUPATIONAL_THERAPIST],
+  'Speech Language Pathology Student': [PRECEPTOR_OCCUPATIONS.SPEECH_LANGUAGE_PATHOLOGIST],
+  'Pharmacy Student': [PRECEPTOR_OCCUPATIONS.PHARMACIST],
+}
+
+export const PRECEPTEE_OCCUPATIONS = Object.keys(PRECEPTEE_OCCUPATION_MATRIX)
 
 /** Display name of the Medical Director type as seeded in the backend. */
 export const MEDICAL_DIRECTOR_TYPE_NAME = 'Medical Director'
@@ -74,16 +119,48 @@ export const SUPERVISEE_ALLOWED_OCCUPATIONS = [
   // Healthcare — supervised by a Supervising/Collaborating Physician
   PHYSICIAN_ASSISTANT_OCCUPATION,
   NURSE_PRACTITIONER_OCCUPATION,
+  // Students (preceptees) — hosted by a Preceptor; see PRECEPTEE_OCCUPATION_MATRIX
+  ...PRECEPTEE_OCCUPATIONS,
 ] as const
 
 const ALLOWED_OCCUPATIONS_NORMALIZED = new Set(
   SUPERVISEE_ALLOWED_OCCUPATIONS.map((name) => normalize(name)),
 )
 
-/** Allowlisted mental-health occupations (everything except NP and PA). */
+const PRECEPTEE_MATRIX_NORMALIZED = new Map(
+  Object.entries(PRECEPTEE_OCCUPATION_MATRIX).map(([student, preceptors]) => [
+    normalize(student),
+    preceptors,
+  ]),
+)
+
+export function isPrecepteeOccupation(occupationName: string): boolean {
+  return PRECEPTEE_MATRIX_NORMALIZED.has(normalize(occupationName))
+}
+
+/** Preceptor occupation names a student of `occupationName` may request ([] when not a preceptee). */
+export function getEligiblePreceptorOccupations(occupationName: string): string[] {
+  return [...(PRECEPTEE_MATRIX_NORMALIZED.get(normalize(occupationName)) ?? [])]
+}
+
+/** Whether a preceptor with `preceptorOccupation` may host a student of `studentOccupation`. */
+export function isPreceptorOccupationEligibleForPreceptee(
+  preceptorOccupation: string,
+  studentOccupation: string,
+): boolean {
+  const allowed = PRECEPTEE_MATRIX_NORMALIZED.get(normalize(studentOccupation))
+  if (!allowed) return false
+  const wanted = normalize(preceptorOccupation)
+  return allowed.some((name) => normalize(name) === wanted)
+}
+
+/** Allowlisted mental-health occupations (everything except NP, PA and students). */
 const MENTAL_HEALTH_OCCUPATIONS_NORMALIZED = new Set(
   SUPERVISEE_ALLOWED_OCCUPATIONS.filter(
-    (name) => name !== PHYSICIAN_ASSISTANT_OCCUPATION && name !== NURSE_PRACTITIONER_OCCUPATION,
+    (name) =>
+      name !== PHYSICIAN_ASSISTANT_OCCUPATION &&
+      name !== NURSE_PRACTITIONER_OCCUPATION &&
+      !isPrecepteeOccupation(name),
   ).map((name) => normalize(name)),
 )
 
@@ -107,12 +184,26 @@ export function isMentalHealthSuperviseeOccupation(occupationName: string): bool
  * Restricts the supervisee "Occupation" dropdown to `SUPERVISEE_ALLOWED_OCCUPATIONS`.
  * `keep` retains extra options regardless of the allowlist — used on profile edit so a
  * legacy occupation saved before this rule still renders as the selected value.
+ * Students (preceptee occupations) have their own signup form and are excluded here;
+ * `filterPrecepteeOccupationOptions` is the inverse.
  */
 export function filterSuperviseeOccupationOptions<T extends { label: string }>(
   options: T[],
   keep?: (option: T) => boolean,
 ): T[] {
-  return options.filter((option) => isAllowedSuperviseeOccupation(option.label) || keep?.(option))
+  return options.filter(
+    (option) =>
+      (isAllowedSuperviseeOccupation(option.label) && !isPrecepteeOccupation(option.label)) ||
+      keep?.(option),
+  )
+}
+
+/** The preceptee (student) signup "Program / Occupation" dropdown: students only. */
+export function filterPrecepteeOccupationOptions<T extends { label: string }>(
+  options: T[],
+  keep?: (option: T) => boolean,
+): T[] {
+  return options.filter((option) => isPrecepteeOccupation(option.label) || keep?.(option))
 }
 
 /**
@@ -126,6 +217,7 @@ export function groupSuperviseeOccupationOptions<T extends { label: string }>(
 ): { label: string; options: T[] }[] {
   const medical: T[] = []
   const mentalHealth: T[] = []
+  const students: T[] = []
   const other: T[] = []
   for (const option of options) {
     if (
@@ -135,6 +227,8 @@ export function groupSuperviseeOccupationOptions<T extends { label: string }>(
       medical.push(option)
     } else if (isMentalHealthSuperviseeOccupation(option.label)) {
       mentalHealth.push(option)
+    } else if (isPrecepteeOccupation(option.label)) {
+      students.push(option)
     } else {
       other.push(option)
     }
@@ -142,6 +236,7 @@ export function groupSuperviseeOccupationOptions<T extends { label: string }>(
   return [
     { label: 'Medical', options: medical },
     { label: 'Mental Health', options: mentalHealth },
+    { label: 'Students', options: students },
     { label: 'Other', options: other },
   ].filter((group) => group.options.length > 0)
 }
@@ -207,9 +302,15 @@ export function isMedicalDirectorType(type: { code?: string; name?: string }): b
   return resolveSupervisorTypeCode(type) === SUPERVISOR_TYPE_CODES.MEDICAL_DIRECTOR
 }
 
+export function isPreceptorType(type: { code?: string; name?: string }): boolean {
+  return resolveSupervisorTypeCode(type) === SUPERVISOR_TYPE_CODES.PRECEPTOR
+}
+
 /**
  * Whether the supervisee may select the given supervision type.
- * Medical Director is always available; unknown/future types default to available.
+ * Medical Director is available to every licensed supervisee; Preceptor only to
+ * students (preceptee occupations), who in turn may pick nothing else.
+ * Unknown/future types default to available for non-students.
  */
 export function isSupervisorTypeEligibleForSupervisee(
   type: { code?: string; name?: string },
@@ -222,10 +323,12 @@ export function isSupervisorTypeEligibleForSupervisee(
       return isPhysicianAssistantOccupation(occupationName)
     case SUPERVISOR_TYPE_CODES.MENTAL_HEALTH_COUNSELORS:
       return isMentalHealthSuperviseeOccupation(occupationName)
+    case SUPERVISOR_TYPE_CODES.PRECEPTOR:
+      return isPrecepteeOccupation(occupationName)
     case SUPERVISOR_TYPE_CODES.MEDICAL_DIRECTOR:
-      return true
+      return !isPrecepteeOccupation(occupationName)
     default:
-      return true
+      return !isPrecepteeOccupation(occupationName)
   }
 }
 
@@ -237,7 +340,9 @@ export function hasCompletedEligibilityFields(occupationName: string): boolean {
 /**
  * Supervision types offered in the "Type of Supervision Needed" dropdown.
  * Medical Director is excluded — it is requested via a separate checkbox instead,
- * since it can be combined with any supervision type (or stand alone).
+ * since it can be combined with any supervision type (or stand alone). Preceptor is
+ * excluded too — students sign up through the dedicated preceptee form, which
+ * sets it directly.
  */
 export function getEligibleSupervisorTypes(
   typesData: SupervisorTypeData[],
@@ -245,7 +350,9 @@ export function getEligibleSupervisorTypes(
 ): SupervisorTypeData[] {
   return typesData.filter(
     (type) =>
-      !isMedicalDirectorType(type) && isSupervisorTypeEligibleForSupervisee(type, occupationName),
+      !isMedicalDirectorType(type) &&
+      !isPreceptorType(type) &&
+      isSupervisorTypeEligibleForSupervisee(type, occupationName),
   )
 }
 

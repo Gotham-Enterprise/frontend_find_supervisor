@@ -9,7 +9,7 @@ import {
   registerSupervisor,
   type SupervisorRegisterValues,
 } from '@/lib/api/signup'
-import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
+import { MEDICAL_DIRECTOR_TYPE_NAME, PRECEPTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 
 export function useSupervisorSignup() {
   const router = useRouter()
@@ -21,7 +21,11 @@ export function useSupervisorSignup() {
         fullName: data.data.user.fullName,
         email: data.data.user.email,
         role:
-          values.supervisorType === MEDICAL_DIRECTOR_TYPE_NAME ? 'Medical Director' : 'Supervisor',
+          values.supervisorType === MEDICAL_DIRECTOR_TYPE_NAME
+            ? 'Medical Director'
+            : values.supervisorType === PRECEPTOR_TYPE_NAME
+              ? 'Preceptor'
+              : 'Supervisor',
         activationToken: data.data.activationToken,
       })
       router.push(`/email-verification?${params.toString()}`)
@@ -34,11 +38,11 @@ export function useSuperviseeSignup() {
 
   return useMutation({
     mutationFn: (values: SuperviseeFormValues) => registerSupervisee(values),
-    onSuccess: (data) => {
+    onSuccess: (data, values) => {
       const params = new URLSearchParams({
         fullName: data.data.user.fullName,
         email: data.data.user.email,
-        role: 'Supervisee',
+        role: values.typeOfSupervisor === PRECEPTOR_TYPE_NAME ? 'Preceptee' : 'Supervisee',
         activationToken: data.data.activationToken,
       })
       router.push(`/email-verification?${params.toString()}`)

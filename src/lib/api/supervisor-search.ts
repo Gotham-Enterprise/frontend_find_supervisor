@@ -67,12 +67,16 @@ export interface SupervisorSearchApiResponse {
   metaData: SupervisorSearchMetaData
 }
 
-/** Which find page is asking — Medical Directors are separated from the supervisor search. */
-export type SupervisorSearchMode = 'supervisors' | 'medical-directors'
+/**
+ * Which find page is asking — Medical Directors and Preceptors are separated
+ * from the supervisor search (each has its own page and directory).
+ */
+export type SupervisorSearchMode = 'supervisors' | 'medical-directors' | 'preceptors'
 
 const SEARCH_MODE_TO_API: Record<SupervisorSearchMode, string> = {
   supervisors: 'supervisors',
   'medical-directors': 'medicalDirectors',
+  preceptors: 'preceptors',
 }
 
 export interface SupervisorSearchQueryInput {

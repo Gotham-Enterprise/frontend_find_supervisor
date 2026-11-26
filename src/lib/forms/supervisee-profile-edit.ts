@@ -16,6 +16,7 @@ import {
 } from '@/lib/utils/profile-formatters'
 import {
   isMedicalDirectorType,
+  isPreceptorType,
   MEDICAL_DIRECTOR_TYPE_NAME,
   SUPERVISION_TYPE_REQUIRED_MESSAGE,
 } from '@/lib/utils/supervisee-eligibility'
@@ -35,6 +36,12 @@ export const SUPERVISEE_PROFILE_BUDGET_TYPE_OPTIONS = [
 export const SUPERVISEE_CREDENTIAL_TITLE_LABEL = 'Credential or License Type'
 export const SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER = 'e.g. AMFT, LPC-Associate, ACSW, PA'
 
+/** A preceptee (student) profile: the need is a Preceptor. */
+export function isPrecepteeProfileNeed(typeOfSupervisorNeeded: string | null | undefined): boolean {
+  const name = typeOfSupervisorNeeded?.trim() ?? ''
+  return name !== '' && isPreceptorType({ name })
+}
+
 export const editSuperviseeProfileSchema = z
   .object({
     fullName: z.string().min(1, 'Full name is required').max(100),
@@ -50,9 +57,26 @@ export const editSuperviseeProfileSchema = z
       .regex(/^\d{5}(-\d{4})?$/, 'Enter a valid US zipcode'),
     occupationId: z.string().min(1, 'Occupation is required'),
     specialtyId: z.string().optional(),
-    title: z.string().min(1, 'Credential or license type is required').max(100),
+    // Credential + its state — required for licensed supervisees; students
+    // (Preceptor need) hold no credential and give their program details instead
+    // (enforced in the superRefine below, matching signup).
+    title: z.string().max(100),
     // State tied to the credential (US state abbreviation, e.g. "TX") — matches signup
-    licensureState: z.string().min(1, 'State of licensure is required'),
+    licensureState: z.string(),
+    schoolName: z.string().max(200, 'Must be 200 characters or less').default(''),
+    degreeProgram: z.string().max(200, 'Must be 200 characters or less').default(''),
+    expectedGraduation: z.string().default(''),
+    clinicalHoursRequired: z.preprocess(
+      normalizeNumberFieldInput,
+      z
+        .number('Please enter the clinical hours your program requires')
+        .int('Clinical hours must be a whole number')
+        .min(1, 'Clinical hours must be at least 1')
+        .max(10000, 'Clinical hours must be 10,000 or less')
+        .optional(),
+    ),
+    rotationStartDate: z.string().optional(),
+    rotationEndDate: z.string().optional(),
     stateOfLicensure: z.array(z.string()).min(1, 'At least one state of licensure is required'),
     // Required unless `needsMedicalDirector` is checked — enforced in the superRefine below.
     typeOfSupervisorNeeded: z.string(),
@@ -96,6 +120,58 @@ export const editSuperviseeProfileSchema = z
   })
   .superRefine((data, ctx) => {
     applyIdentityPreferenceRules(data, ctx)
+    if (isPrecepteeProfileNeed(data.typeOfSupervisorNeeded)) {
+      if (!data.schoolName.trim()) {
+        ctx.addIssue({ code: 'custom', path: ['schoolName'], message: 'School name is required' })
+      }
+      if (!data.degreeProgram.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['degreeProgram'],
+          message: 'Degree program is required',
+        })
+      }
+      if (!data.expectedGraduation.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['expectedGraduation'],
+          message: 'Expected graduation is required',
+        })
+      }
+      if (data.clinicalHoursRequired == null) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['clinicalHoursRequired'],
+          message: 'Please enter the clinical hours your program requires',
+        })
+      }
+      if (
+        data.rotationStartDate &&
+        data.rotationEndDate &&
+        Date.parse(data.rotationEndDate) < Date.parse(data.rotationStartDate)
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['rotationEndDate'],
+          message: 'Rotation end date must be on or after the start date',
+        })
+      }
+    } else {
+      if (!data.title.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['title'],
+          message: 'Credential or license type is required',
+        })
+      }
+      if (!data.licensureState.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['licensureState'],
+          message: 'State of licensure is required',
+        })
+      }
+    }
     if (data.howSoonLooking === 'CUSTOM_DATE' && !data.lookingDate) {
       ctx.addIssue({
         code: 'custom',
@@ -210,6 +286,12 @@ export function getDefaultSuperviseeProfileFormValues(
     specialtyId: defaultSpecialtyId,
     title: profile.title ?? '',
     licensureState: profile.licensureState ?? '',
+    schoolName: profile.schoolName ?? '',
+    degreeProgram: profile.degreeProgram ?? '',
+    expectedGraduation: profile.expectedGraduation ? profile.expectedGraduation.slice(0, 10) : '',
+    clinicalHoursRequired: profile.clinicalHoursRequired ?? undefined,
+    rotationStartDate: profile.rotationStartDate ? profile.rotationStartDate.slice(0, 10) : '',
+    rotationEndDate: profile.rotationEndDate ? profile.rotationEndDate.slice(0, 10) : '',
     stateOfLicensure: profile.user.stateOfLicensure ?? [],
     typeOfSupervisorNeeded:
       storedSupervisionTypes.find((name) => !isMedicalDirectorType({ name })) ?? '',
@@ -251,6 +333,8 @@ export function superviseeProfileFormValuesToPayload(
     ),
   ]
 
+  const isPreceptee = isPrecepteeProfileNeed(values.typeOfSupervisorNeeded)
+
   return {
     fullName: values.fullName,
     identity: identityPreferencesToPayload(values),
@@ -262,8 +346,21 @@ export function superviseeProfileFormValuesToPayload(
     zipcode: values.zipcode || undefined,
     occupation: values.occupationId || undefined,
     specialty: values.specialtyId || undefined,
-    title: values.title.trim() || undefined,
-    licensureState: values.licensureState || undefined,
+    title: isPreceptee ? undefined : values.title.trim() || undefined,
+    licensureState: isPreceptee ? undefined : values.licensureState || undefined,
+    // Preceptee program details — sent only with a Preceptor need (the backend
+    // rejects them otherwise and clears them itself when the need changes);
+    // '' clears an optional rotation date.
+    ...(isPreceptee
+      ? {
+          schoolName: values.schoolName.trim(),
+          degreeProgram: values.degreeProgram.trim(),
+          expectedGraduation: values.expectedGraduation,
+          clinicalHoursRequired: values.clinicalHoursRequired ?? '',
+          rotationStartDate: values.rotationStartDate ?? '',
+          rotationEndDate: values.rotationEndDate ?? '',
+        }
+      : {}),
     stateOfLicensure: values.stateOfLicensure,
     typeOfSupervisorNeeded: supervisionTypes.length > 0 ? supervisionTypes : undefined,
     // '' (not undefined) when cleared, so the backend nulls the stored value — e.g. a

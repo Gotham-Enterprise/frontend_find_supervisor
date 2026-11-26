@@ -40,6 +40,8 @@ interface SuperviseeDashboardContentProps {
   isRecommendedError: boolean
   /** True when the supervisee's needs include a non-MD supervision type. */
   showSupervisorsSection: boolean
+  /** Student (preceptee): the supervisors section is relabeled for preceptors. */
+  isPreceptee?: boolean
   /** Medical Director recommendations — separate section, shown only for MD needs. */
   showMedicalDirectorsSection: boolean
   recommendedMedicalDirectors: RecommendedSupervisorApiItem[]
@@ -68,6 +70,7 @@ export function SuperviseeDashboardContent({
   isRecommendedLoading,
   isRecommendedError,
   showSupervisorsSection,
+  isPreceptee = false,
   showMedicalDirectorsSection,
   recommendedMedicalDirectors,
   isRecommendedMdLoading,
@@ -142,7 +145,13 @@ export function SuperviseeDashboardContent({
               supervisors={recommendedSupervisors}
               isLoading={isRecommendedLoading}
               isError={isRecommendedError}
-              title="Recommended Supervisors"
+              title={isPreceptee ? 'Recommended Preceptors' : 'Recommended Supervisors'}
+              {...(isPreceptee && {
+                subtitle: 'Based on your program and rotation needs',
+                browseHref: '/find-preceptors',
+                browseLabel: 'Browse all preceptors →',
+                emptyMessage: 'No preceptors available right now.',
+              })}
             />
           )}
           {showMedicalDirectorsSection && (

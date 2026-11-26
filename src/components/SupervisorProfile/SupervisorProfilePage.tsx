@@ -29,7 +29,10 @@ import { SupervisorProfileProfessional } from './SupervisorProfileProfessional'
 import { SupervisorProfileReviews } from './SupervisorProfileReviews'
 import { SupervisorProfileSkeleton } from './SupervisorProfileSkeleton'
 
-export type SupervisorProfileBasePath = '/find-supervisors' | '/find-medical-directors'
+export type SupervisorProfileBasePath =
+  | '/find-supervisors'
+  | '/find-medical-directors'
+  | '/find-preceptors'
 
 interface SupervisorProfilePageProps {
   supervisorId: string
@@ -53,6 +56,7 @@ const DEFAULT_BACK_BY_BASE: Record<SupervisorProfileBasePath, { href: string; la
     href: '/find-medical-directors',
     label: 'Back to Find Medical Directors',
   },
+  '/find-preceptors': { href: '/find-preceptors', label: 'Back to Find Preceptors' },
 }
 
 function buildFindBackLink(

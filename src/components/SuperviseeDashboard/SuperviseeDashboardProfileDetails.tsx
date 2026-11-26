@@ -10,6 +10,7 @@ import { getOwnIdentitySummary } from '@/lib/utils/identity-display'
 import { formatUSPhoneForDisplay } from '@/lib/utils/phone'
 import {
   formatCredentialWithState,
+  formatDate,
   formatDisplayName,
   formatHowSoonLooking,
   formatLocation,
@@ -18,7 +19,7 @@ import {
   resolveOptionLabel,
   resolveSupervisorTypeLabel,
 } from '@/lib/utils/profile-formatters'
-import { isMedicalDirectorType } from '@/lib/utils/supervisee-eligibility'
+import { isMedicalDirectorType, isPreceptorType } from '@/lib/utils/supervisee-eligibility'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
 
 // ─── Formatters specific to the supervisee domain ────────────────────────────
@@ -91,8 +92,18 @@ export function SuperviseeDashboardProfileDetails({
   const location = formatLocation(profile.user.city, profile.user.state, profile.user.zipcode)
   const occupation = profile.occupation?.name ?? profile.user.occupation?.name
   const specialty = profile.specialty?.name ?? profile.user.specialty?.name
-  const credentialTitle = formatCredentialWithState(profile.title, profile.licensureState)
+  const isPreceptee = (
+    Array.isArray(profile.typeOfSupervisorNeeded) ? profile.typeOfSupervisorNeeded : []
+  ).some((name) => isPreceptorType({ name }))
+  // Students show their program where a licensed supervisee shows a credential.
+  const credentialTitle =
+    formatCredentialWithState(profile.title, profile.licensureState) ||
+    (isPreceptee ? (profile.degreeProgram ?? '') : '')
   const subline = [credentialTitle, occupation, specialty].filter(Boolean).join(' · ')
+  const rotationWindow = [profile.rotationStartDate, profile.rotationEndDate]
+    .map((value) => (value ? formatDate(value) : ''))
+    .filter(Boolean)
+    .join(' to ')
   const statesOfLicensure = profile.user.stateOfLicensure ?? []
 
   const availabilityLabel = resolveOptionLabel(profile.availability, availabilityOptions)
@@ -182,6 +193,22 @@ export function SuperviseeDashboardProfileDetails({
           )}
           {hoursNeededLabel && (
             <ProfileDetailRow label="Hours Needed">{hoursNeededLabel}</ProfileDetailRow>
+          )}
+          {profile.schoolName && (
+            <ProfileDetailRow label="School">{profile.schoolName}</ProfileDetailRow>
+          )}
+          {profile.expectedGraduation && (
+            <ProfileDetailRow label="Expected Graduation">
+              {formatDate(profile.expectedGraduation)}
+            </ProfileDetailRow>
+          )}
+          {profile.clinicalHoursRequired != null && profile.clinicalHoursRequired > 0 && (
+            <ProfileDetailRow label="Clinical Hours Required">
+              {profile.clinicalHoursRequired.toLocaleString('en-US')} hours
+            </ProfileDetailRow>
+          )}
+          {rotationWindow && (
+            <ProfileDetailRow label="Rotation Window">{rotationWindow}</ProfileDetailRow>
           )}
           {profile.howSoonLooking && (
             <ProfileDetailRow label="How Soon">{howSoonLabel}</ProfileDetailRow>

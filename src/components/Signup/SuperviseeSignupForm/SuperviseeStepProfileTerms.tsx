@@ -74,7 +74,12 @@ export function SuperviseeStepProfileTerms({
                   I agree to post my profile on{' '}
                   <span className="font-semibold text-primary">Gotham Enterprises Ltd</span> and
                   agree to be contacted by a prospective{' '}
-                  {isNeedMedicalDirector ? 'medical director' : 'supervisor'} via email, messages on{' '}
+                  {isNeedMedicalDirector
+                    ? 'medical director'
+                    : variant === 'preceptee'
+                      ? 'preceptor'
+                      : 'supervisor'}{' '}
+                  via email, messages on{' '}
                   <span className="font-semibold text-primary">Gotham Enterprises Ltd</span>, SMS
                   text, and phone.
                 </p>

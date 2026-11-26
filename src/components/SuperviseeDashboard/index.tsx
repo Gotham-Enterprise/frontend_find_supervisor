@@ -10,7 +10,7 @@ import {
   useUser,
 } from '@/lib/hooks'
 import { useSuperviseeProfile } from '@/lib/hooks/useSuperviseeProfile'
-import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
+import { MEDICAL_DIRECTOR_TYPE_NAME, PRECEPTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 
 import { SuperviseeDashboardContent } from './SuperviseeDashboardContent'
 import { SuperviseeDashboardSkeleton } from './SuperviseeDashboardSkeleton'
@@ -42,6 +42,9 @@ export function SuperviseeDashboard() {
   // are separate products with separate cards.
   const needs = (superviseeProfile?.typeOfSupervisorNeeded ?? []).map((need) => need.trim())
   const hasMdNeed = profileFetched && needs.includes(MEDICAL_DIRECTOR_TYPE_NAME)
+  // Preceptees (students) reuse the supervisors section: the backend already
+  // recommends only preceptors to them; the card is relabeled.
+  const hasPreceptorNeed = profileFetched && needs.includes(PRECEPTOR_TYPE_NAME)
   // Legacy profiles without stored needs keep the general supervisors section.
   const hasNonMdNeed =
     !profileFetched ||
@@ -97,6 +100,7 @@ export function SuperviseeDashboard() {
         isRecommendedError={recommendedError}
         showSupervisorsSection={hasNonMdNeed}
         showMedicalDirectorsSection={hasMdNeed}
+        isPreceptee={hasPreceptorNeed}
         recommendedMedicalDirectors={recommendedMdData?.items ?? []}
         isRecommendedMdLoading={recommendedMdLoading}
         isRecommendedMdError={recommendedMdError}

@@ -27,19 +27,28 @@ export const GTM_EVENTS = {
   SUPERVISEE_SIGNUP_SUCCESS: 'supervisee_full_registration_success',
   MEDICAL_DIRECTOR_SIGNUP_SUCCESS: 'medical_director_full_registration_success',
   NEED_MEDICAL_DIRECTOR_SIGNUP_SUCCESS: 'need_medical_director_full_registration_success',
+  PRECEPTOR_SIGNUP_SUCCESS: 'preceptor_full_registration_success',
+  PRECEPTEE_SIGNUP_SUCCESS: 'preceptee_full_registration_success',
 } as const
 
 export type GtmEventName = (typeof GTM_EVENTS)[keyof typeof GTM_EVENTS]
 
 /** Maps each signup form variant to its GTM event. */
 export const SIGNUP_GTM_EVENT: Record<
-  'supervisor' | 'medical-director' | 'supervisee' | 'need-medical-director',
+  | 'supervisor'
+  | 'medical-director'
+  | 'supervisee'
+  | 'need-medical-director'
+  | 'preceptor'
+  | 'preceptee',
   GtmEventName
 > = {
   supervisor: GTM_EVENTS.SUPERVISOR_SIGNUP_SUCCESS,
   'medical-director': GTM_EVENTS.MEDICAL_DIRECTOR_SIGNUP_SUCCESS,
   supervisee: GTM_EVENTS.SUPERVISEE_SIGNUP_SUCCESS,
   'need-medical-director': GTM_EVENTS.NEED_MEDICAL_DIRECTOR_SIGNUP_SUCCESS,
+  preceptor: GTM_EVENTS.PRECEPTOR_SIGNUP_SUCCESS,
+  preceptee: GTM_EVENTS.PRECEPTEE_SIGNUP_SUCCESS,
 }
 
 type DataLayerEntry = { event: GtmEventName } & Record<

@@ -11,6 +11,21 @@ export function isPhysicianSupervisorType(supervisorType: string): boolean {
   return (PHYSICIAN_SUPERVISOR_TYPES as readonly string[]).includes(supervisorType)
 }
 
+/**
+ * Preceptors host students for program-required clinical hours. They use the
+ * license-type path (never degree types) and certifications are optional.
+ */
+export const PRECEPTOR_SUPERVISOR_TYPE = 'Preceptor'
+
+export function isPreceptorSupervisorType(supervisorType: string): boolean {
+  return supervisorType.trim() === PRECEPTOR_SUPERVISOR_TYPE
+}
+
+/** Types whose signup/edit forms do not require a certification. */
+export function requiresSupervisorCertifications(supervisorType: string): boolean {
+  return !isPhysicianSupervisorType(supervisorType) && !isPreceptorSupervisorType(supervisorType)
+}
+
 /** Supervisor types restricted to the MONTHLY supervision fee type. */
 export const MONTHLY_ONLY_SUPERVISOR_TYPES = ['Medical Director'] as const
 
@@ -130,7 +145,7 @@ function applySupervisorPhysicianRules(
     })
   }
 
-  if (!physician && data.certifications.length === 0) {
+  if (requiresSupervisorCertifications(data.supervisorType) && data.certifications.length === 0) {
     ctx.addIssue({
       code: 'custom',
       path: ['certifications'],

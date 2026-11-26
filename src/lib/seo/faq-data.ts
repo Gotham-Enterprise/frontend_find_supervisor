@@ -176,6 +176,63 @@ export function getMedicalDirectorStateFaqs(stateName: string): FaqItem[] {
 }
 
 // ---------------------------------------------------------------------------
+// Preceptor FAQ
+// ---------------------------------------------------------------------------
+
+export function getPreceptorIndexFaqs(): FaqItem[] {
+  return [
+    {
+      question: 'What is a preceptor?',
+      answer:
+        'A preceptor is a licensed clinician who hosts a student at their practice or facility and supervises the clinical or field hours the student needs to graduate. Nurse Practitioner, Physician Assistant, Physical Therapy, PTA, dental hygiene and assisting, occupational therapy assistant, speech-language pathology, and pharmacy programs all rely on preceptors for rotations.',
+    },
+    {
+      question: 'Who can be a preceptor on Find A Supervisor?',
+      answer:
+        'Nurse Practitioners, Physicians (MD/DO), Physical Therapists, Pharmacists, Dentists, Occupational Therapists, and Speech Language Pathologists can list themselves as preceptors. Each profile shows the discipline, licensed states, specialty focus, format, and availability.',
+    },
+    {
+      question: 'Which students can request a preceptor?',
+      answer:
+        'Students enrolled in a degree program who need supervised field hours, including NP, PA, PT, PTA, dental hygiene, dental assistant, COTA, SLP, and pharmacy students. Students only see preceptors whose discipline matches their program.',
+    },
+    {
+      question: 'How do I find a preceptor?',
+      answer:
+        'Browse preceptors by state or discipline, review each profile for specialty, format, and fees, then create a free student account to message preceptors and send a request with your program, rotation dates, and required hours.',
+    },
+    {
+      question: 'Does my school need to approve the placement?',
+      answer:
+        'Usually yes. Most programs require an affiliation agreement with the site and approval of the preceptor before hours count. Confirm your program requirements and deadlines before you commit to a rotation.',
+    },
+  ]
+}
+
+/** FAQs for /preceptors/[state] pages. */
+export function getPreceptorStateFaqs(stateName: string): FaqItem[] {
+  return [
+    {
+      question: `How do I find a preceptor in ${stateName}?`,
+      answer: `On Find A Supervisor, browse preceptors licensed in ${stateName}. Filter by discipline, review specialty focus, format, and fees, then create a free student account to message them and send a rotation request.`,
+    },
+    {
+      question: `Does my preceptor need to be licensed in ${stateName}?`,
+      answer: `A preceptor supervising patient care in ${stateName} generally needs an active ${stateName} license in their discipline. Every profile lists the states where the preceptor is licensed, so you can confirm before reaching out.`,
+    },
+    {
+      question: `Can a preceptor in ${stateName} supervise my rotation virtually?`,
+      answer: `Some programs allow telehealth or hybrid rotations, but most clinical hours must be completed on site. Check what ${stateName} licensing boards and your program allow before agreeing on a format.`,
+    },
+    {
+      question: 'What should I confirm before starting a rotation?',
+      answer:
+        'Confirm the preceptor meets your program requirements, the site has or can sign an affiliation agreement, the start and end dates and total hours fit your schedule, how hours and evaluations will be documented, and any fee the preceptor charges.',
+    },
+  ]
+}
+
+// ---------------------------------------------------------------------------
 // License-type + state FAQ
 // ---------------------------------------------------------------------------
 

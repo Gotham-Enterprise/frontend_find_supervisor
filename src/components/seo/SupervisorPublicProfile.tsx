@@ -1,6 +1,10 @@
 import Link from 'next/link'
 
-import { isPublicMedicalDirector, type PublicSupervisorSummary } from '@/lib/api/public-supervisors'
+import {
+  isPublicMedicalDirector,
+  isPublicPreceptor,
+  type PublicSupervisorSummary,
+} from '@/lib/api/public-supervisors'
 import { stateAbbreviationToDisplayName } from '@/lib/seo/routes'
 import { formatPublicIdentity } from '@/lib/utils/identity-display'
 import {
@@ -32,11 +36,15 @@ export function SupervisorPublicProfile({
   signupHref = '/signup',
 }: SupervisorPublicProfileProps) {
   const isMedicalDirector = isPublicMedicalDirector(supervisor)
+  const isPreceptor = isPublicPreceptor(supervisor)
   const location = [supervisor.city, supervisor.state].filter(Boolean).join(', ')
-  // Medical Directors show every role they cover (primary + offerings).
+  // Medical Directors show every role they cover (primary + offerings);
+  // Preceptors show their discipline next to the role.
   const roleTags = isMedicalDirector
     ? getSupervisorTypeDisplayLabels('Medical Director', supervisor.offerings)
-    : [supervisor.supervisorType]
+    : isPreceptor
+      ? ['Preceptor', supervisor.occupation].filter(Boolean)
+      : [supervisor.supervisorType]
   const tags = [...new Set([supervisor.licenseType, ...roleTags, supervisor.supervisionFormat])]
     .filter(Boolean)
     .map((tag) => (tag === supervisor.supervisionFormat ? formatEnum(tag) : tag))
@@ -77,7 +85,11 @@ export function SupervisorPublicProfile({
           <div className="mt-3 flex flex-wrap gap-1.5">
             {supervisor.acceptingSupervisees && (
               <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-200">
-                {isMedicalDirector ? 'Accepting new clients' : 'Accepting supervisees'}
+                {isMedicalDirector
+                  ? 'Accepting new clients'
+                  : isPreceptor
+                    ? 'Accepting students'
+                    : 'Accepting supervisees'}
               </span>
             )}
             {tags.map((tag) => (
@@ -105,7 +117,7 @@ export function SupervisorPublicProfile({
         )}
         {supervisor.supervisionFormat && (
           <ProfileDetail
-            label={isMedicalDirector ? 'Format' : 'Supervision Format'}
+            label={isMedicalDirector || isPreceptor ? 'Format' : 'Supervision Format'}
             value={formatEnum(supervisor.supervisionFormat)}
           />
         )}

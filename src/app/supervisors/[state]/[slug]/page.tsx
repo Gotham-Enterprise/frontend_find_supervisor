@@ -35,7 +35,7 @@ import { SupervisionFormatGuide } from '@/components/SupervisionFormatGuide'
 import {
   fetchPublicSupervisorById,
   fetchPublicSupervisors,
-  isPublicMedicalDirector,
+  publicDirectoryFor,
 } from '@/lib/api/public-supervisors'
 import {
   MENTAL_HEALTH_PROFESSIONS,
@@ -53,10 +53,12 @@ import {
   LICENSE_TYPE_SLUGS,
   licenseSlugToLabel,
   MEDICAL_DIRECTORS_PATH,
+  PRECEPTORS_PATH,
   profileStateSlug,
   stateSlugToAbbreviation,
   stateSlugToDisplayName,
   SUPERVISOR_TYPE_PAGE_SLUG_MAP,
+  SUPERVISORS_PATH,
   TOP_LICENSE_SLUGS_FOR_STATE,
   US_STATES,
 } from '@/lib/seo/routes'
@@ -141,9 +143,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (isUUID(slug)) {
     const supervisor = await fetchPublicSupervisorById(slug)
 
-    // Primary Medical Directors are canonical under /medical-directors.
-    if (supervisor && isPublicMedicalDirector(supervisor)) {
-      permanentRedirect(`${MEDICAL_DIRECTORS_PATH}/${stateSlug}/${slug}`)
+    // Primary Medical Directors and Preceptors are canonical under their own directories.
+    if (supervisor && publicDirectoryFor(supervisor) !== SUPERVISORS_PATH) {
+      permanentRedirect(`${publicDirectoryFor(supervisor)}/${stateSlug}/${slug}`)
     }
 
     if (supervisor) {
@@ -493,6 +495,12 @@ async function SupervisorTypeView({
             >
               Medical Directors in {stateName}
             </Link>
+            <Link
+              href={`${PRECEPTORS_PATH}/${stateSlug}`}
+              className="rounded-full border px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              Preceptors in {stateName}
+            </Link>
           </div>
         </nav>
 
@@ -598,9 +606,9 @@ async function SupervisorProfileView({
   const stateAbbreviation = stateSlugToAbbreviation(stateSlug) ?? stateSlug.toUpperCase()
   const supervisor = await fetchPublicSupervisorById(supervisorId)
 
-  // Primary Medical Directors are canonical under /medical-directors.
-  if (supervisor && isPublicMedicalDirector(supervisor)) {
-    permanentRedirect(`${MEDICAL_DIRECTORS_PATH}/${stateSlug}/${supervisorId}`)
+  // Primary Medical Directors and Preceptors are canonical under their own directories.
+  if (supervisor && publicDirectoryFor(supervisor) !== SUPERVISORS_PATH) {
+    permanentRedirect(`${publicDirectoryFor(supervisor)}/${stateSlug}/${supervisorId}`)
   }
 
   const jsonLd = generateSupervisorJsonLd({

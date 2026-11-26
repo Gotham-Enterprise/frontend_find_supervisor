@@ -17,6 +17,7 @@ import {
   getSupervisorCredentialSelectOptions,
   isPhysicianSupervisorType,
   PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE,
+  requiresSupervisorCertifications,
 } from '@/lib/utils/supervisor-type'
 
 /** Select does not allow `SelectItem value=""`; map to empty `specialtyId` in the form. */
@@ -29,6 +30,8 @@ const yearsOfExperienceSelectOptions: SelectOption[] = yearsOfExperienceOptions.
 
 type SupervisorStepLicenseCredentialsProps = {
   supervisorTypeOptions: SelectOption[]
+  /** Dedicated flows (Preceptor) preset `supervisorType` and render no select. */
+  hideSupervisorType?: boolean
   supervisorTypesData: SupervisorTypeData[]
   certificateOptions: SelectOption[]
   stateOptions: SelectOption[]
@@ -39,6 +42,7 @@ type SupervisorStepLicenseCredentialsProps = {
 
 export function SupervisorStepLicenseCredentials({
   supervisorTypeOptions,
+  hideSupervisorType = false,
   supervisorTypesData,
   certificateOptions,
   stateOptions,
@@ -51,6 +55,8 @@ export function SupervisorStepLicenseCredentials({
   const supervisorType = useWatch({ control, name: 'supervisorType' }) ?? ''
   const supervisorOccupationId = useWatch({ control, name: 'supervisorOccupationId' }) ?? ''
   const physicianSupervisorType = isPhysicianSupervisorType(supervisorType)
+  // Physicians: certifications not applicable; Preceptors: optional; others: required.
+  const certificationsRequired = requiresSupervisorCertifications(supervisorType)
   const certificationsDisabled = physicianSupervisorType || certificatesLoading || isSubmitting
 
   /** Options change with supervisor type/occupation, so per-entry license types reset. */
@@ -93,40 +99,48 @@ export function SupervisorStepLicenseCredentials({
 
   return (
     <FormSection title="License & Credentials">
-      <FormSelectField
-        control={control}
-        name="supervisorType"
-        label="Supervisor Type"
-        rules={supervisorFieldRules('supervisorType')}
-        options={supervisorTypeOptions}
-        placeholder={supervisorTypesLoading ? 'Loading…' : 'Select Supervisor Type'}
-        loading={supervisorTypesLoading}
-        isSubmitting={isSubmitting}
-        required
-        onValueChange={() => {
-          setValue('supervisorOccupationId', '')
-          setValue('supervisorSpecialtyId', '')
-          setValue('degreeType', '')
-          setValue('certifications', [])
-          resetLicenseEntryTypes()
-          clearErrors([
-            'supervisorOccupationId',
-            'supervisorSpecialtyId',
-            'degreeType',
-            'certifications',
-            'licenses',
-          ])
-        }}
-      />
+      {!hideSupervisorType && (
+        <FormSelectField
+          control={control}
+          name="supervisorType"
+          label="Supervisor Type"
+          rules={supervisorFieldRules('supervisorType')}
+          options={supervisorTypeOptions}
+          placeholder={supervisorTypesLoading ? 'Loading…' : 'Select Supervisor Type'}
+          loading={supervisorTypesLoading}
+          isSubmitting={isSubmitting}
+          required
+          onValueChange={() => {
+            setValue('supervisorOccupationId', '')
+            setValue('supervisorSpecialtyId', '')
+            setValue('degreeType', '')
+            setValue('certifications', [])
+            resetLicenseEntryTypes()
+            clearErrors([
+              'supervisorOccupationId',
+              'supervisorSpecialtyId',
+              'degreeType',
+              'certifications',
+              'licenses',
+            ])
+          }}
+        />
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <FormSelectField
           control={control}
           name="supervisorOccupationId"
-          label="Occupation"
+          label={hideSupervisorType ? 'Profession' : 'Occupation'}
           rules={supervisorFieldRules('supervisorOccupationId')}
           options={occupationOptions}
-          placeholder={occupationDisabled ? 'Select a Supervisor Type First' : 'Select Occupation'}
+          placeholder={
+            occupationDisabled
+              ? 'Select a Supervisor Type First'
+              : hideSupervisorType
+                ? 'Select Your Profession'
+                : 'Select Occupation'
+          }
           loading={supervisorTypesLoading}
           disabled={occupationDisabled}
           isSubmitting={isSubmitting}
@@ -214,7 +228,7 @@ export function SupervisorStepLicenseCredentials({
           <FormItem>
             <FormLabel>
               Certifications
-              {!physicianSupervisorType ? <span className="text-destructive"> *</span> : null}
+              {certificationsRequired ? <span className="text-destructive"> *</span> : null}
             </FormLabel>
             <FormControl>
               <div

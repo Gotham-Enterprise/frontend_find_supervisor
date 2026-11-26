@@ -20,6 +20,8 @@ import type { SelectOption } from '@/lib/api/options'
 type SupervisorStepAccountProps = {
   /** MD signup shows physician-style credential examples. */
   isMedicalDirector?: boolean
+  /** Preceptor flow — credential placeholder spans the preceptor professions. */
+  isPreceptor?: boolean
   stateOptions: SelectOption[]
   cityOptions: SelectOption[]
   statesLoading: boolean
@@ -38,6 +40,7 @@ export function SupervisorStepAccount({
   citiesError,
   isSubmitting,
   isMedicalDirector = false,
+  isPreceptor = false,
 }: SupervisorStepAccountProps) {
   const { control } = useFormContext<SupervisorFormValues>()
   const stateValue = useWatch({ control, name: 'state' }) ?? ''
@@ -92,7 +95,13 @@ export function SupervisorStepAccount({
             </>
           }
           rules={supervisorFieldRules('professionalCredentials')}
-          placeholder={isMedicalDirector ? 'MD, DO' : 'Ph.D., NCC, LPC-S (AL)'}
+          placeholder={
+            isMedicalDirector
+              ? 'MD, DO'
+              : isPreceptor
+                ? 'DNP, FNP-C, DPT, PharmD, DDS'
+                : 'Ph.D., NCC, LPC-S (AL)'
+          }
           description={PROFESSIONAL_CREDENTIALS_HELPER_TEXT}
           maxLength={PROFESSIONAL_CREDENTIALS_MAX_LENGTH}
           normalizeEmptyToString

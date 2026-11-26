@@ -4,6 +4,7 @@ import { fetchAllPublicSupervisorIds } from '@/lib/api/public-supervisors'
 import { SITE_URL } from '@/lib/seo/config'
 import {
   MEDICAL_DIRECTORS_PATH,
+  PRECEPTORS_PATH,
   profileStateSlug,
   type PublicDirectoryPath,
   SUPERVISOR_TYPE_PAGE_SLUGS,
@@ -27,6 +28,12 @@ const STATIC_PAGES: MetadataRoute.Sitemap = [
   },
   {
     url: `${SITE_URL}${MEDICAL_DIRECTORS_PATH}`,
+    lastModified: new Date(),
+    changeFrequency: 'daily',
+    priority: 0.9,
+  },
+  {
+    url: `${SITE_URL}${PRECEPTORS_PATH}`,
     lastModified: new Date(),
     changeFrequency: 'daily',
     priority: 0.9,
@@ -68,6 +75,14 @@ const MEDICAL_DIRECTOR_STATE_PAGES: MetadataRoute.Sitemap = Object.keys(US_STATE
     priority: 0.8,
   }),
 )
+
+/** Preceptor state pSEO pages — one per US state (thin ones self-noindex). */
+const PRECEPTOR_STATE_PAGES: MetadataRoute.Sitemap = Object.keys(US_STATES).map((stateSlug) => ({
+  url: `${SITE_URL}${PRECEPTORS_PATH}/${stateSlug}`,
+  lastModified: new Date(),
+  changeFrequency: 'weekly' as const,
+  priority: 0.8,
+}))
 
 /** Supervisee state pSEO pages — one per US state (thin ones self-noindex). */
 const SUPERVISEE_STATE_PAGES: MetadataRoute.Sitemap = Object.keys(US_STATES).map((stateSlug) => ({
@@ -128,9 +143,10 @@ function profilePages(
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Each directory is fetched with its own searchMode so every profile is
   // listed once, at its canonical URL. Never throws — returns [] on failure.
-  const [supervisorIds, medicalDirectorIds] = await Promise.all([
+  const [supervisorIds, medicalDirectorIds, preceptorIds] = await Promise.all([
     fetchAllPublicSupervisorIds('supervisors'),
     fetchAllPublicSupervisorIds('medicalDirectors'),
+    fetchAllPublicSupervisorIds('preceptors'),
   ])
 
   // Supervisor mode still lists Medical Directors with a physician offering;
@@ -141,6 +157,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...STATIC_PAGES,
     ...STATE_PAGES,
     ...MEDICAL_DIRECTOR_STATE_PAGES,
+    ...PRECEPTOR_STATE_PAGES,
     ...SUPERVISEE_STATE_PAGES,
     ...SUPERVISOR_TYPE_STATE_PAGES,
     ...LICENSE_STATE_PAGES,
@@ -149,5 +166,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       supervisorIds.filter(({ id }) => !medicalDirectorIdSet.has(id)),
     ),
     ...profilePages(MEDICAL_DIRECTORS_PATH, medicalDirectorIds),
+    ...profilePages(PRECEPTORS_PATH, preceptorIds),
   ]
 }

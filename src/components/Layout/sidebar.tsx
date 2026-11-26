@@ -4,6 +4,7 @@ import {
   Briefcase,
   ClipboardList,
   CreditCard,
+  GraduationCap,
   LayoutDashboard,
   Link2,
   MessageCircle,
@@ -23,7 +24,7 @@ import { useConversations } from '@/lib/hooks/useChat'
 import { useSuperviseeProfile } from '@/lib/hooks/useSuperviseeProfile'
 import { useSupervisorProfile } from '@/lib/hooks/useSupervisorProfile'
 import { cn } from '@/lib/utils'
-import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
+import { MEDICAL_DIRECTOR_TYPE_NAME, PRECEPTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -42,12 +43,28 @@ const navItems = [
     superviseeOnly: true,
     requiresMdNeed: true,
   },
+  // Preceptees (students) have their own find page; hires reuse the
+  // supervisor list pages under a preceptor label.
+  {
+    label: 'Find Preceptors',
+    href: '/find-preceptors',
+    icon: GraduationCap,
+    superviseeOnly: true,
+    requiresPreceptorNeed: true,
+  },
   {
     label: 'Hired Supervisors',
     href: '/hired-supervisors',
     icon: Briefcase,
     superviseeOnly: true,
     requiresNonMdNeed: true,
+  },
+  {
+    label: 'Hired Preceptors',
+    href: '/hired-supervisors',
+    icon: Briefcase,
+    superviseeOnly: true,
+    requiresPreceptorNeed: true,
   },
   {
     label: 'Hired Medical Directors',
@@ -58,12 +75,26 @@ const navItems = [
   },
   { label: 'Find Supervisees', href: '/find-supervisees', icon: Users, supervisorOnly: true },
   {
+    label: 'Browse Preceptees',
+    href: '/find-supervisees',
+    icon: GraduationCap,
+    supervisorOnly: true,
+    requiresPreceptorRole: true,
+  },
+  {
     label: 'My Supervisees',
     href: '/supervisees',
     icon: UserCheck,
     supervisorOnly: true,
     // Hidden for a plain Medical Director (no supervision offerings)
     requiresSupervisionRole: true,
+  },
+  {
+    label: 'My Preceptees',
+    href: '/supervisees',
+    icon: UserCheck,
+    supervisorOnly: true,
+    requiresPreceptorRole: true,
   },
   {
     label: 'Medical Director Clients',
@@ -110,11 +141,16 @@ export function Sidebar() {
     useSuperviseeProfile(isSupervisee)
   const needs = (superviseeProfile?.typeOfSupervisorNeeded ?? []).map((need) => need.trim())
   const hasMdNeed = superviseeProfileFetched && needs.includes(MEDICAL_DIRECTOR_TYPE_NAME)
+  // Preceptees (students) only ever need a Preceptor — they get the preceptor
+  // pages instead of the supervisor ones.
+  const hasPreceptorNeed = superviseeProfileFetched && needs.includes(PRECEPTOR_TYPE_NAME)
   // Legacy profiles without stored needs keep the unrestricted supervisor search.
   const hasNonMdNeed =
     !superviseeProfileFetched ||
     needs.length === 0 ||
-    needs.some((need) => need && need !== MEDICAL_DIRECTOR_TYPE_NAME)
+    needs.some(
+      (need) => need && need !== MEDICAL_DIRECTOR_TYPE_NAME && need !== PRECEPTOR_TYPE_NAME,
+    )
 
   // Supervisor role split: Medical Director Clients is a separate list from
   // My Supervisees. While the profile loads, keep the pre-existing default
@@ -124,9 +160,13 @@ export function Sidebar() {
     useSupervisorProfile(isSupervisorRole)
   const isMdSupervisor =
     supervisorProfileFetched && supervisorProfile?.supervisorType === MEDICAL_DIRECTOR_TYPE_NAME
+  // Preceptors host students: their supervisee lists carry preceptee labels.
+  const isPreceptorSupervisor =
+    supervisorProfileFetched && supervisorProfile?.supervisorType === PRECEPTOR_TYPE_NAME
   const providesSupervision =
     !supervisorProfileFetched ||
-    supervisorProfile?.supervisorType !== MEDICAL_DIRECTOR_TYPE_NAME ||
+    (supervisorProfile?.supervisorType !== MEDICAL_DIRECTOR_TYPE_NAME &&
+      supervisorProfile?.supervisorType !== PRECEPTOR_TYPE_NAME) ||
     (supervisorProfile?.offerings?.length ?? 0) > 0
 
   const visibleNavItems = navItems.filter((item) => {
@@ -136,14 +176,22 @@ export function Sidebar() {
     if ('requiresMdRole' in item && item.requiresMdRole) {
       return isSupervisorRole && isMdSupervisor
     }
+    if ('requiresPreceptorRole' in item && item.requiresPreceptorRole) {
+      return isSupervisorRole && isPreceptorSupervisor
+    }
     if ('requiresSupervisionRole' in item && item.requiresSupervisionRole) {
       return isSupervisorRole && providesSupervision
     }
     if ('supervisorOnly' in item && item.supervisorOnly) {
+      // Preceptors browse preceptees under their own label (entry above).
+      if (item.href === '/find-supervisees' && isPreceptorSupervisor) return false
       return user ? !isSuperviseeRole(user.role) : false
     }
     if ('requiresMdNeed' in item && item.requiresMdNeed) {
       return hasMdNeed
+    }
+    if ('requiresPreceptorNeed' in item && item.requiresPreceptorNeed) {
+      return hasPreceptorNeed
     }
     if ('requiresNonMdNeed' in item && item.requiresNonMdNeed) {
       return hasNonMdNeed
@@ -170,6 +218,7 @@ export function Sidebar() {
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
         {visibleNavItems.map(({ label, href, icon: Icon }) => {
+          // Two entries can share an href (role-specific labels); key on both.
           const isActive = pathname === href || pathname.startsWith(href + '/')
           const badge =
             href === '/supervision-requests' && pendingCount && pendingCount > 0
@@ -180,7 +229,7 @@ export function Sidebar() {
 
           return (
             <Link
-              key={href}
+              key={`${href}:${label}`}
               href={href}
               className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',

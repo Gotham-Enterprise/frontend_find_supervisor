@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import {
   isPublicMedicalDirector,
+  isPublicPreceptor,
   publicSupervisorProfilePath,
   type PublicSupervisorSummary,
 } from '@/lib/api/public-supervisors'
@@ -34,7 +35,9 @@ export function SupervisorCard({ supervisor, stateSlug }: SupervisorCardProps) {
   // through their offerings, so show every role they cover.
   const rolesLine = isPublicMedicalDirector(supervisor)
     ? formatSupervisorTypeWithOfferings('Medical Director', supervisor.offerings)
-    : ''
+    : isPublicPreceptor(supervisor)
+      ? ['Preceptor', supervisor.occupation].filter(Boolean).join(' · ')
+      : ''
   const location = [supervisor.city, supervisor.state].filter(Boolean).join(', ')
   const credentialLine = [supervisor.licenseType, supervisor.specialty].filter(Boolean).join(' · ')
   const licensedIn = supervisor.stateOfLicensure.filter(Boolean).join(', ')

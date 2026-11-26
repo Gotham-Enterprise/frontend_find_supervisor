@@ -27,6 +27,7 @@ import { getStateFaqs } from '@/lib/seo/faq-data'
 import {
   isValidStateSlug,
   MEDICAL_DIRECTORS_PATH,
+  PRECEPTORS_PATH,
   stateSlugToAbbreviation,
   stateSlugToDisplayName,
   SUPERVISOR_TYPE_PAGE_SLUGS,
@@ -164,6 +165,12 @@ export default async function StateSupervisorsPage({ params }: Props) {
               className="rounded-full border px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
             >
               Medical Directors in {stateName}
+            </Link>
+            <Link
+              href={`${PRECEPTORS_PATH}/${stateSlug}`}
+              className="rounded-full border px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              Preceptors in {stateName}
             </Link>
           </div>
         </nav>

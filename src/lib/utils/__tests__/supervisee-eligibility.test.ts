@@ -2,12 +2,19 @@ import { describe, expect, it } from 'vitest'
 
 import type { SupervisorTypeData } from '@/lib/api/options'
 import {
+  filterPrecepteeOccupationOptions,
   filterSuperviseeOccupationOptions,
+  getEligiblePreceptorOccupations,
   getEligibleSupervisorTypes,
   groupSuperviseeOccupationOptions,
   hasCompletedEligibilityFields,
   isAllowedSuperviseeOccupation,
+  isPrecepteeOccupation,
+  isPreceptorOccupationEligibleForPreceptee,
+  isPreceptorType,
   isSupervisorTypeEligibleForSupervisee,
+  PRECEPTEE_OCCUPATIONS,
+  PRECEPTOR_OCCUPATIONS,
   reconcileSelectedSupervisorType,
   SUPERVISEE_ALLOWED_OCCUPATIONS,
   supervisionTypeDisplayLabel,
@@ -30,8 +37,10 @@ const ALL_TYPES = [
 ]
 
 const MENTAL_HEALTH_OCCUPATIONS = SUPERVISEE_ALLOWED_OCCUPATIONS.filter(
-  (name) => name !== 'Physician Assistant' && name !== 'Nurse Practitioner',
+  (name) =>
+    name !== 'Physician Assistant' && name !== 'Nurse Practitioner' && !isPrecepteeOccupation(name),
 )
+const preceptor = { code: 'PRECEPTOR', name: 'Preceptor' }
 
 describe('Nurse Practitioner eligibility', () => {
   it('allows Collaborating Physician for the Nurse Practitioner occupation', () => {
@@ -272,5 +281,95 @@ describe('supervisionTypeDisplayLabel', () => {
 
   it('humanizes unlisted enum codes instead of leaking them raw', () => {
     expect(supervisionTypeDisplayLabel('SOME_OLD_TYPE')).toBe('Some Old Type')
+  })
+})
+
+describe('Preceptor / preceptee (student) eligibility', () => {
+  it('lets only student occupations request a Preceptor', () => {
+    for (const student of PRECEPTEE_OCCUPATIONS) {
+      expect(isSupervisorTypeEligibleForSupervisee(preceptor, student)).toBe(true)
+    }
+    for (const licensed of [
+      'Nurse Practitioner',
+      'Physician Assistant',
+      ...MENTAL_HEALTH_OCCUPATIONS,
+    ]) {
+      expect(isSupervisorTypeEligibleForSupervisee(preceptor, licensed)).toBe(false)
+    }
+  })
+
+  it('closes every other type (including Medical Director and unknown types) to students', () => {
+    for (const student of PRECEPTEE_OCCUPATIONS) {
+      for (const type of ALL_TYPES) {
+        expect(isSupervisorTypeEligibleForSupervisee(type, student)).toBe(false)
+      }
+      expect(isSupervisorTypeEligibleForSupervisee({ code: 'FUTURE_TYPE' }, student)).toBe(false)
+    }
+  })
+
+  it('keeps student names distinct from the licensed NP/PA occupations', () => {
+    expect(
+      isSupervisorTypeEligibleForSupervisee(collaboratingPhysician, 'Nurse Practitioner Student'),
+    ).toBe(false)
+    expect(
+      isSupervisorTypeEligibleForSupervisee(supervisingPhysician, 'Physician Assistant Student'),
+    ).toBe(false)
+    expect(isPrecepteeOccupation('Nurse Practitioner')).toBe(false)
+  })
+
+  it('maps each student to its preceptor professions (CEO-approved matrix)', () => {
+    const expected: Record<string, string[]> = {
+      'Nurse Practitioner Student': ['Nurse Practitioner', 'Physician'],
+      'Physician Assistant Student': ['Physician', 'Nurse Practitioner'],
+      'Physical Therapy Student': ['Physical Therapist'],
+      'Physical Therapist Assistant Student': ['Physical Therapist'],
+      'Dental Hygiene Student': ['Dentist'],
+      'Dental Assistant Student': ['Dentist'],
+      'Occupational Therapy Assistant Student': ['Occupational Therapist'],
+      'Speech Language Pathology Student': ['Speech Language Pathologist'],
+      'Pharmacy Student': ['Pharmacist'],
+    }
+    expect(new Set(PRECEPTEE_OCCUPATIONS)).toEqual(new Set(Object.keys(expected)))
+    for (const [student, preceptors] of Object.entries(expected)) {
+      expect(getEligiblePreceptorOccupations(student)).toEqual(preceptors)
+      for (const occupation of Object.values(PRECEPTOR_OCCUPATIONS)) {
+        expect(isPreceptorOccupationEligibleForPreceptee(occupation, student)).toBe(
+          preceptors.includes(occupation),
+        )
+      }
+    }
+    expect(isPreceptorOccupationEligibleForPreceptee(' dentist ', 'DENTAL HYGIENE STUDENT')).toBe(
+      true,
+    )
+    expect(getEligiblePreceptorOccupations('Nurse Practitioner')).toEqual([])
+    expect(Object.values(PRECEPTOR_OCCUPATIONS)).not.toContain('Physician Assistant')
+  })
+
+  it('splits the occupation dropdowns: students only in the preceptee flow, never in the supervisee flow', () => {
+    const options = [
+      { label: 'Nurse Practitioner', value: '1' },
+      { label: 'Pharmacy Student', value: '2' },
+      { label: 'Associate Social Worker', value: '3' },
+      { label: 'Accountant', value: '4' },
+    ]
+    expect(filterSuperviseeOccupationOptions(options).map((o) => o.label)).toEqual([
+      'Nurse Practitioner',
+      'Associate Social Worker',
+    ])
+    expect(filterPrecepteeOccupationOptions(options).map((o) => o.label)).toEqual([
+      'Pharmacy Student',
+    ])
+    expect(groupSuperviseeOccupationOptions(options).map((g) => g.label)).toEqual([
+      'Medical',
+      'Mental Health',
+      'Students',
+      'Other',
+    ])
+  })
+
+  it('keeps Preceptor out of the regular "Type of Supervision Needed" dropdown', () => {
+    const types = [...ALL_TYPES, preceptor] as never[]
+    expect(isPreceptorType(preceptor)).toBe(true)
+    expect(getEligibleSupervisorTypes(types, 'Pharmacy Student')).toEqual([])
   })
 })

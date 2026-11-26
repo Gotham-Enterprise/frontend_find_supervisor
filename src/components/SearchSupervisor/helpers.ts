@@ -8,6 +8,7 @@ import {
 import { formatPatientPopulation, formatWeeklyHoursAvailable } from '@/lib/utils/profile-formatters'
 import {
   isMedicalDirectorType,
+  isPreceptorType,
   resolveSupervisorTypeCode,
 } from '@/lib/utils/supervisee-eligibility'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
@@ -270,7 +271,10 @@ export function getSearchableSupervisorTypes(
   types: SupervisorTypeData[],
   supervisionNeeds: string[] | null | undefined,
 ): SupervisorTypeData[] {
-  const nonMedicalDirector = types.filter((type) => !isMedicalDirectorType(type))
+  // Medical Director and Preceptor each have their own find page.
+  const nonMedicalDirector = types.filter(
+    (type) => !isMedicalDirectorType(type) && !isPreceptorType(type),
+  )
   const neededCodes = new Set(
     (supervisionNeeds ?? [])
       .map((need) => need.trim())

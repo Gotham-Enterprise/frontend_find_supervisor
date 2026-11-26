@@ -24,6 +24,11 @@ const browseLinks = [
     description: 'MDs and DOs for med spas, clinics, and practices',
   },
   {
+    label: 'Preceptors',
+    href: '/preceptors',
+    description: 'Clinical placements for NP, PA, PT, dental, OT, SLP & pharmacy students',
+  },
+  {
     label: 'Supervisees',
     href: '/browse-supervisees',
     description: 'Professionals looking for a Supervisor',

@@ -25,6 +25,7 @@ const staticColumns: FooterColumn[] = [
       { label: 'Collaborating Physicians', href: '/supervisors?type=collaborating-physician' },
       { label: 'Supervising Physicians', href: '/supervisors?type=supervising-physician' },
       { label: 'Medical Directors', href: '/medical-directors' },
+      { label: 'Preceptors', href: '/preceptors' },
     ],
   },
   {
@@ -36,6 +37,8 @@ const staticColumns: FooterColumn[] = [
       { label: 'For Supervisees', href: '/signup?type=supervisee' },
       { label: 'For Medical Directors', href: '/signup?type=medical-director' },
       { label: 'Need a Medical Director', href: '/signup?type=need-medical-director' },
+      { label: 'For Preceptors', href: '/signup?type=preceptor' },
+      { label: 'For Students (Preceptees)', href: '/signup?type=preceptee' },
     ],
   },
   {
@@ -50,7 +53,7 @@ const staticColumns: FooterColumn[] = [
 
 /**
  * Public footer (async server component). The "Find Supervisors", "Find
- * Medical Directors", and "Find Supervisees" state links are data-driven: the
+ * Medical Directors", "Find Preceptors", and "Find Supervisees" state links are data-driven: the
  * states with the most publicly visible members, fetched with 1h ISR. States
  * without any members are never listed; if the data is unavailable, only the
  * "Browse All" links render.
@@ -86,6 +89,20 @@ export async function PublicFooter() {
     }),
   ]
 
+  const preceptorLinks: FooterLink[] = [
+    { label: 'Browse All Preceptors', href: '/preceptors' },
+    ...topStates.preceptors.flatMap(({ state }) => {
+      const slug = stateAbbreviationToSlug(state)
+      if (!slug) return []
+      return [
+        {
+          label: `Preceptors in ${stateAbbreviationToDisplayName(state)}`,
+          href: `/preceptors/${slug}`,
+        },
+      ]
+    }),
+  ]
+
   const superviseeLinks: FooterLink[] = [
     { label: 'Browse All Supervisees', href: '/browse-supervisees' },
     ...topStates.supervisees.map(({ state }) => {
@@ -100,6 +117,7 @@ export async function PublicFooter() {
   const footerColumns: FooterColumn[] = [
     { heading: 'Find Supervisors', links: supervisorLinks },
     { heading: 'Find Medical Directors', links: medicalDirectorLinks },
+    { heading: 'Find Preceptors', links: preceptorLinks },
     { heading: 'Find Supervisees', links: superviseeLinks },
     ...staticColumns,
   ]

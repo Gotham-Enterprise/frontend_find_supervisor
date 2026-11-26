@@ -18,6 +18,7 @@ import { SupervisorPublicProfile } from '@/components/seo/SupervisorPublicProfil
 import {
   fetchPublicSupervisorById,
   isPublicMedicalDirector,
+  publicDirectoryFor,
   type PublicSupervisorSummary,
 } from '@/lib/api/public-supervisors'
 import { buildMetadata, SITE_NAME } from '@/lib/seo/config'
@@ -52,7 +53,7 @@ async function resolveMedicalDirector(
   if (!supervisor) notFound()
 
   if (!isPublicMedicalDirector(supervisor)) {
-    permanentRedirect(`/supervisors/${stateSlug}/${id}`)
+    permanentRedirect(`${publicDirectoryFor(supervisor)}/${stateSlug}/${id}`)
   }
 
   return supervisor

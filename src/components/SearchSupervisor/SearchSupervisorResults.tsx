@@ -30,8 +30,8 @@ interface SearchSupervisorResultsProps {
   onPageChange: (page: number) => void
   onSortChange: (sort: SortOption) => void
   onClearFilters: () => void
-  profileBasePath?: '/find-supervisors' | '/find-medical-directors'
-  /** Result noun per search mode — "supervisors" on the default page, "medical directors" on the MD page. */
+  profileBasePath?: '/find-supervisors' | '/find-medical-directors' | '/find-preceptors'
+  /** Result noun per search mode — "supervisors", "medical directors", or "preceptors". */
   noun?: { singular: string; plural: string; title: string }
 }
 

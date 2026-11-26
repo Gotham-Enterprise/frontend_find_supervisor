@@ -15,7 +15,11 @@ import {
   requiresWeeklyHoursAvailable,
   WEEKLY_HOURS_AVAILABLE_REQUIRED_MESSAGE,
 } from '@/lib/utils/profile-formatters'
-import { isPhysicianSupervisorType, isValidPhysicianDegreeType } from '@/lib/utils/supervisor-type'
+import {
+  isPhysicianSupervisorType,
+  isValidPhysicianDegreeType,
+  requiresSupervisorCertifications,
+} from '@/lib/utils/supervisor-type'
 
 /**
  * Per-field `rules` for Controller so RHF validates after touch (`mode: 'onTouched'`) and
@@ -35,7 +39,8 @@ export function supervisorFieldRules<N extends keyof SupervisorFormValues>(name:
       }
 
       if (name === 'certifications') {
-        if (isPhysicianSupervisorType(supervisorType)) return true
+        // Physicians: not applicable; Preceptors: optional.
+        if (!requiresSupervisorCertifications(supervisorType)) return true
         if (!Array.isArray(value) || value.length === 0) {
           return 'Add at least one certification'
         }

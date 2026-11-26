@@ -28,7 +28,9 @@ describe('SIGNUP_GTM_EVENT', () => {
       'medical-director': 'medical_director_full_registration_success',
       supervisee: 'supervisee_full_registration_success',
       'need-medical-director': 'need_medical_director_full_registration_success',
+      preceptor: 'preceptor_full_registration_success',
+      preceptee: 'preceptee_full_registration_success',
     })
-    expect(new Set(Object.values(SIGNUP_GTM_EVENT)).size).toBe(4)
+    expect(new Set(Object.values(SIGNUP_GTM_EVENT)).size).toBe(6)
   })
 })

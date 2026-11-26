@@ -1,5 +1,5 @@
 import { identityPreferenceDefaultValues } from '@/lib/forms/identity-preferences'
-import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
+import { MEDICAL_DIRECTOR_TYPE_NAME, PRECEPTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 
 import type {
   BoardCertificationEntryValues,
@@ -15,6 +15,8 @@ export function parseSignupRoleFromType(type?: string | null): SignupRole {
   if (type === 'supervisee') return 'supervisee'
   if (type === 'medical-director') return 'medical-director'
   if (type === 'need-medical-director') return 'need-medical-director'
+  if (type === 'preceptor') return 'preceptor'
+  if (type === 'preceptee') return 'preceptee'
   return 'supervisor'
 }
 
@@ -102,6 +104,12 @@ export const medicalDirectorDefaultValues: Partial<MedicalDirectorFormValues> = 
   supervisorType: MEDICAL_DIRECTOR_TYPE_NAME,
 }
 
+export const preceptorDefaultValues: Partial<MedicalDirectorFormValues> = {
+  ...supervisorSignupDefaultValues,
+  // Preset — the Preceptor flow renders no Supervisor Type select.
+  supervisorType: PRECEPTOR_TYPE_NAME,
+}
+
 export const superviseeDefaultValues: Partial<SuperviseeFormValues> = {
   fullName: '',
   ...identityPreferenceDefaultValues,
@@ -136,9 +144,22 @@ export const superviseeDefaultValues: Partial<SuperviseeFormValues> = {
   licensureState: '',
   occupationId: '',
   specialtyId: '',
+  schoolName: '',
+  degreeProgram: '',
+  expectedGraduation: '',
+  clinicalHoursRequired: undefined,
+  rotationStartDate: '',
+  rotationEndDate: '',
   description: '',
   agreedToPost: false,
   agreedToTerms: false,
+}
+
+export const precepteeDefaultValues: Partial<SuperviseeFormValues> = {
+  ...superviseeDefaultValues,
+  // Preset — the preceptee (student) flow renders no supervision-type select;
+  // the payload builder sends typeOfSupervisorNeeded[]=Preceptor.
+  typeOfSupervisor: PRECEPTOR_TYPE_NAME,
 }
 
 export const needMedicalDirectorDefaultValues: Partial<SuperviseeFormValues> = {

@@ -21,6 +21,7 @@ import {
   isConnectedHireStatus,
   maskNameToFirstInitial,
 } from '@/lib/utils/profile-formatters'
+import { isPreceptorType } from '@/lib/utils/supervisee-eligibility'
 import {
   getConnectionBadgeClassName,
   getConnectionStatusLabel,
@@ -134,8 +135,12 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
   const occupation = user.occupation?.name ?? profile.superviseeOccupation
   const specialty = user.specialty?.name ?? profile.superviseeSpecialty
   const subline = [occupation, specialty].filter(Boolean).join(' · ')
+  const isPreceptee = (profile.typeOfSupervisorNeeded ?? []).some((name) =>
+    isPreceptorType({ name }),
+  )
   const roleBadgeLabel =
-    formatCredentialWithState(profile.title, profile.licensureState) || 'Supervisee'
+    formatCredentialWithState(profile.title, profile.licensureState) ||
+    (isPreceptee ? profile.degreeProgram?.trim() || 'Preceptee' : 'Supervisee')
   // Shown only when the supervisee opted in (the API strips it for other viewers anyway).
   const pronouns = formatPronouns(getVisiblePronounLabels(user))
 

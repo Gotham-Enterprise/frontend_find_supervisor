@@ -52,6 +52,13 @@ export interface UpdateSuperviseeProfilePayload {
   introduction?: string
   /** Sent as '' to clear the stored value. */
   supervisionHoursNeeded?: string
+  /** Preceptee (student) program details — only with a Preceptor need; '' clears. */
+  schoolName?: string
+  degreeProgram?: string
+  expectedGraduation?: string
+  clinicalHoursRequired?: number | ''
+  rotationStartDate?: string
+  rotationEndDate?: string
   uploadProfilePhoto?: File
 }
 
@@ -74,6 +81,12 @@ export async function updateSuperviseeProfile(
     mdMonthlyBudget,
     introduction,
     supervisionHoursNeeded,
+    schoolName,
+    degreeProgram,
+    expectedGraduation,
+    clinicalHoursRequired,
+    rotationStartDate,
+    rotationEndDate,
     identity,
     ...rest
   } = payload
@@ -116,6 +129,17 @@ export async function updateSuperviseeProfile(
   // Same for the optional hours — '' clears the stored value.
   if (supervisionHoursNeeded !== undefined) {
     fd.append('supervisionHoursNeeded', supervisionHoursNeeded)
+  }
+  // Preceptee program details — present-but-empty clears a stored value.
+  for (const [key, value] of [
+    ['schoolName', schoolName],
+    ['degreeProgram', degreeProgram],
+    ['expectedGraduation', expectedGraduation],
+    ['clinicalHoursRequired', clinicalHoursRequired],
+    ['rotationStartDate', rotationStartDate],
+    ['rotationEndDate', rotationEndDate],
+  ] as const) {
+    if (value !== undefined) fd.append(key, String(value))
   }
 
   if (budgetRangeStart !== undefined) {

@@ -7,7 +7,11 @@ import { useEffect, useMemo, useState } from 'react'
 import type { SupervisorSearchMode } from '@/lib/api/supervisor-search'
 import { useStateNameOptions, useSuperviseeProfile, useSupervisorSearch } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
-import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
+import {
+  getEligiblePreceptorOccupations,
+  MEDICAL_DIRECTOR_TYPE_NAME,
+  PRECEPTOR_TYPE_NAME,
+} from '@/lib/utils/supervisee-eligibility'
 
 import { DEFAULT_FILTERS, resolveFormatGuideTarget, SUPERVISOR_SEARCH_PAGE_SIZE } from './helpers'
 import { SearchSupervisorFilters } from './SearchSupervisorFilters'
@@ -38,8 +42,32 @@ function sortSupervisorsLocal(
 }
 
 interface SearchSupervisorPageProps {
-  /** 'medical-directors' renders the dedicated Medical Director search. */
+  /** 'medical-directors' / 'preceptors' render the dedicated Medical Director / Preceptor searches. */
   mode?: SupervisorSearchMode
+}
+
+const PAGE_CONFIG: Record<
+  SupervisorSearchMode,
+  {
+    path: '/find-supervisors' | '/find-medical-directors' | '/find-preceptors'
+    subtitle?: string
+    noun: { singular: string; plural: string; title: string }
+  }
+> = {
+  supervisors: {
+    path: '/find-supervisors',
+    noun: { singular: 'supervisor', plural: 'supervisors', title: 'Supervisors' },
+  },
+  'medical-directors': {
+    path: '/find-medical-directors',
+    subtitle: 'Browse verified medical directors for your practice.',
+    noun: { singular: 'medical director', plural: 'medical directors', title: 'Medical Directors' },
+  },
+  preceptors: {
+    path: '/find-preceptors',
+    subtitle: 'Browse verified preceptors who can host your clinical rotation.',
+    noun: { singular: 'preceptor', plural: 'preceptors', title: 'Preceptors' },
+  },
 }
 
 export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorPageProps) {
@@ -65,20 +93,38 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
 
   const { data: superviseeProfile, isFetched: superviseeProfileFetched } = useSuperviseeProfile()
 
-  // Cross-redirects between the two find pages based on the supervisee's
-  // stored needs: the Medical Director page is only for supervisees who need
-  // one, and an MD-only supervisee has nothing to see on the supervisor page.
+  // Cross-redirects between the find pages based on the supervisee's stored
+  // needs: the Medical Director page is only for supervisees who need one, the
+  // Preceptor page only for students (preceptees), and an MD-only or
+  // preceptee profile has nothing to see on the supervisor page.
   useEffect(() => {
     if (!superviseeProfileFetched) return
     const needs = (superviseeProfile?.typeOfSupervisorNeeded ?? []).map((need) => need.trim())
     const hasMdNeed = needs.includes(MEDICAL_DIRECTOR_TYPE_NAME)
-    const hasNonMdNeed = needs.some((need) => need && need !== MEDICAL_DIRECTOR_TYPE_NAME)
-    if (mode === 'medical-directors' && !hasMdNeed) {
-      router.replace('/find-supervisors')
-    } else if (mode === 'supervisors' && hasMdNeed && !hasNonMdNeed) {
-      router.replace('/find-medical-directors')
+    const hasPreceptorNeed = needs.includes(PRECEPTOR_TYPE_NAME)
+    const hasNonMdNeed = needs.some(
+      (need) => need && need !== MEDICAL_DIRECTOR_TYPE_NAME && need !== PRECEPTOR_TYPE_NAME,
+    )
+    if (mode === 'preceptors' && !hasPreceptorNeed) {
+      router.replace(hasMdNeed && !hasNonMdNeed ? '/find-medical-directors' : '/find-supervisors')
+    } else if (mode === 'medical-directors' && !hasMdNeed) {
+      router.replace(hasPreceptorNeed ? '/find-preceptors' : '/find-supervisors')
+    } else if (mode === 'supervisors' && !hasNonMdNeed && (hasMdNeed || hasPreceptorNeed)) {
+      router.replace(hasPreceptorNeed ? '/find-preceptors' : '/find-medical-directors')
     }
   }, [mode, superviseeProfileFetched, superviseeProfile, router])
+
+  // Preceptees only see preceptor disciplines their program may rotate with
+  // (the backend scopes results the same way).
+  const allowedPreceptorOccupations = useMemo(() => {
+    if (mode !== 'preceptors') return undefined
+    const occupationName =
+      superviseeProfile?.occupation?.name ?? superviseeProfile?.user.occupation?.name
+    const allowed = getEligiblePreceptorOccupations(occupationName ?? '')
+    return allowed.length > 0 ? allowed : undefined
+  }, [mode, superviseeProfile])
+
+  const pageConfig = PAGE_CONFIG[mode]
 
   // Mirror the applied search state into the URL (replace, not push — filter tweaks
   // shouldn't grow browser history) so it survives navigating away and back.
@@ -171,11 +217,7 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
             setFilters({ ...filters, supervisionFormats: next })
           }
           onSearch={handleSearch}
-          subtitle={
-            mode === 'medical-directors'
-              ? 'Browse verified medical directors for your practice.'
-              : undefined
-          }
+          subtitle={pageConfig.subtitle}
         />
       </div>
 
@@ -189,6 +231,7 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
             onClearFilters={handleClearFilterPanel}
             mode={mode}
             supervisionNeeds={superviseeProfile?.typeOfSupervisorNeeded}
+            allowedOccupations={allowedPreceptorOccupations}
           />
         </div>
 
@@ -216,18 +259,8 @@ export function SearchSupervisorPage({ mode = 'supervisors' }: SearchSupervisorP
               setPage(1)
             }}
             onClearFilters={handleResetSearch}
-            profileBasePath={
-              mode === 'medical-directors' ? '/find-medical-directors' : '/find-supervisors'
-            }
-            noun={
-              mode === 'medical-directors'
-                ? {
-                    singular: 'medical director',
-                    plural: 'medical directors',
-                    title: 'Medical Directors',
-                  }
-                : { singular: 'supervisor', plural: 'supervisors', title: 'Supervisors' }
-            }
+            profileBasePath={pageConfig.path}
+            noun={pageConfig.noun}
           />
         </div>
       </div>

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   fetchPublicSupervisors,
   isPublicMedicalDirector,
+  isPublicPreceptor,
   publicDirectoryFor,
   publicSupervisorProfilePath,
 } from '@/lib/api/public-supervisors'
@@ -35,6 +36,29 @@ describe('fetchPublicSupervisors — searchMode', () => {
     const url = new URL(fetchMock.mock.calls[0][0] as string)
     expect(url.searchParams.get('searchMode')).toBe('medicalDirectors')
     expect(url.searchParams.get('acceptingSupervisees')).toBe('true')
+  })
+
+  it('forwards the preceptor scope and discipline filter', async () => {
+    const fetchMock = mockSearchResponse([])
+    await fetchPublicSupervisors({ searchMode: 'preceptors', supervisorOccupation: 'Dentist' })
+    const url = new URL(fetchMock.mock.calls[0][0] as string)
+    expect(url.searchParams.get('searchMode')).toBe('preceptors')
+    expect(url.searchParams.get('supervisorOccupation')).toBe('Dentist')
+  })
+
+  it('parses the preceptor occupation from the profile endpoint shapes', async () => {
+    mockSearchResponse([
+      { id: 'p-1', fullName: 'Dee D', supervisorType: 'Preceptor', occupation: 'Dentist' },
+      {
+        id: 'p-2',
+        fullName: 'Pat P',
+        supervisorType: 'Preceptor',
+        occupation: { name: 'Pharmacist' },
+      },
+      { id: 's-1', fullName: 'Sam S', supervisorType: 'Mental Health Counselors' },
+    ])
+    const { supervisors } = await fetchPublicSupervisors({ searchMode: 'preceptors' })
+    expect(supervisors.map((s) => s.occupation)).toEqual(['Dentist', 'Pharmacist', ''])
   })
 
   it('parses Medical Director offerings and board certifications', async () => {
@@ -93,6 +117,23 @@ describe('fetchPublicSupervisors — searchMode', () => {
 })
 
 describe('public directory routing', () => {
+  it('detects primary Preceptors by name or enum code', () => {
+    expect(isPublicPreceptor({ supervisorType: 'Preceptor' })).toBe(true)
+    expect(isPublicPreceptor({ supervisorType: 'PRECEPTOR' })).toBe(true)
+    expect(isPublicPreceptor({ supervisorType: 'Medical Director' })).toBe(false)
+    expect(isPublicPreceptor({ supervisorType: '' })).toBe(false)
+  })
+
+  it('routes Preceptors to /preceptors and builds their canonical profile path', () => {
+    expect(publicDirectoryFor({ supervisorType: 'Preceptor' })).toBe('/preceptors')
+    expect(
+      publicSupervisorProfilePath({ id: 'p1', state: 'TX', supervisorType: 'Preceptor' }),
+    ).toBe('/preceptors/texas/p1')
+    expect(publicSupervisorProfilePath({ id: 'p1', state: '', supervisorType: 'Preceptor' })).toBe(
+      '/preceptors/profile/p1',
+    )
+  })
+
   it('detects primary Medical Directors by name or legacy enum code', () => {
     expect(isPublicMedicalDirector({ supervisorType: 'Medical Director' })).toBe(true)
     expect(isPublicMedicalDirector({ supervisorType: 'MEDICAL_DIRECTOR' })).toBe(true)

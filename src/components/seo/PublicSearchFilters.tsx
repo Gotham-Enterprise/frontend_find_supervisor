@@ -58,6 +58,15 @@ interface PublicSearchFiltersProps {
   basePath?: PublicDirectoryPath
   /** Hide the Supervisor type select (single-type directories like /medical-directors). */
   showTypeFilter?: boolean
+  /**
+   * Replace the Supervisor type select with another single-select filter
+   * (e.g. the preceptor discipline on /preceptors). The value is pushed to the
+   * URL under `typeParam` (default `type`).
+   */
+  typeOptions?: Array<{ label: string; value: string }>
+  typeParam?: string
+  typeLabel?: string
+  typeAllLabel?: string
   /** Lowercase plural noun used in the search input's accessible label. */
   noun?: string
 }
@@ -76,6 +85,10 @@ export function PublicSearchFilters({
   initialValues,
   basePath = SUPERVISORS_PATH,
   showTypeFilter = true,
+  typeOptions = SUPERVISOR_TYPE_OPTIONS,
+  typeParam = 'type',
+  typeLabel = 'Filter by supervisor type',
+  typeAllLabel = 'All Supervisor Types',
   noun = 'supervisors',
 }: PublicSearchFiltersProps) {
   const router = useRouter()
@@ -88,9 +101,7 @@ export function PublicSearchFilters({
   // (?state=al → AL) and invalid ones (?state=ZZ) count as no filter, so the
   // selects and chips never echo a value the results ignored.
   const state = resolveOptionValue(STATE_OPTIONS, searchParams.get('state'))
-  const type = showTypeFilter
-    ? resolveOptionValue(SUPERVISOR_TYPE_OPTIONS, searchParams.get('type'))
-    : ''
+  const type = showTypeFilter ? resolveOptionValue(typeOptions, searchParams.get(typeParam)) : ''
   const format = resolveOptionValue(FORMAT_OPTIONS, searchParams.get('format'))
 
   // q needs local state for the debounced text input only.
@@ -106,7 +117,7 @@ export function PublicSearchFilters({
       const params = new URLSearchParams()
       if (next.q.trim()) params.set('q', next.q.trim())
       if (next.state) params.set('state', next.state)
-      if (next.type) params.set('type', next.type)
+      if (next.type) params.set(typeParam, next.type)
       if (next.format) params.set('format', next.format)
       const qs = params.toString()
       router.push(`${basePath}${qs ? `?${qs}` : ''}`, { scroll: false })
@@ -115,7 +126,7 @@ export function PublicSearchFilters({
       // changes, tucking the page heading under the sticky header + filter bar.
       window.scrollTo({ top: 0 })
     },
-    [q, state, type, format, router, basePath],
+    [q, state, type, format, router, basePath, typeParam],
   )
 
   function handleQChange(value: string) {
@@ -210,11 +221,11 @@ export function PublicSearchFilters({
               <select
                 value={type}
                 onChange={(e) => handleTypeChange(e.target.value)}
-                aria-label="Filter by supervisor type"
+                aria-label={typeLabel}
                 className="h-10 rounded-md border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 sm:w-52"
               >
-                <option value="">All Supervisor Types</option>
-                {SUPERVISOR_TYPE_OPTIONS.map((opt) => (
+                <option value="">{typeAllLabel}</option>
+                {typeOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>

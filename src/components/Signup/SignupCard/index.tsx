@@ -20,18 +20,12 @@ export function SignupCard({ initialRole = 'supervisor' }: SignupCardProps) {
         <AccountTypeSelector value={role} onChange={setRole} />
       </div>
 
-      {role === 'supervisee' || role === 'need-medical-director' ? (
+      {role === 'supervisee' || role === 'need-medical-director' || role === 'preceptee' ? (
         // key={role}: variant switches must remount so the shared useForm
         // instance never carries stale needsMedicalDirector/supervisorType state.
-        <SuperviseeSignupForm
-          key={role}
-          variant={role === 'need-medical-director' ? 'need-medical-director' : 'supervisee'}
-        />
+        <SuperviseeSignupForm key={role} variant={role} />
       ) : (
-        <SupervisorSignupForm
-          key={role}
-          variant={role === 'medical-director' ? 'medical-director' : 'supervisor'}
-        />
+        <SupervisorSignupForm key={role} variant={role} />
       )}
     </div>
   )

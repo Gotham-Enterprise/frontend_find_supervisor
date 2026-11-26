@@ -1,5 +1,6 @@
 import {
   NEED_MEDICAL_DIRECTOR_SIGNUP_STEP_META,
+  PRECEPTEE_SIGNUP_STEP_META,
   SUPERVISEE_SIGNUP_STEP_META,
 } from '@/components/Signup/schema'
 import { cn } from '@/lib/utils'
@@ -19,7 +20,9 @@ export function SuperviseeStepIndicator({
   const stepMeta =
     variant === 'need-medical-director'
       ? NEED_MEDICAL_DIRECTOR_SIGNUP_STEP_META
-      : SUPERVISEE_SIGNUP_STEP_META
+      : variant === 'preceptee'
+        ? PRECEPTEE_SIGNUP_STEP_META
+        : SUPERVISEE_SIGNUP_STEP_META
   return (
     <div className="mb-8">
       <p className="mb-0.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">

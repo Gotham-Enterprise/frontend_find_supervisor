@@ -15,7 +15,7 @@ import {
   requiresSupervisionHoursNeeded,
   requiresWeeklyHoursAvailable,
 } from '@/lib/utils/profile-formatters'
-import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
+import { MEDICAL_DIRECTOR_TYPE_NAME, PRECEPTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 import { isPhysicianSupervisorType } from '@/lib/utils/supervisor-type'
 
 import { apiClient } from './client'
@@ -269,9 +269,21 @@ export function buildSuperviseeFormData(values: SuperviseeFormValues): FormData 
   fd.append('zipcode', values.zipcode)
 
   fd.append('occupation', values.occupationId)
-  fd.append('title', values.title)
-  // State tied to the credential/title (US state abbreviation, e.g. "TX")
-  fd.append('licensureState', values.licensureState)
+  const isPreceptee = values.typeOfSupervisor === PRECEPTOR_TYPE_NAME
+  // Credential + its state — every licensed supervisee; students (preceptee
+  // flow) hold no license yet and send their program details instead.
+  if (!isPreceptee) {
+    fd.append('title', values.title)
+    // State tied to the credential/title (US state abbreviation, e.g. "TX")
+    fd.append('licensureState', values.licensureState)
+  } else {
+    fd.append('schoolName', values.schoolName)
+    fd.append('degreeProgram', values.degreeProgram)
+    fd.append('expectedGraduation', values.expectedGraduation)
+    fd.append('clinicalHoursRequired', String(values.clinicalHoursRequired ?? ''))
+    if (values.rotationStartDate) fd.append('rotationStartDate', values.rotationStartDate)
+    if (values.rotationEndDate) fd.append('rotationEndDate', values.rotationEndDate)
+  }
   if (values.specialtyId) fd.append('specialty', values.specialtyId)
 
   // Supervision needs — `stateOfLicensure[]` so a single state is still parsed as an array (multer + express-validator .isArray())

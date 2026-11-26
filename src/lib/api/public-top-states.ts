@@ -21,7 +21,16 @@ export interface PublicTopStates {
   supervisors: TopStateEntry[]
   /** Primary Medical Directors (absent on older backends → []). */
   medicalDirectors: TopStateEntry[]
+  /** Primary Preceptors (absent on older backends → []). */
+  preceptors: TopStateEntry[]
   supervisees: TopStateEntry[]
+}
+
+const EMPTY_TOP_STATES: PublicTopStates = {
+  supervisors: [],
+  medicalDirectors: [],
+  preceptors: [],
+  supervisees: [],
 }
 
 function parseEntries(raw: unknown): TopStateEntry[] {
@@ -47,21 +56,27 @@ export async function fetchPublicTopStates(limit = 4): Promise<PublicTopStates> 
 
     if (!res.ok) {
       console.warn(`[public-top-states] Returned ${res.status}`)
-      return { supervisors: [], medicalDirectors: [], supervisees: [] }
+      return { ...EMPTY_TOP_STATES }
     }
 
     const json = (await res.json()) as {
       success?: boolean
-      data?: { supervisors?: unknown; medicalDirectors?: unknown; supervisees?: unknown }
+      data?: {
+        supervisors?: unknown
+        medicalDirectors?: unknown
+        preceptors?: unknown
+        supervisees?: unknown
+      }
     }
 
     return {
       supervisors: parseEntries(json.data?.supervisors),
       medicalDirectors: parseEntries(json.data?.medicalDirectors),
+      preceptors: parseEntries(json.data?.preceptors),
       supervisees: parseEntries(json.data?.supervisees),
     }
   } catch (err) {
     console.error('[public-top-states] fetchPublicTopStates error:', err)
-    return { supervisors: [], medicalDirectors: [], supervisees: [] }
+    return { ...EMPTY_TOP_STATES }
   }
 }

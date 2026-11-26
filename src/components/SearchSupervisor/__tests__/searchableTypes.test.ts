@@ -16,6 +16,7 @@ const TYPES = [
   type('SUPERVISING_PHYSICIAN', 'Supervising Physician'),
   type('COLLABORATING_PHYSICIAN', 'Collaborating Physician'),
   type('MEDICAL_DIRECTOR', 'Medical Director'),
+  type('PRECEPTOR', 'Preceptor'),
 ]
 
 const codes = (types: SupervisorTypeData[]) => types.map((t) => t.code)
@@ -33,10 +34,17 @@ describe('getSearchableSupervisorTypes', () => {
     ])
   })
 
-  it('falls back to every non-Medical-Director type when no need matches', () => {
+  it('falls back to every non-Medical-Director, non-Preceptor type when no need matches', () => {
     const all = ['MENTAL_HEALTH_COUNSELORS', 'SUPERVISING_PHYSICIAN', 'COLLABORATING_PHYSICIAN']
     expect(codes(getSearchableSupervisorTypes(TYPES, undefined))).toEqual(all)
     expect(codes(getSearchableSupervisorTypes(TYPES, ['LPC_SUPERVISOR']))).toEqual(all)
     expect(codes(getSearchableSupervisorTypes(TYPES, ['Medical Director']))).toEqual(all)
+  })
+
+  it('never offers the Preceptor type on the supervisor search (it has its own page)', () => {
+    expect(codes(getSearchableSupervisorTypes(TYPES, ['Preceptor']))).not.toContain('PRECEPTOR')
+    expect(
+      codes(getSearchableSupervisorTypes(TYPES, ['Preceptor', 'Supervising Physician'])),
+    ).toEqual(['SUPERVISING_PHYSICIAN'])
   })
 })

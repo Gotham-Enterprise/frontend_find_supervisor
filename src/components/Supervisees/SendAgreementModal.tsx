@@ -23,7 +23,7 @@ import { useUserSnackbar } from '@/lib/hooks'
 import { useProposeAgreement, useUpdateAgreement } from '@/lib/hooks/useHires'
 import { parseApiError } from '@/lib/utils/error-parser'
 import { coerceStringList, formatDisplayName } from '@/lib/utils/profile-formatters'
-import { isMedicalDirectorType } from '@/lib/utils/supervisee-eligibility'
+import { isMedicalDirectorType, isPreceptorType } from '@/lib/utils/supervisee-eligibility'
 import type { AgreementSource, HireListItem, ProposeAgreementInput } from '@/types/hire'
 
 // ─── Validation schema ────────────────────────────────────────────────────────
@@ -104,12 +104,19 @@ function isMedicalDirectorHire(hire: HireListItem): boolean {
   )
 }
 
+/** A hire made for the Preceptor role uses the platform's preceptorship template. */
+function isPreceptorHire(hire: HireListItem): boolean {
+  return coerceStringList(hire.typeOfSupervisorNeeded).some((name) => isPreceptorType({ name }))
+}
+
 function getSourceOptions(
   hire: HireListItem,
 ): { value: AgreementSource; label: string; description: string }[] {
   const templateName = isMedicalDirectorHire(hire)
     ? 'medical director agreement'
-    : 'supervision agreement'
+    : isPreceptorHire(hire)
+      ? 'preceptorship agreement'
+      : 'supervision agreement'
   return [
     {
       value: 'DEFAULT_TEMPLATE',

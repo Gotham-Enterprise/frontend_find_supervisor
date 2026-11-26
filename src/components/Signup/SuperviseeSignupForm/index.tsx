@@ -5,6 +5,7 @@ import { useForm, useFormState, useWatch } from 'react-hook-form'
 
 import {
   needMedicalDirectorDefaultValues,
+  precepteeDefaultValues,
   superviseeDefaultValues,
 } from '@/components/Signup/helpers'
 import {
@@ -23,6 +24,7 @@ import {
 } from '@/lib/hooks'
 import { parseApiError } from '@/lib/utils/error-parser'
 import {
+  filterPrecepteeOccupationOptions,
   filterSuperviseeOccupationOptions,
   INELIGIBLE_SUPERVISION_TYPE_MESSAGE,
   isSupervisorTypeEligibleForSupervisee,
@@ -45,15 +47,19 @@ import { type SuperviseeSignupStepIndex, validateSuperviseeStep } from './valida
 
 const LAST_STEP: SuperviseeSignupStepIndex = 2
 
-export type SuperviseeSignupVariant = 'supervisee' | 'need-medical-director'
+export type SuperviseeSignupVariant = 'supervisee' | 'need-medical-director' | 'preceptee'
 
 type SuperviseeSignupFormProps = {
-  /** 'need-medical-director' presets needsMedicalDirector and hides the supervision-type UI. */
+  /**
+   * 'need-medical-director' presets needsMedicalDirector and hides the supervision-type UI;
+   * 'preceptee' is the student flow: Preceptor preset, program details instead of a credential.
+   */
   variant?: SuperviseeSignupVariant
 }
 
 export function SuperviseeSignupForm({ variant = 'supervisee' }: SuperviseeSignupFormProps) {
   const isNeedMedicalDirector = variant === 'need-medical-director'
+  const isPreceptee = variant === 'preceptee'
   const [step, setStep] = useState<SuperviseeSignupStepIndex>(0)
   const stepRef = useRef(step)
   stepRef.current = step
@@ -74,21 +80,26 @@ export function SuperviseeSignupForm({ variant = 'supervisee' }: SuperviseeSignu
   } = useSuperviseeFormOptions()
 
   // Regular supervisees pick from the allowlisted occupations (associate-level
-  // mental health counselors, NPs, and PAs); the Medical Director flow is open
-  // to any occupation — its typical clients (med spa owners, RNs, etc.) are
-  // outside the supervisee allowlist.
+  // mental health counselors, NPs, and PAs); students (preceptee flow) pick
+  // their program from the student occupations; the Medical Director flow is
+  // open to any occupation — its typical clients (med spa owners, RNs, etc.)
+  // are outside the supervisee allowlist.
   const superviseeOccupationOptions = useMemo(
     () =>
       isNeedMedicalDirector
         ? occupationOptions
-        : filterSuperviseeOccupationOptions(occupationOptions),
-    [isNeedMedicalDirector, occupationOptions],
+        : isPreceptee
+          ? filterPrecepteeOccupationOptions(occupationOptions)
+          : filterSuperviseeOccupationOptions(occupationOptions),
+    [isNeedMedicalDirector, isPreceptee, occupationOptions],
   )
 
   const form = useForm<SuperviseeFormValues>({
     defaultValues: isNeedMedicalDirector
       ? needMedicalDirectorDefaultValues
-      : superviseeDefaultValues,
+      : isPreceptee
+        ? precepteeDefaultValues
+        : superviseeDefaultValues,
     shouldUnregister: false,
     mode: 'onTouched',
     reValidateMode: 'onChange',
@@ -286,7 +297,7 @@ export function SuperviseeSignupForm({ variant = 'supervisee' }: SuperviseeSignu
               // Medical Director — closes Step 2, right after the description
               // (the dedicated flow's own section already covers the MD need)
               medicalDirectorSection={
-                !isNeedMedicalDirector ? (
+                !isNeedMedicalDirector && !isPreceptee ? (
                   <SuperviseeStepMedicalDirector
                     supervisorTypesData={supervisorTypesData}
                     supervisorTypesLoading={supervisorTypesLoading}

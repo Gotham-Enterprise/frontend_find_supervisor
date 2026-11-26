@@ -15,7 +15,10 @@ import {
   SUPERVISION_HOURS_NEEDED_REQUIRED_MESSAGE,
   WEEKLY_HOURS_AVAILABLE_REQUIRED_MESSAGE,
 } from '@/lib/utils/profile-formatters'
-import { SUPERVISION_TYPE_REQUIRED_MESSAGE } from '@/lib/utils/supervisee-eligibility'
+import {
+  PRECEPTOR_TYPE_NAME,
+  SUPERVISION_TYPE_REQUIRED_MESSAGE,
+} from '@/lib/utils/supervisee-eligibility'
 import {
   applySupervisorMonthlyOnlyFeeRule,
   applySupervisorPhysicianRules,
@@ -552,12 +555,32 @@ export const superviseeSchemaObject = accountSchemaBase.extend({
     .max(500, 'Must be 500 characters or less'),
 
   // Step 2 — profile fields (sent to backend as numeric category IDs); collected before
-  // `typeOfSupervisor` so the available supervision types can be filtered by eligibility
-  title: z.string().min(1, 'Credential or license type is required').max(100),
+  // `typeOfSupervisor` so the available supervision types can be filtered by eligibility.
+  // Credential + its state are required for every licensed supervisee; students
+  // (preceptee flow) hold no license yet, so they are skipped there and the
+  // program fields below take their place — see applySuperviseePrecepteeRules.
+  title: z.string().max(100, 'Must be 100 characters or less'),
   // State tied to the credential (stored as the US state abbreviation, e.g. "TX")
-  licensureState: z.string().min(1, 'State of licensure is required'),
+  licensureState: z.string(),
   occupationId: z.string().min(1, 'Occupation is required'),
   specialtyId: z.string().optional(),
+
+  // Preceptee (student) program details — required only in the preceptee flow
+  // (typeOfSupervisor === Preceptor); backed by the SuperviseeProfile student columns.
+  schoolName: z.string().max(200, 'Must be 200 characters or less').default(''),
+  degreeProgram: z.string().max(200, 'Must be 200 characters or less').default(''),
+  expectedGraduation: z.string().default(''),
+  clinicalHoursRequired: z.preprocess(
+    normalizeNumberFieldInput,
+    z
+      .number('Please enter the clinical hours your program requires')
+      .int('Clinical hours must be a whole number')
+      .min(1, 'Clinical hours must be at least 1')
+      .max(10000, 'Clinical hours must be 10,000 or less')
+      .optional(),
+  ),
+  rotationStartDate: z.string().optional(),
+  rotationEndDate: z.string().optional(),
 
   description: z
     .string()
@@ -572,6 +595,79 @@ export const superviseeSchemaObject = accountSchemaBase.extend({
     .boolean()
     .refine((val) => val === true, 'You must agree to the Terms of Service'),
 })
+
+/** The preceptee (student) flow presets the Preceptor type. */
+export function isPrecepteeSignup(data: { typeOfSupervisor?: string }): boolean {
+  return (data.typeOfSupervisor ?? '').trim() === PRECEPTOR_TYPE_NAME
+}
+
+export const SUPERVISEE_TITLE_REQUIRED_MESSAGE = 'Credential or license type is required'
+export const SUPERVISEE_LICENSURE_STATE_REQUIRED_MESSAGE = 'State of licensure is required'
+
+/**
+ * Credential rules that follow the flow: licensed supervisees must give their
+ * credential + its state; students (preceptees) must give their program details
+ * instead, and the rotation window must be ordered.
+ */
+export function applySuperviseePrecepteeRules(
+  data: {
+    typeOfSupervisor: string
+    title: string
+    licensureState: string
+    schoolName: string
+    degreeProgram: string
+    expectedGraduation: string
+    clinicalHoursRequired?: number
+    rotationStartDate?: string
+    rotationEndDate?: string
+  },
+  ctx: z.RefinementCtx,
+) {
+  if (!isPrecepteeSignup(data)) {
+    if (!data.title.trim()) {
+      ctx.addIssue({ code: 'custom', path: ['title'], message: SUPERVISEE_TITLE_REQUIRED_MESSAGE })
+    }
+    if (!data.licensureState.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['licensureState'],
+        message: SUPERVISEE_LICENSURE_STATE_REQUIRED_MESSAGE,
+      })
+    }
+    return
+  }
+  if (!data.schoolName.trim()) {
+    ctx.addIssue({ code: 'custom', path: ['schoolName'], message: 'School name is required' })
+  }
+  if (!data.degreeProgram.trim()) {
+    ctx.addIssue({ code: 'custom', path: ['degreeProgram'], message: 'Degree program is required' })
+  }
+  if (!data.expectedGraduation.trim()) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['expectedGraduation'],
+      message: 'Expected graduation is required',
+    })
+  }
+  if (data.clinicalHoursRequired == null) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['clinicalHoursRequired'],
+      message: 'Please enter the clinical hours your program requires',
+    })
+  }
+  if (
+    data.rotationStartDate &&
+    data.rotationEndDate &&
+    Date.parse(data.rotationEndDate) < Date.parse(data.rotationStartDate)
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['rotationEndDate'],
+      message: 'Rotation end date must be on or after the start date',
+    })
+  }
+}
 
 /**
  * A supervision type is required unless the supervisee only needs a Medical Director;
@@ -699,6 +795,7 @@ function applySuperviseeMdNeedRules(
 
 export const superviseeSchema = withAccountRules(
   superviseeSchemaObject
+    .superRefine(applySuperviseePrecepteeRules)
     .superRefine(applySuperviseeSupervisionNeedRules)
     .superRefine(applySuperviseeHoursNeededRule)
     .superRefine(applySuperviseeBudgetRules)
@@ -909,6 +1006,12 @@ export const superviseeStep2Schema = superviseeSchemaObject
     specialtyId: true,
     title: true,
     licensureState: true,
+    schoolName: true,
+    degreeProgram: true,
+    expectedGraduation: true,
+    clinicalHoursRequired: true,
+    rotationStartDate: true,
+    rotationEndDate: true,
     typeOfSupervisor: true,
     needsMedicalDirector: true,
     supervisorOccupationId: true,
@@ -940,6 +1043,7 @@ export const superviseeStep2Schema = superviseeSchemaObject
       })
     }
   })
+  .superRefine(applySuperviseePrecepteeRules)
   .superRefine(applySuperviseeSupervisionNeedRules)
   .superRefine(applySuperviseeHoursNeededRule)
   .superRefine(applySuperviseeBudgetRules)
@@ -976,6 +1080,12 @@ export const SUPERVISEE_SIGNUP_STEP_FIELDS = [
     'specialtyId',
     'title',
     'licensureState',
+    'schoolName',
+    'degreeProgram',
+    'expectedGraduation',
+    'clinicalHoursRequired',
+    'rotationStartDate',
+    'rotationEndDate',
     'typeOfSupervisor',
     'needsMedicalDirector',
     'supervisorOccupationId',
@@ -1010,5 +1120,12 @@ export const SUPERVISEE_SIGNUP_STEP_META = [
 export const NEED_MEDICAL_DIRECTOR_SIGNUP_STEP_META = [
   { title: 'Account', stepLabel: 'Step 1' },
   { title: 'Medical Director Needs', stepLabel: 'Step 2' },
+  { title: 'Introduction & Terms', stepLabel: 'Step 3' },
+] as const
+
+/** Step titles for the preceptee (student) flow. */
+export const PRECEPTEE_SIGNUP_STEP_META = [
+  { title: 'Account', stepLabel: 'Step 1' },
+  { title: 'Program & Rotation Needs', stepLabel: 'Step 2' },
   { title: 'Introduction & Terms', stepLabel: 'Step 3' },
 ] as const

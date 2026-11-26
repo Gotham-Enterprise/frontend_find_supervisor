@@ -6,7 +6,11 @@ import { useFormContext, useWatch } from 'react-hook-form'
 
 import { FormatSelector } from '@/components/Signup/FormatSelector'
 import { FormSection } from '@/components/Signup/FormSection'
-import { type SuperviseeFormValues } from '@/components/Signup/schema'
+import {
+  SUPERVISEE_LICENSURE_STATE_REQUIRED_MESSAGE,
+  SUPERVISEE_TITLE_REQUIRED_MESSAGE,
+  type SuperviseeFormValues,
+} from '@/components/Signup/schema'
 import { superviseeFieldRules } from '@/components/Signup/superviseeFieldRules'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { FormInputField } from '@/components/ui/form-input-field'
@@ -27,6 +31,7 @@ import {
   SUPERVISION_HOURS_NEEDED_REQUIRED_MESSAGE,
 } from '@/lib/utils/profile-formatters'
 import {
+  getEligiblePreceptorOccupations,
   getEligibleSupervisorTypes,
   groupSuperviseeOccupationOptions,
   hasCompletedEligibilityFields,
@@ -40,6 +45,7 @@ import {
 } from '@/lib/utils/supervisee-eligibility'
 
 import type { SuperviseeSignupVariant } from './index'
+import { PrecepteeProgramFields } from './PrecepteeProgramFields'
 import {
   MdHowSoonDateInput,
   MdHowSoonSelect,
@@ -98,6 +104,7 @@ export function SuperviseeStepSupervisionNeeds({
   isSubmitting,
 }: SuperviseeStepSupervisionNeedsProps) {
   const isNeedMedicalDirector = variant === 'need-medical-director'
+  const isPreceptee = variant === 'preceptee'
   const { control, clearErrors, setValue } = useFormContext<SuperviseeFormValues>()
   const howSoon = useWatch({ control, name: 'howSoon' })
   const typeOfSupervisor = useWatch({ control, name: 'typeOfSupervisor' }) ?? ''
@@ -128,10 +135,25 @@ export function SuperviseeStepSupervisionNeeds({
     return supervisorTypesData.find((t) => t.name === typeOfSupervisor)
   }, [typeOfSupervisor, supervisorTypesData])
 
-  const supervisionOccupationOptions = useMemo<SelectOption[]>(
-    () => selectedSupervisionType?.occupations.map((o) => ({ label: o.name, value: o.name })) ?? [],
-    [selectedSupervisionType],
+  const occupationName = useMemo(
+    () => occupationOptions.find((o) => o.value === occupationId)?.label ?? '',
+    [occupationOptions, occupationId],
   )
+
+  // Preceptor occupations a student may rotate with (matrix) — the desired
+  // "Preceptor Profession" dropdown is limited to them.
+  const eligiblePreceptorOccupations = useMemo(
+    () => (isPreceptee ? getEligiblePreceptorOccupations(occupationName) : []),
+    [isPreceptee, occupationName],
+  )
+
+  const supervisionOccupationOptions = useMemo<SelectOption[]>(() => {
+    const all =
+      selectedSupervisionType?.occupations.map((o) => ({ label: o.name, value: o.name })) ?? []
+    if (!isPreceptee) return all
+    const allowed = new Set(eligiblePreceptorOccupations.map((name) => name.toLowerCase()))
+    return all.filter((o) => allowed.has(o.label.toLowerCase()))
+  }, [selectedSupervisionType, isPreceptee, eligiblePreceptorOccupations])
 
   const supervisionSpecialtyOptions = useMemo<SelectOption[]>(() => {
     if (!supervisorOccupationId) return []
@@ -141,17 +163,15 @@ export function SuperviseeStepSupervisionNeeds({
     return selectedOccupation?.specialties.map((s) => ({ label: s.name, value: s.name })) ?? []
   }, [selectedSupervisionType, supervisorOccupationId])
 
-  const occupationName = useMemo(
-    () => occupationOptions.find((o) => o.value === occupationId)?.label ?? '',
-    [occupationOptions, occupationId],
-  )
-
   // Medical (NP/PA) on top, Mental Health below. The dedicated Medical Director flow
   // keeps a flat list — its occupation dropdown is unfiltered, so most entries would
   // land in a meaningless "Other" bucket.
   const occupationGroups = useMemo(
-    () => (isNeedMedicalDirector ? undefined : groupSuperviseeOccupationOptions(occupationOptions)),
-    [isNeedMedicalDirector, occupationOptions],
+    () =>
+      isNeedMedicalDirector || isPreceptee
+        ? undefined
+        : groupSuperviseeOccupationOptions(occupationOptions),
+    [isNeedMedicalDirector, isPreceptee, occupationOptions],
   )
   const eligibilityComplete = hasCompletedEligibilityFields(occupationName)
 
@@ -167,8 +187,11 @@ export function SuperviseeStepSupervisionNeeds({
   )
 
   // Clear a previously selected supervision type that became ineligible after the
-  // occupation changed.
+  // occupation changed. The preceptee flow presets Preceptor (every student
+  // occupation is eligible for it), so it is left alone there — before a
+  // program is picked the preset would otherwise be wiped.
   useEffect(() => {
+    if (isPreceptee) return
     const reconciled = reconcileSelectedSupervisorType(
       typeOfSupervisor,
       supervisorTypesData,
@@ -180,7 +203,21 @@ export function SuperviseeStepSupervisionNeeds({
       setValue('supervisorSpecialtyId', '')
       clearErrors(['typeOfSupervisor', 'supervisorOccupationId', 'supervisorSpecialtyId'])
     }
-  }, [typeOfSupervisor, supervisorTypesData, occupationName, setValue, clearErrors])
+  }, [isPreceptee, typeOfSupervisor, supervisorTypesData, occupationName, setValue, clearErrors])
+
+  // A desired preceptor profession outside the student's matrix (picked before
+  // the program changed) is cleared.
+  useEffect(() => {
+    if (!isPreceptee || !supervisorOccupationId) return
+    const stillAllowed = eligiblePreceptorOccupations.some(
+      (name) => name.toLowerCase() === supervisorOccupationId.toLowerCase(),
+    )
+    if (!stillAllowed) {
+      setValue('supervisorOccupationId', '')
+      setValue('supervisorSpecialtyId', '')
+      clearErrors(['supervisorOccupationId', 'supervisorSpecialtyId'])
+    }
+  }, [isPreceptee, supervisorOccupationId, eligiblePreceptorOccupations, setValue, clearErrors])
 
   // Hidden supervision-only fields must not keep stale errors once the signup
   // becomes MD-only.
@@ -198,17 +235,17 @@ export function SuperviseeStepSupervisionNeeds({
     <>
       {/* ── Supervisee profile fields — collected here (before Step 3) because the
           occupation determines supervision-type eligibility ── */}
-      <FormSection title="Professional Background">
+      <FormSection title={isPreceptee ? 'Program Details' : 'Professional Background'}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormSelectField
             control={control}
             name="occupationId"
-            label="Occupation"
+            label={isPreceptee ? 'Program / Discipline' : 'Occupation'}
             searchable
             rules={superviseeFieldRules('occupationId')}
             options={occupationOptions}
             groups={occupationGroups}
-            placeholder="Select Occupation"
+            placeholder={isPreceptee ? 'Select Your Program' : 'Select Occupation'}
             loading={occupationsLoading}
             isSubmitting={isSubmitting}
             required
@@ -221,7 +258,7 @@ export function SuperviseeStepSupervisionNeeds({
           <FormSelectField
             control={control}
             name="specialtyId"
-            label="Specialty"
+            label={isPreceptee ? 'Rotation Focus' : 'Specialty'}
             options={specialtyOptions}
             sortOptions
             placeholder={
@@ -237,46 +274,60 @@ export function SuperviseeStepSupervisionNeeds({
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormInputField
-            control={control}
-            name="title"
-            label={SUPERVISEE_CREDENTIAL_TITLE_LABEL}
-            rules={superviseeFieldRules('title')}
-            placeholder={SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER}
-            isSubmitting={isSubmitting}
-            required
-          />
+        {isPreceptee ? (
+          // Students hold no credential yet — the program details replace it.
+          <PrecepteeProgramFields isSubmitting={isSubmitting} />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormInputField
+              control={control}
+              name="title"
+              label={SUPERVISEE_CREDENTIAL_TITLE_LABEL}
+              rules={{
+                validate: (value: unknown) =>
+                  String(value ?? '').trim() ? true : SUPERVISEE_TITLE_REQUIRED_MESSAGE,
+              }}
+              placeholder={SUPERVISEE_CREDENTIAL_TITLE_PLACEHOLDER}
+              isSubmitting={isSubmitting}
+              required
+            />
 
-          {/* State tied to the credential — US convention pairs the state with the
-              credential (e.g. "TX LPC-A"); stored as the abbreviation */}
-          <FormSelectField
-            control={control}
-            name="licensureState"
-            label="State of Licensure"
-            searchable
-            rules={superviseeFieldRules('licensureState')}
-            options={licensureStateOptions}
-            placeholder="Select State"
-            loading={licensureStatesLoading}
-            isSubmitting={isSubmitting}
-            required
-          />
-        </div>
+            {/* State tied to the credential — US convention pairs the state with the
+                credential (e.g. "TX LPC-A"); stored as the abbreviation */}
+            <FormSelectField
+              control={control}
+              name="licensureState"
+              label="State of Licensure"
+              searchable
+              rules={{
+                validate: (value: unknown) =>
+                  String(value ?? '').trim() ? true : SUPERVISEE_LICENSURE_STATE_REQUIRED_MESSAGE,
+              }}
+              options={licensureStateOptions}
+              placeholder="Select State"
+              loading={licensureStatesLoading}
+              isSubmitting={isSubmitting}
+              required
+            />
+          </div>
+        )}
       </FormSection>
 
       <FormSection
         title={
           isNeedMedicalDirector
             ? 'Medical Director Preferences'
-            : isMdOnly
-              ? 'Preferences'
-              : 'Supervision Needs'
+            : isPreceptee
+              ? 'Rotation Needs'
+              : isMdOnly
+                ? 'Preferences'
+                : 'Supervision Needs'
         }
       >
         {/* ── Type of Supervision Needed (filtered by eligibility) — hidden in the
-            dedicated flow where the preset needsMedicalDirector covers the need ── */}
-        {!isNeedMedicalDirector && (
+            dedicated flows where the preset (needsMedicalDirector / Preceptor)
+            covers the need ── */}
+        {!isNeedMedicalDirector && !isPreceptee && (
           <FormSelectField
             control={control}
             name="typeOfSupervisor"
@@ -323,24 +374,34 @@ export function SuperviseeStepSupervisionNeeds({
             <FormSelectField
               control={control}
               name="supervisorOccupationId"
-              label="Occupation"
+              label={isPreceptee ? 'Preceptor Profession' : 'Occupation'}
               rules={{
                 // Required only when a supervision type is selected — a Medical Director-only
                 // request has no type, so no occupation cascade to fill in.
                 validate: (value: unknown, formValues: SuperviseeFormValues) =>
-                  formValues.typeOfSupervisor && !value ? 'Occupation is required' : true,
+                  formValues.typeOfSupervisor && !value
+                    ? isPreceptee
+                      ? 'Preceptor profession is required'
+                      : 'Occupation is required'
+                    : true,
               }}
               options={supervisionOccupationOptions}
               placeholder={
-                !typeOfSupervisor
-                  ? 'Select a Type of Supervision First'
-                  : supervisionOccupationOptions.length === 0
-                    ? 'No Occupations Available'
-                    : 'Select Occupation'
+                isPreceptee
+                  ? !occupationId
+                    ? 'Select Your Program First'
+                    : supervisionOccupationOptions.length === 0
+                      ? 'No Preceptor Professions Available'
+                      : 'Select Preceptor Profession'
+                  : !typeOfSupervisor
+                    ? 'Select a Type of Supervision First'
+                    : supervisionOccupationOptions.length === 0
+                      ? 'No Occupations Available'
+                      : 'Select Occupation'
               }
               loading={supervisorTypesLoading}
-              isSubmitting={isSubmitting || !typeOfSupervisor}
-              selectKey={typeOfSupervisor}
+              isSubmitting={isSubmitting || !typeOfSupervisor || (isPreceptee && !occupationId)}
+              selectKey={isPreceptee ? `${typeOfSupervisor}-${occupationId}` : typeOfSupervisor}
               required={Boolean(typeOfSupervisor)}
               onValueChange={() => {
                 setValue('supervisorSpecialtyId', '')
@@ -419,7 +480,10 @@ export function SuperviseeStepSupervisionNeeds({
             render={({ field }) => (
               <FormItem className="sm:col-span-2">
                 <FormLabel>
-                  State(s) of Licensure <span className="text-destructive">*</span>
+                  {isPreceptee
+                    ? 'State(s) Where You Can Complete Your Rotation'
+                    : 'State(s) of Licensure'}{' '}
+                  <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
                   <TagInput
@@ -445,7 +509,11 @@ export function SuperviseeStepSupervisionNeeds({
               <FormSelectField
                 control={control}
                 name="howSoon"
-                label="How Soon Do You Need Supervision?"
+                label={
+                  isPreceptee
+                    ? 'How Soon Do You Need a Preceptor?'
+                    : 'How Soon Do You Need Supervision?'
+                }
                 rules={superviseeFieldRules('howSoon')}
                 options={howSoonOptions}
                 placeholder="Select Timeframe"

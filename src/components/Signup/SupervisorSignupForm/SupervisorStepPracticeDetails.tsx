@@ -44,6 +44,8 @@ type SupervisorStepPracticeDetailsProps = {
   isSubmitting: boolean
   /** MD variant: patient population applies only when a physician offering is checked. */
   isMedicalDirector?: boolean
+  /** Preceptor flow — copy addresses preceptees (students) instead of supervisees. */
+  isPreceptor?: boolean
 }
 
 export function SupervisorStepPracticeDetails({
@@ -53,6 +55,7 @@ export function SupervisorStepPracticeDetails({
   availabilityLoading,
   isSubmitting,
   isMedicalDirector = false,
+  isPreceptor = false,
 }: SupervisorStepPracticeDetailsProps) {
   const { control, clearErrors, setValue } = useFormContext<MedicalDirectorFormValues>()
   const professionalSummaryValue = useWatch({ control, name: 'professionalSummary' }) ?? ''
@@ -315,7 +318,9 @@ export function SupervisorStepPracticeDetails({
                   agree to be contacted by{' '}
                   {isMedicalDirector
                     ? 'prospective supervisees and individuals seeking a medical director'
-                    : 'a prospective supervisee'}{' '}
+                    : isPreceptor
+                      ? 'a prospective preceptee (student)'
+                      : 'a prospective supervisee'}{' '}
                   via email, messages on{' '}
                   <span className="font-semibold text-primary">Gotham Enterprises Ltd</span>, SMS
                   text, and phone.

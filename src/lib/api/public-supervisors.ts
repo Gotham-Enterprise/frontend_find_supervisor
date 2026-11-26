@@ -12,11 +12,12 @@
 
 import {
   MEDICAL_DIRECTORS_PATH,
+  PRECEPTORS_PATH,
   type PublicDirectoryPath,
   publicProfilePath,
   SUPERVISORS_PATH,
 } from '@/lib/seo/routes'
-import { isMedicalDirectorType } from '@/lib/utils/supervisee-eligibility'
+import { isMedicalDirectorType, isPreceptorType } from '@/lib/utils/supervisee-eligibility'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:5000/api'
 
@@ -48,6 +49,11 @@ export interface PublicSupervisorSummary {
   state: string
   licenseType: string
   supervisorType: string
+  /**
+   * Supervisor-type hierarchy occupation (e.g. "Dentist" for a Preceptor).
+   * Only the public-profile endpoint returns it; search rows leave it ''.
+   */
+  occupation: string
   specialty: string
   /** Merged bio — professionalSummary if present, otherwise describeYourself. */
   bio: string
@@ -164,6 +170,15 @@ function parseBoardCertifications(value: unknown): PublicBoardCertification[] {
     .filter((certification) => certification.certifyingBoard)
 }
 
+/** The profile endpoint returns the occupation as a plain string; older shapes nest `{ name }`. */
+function parseOccupation(value: unknown): string {
+  if (typeof value === 'string') return value.trim()
+  if (value && typeof value === 'object' && 'name' in value) {
+    return String((value as { name?: unknown }).name ?? '').trim()
+  }
+  return ''
+}
+
 function parseRow(row: Record<string, unknown>): PublicSupervisorSummary {
   const professionalSummary = row.professionalSummary
     ? String(row.professionalSummary).trim()
@@ -180,6 +195,7 @@ function parseRow(row: Record<string, unknown>): PublicSupervisorSummary {
     state: String(row.state ?? ''),
     licenseType: String(row.licenseType ?? ''),
     supervisorType: String(row.supervisorType ?? row.profession ?? ''),
+    occupation: parseOccupation(row.occupation),
     specialty: String(row.specialty ?? ''),
     bio,
     professionalSummary,
@@ -223,9 +239,20 @@ export function isPublicMedicalDirector(supervisor: { supervisorType: string }):
   return isMedicalDirectorType({ name: value }) || isMedicalDirectorType({ code: value })
 }
 
+/**
+ * Whether the supervisor's PRIMARY type is Preceptor. Preceptors live under
+ * /preceptors; they never appear in supervisor results.
+ */
+export function isPublicPreceptor(supervisor: { supervisorType: string }): boolean {
+  const value = supervisor.supervisorType
+  return isPreceptorType({ name: value }) || isPreceptorType({ code: value })
+}
+
 /** The public directory a supervisor's profile lives in (by primary type). */
 export function publicDirectoryFor(supervisor: { supervisorType: string }): PublicDirectoryPath {
-  return isPublicMedicalDirector(supervisor) ? MEDICAL_DIRECTORS_PATH : SUPERVISORS_PATH
+  if (isPublicMedicalDirector(supervisor)) return MEDICAL_DIRECTORS_PATH
+  if (isPublicPreceptor(supervisor)) return PRECEPTORS_PATH
+  return SUPERVISORS_PATH
 }
 
 /** Canonical public profile URL path for a supervisor (or Medical Director). */
@@ -239,11 +266,12 @@ export function publicSupervisorProfilePath(
 /**
  * Directory scoping on the public search endpoint:
  *  - 'supervisors'      — excludes plain Medical Directors (MDs with a matching
- *                         physician offering stay visible)
+ *                         physician offering stay visible) and Preceptors
  *  - 'medicalDirectors' — primary Medical Directors only
+ *  - 'preceptors'       — primary Preceptors only
  * Omitted keeps the backend's legacy mixed listing.
  */
-export type PublicSearchMode = 'supervisors' | 'medicalDirectors'
+export type PublicSearchMode = 'supervisors' | 'medicalDirectors' | 'preceptors'
 
 export type PublicSearchParams = {
   stateOfLicensure?: string
@@ -253,6 +281,8 @@ export type PublicSearchParams = {
   licenseType?: string
   /** Supervisor type name from the hierarchy (e.g. "Collaborating Physician"). */
   supervisorType?: string
+  /** Hierarchy occupation name (e.g. the preceptor discipline "Dentist"). */
+  supervisorOccupation?: string
   /** Supervision format: "VIRTUAL" | "IN_PERSON" | "HYBRID" */
   supervisionFormat?: string
   /** City name for city-scoped searches. */
@@ -289,6 +319,7 @@ export async function fetchPublicSupervisors(
     }
     if (params.licenseType) query.set('licenseType', params.licenseType)
     if (params.supervisorType) query.set('supervisorType', params.supervisorType)
+    if (params.supervisorOccupation) query.set('supervisorOccupation', params.supervisorOccupation)
     if (params.supervisionFormat) query.set('supervisionFormat', params.supervisionFormat)
     if (params.city?.trim()) query.set('city', params.city.trim())
     if (params.keywords?.trim()) query.set('keywords', params.keywords.trim())

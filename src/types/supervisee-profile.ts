@@ -79,8 +79,19 @@ export interface SuperviseeProfileData {
   /** Optional self introduction (separate from idealSupervisor) */
   introduction?: string | null
 
-  /** Total supervised hours still needed for licensure (every need except Medical Director) */
+  /** Total supervised hours still needed for licensure (every need except Medical Director and Preceptor) */
   supervisionHoursNeeded?: string | null
+
+  /** Preceptee (student) program details — set only when typeOfSupervisorNeeded
+   *  includes "Preceptor"; students hold no credential, so title/licensureState stay null. */
+  schoolName?: string | null
+  degreeProgram?: string | null
+  /** ISO date */
+  expectedGraduation?: string | null
+  /** Clinical/field hours the program requires for this rotation */
+  clinicalHoursRequired?: number | null
+  rotationStartDate?: string | null
+  rotationEndDate?: string | null
 
   /** Number of completed supervision sessions */
   completedCount: number

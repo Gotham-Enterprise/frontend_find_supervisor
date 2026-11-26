@@ -82,7 +82,9 @@ export function SuperviseeStepNavigation({
               ? 'Creating your account…'
               : variant === 'need-medical-director'
                 ? 'Complete Sign Up →'
-                : 'Sign Up as Supervisee →'}
+                : variant === 'preceptee'
+                  ? 'Sign Up as Preceptee →'
+                  : 'Sign Up as Supervisee →'}
           </Button>
         )}
       </div>

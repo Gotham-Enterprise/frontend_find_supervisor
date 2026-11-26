@@ -1,4 +1,4 @@
-import { MEDICAL_DIRECTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
+import { MEDICAL_DIRECTOR_TYPE_NAME, PRECEPTOR_TYPE_NAME } from '@/lib/utils/supervisee-eligibility'
 import type { User } from '@/types'
 import type { HireListItem } from '@/types/hire'
 import type { SuperviseeProfileData } from '@/types/supervisee-profile'
@@ -14,6 +14,7 @@ const MY_PROFILE_HREF = '/my-profile'
  * everyone else, including legacy profiles without stored needs, browses `/find-supervisors`.
  */
 export function getFindFirstSupervisorHref(profile?: SuperviseeProfileData | null): string {
+  if (isPrecepteeProfile(profile)) return '/find-preceptors'
   return isMedicalDirectorOnlyProfile(profile) ? '/find-medical-directors' : '/find-supervisors'
 }
 
@@ -23,11 +24,23 @@ function isMedicalDirectorOnlyProfile(profile?: SuperviseeProfileData | null): b
   return needs.length > 0 && needs.every((need) => need === MEDICAL_DIRECTOR_TYPE_NAME)
 }
 
+/** True when the supervisee is a student whose stored needs include a Preceptor. */
+export function isPrecepteeProfile(profile?: SuperviseeProfileData | null): boolean {
+  const needs = profile ? getSuperviseeNeeds(profile) : []
+  return needs.includes(PRECEPTOR_TYPE_NAME)
+}
+
 /** Label + description for the last goal, worded for what the supervisee is actually looking for. */
 function getFindFirstSupervisorCopy(profile?: SuperviseeProfileData | null): {
   label: string
   description: string
 } {
+  if (isPrecepteeProfile(profile)) {
+    return {
+      label: 'Find your first preceptor',
+      description: 'Browse verified preceptors for your rotation and send a request',
+    }
+  }
   if (isMedicalDirectorOnlyProfile(profile)) {
     return {
       label: 'Find your first medical director',
@@ -92,7 +105,8 @@ function getSuperviseeProfileCompletionChecks(profile: SuperviseeProfileData): b
     !!user.state,
     !!user.contactNumber,
     (user.stateOfLicensure?.length ?? 0) > 0,
-    !!profile.title?.trim(),
+    // Students (preceptees) carry program details instead of a credential.
+    isPrecepteeProfile(profile) ? !!profile.schoolName?.trim() : !!profile.title?.trim(),
     needs.length > 0,
     !!profile.preferredFormat,
     !!profile.availability,

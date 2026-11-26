@@ -9,6 +9,8 @@ const SIGNUP_ROLE_OPTIONS: { value: SignupRole; label: string }[] = [
   { value: 'supervisee', label: "I'm a Supervisee" },
   { value: 'medical-director', label: "I'm a Medical Director" },
   { value: 'need-medical-director', label: 'I need a Medical Director' },
+  { value: 'preceptor', label: "I'm a Preceptor" },
+  { value: 'preceptee', label: "I'm a Student (Preceptee)" },
 ]
 
 type AccountTypeSelectorProps = {
@@ -18,7 +20,7 @@ type AccountTypeSelectorProps = {
 
 export function AccountTypeSelector({ value, onChange }: AccountTypeSelectorProps) {
   return (
-    <div className="grid grid-cols-1 gap-1 rounded-xl border border-border bg-muted/40 p-1 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-1 rounded-xl border border-border bg-muted/40 p-1 sm:grid-cols-2 lg:grid-cols-3">
       {SIGNUP_ROLE_OPTIONS.map((option) => (
         <button
           key={option.value}

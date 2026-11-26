@@ -27,7 +27,7 @@ import {
   useSupervisorTypesData,
 } from '@/lib/hooks'
 import { WEEKLY_HOURS_AVAILABLE_OPTIONS } from '@/lib/utils/profile-formatters'
-import { isMedicalDirectorType } from '@/lib/utils/supervisee-eligibility'
+import { isMedicalDirectorType, isPreceptorType } from '@/lib/utils/supervisee-eligibility'
 
 import { ActiveFilterChips } from './ActiveFilterChips'
 import type { ChipOptions } from './helpers'
@@ -61,6 +61,8 @@ interface SearchSupervisorFiltersProps {
   mode?: SupervisorSearchMode
   /** The supervisee's stored supervision needs (type names); scopes occupation/license options. */
   supervisionNeeds?: string[] | null
+  /** Preceptor page: disciplines the student's program may rotate with (occupation matrix). */
+  allowedOccupations?: string[]
 }
 
 function FilterLabel({ children }: { children: React.ReactNode }) {
@@ -82,8 +84,10 @@ export function SearchSupervisorFilters({
   onClearFilters,
   mode = 'supervisors',
   supervisionNeeds,
+  allowedOccupations,
 }: SearchSupervisorFiltersProps) {
   const isMedicalDirectors = mode === 'medical-directors'
+  const isPreceptors = mode === 'preceptors'
   const {
     patientPopulations: {
       data: patientPopulationOptions = [],
@@ -96,18 +100,27 @@ export function SearchSupervisorFilters({
   const { data: supervisorTypesData = [], isLoading: hierarchyLoading } = useSupervisorTypesData()
 
   // Only the supervisor types this supervisee needs (the backend scopes results
-  // the same way), so e.g. a PA never sees counselor or NP occupations.
+  // the same way), so e.g. a PA never sees counselor or NP occupations. The
+  // Preceptor page is scoped to the Preceptor type alone.
   const searchableTypes = useMemo(
-    () => getSearchableSupervisorTypes(supervisorTypesData, supervisionNeeds),
-    [supervisorTypesData, supervisionNeeds],
+    () =>
+      isPreceptors
+        ? supervisorTypesData.filter((type) => isPreceptorType(type))
+        : getSearchableSupervisorTypes(supervisorTypesData, supervisionNeeds),
+    [isPreceptors, supervisorTypesData, supervisionNeeds],
   )
 
-  // Occupation options — union of occupations across the searchable types.
+  // Occupation options — union of occupations across the searchable types,
+  // narrowed to the student's eligible disciplines on the Preceptor page.
   const occupationOptions = useMemo<SelectOption[]>(() => {
+    const allowed = allowedOccupations
+      ? new Set(allowedOccupations.map((name) => name.toLowerCase()))
+      : null
     const seen = new Set<string>()
     const opts: SelectOption[] = []
     for (const t of searchableTypes) {
       for (const o of t.occupations) {
+        if (allowed && !allowed.has(o.name.toLowerCase())) continue
         if (!seen.has(o.name)) {
           seen.add(o.name)
           opts.push({ label: o.name, value: o.name })
@@ -115,7 +128,7 @@ export function SearchSupervisorFilters({
       }
     }
     return opts
-  }, [searchableTypes])
+  }, [searchableTypes, allowedOccupations])
 
   // Specialty options — union of specialties across selected occupations. On
   // the Medical Director page there is no occupation filter, so the physician
