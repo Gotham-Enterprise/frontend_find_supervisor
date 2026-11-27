@@ -193,8 +193,8 @@ function LateSessionStatus({
       <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
         <p>
           Gotham support added this session because it wasn&apos;t logged in time. Approve it if it
-          happened as described. If this week is already settled, approving charges your card for
-          these hours plus the service fee.
+          happened as described. Approving charges your card for these hours plus the service fee,
+          separately from the week&apos;s charge.
         </p>
         <div className="mt-2 flex justify-end gap-2">
           <Button
@@ -787,7 +787,7 @@ export function useHireSessions({
         }
         description={
           responding?.approve
-            ? `${counterpartName} is paid for it. If this week is already settled, your card is charged for these hours plus the service fee.`
+            ? `${counterpartName} is paid for it. Your card is charged for these hours plus the service fee, separately from the week's charge.`
             : `${counterpartName} isn't paid for it. Reject it only if the session didn't happen as described.`
         }
         confirmLabel={responding?.approve ? 'Approve' : 'Reject'}

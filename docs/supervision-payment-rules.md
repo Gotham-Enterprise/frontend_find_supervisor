@@ -175,7 +175,7 @@ closes it at $0 and cancels the charge.
 
 - If the supervisor missed logging a session, they can **request a late entry** within **14 days** after that week ends. Support is emailed.
 - **Gotham support** adds it (or dismisses the request, with a note). The supervisee **approves or rejects** it.
-- If that week was already settled, an approved late session is **charged on its own**: hours × rate plus its own service fee. The supervisor's share is transferred right away. On a week still waiting for its payout it joins the approved hours, paid out only up to what the week's invoice charged.
+- An approved late session is **always charged on its own**: hours × rate plus its own service fee, whether the week is in review, approved or settled (the week's invoice was fixed at the cutoff, so it can't absorb it). The supervisor's share is transferred right away. Approving the whole week, or support resolving a dispute, approves the pending late entries too and charges each of them. The week's own approved hours count only the supervisor's sessions; admin shows "invoiced" minutes next to "logged".
 - A failed late charge is retried only by support (a card decline and any other error — e.g. a removed card — both leave it "failed" with the reason, so **Retry charge** works). A late entry the supervisee hasn't answered within **3 days** is approved automatically (like an unreviewed week), so it can't hold up the week.
 - If the charge succeeds but the supervisor's payout can't be made (no payout account), the entry is marked "Payout pending", support is emailed once, and the billing job retries the transfer every 15 minutes.
 

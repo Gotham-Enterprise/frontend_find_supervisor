@@ -454,7 +454,7 @@ const superviseeFaqs: FaqCategory[] = [
       {
         question: 'What is a late session?',
         answer:
-          "If your Supervisor missed logging a session, they can ask Gotham support to add it within 14 days after that week. You'll be asked to approve or reject it. If that week was already settled, an approved late session is charged on its own (hours × rate plus the service fee).",
+          "If your Supervisor missed logging a session, they can ask Gotham support to add it within 14 days after that week. You'll be asked to approve or reject it. An approved late session is charged on its own (hours × rate plus the service fee), separately from that week's charge.",
       },
       {
         question: 'What happens if I end a supervision mid-week?',
