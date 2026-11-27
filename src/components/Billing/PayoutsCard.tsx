@@ -1,0 +1,314 @@
+'use client'
+
+import { AlertCircle, CheckCircle2, Clock, Landmark, RefreshCw, Settings } from 'lucide-react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useRef, useState } from 'react'
+
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { usePayoutStatusQuery, useStartPayoutOnboarding, useUserSnackbar } from '@/lib/hooks'
+import { formatEasternDate } from '@/lib/utils/date'
+import { parseApiError } from '@/lib/utils/error-parser'
+import { formatUsdCents } from '@/lib/utils/money'
+import type { PayoutAccountStatus, PayoutStatus } from '@/types/payouts'
+
+import { ManagePayoutAccountDialog } from './ManagePayoutAccountDialog'
+import { RemovePayoutAccountDialog } from './RemovePayoutAccountDialog'
+
+const STATUS_CONFIG: Record<
+  PayoutAccountStatus,
+  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
+> = {
+  not_started: { label: 'Not set up', variant: 'outline' },
+  incomplete: { label: 'Incomplete', variant: 'outline' },
+  action_required: { label: 'Action required', variant: 'destructive' },
+  pending: { label: 'Verifying', variant: 'secondary' },
+  ready: { label: 'Ready', variant: 'default' },
+}
+
+/**
+ * Stripe sends supervisors back to /billing?payouts=return when they finish
+ * onboarding, or ?payouts=refresh when the single-use link expired — in that
+ * case a fresh link is requested and they are sent straight back to Stripe.
+ */
+function PayoutsReturnHandler({ onRefreshLink }: { onRefreshLink: () => void }) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+  const handled = useRef(false)
+  const payoutsParam = searchParams.get('payouts')
+
+  useEffect(() => {
+    if (!payoutsParam || handled.current) return
+    handled.current = true
+    if (payoutsParam === 'refresh') {
+      onRefreshLink()
+      return
+    }
+    router.replace(pathname, { scroll: false })
+  }, [payoutsParam, onRefreshLink, router, pathname])
+
+  return null
+}
+
+export function PayoutsCard() {
+  const { data, isLoading, isError, refetch } = usePayoutStatusQuery(true)
+  const { mutate: startOnboarding, isPending: isStarting } = useStartPayoutOnboarding()
+  const { showError } = useUserSnackbar()
+  const [manageOpen, setManageOpen] = useState(false)
+  const [removeOpen, setRemoveOpen] = useState(false)
+
+  function handleStartOnboarding() {
+    startOnboarding(undefined, { onError: (error) => showError(parseApiError(error)) })
+  }
+
+  const status = data?.status
+  // Any account Stripe has (even unfinished) can be removed; not_started has none.
+  const hasAccount = status != null && status !== 'not_started'
+  const config = status ? STATUS_CONFIG[status] : null
+
+  return (
+    <Card>
+      <Suspense fallback={null}>
+        <PayoutsReturnHandler onRefreshLink={handleStartOnboarding} />
+      </Suspense>
+
+      <CardHeader className="border-b">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <Landmark className="size-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle>Payment Information</CardTitle>
+              <CardDescription className="mt-0.5">
+                Receive supervisee payments directly to your bank account.
+              </CardDescription>
+            </div>
+          </div>
+          {config && (
+            <Badge variant={config.variant} className="mt-0.5 shrink-0">
+              {config.label}
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+
+      <CardContent className="pt-4">
+        {isLoading ? (
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-4 w-72" />
+            <Skeleton className="h-9 w-40" />
+          </div>
+        ) : isError || !status ? (
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              We couldn&apos;t load your payout status.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => void refetch()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Retry
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <PayoutStatusMessage status={status} requirementsDueCount={data.requirementsDueCount} />
+            {status === 'ready' && <PayoutDetails data={data} />}
+
+            <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+              {/* Destructive and rarely needed: a text link, left of the main action. */}
+              {hasAccount && (
+                <button
+                  type="button"
+                  onClick={() => setRemoveOpen(true)}
+                  className="mr-auto text-sm font-medium text-destructive underline-offset-4 hover:underline"
+                >
+                  Remove Payout Account
+                </button>
+              )}
+              {status === 'ready' ? (
+                <Button variant="outline" size="sm" onClick={() => setManageOpen(true)}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Manage Account
+                </Button>
+              ) : (
+                <>
+                  {status === 'pending' && (
+                    <Button variant="outline" size="sm" onClick={() => void refetch()}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Check Status
+                    </Button>
+                  )}
+                  {status !== 'pending' && (
+                    <Button size="sm" disabled={isStarting} onClick={handleStartOnboarding}>
+                      {isStarting ? 'Redirecting to Stripe…' : ONBOARDING_CTA[status]}
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Payouts are handled securely by Stripe. Your bank and identity details are never
+              stored by Find a Supervisor.
+            </p>
+          </div>
+        )}
+      </CardContent>
+
+      <ManagePayoutAccountDialog open={manageOpen} onOpenChange={setManageOpen} />
+      <RemovePayoutAccountDialog open={removeOpen} onOpenChange={setRemoveOpen} />
+    </Card>
+  )
+}
+
+const ONBOARDING_CTA: Record<Exclude<PayoutAccountStatus, 'ready' | 'pending'>, string> = {
+  not_started: 'Set Up Payment Information',
+  incomplete: 'Continue Setup',
+  action_required: 'Update Details',
+}
+
+function describeSchedule(schedule: PayoutStatus['payoutSchedule']): string | null {
+  if (!schedule) return null
+  const delay =
+    schedule.delayDays != null && schedule.delayDays > 0
+      ? ` (${schedule.delayDays} business day${schedule.delayDays === 1 ? '' : 's'} after each payment)`
+      : ''
+  switch (schedule.interval) {
+    case 'daily':
+      return `paid out daily${delay}`
+    case 'weekly':
+      return `paid out weekly${schedule.weeklyAnchor ? ` on ${capitalize(schedule.weeklyAnchor)}` : ''}${delay}`
+    case 'monthly':
+      return `paid out monthly${schedule.monthlyAnchor ? ` on day ${schedule.monthlyAnchor}` : ''}${delay}`
+    case 'manual':
+      return 'paid out when you request it from Stripe'
+    default:
+      return null
+  }
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+/**
+ * Ready-state extras: where payouts go, how often, and what's in flight.
+ * Everything here is read live from Stripe; each piece is optional so a
+ * failed lookup just hides its line.
+ */
+function PayoutDetails({ data }: { data: PayoutStatus }) {
+  const { bankAccount, payoutSchedule, balance, nextPayout, lastPayout } = data
+  const bankLabel = bankAccount
+    ? `${bankAccount.bankName ?? 'Bank account'}${bankAccount.last4 ? ` •••• ${bankAccount.last4}` : ''}`
+    : null
+  const schedule = describeSchedule(payoutSchedule)
+  const inFlightCents = (balance?.availableCents ?? 0) + (balance?.pendingCents ?? 0)
+
+  if (!bankLabel && !schedule && !nextPayout && !lastPayout && !balance) return null
+
+  return (
+    <dl className="grid gap-x-6 gap-y-3 rounded-lg border bg-muted/30 px-4 py-3 text-sm sm:grid-cols-2">
+      {(bankLabel || schedule) && (
+        <div className="sm:col-span-2">
+          <dt className="text-xs text-muted-foreground">Paying out to</dt>
+          <dd className="mt-0.5 font-medium text-foreground">
+            {bankLabel ?? 'Your bank account'}
+            {schedule && <span className="font-normal text-muted-foreground">, {schedule}</span>}
+          </dd>
+        </div>
+      )}
+      <div>
+        <dt className="text-xs text-muted-foreground">Next payout</dt>
+        <dd className="mt-0.5 font-medium tabular-nums text-foreground">
+          {nextPayout ? (
+            <>
+              {formatUsdCents(nextPayout.amountCents)}
+              <span className="font-normal text-muted-foreground">
+                {' '}
+                {nextPayout.status === 'in_transit' ? 'arriving' : 'expected'}{' '}
+                {formatEasternDate(nextPayout.arrivalDate)}
+              </span>
+            </>
+          ) : inFlightCents > 0 ? (
+            <>
+              {formatUsdCents(inFlightCents)}
+              <span className="font-normal text-muted-foreground">
+                {' '}
+                pending with Stripe, paid out automatically
+              </span>
+            </>
+          ) : (
+            <span className="font-normal text-muted-foreground">No pending payouts</span>
+          )}
+        </dd>
+      </div>
+      <div>
+        <dt className="text-xs text-muted-foreground">Last payout</dt>
+        <dd className="mt-0.5 font-medium tabular-nums text-foreground">
+          {lastPayout ? (
+            <>
+              {formatUsdCents(lastPayout.amountCents)}
+              <span className="font-normal text-muted-foreground">
+                {' '}
+                on {formatEasternDate(lastPayout.arrivalDate)}
+              </span>
+            </>
+          ) : (
+            <span className="font-normal text-muted-foreground">None yet</span>
+          )}
+        </dd>
+      </div>
+    </dl>
+  )
+}
+
+function PayoutStatusMessage({
+  status,
+  requirementsDueCount,
+}: {
+  status: PayoutAccountStatus
+  requirementsDueCount: number
+}) {
+  switch (status) {
+    case 'ready':
+      return (
+        <p className="flex items-start gap-2 text-sm text-foreground">
+          <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
+          You&apos;re ready to receive payments from supervisees.
+        </p>
+      )
+    case 'pending':
+      return (
+        <p className="flex items-start gap-2 text-sm text-foreground">
+          <Clock className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          Stripe is verifying your details. This usually takes a few minutes but can take longer.
+        </p>
+      )
+    case 'action_required':
+      return (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <AlertCircle className="mt-0.5 size-4 shrink-0" />
+          <span>
+            Stripe needs more information before you can receive payments
+            {requirementsDueCount > 0 ? ` (${requirementsDueCount} item(s) outstanding)` : ''}.
+          </span>
+        </div>
+      )
+    case 'incomplete':
+      return (
+        <p className="text-sm text-muted-foreground">
+          You started setting up payouts but haven&apos;t finished. Continue where you left off.
+        </p>
+      )
+    default:
+      return (
+        <p className="text-sm text-muted-foreground">
+          Set up a payout account to get paid by supervisees through Find a Supervisor. You&apos;ll
+          be redirected to Stripe to verify your identity and add your bank account.
+        </p>
+      )
+  }
+}

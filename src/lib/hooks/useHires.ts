@@ -1,12 +1,16 @@
 'use client'
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
   acceptHire,
   cancelHire,
+  endSupervision,
+  type EndSupervisionOutcome,
   getAgreement,
+  getHire,
   getSuperviseeUpcomingSessions,
+  type HireListFilters,
   type HiresListMode,
   hireSupervisor,
   listHires,
@@ -39,6 +43,7 @@ export const hireKeys = {
       Array.isArray(status) ? status.join(',') : (status ?? ''),
     ] as const,
   pendingCount: () => [...hireKeys.all, 'pending-count'] as const,
+  detail: (hireId: string) => [...hireKeys.all, 'detail', hireId] as const,
 }
 
 export const upcomingSessionsKeys = {
@@ -48,6 +53,10 @@ export const upcomingSessionsKeys = {
 async function invalidateHireRelatedQueries(queryClient: ReturnType<typeof useQueryClient>) {
   await queryClient.invalidateQueries({ queryKey: hireKeys.all })
   await queryClient.invalidateQueries({ queryKey: upcomingSessionsKeys.all })
+  // Ending a monthly (Medical Director) hire changes its billing: scheduled
+  // end, next charge. Same key as monthlyBillingKeys.all in useMonthlyBilling
+  // (not imported: that module imports this one).
+  await queryClient.invalidateQueries({ queryKey: ['supervision', 'monthly-billing'] })
 }
 
 export function useHireSupervisor() {
@@ -70,11 +79,17 @@ export function useHiresList(
   limit = 10,
   status?: HireStatus | HireStatus[],
   mode?: HiresListMode,
+  filters: HireListFilters = {},
 ) {
+  const search = filters.search?.trim() ?? ''
+  const group = filters.group ?? ''
+  const excludePending = filters.excludePending ?? false
   return useQuery({
-    queryKey: [...hireKeys.list(page, limit, status), mode ?? 'all'],
-    queryFn: () => listHires(page, limit, status, mode),
+    queryKey: [...hireKeys.list(page, limit, status), mode ?? 'all', search, group, excludePending],
+    queryFn: () => listHires(page, limit, status, mode, filters),
     staleTime: 2 * 60 * 1000,
+    // Keep the current rows on screen while a new search/filter loads.
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -137,6 +152,23 @@ export function useCancelHire() {
   })
 }
 
+export function useEndSupervision() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      hireId,
+      ...payload
+    }: {
+      hireId: string
+      outcome: EndSupervisionOutcome
+      reason?: string
+    }) => endSupervision(hireId, payload),
+    onSettled: async () => {
+      await invalidateHireRelatedQueries(queryClient)
+    },
+  })
+}
+
 export function useMarkHireAsCompleted() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -152,6 +184,16 @@ export function useMarkHireAsCompleted() {
 
 export const agreementKeys = {
   detail: (hireId: string) => [...hireKeys.all, 'agreement', hireId] as const,
+}
+
+/** One hire (list-item shape) for its workroom; refreshed with every hire mutation via hireKeys.all. */
+export function useHire(hireId: string) {
+  return useQuery({
+    queryKey: hireKeys.detail(hireId),
+    queryFn: () => getHire(hireId),
+    enabled: Boolean(hireId),
+    retry: false,
+  })
 }
 
 export function useAgreement(hireId: string, enabled = true) {

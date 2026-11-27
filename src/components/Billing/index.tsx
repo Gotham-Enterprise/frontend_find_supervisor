@@ -9,7 +9,8 @@ import {
   Star,
   XCircle,
 } from 'lucide-react'
-import { useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useState } from 'react'
 
 import {
   FreeFeatureRow,
@@ -18,27 +19,38 @@ import {
 } from '@/components/Dashboard/subscription/SubscriptionFeatureRows'
 import { SubscriptionModal } from '@/components/Dashboard/subscription/SubscriptionModal'
 import { SupervisorRouteGuard } from '@/components/Layout/SupervisorRouteGuard'
+import { MonthlyPaymentsCard } from '@/components/MonthlyBilling/MonthlyPaymentsCard'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { isSupervisorRole } from '@/lib/auth/roles'
+import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import { isSupervisionFreeTierSubscription } from '@/lib/constants/supervision-dashboard-plans'
 import {
   useCancelSubscription,
   useCurrentSubscriptionQuery,
+  usePayoutStatusQuery,
   useReactivateSubscription,
+  useSupervisorEarnings,
+  useSupervisorProfile,
   useUser,
   useUserSnackbar,
 } from '@/lib/hooks'
 import { useUpgradePlanName } from '@/lib/hooks/useSubscriptionPlans'
 import { parseApiError } from '@/lib/utils/error-parser'
+import { formatUsdCents } from '@/lib/utils/money'
 import {
   canResumeSubscription,
   isSubscriptionScheduledForCancellation,
 } from '@/lib/utils/subscription-status'
+import { isMonthlyOnlySupervisorType } from '@/lib/utils/supervisor-type'
 import type { Subscription, SubscriptionStatus } from '@/types/supervisor-profile'
+
+import { EarningsCard } from './EarningsCard'
+import { PayoutsCard } from './PayoutsCard'
+import { WeekSummaryCard } from './WeekSummaryCard'
 
 // ─── Feature list shared with the dashboard upgrade cards ─────────────────────
 
@@ -133,7 +145,7 @@ function BillingSkeleton() {
         <Skeleton className="h-7 w-48" />
         <Skeleton className="h-4 w-80 mt-2" />
       </div>
-      <Card className="max-w-2xl">
+      <Card className="lg:max-w-[60%]">
         <CardHeader>
           <Skeleton className="h-5 w-40" />
           <Skeleton className="h-4 w-56 mt-1" />
@@ -157,7 +169,7 @@ function BillingSkeleton() {
 
 function BillingError({ onRetry }: { onRetry: () => void }) {
   return (
-    <Card className="max-w-2xl border-destructive/40 bg-destructive/5">
+    <Card className="lg:max-w-[60%] border-destructive/40 bg-destructive/5">
       <CardContent className="flex flex-col items-center gap-4 py-8 text-center">
         <AlertCircle className="h-8 w-8 text-destructive" />
         <div>
@@ -376,7 +388,7 @@ function SubscriptionCard({
   const canResume = canResumeSubscription(subscription)
 
   return (
-    <Card className="max-w-2xl">
+    <Card>
       <CardHeader className="border-b">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -393,7 +405,7 @@ function SubscriptionCard({
       </CardHeader>
 
       <CardContent className="pt-4">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-5 xl:grid-cols-4">
           <InfoRow label="Plan" value={subscription.plan.name} />
           <InfoRow
             label="Price"
@@ -454,7 +466,7 @@ function SubscriptionCard({
 
 function InvoicesCard() {
   return (
-    <Card className="max-w-2xl">
+    <Card>
       <CardHeader className="border-b">
         <CardTitle>Invoices</CardTitle>
         <CardDescription>Download or view your past billing invoices.</CardDescription>
@@ -474,6 +486,26 @@ function InvoicesCard() {
   )
 }
 
+// ─── Tabs ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Money going out (the supervisor's subscription) and money coming in (in-app
+ * supervision earnings and payouts) live on separate tabs. `?tab=earnings`
+ * deep-links to the second one; Stripe's `?payouts=` return also lands there.
+ */
+type BillingTab = 'subscription' | 'earnings'
+
+const BILLING_TABS: { id: BillingTab; label: string }[] = [
+  { id: 'subscription', label: 'Subscription' },
+  { id: 'earnings', label: 'Earnings' },
+]
+
+function tabFromParams(tab: string | null, payouts: string | null): BillingTab | null {
+  if (tab === 'earnings' || payouts) return 'earnings'
+  if (tab === 'subscription') return 'subscription'
+  return null
+}
+
 // ─── Main component ────────────────────────────────────────────────────────────
 
 function BillingContent() {
@@ -486,6 +518,9 @@ function BillingContent() {
     isError,
     refetch,
   } = useCurrentSubscriptionQuery(isSupervisor)
+  // Medical Directors are billed monthly only: no weekly (hourly) earnings to show.
+  const { data: supervisorProfile } = useSupervisorProfile(isSupervisor)
+  const monthlyOnly = isMonthlyOnlySupervisorType(supervisorProfile?.supervisorType ?? '')
 
   const { mutateAsync: cancelSub, isPending: isCanceling } = useCancelSubscription()
   const { mutateAsync: reactivateSub, isPending: isReactivating } = useReactivateSubscription()
@@ -493,6 +528,35 @@ function BillingContent() {
 
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [resumeConfirmOpen, setResumeConfirmOpen] = useState(false)
+
+  // Tabs: the URL wins, then the user's click, then a default — Earnings once
+  // the payout account is ready (that's what they come back for), else Subscription.
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const urlTab = tabFromParams(searchParams.get('tab'), searchParams.get('payouts'))
+  const [chosenTab, setChosenTab] = useState<BillingTab | null>(urlTab)
+  // A new ?tab= in the URL (e.g. a notification link) takes over from the last click.
+  const [seenUrlTab, setSeenUrlTab] = useState(urlTab)
+  if (urlTab !== seenUrlTab) {
+    setSeenUrlTab(urlTab)
+    if (urlTab) setChosenTab(urlTab)
+  }
+  const { data: payoutStatus, isLoading: isPayoutLoading } =
+    usePayoutStatusQuery(IN_APP_PAYMENTS_ENABLED)
+  // Same query the Earnings card uses, so this costs no extra request.
+  const { data: earnings } = useSupervisorEarnings(1, IN_APP_PAYMENTS_ENABLED)
+  const activeTab: BillingTab = !IN_APP_PAYMENTS_ENABLED
+    ? 'subscription'
+    : (chosenTab ?? (payoutStatus?.status === 'ready' ? 'earnings' : 'subscription'))
+  // Hold the skeleton until we know which tab to open by default.
+  const isDecidingTab = IN_APP_PAYMENTS_ENABLED && chosenTab == null && isPayoutLoading
+  const paidThisMonth = earnings?.totals.paidOutThisMonthCents ?? 0
+
+  function handleTabChange(tab: BillingTab) {
+    setChosenTab(tab)
+    router.replace(`${pathname}?tab=${tab}`, { scroll: false })
+  }
 
   async function handleConfirmCancel() {
     try {
@@ -535,35 +599,88 @@ function BillingContent() {
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Page header */}
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Billing &amp; Invoices</h1>
-        <p className="mt-1 text-base text-muted-foreground">
-          Manage your subscription, billing details, and invoices.
-        </p>
-      </div>
+      {/* The page title is in the top bar; only its description here. */}
+      <p className="text-base text-muted-foreground">
+        {IN_APP_PAYMENTS_ENABLED
+          ? 'Your subscription and invoices, and what you earn from in-app supervision.'
+          : 'Manage your subscription, billing details, and invoices.'}
+      </p>
 
-      {isLoading ? (
+      {IN_APP_PAYMENTS_ENABLED && (
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Billing sections">
+          {BILLING_TABS.map((tab) => {
+            const selected = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => handleTabChange(tab.id)}
+                className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                  selected
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-background text-foreground hover:bg-muted'
+                }`}
+              >
+                {tab.label}
+                {tab.id === 'earnings' && paidThisMonth > 0 && (
+                  <span
+                    className={`ml-2 rounded-full px-1.5 py-0.5 text-xs tabular-nums ${
+                      selected ? 'bg-primary-foreground/20' : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {formatUsdCents(paidThisMonth)} this month
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {isLoading || isDecidingTab ? (
         <BillingSkeleton />
       ) : isError ? (
         <BillingError onRetry={() => void refetch()} />
+      ) : activeTab === 'earnings' ? (
+        // Earnings — one week at a glance, then the main column: weekly
+        // earnings (hourly; Medical Directors have only the monthly card);
+        // side column: Stripe payout account.
+        <div className="flex flex-col gap-6">
+          {!monthlyOnly && <WeekSummaryCard />}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+            <div className="flex flex-col gap-6 lg:col-span-3">
+              {!monthlyOnly && <EarningsCard />}
+              <MonthlyPaymentsCard role="supervisor" />
+            </div>
+            <div className="flex flex-col gap-6 lg:col-span-2">
+              <PayoutsCard />
+            </div>
+          </div>
+        </div>
       ) : isFreeTier ? (
-        // Free or no subscription — show upgrade prompt only, no invoices
+        // Free or no subscription — the upgrade prompt spans the page (its own
+        // 3-col layout needs the width).
         subscription ? (
           <FreePlanUpgradeCard planName={subscription.plan.name || 'Find a Supervisor Free Plan'} />
         ) : (
           <NoSubscriptionUpgradeCard />
         )
       ) : (
-        // Paid subscription — show subscription card + invoices
-        <>
-          <SubscriptionCard
-            subscription={subscription!}
-            onCancelClick={() => setConfirmOpen(true)}
-            onResumeClick={() => setResumeConfirmOpen(true)}
-          />
-          <InvoicesCard />
-        </>
+        // Paid subscription — main column: plan; side column: invoices.
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+          <div className="flex flex-col gap-6 lg:col-span-3">
+            <SubscriptionCard
+              subscription={subscription!}
+              onCancelClick={() => setConfirmOpen(true)}
+              onResumeClick={() => setResumeConfirmOpen(true)}
+            />
+          </div>
+          <div className="flex flex-col gap-6 lg:col-span-2">
+            <InvoicesCard />
+          </div>
+        </div>
       )}
 
       {/* Cancel / resume confirmation dialogs — only rendered for paid subscribers */}
@@ -603,7 +720,10 @@ function BillingContent() {
 export function BillingPanel() {
   return (
     <SupervisorRouteGuard>
-      <BillingContent />
+      {/* useSearchParams (tab deep links) needs a Suspense boundary */}
+      <Suspense fallback={<BillingSkeleton />}>
+        <BillingContent />
+      </Suspense>
     </SupervisorRouteGuard>
   )
 }

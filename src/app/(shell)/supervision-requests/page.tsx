@@ -1,3 +1,5 @@
+import { Suspense } from 'react'
+
 import { SupervisorRouteGuard } from '@/components/Layout/SupervisorRouteGuard'
 import { SupervisionRequestsPage } from '@/components/SupervisionRequests'
 
@@ -7,9 +9,12 @@ export const metadata = {
 }
 
 export default function SupervisionRequestsRoutePage() {
+  // Suspense: the page reads ?accept=<hireId> via useSearchParams (resume after checkout)
   return (
     <SupervisorRouteGuard>
-      <SupervisionRequestsPage />
+      <Suspense fallback={null}>
+        <SupervisionRequestsPage />
+      </Suspense>
     </SupervisorRouteGuard>
   )
 }

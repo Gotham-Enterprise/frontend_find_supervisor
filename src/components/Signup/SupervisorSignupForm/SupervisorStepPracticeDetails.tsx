@@ -29,7 +29,10 @@ import {
   requiresWeeklyHoursAvailable,
   WEEKLY_HOURS_AVAILABLE_OPTIONS,
 } from '@/lib/utils/profile-formatters'
-import { isMonthlyOnlySupervisorType } from '@/lib/utils/supervisor-type'
+import {
+  allowedSupervisionFeeTypes,
+  isMonthlyOnlySupervisorType,
+} from '@/lib/utils/supervisor-type'
 
 const supervisionFeeSelectOptions: SelectOption[] = supervisionFeeTypeOptions.map((o) => ({
   value: o.value,
@@ -69,17 +72,20 @@ export function SupervisorStepPracticeDetails({
 
   const showWeeklyHours = !isMedicalDirector && requiresWeeklyHoursAvailable(supervisorTypeValue)
 
+  // Medical Directors are monthly-only; every other supervisor is hourly-only.
   const monthlyFeeOnly = isMonthlyOnlySupervisorType(supervisorTypeValue)
-  const feeTypeOptions = monthlyFeeOnly
-    ? supervisionFeeSelectOptions.filter((o) => o.value === 'MONTHLY')
-    : supervisionFeeSelectOptions
+  const allowedFeeTypes = allowedSupervisionFeeTypes(supervisorTypeValue)
+  const feeTypeOptions = supervisionFeeSelectOptions.filter((o) =>
+    (allowedFeeTypes as string[]).includes(o.value),
+  )
+  const onlyFeeType = allowedFeeTypes[0]
 
   useEffect(() => {
-    if (monthlyFeeOnly && supervisionFeeTypeValue !== 'MONTHLY') {
-      setValue('supervisionFeeType', 'MONTHLY', { shouldValidate: false })
+    if (supervisionFeeTypeValue !== onlyFeeType) {
+      setValue('supervisionFeeType', onlyFeeType, { shouldValidate: false })
       clearErrors('supervisionFeeType')
     }
-  }, [monthlyFeeOnly, supervisionFeeTypeValue, setValue, clearErrors])
+  }, [onlyFeeType, supervisionFeeTypeValue, setValue, clearErrors])
 
   return (
     <>
@@ -209,7 +215,7 @@ export function SupervisorStepPracticeDetails({
             label="Fee Type"
             rules={supervisorFieldRules('supervisionFeeType')}
             options={feeTypeOptions}
-            placeholder={monthlyFeeOnly ? 'Monthly' : 'Hourly or Monthly'}
+            placeholder={monthlyFeeOnly ? 'Monthly' : 'Hourly'}
             isSubmitting={isSubmitting}
             required
           />

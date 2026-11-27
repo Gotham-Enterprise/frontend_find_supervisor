@@ -21,6 +21,24 @@ export function isMonthlyOnlySupervisorType(supervisorType: string): boolean {
 export const MONTHLY_ONLY_FEE_TYPE_MESSAGE =
   'Only the Monthly fee type is available for this supervisor type.'
 
+/**
+ * Fee types a supervisor can pick. Medical Directors are monthly-only; everyone
+ * else is hourly-only, since in-app billing covers hourly supervision. A profile
+ * already saved as monthly (from before) keeps that option until they switch.
+ */
+export function allowedSupervisionFeeTypes(
+  supervisorType: string,
+  savedFeeType?: string | null,
+): ('HOURLY' | 'MONTHLY')[] {
+  if (isMonthlyOnlySupervisorType(supervisorType)) return ['MONTHLY']
+  return savedFeeType?.toUpperCase() === 'MONTHLY' ? ['HOURLY', 'MONTHLY'] : ['HOURLY']
+}
+
+/** A non-Medical Director profile still on the retired monthly fee type. */
+export function hasLegacyMonthlyFee(supervisorType: string, feeType?: string | null): boolean {
+  return !isMonthlyOnlySupervisorType(supervisorType) && feeType?.toUpperCase() === 'MONTHLY'
+}
+
 export const PHYSICIAN_CERTIFICATIONS_DISABLED_MESSAGE =
   'Certifications are not required for Collaborating Physicians, Supervising Physicians, or Medical Directors.'
 

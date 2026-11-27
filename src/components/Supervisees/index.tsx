@@ -2,22 +2,41 @@
 
 import {
   AlertCircle,
+  CalendarClock,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  FileSignature,
   FileText,
+  LayoutDashboard,
   MapPin,
   Monitor,
   MoreVertical,
+  NotebookPen,
+  Receipt,
   Star,
   Target,
   Users,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
+import { ActivityLogDialog } from '@/components/ActivityLog/ActivityLogDialog'
 import { AgreementDialog } from '@/components/HiredSupervisors/AgreementDialog'
 import { AgreementStageBadge } from '@/components/HiredSupervisors/AgreementStageBadge'
 import { HireStatusBadge } from '@/components/HiredSupervisors/HireStatusBadge'
+import {
+  HIRE_LIST_GRID,
+  type HireListGroupFilter,
+  HireListHeader,
+  HireListNoResults,
+  HireListToolbar,
+  useDebouncedValue,
+  useHireListView,
+} from '@/components/HireList/HireListToolbar'
+import { HireSessionsDialog } from '@/components/HireSessions/HireSessionsDialog'
+import { MonthlyBillingDialog } from '@/components/MonthlyBilling/MonthlyBillingDialog'
+import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
@@ -27,22 +46,29 @@ import {
   DropdownMenuPortal,
   DropdownMenuPositioner,
   DropdownMenuRoot,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { ACTIVITY_LOG_ENABLED, IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
 import {
+  useHire,
   useHiresList,
   useMyReviews,
   useRemindAgreement,
   useSuperviseeFormOptions,
   useUserSnackbar,
 } from '@/lib/hooks'
+import { cn } from '@/lib/utils'
 import { parseApiError } from '@/lib/utils/error-parser'
+import { hiredListPath } from '@/lib/utils/hire-workroom'
+import { scheduledLastDayLabel, usesInAppMonthlyBilling } from '@/lib/utils/monthly-billing'
 import {
   formatAvailability,
   formatContactNumber,
   formatDate,
+  formatDateOnly,
   formatDisplayName,
   formatLocation,
   formatSupervisionFormat,
@@ -50,26 +76,53 @@ import {
   resolveSupervisorTypeLabel,
 } from '@/lib/utils/profile-formatters'
 import { getAgreementStage, getAgreementStageLabel } from '@/lib/utils/supervision-status'
-import type { HireListItem, HireStatus } from '@/types/hire'
+import type { HireListItem } from '@/types/hire'
 import type { Review } from '@/types/review'
 
+import { EndSupervisionDialog } from './EndSupervisionDialog'
 import { SendAgreementModal } from './SendAgreementModal'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 10
 
-type TabStatus = 'ALL' | 'ACCEPTED' | 'COMPLETED'
-
-const TABS: { id: TabStatus; label: string }[] = [
-  { id: 'ALL', label: 'All' },
-  { id: 'ACCEPTED', label: 'Accepted' },
-  { id: 'COMPLETED', label: 'Completed' },
-]
-
-function isCompletedTabHire(hire: HireListItem): boolean {
-  return hire.status === 'COMPLETED' || (hire.status === 'REVIEWED' && hire.completedAt != null)
+/**
+ * A billing notification links to …?billing=<hireId>. Each card opens its own
+ * dialog when it's the linked hire; this covers a hire that isn't on the page
+ * being shown (another page, group or search), so the link still lands.
+ */
+function DeepLinkedBillingDialog({ items }: { items: HireListItem[] }) {
+  const [{ hireId, periodId }] = useState(() => {
+    const params =
+      typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+    return { hireId: params?.get('billing') ?? null, periodId: params?.get('period') ?? null }
+  })
+  const onPage = hireId != null && items.some((hire) => hire.id === hireId)
+  const { data: hire } = useHire(hireId && !onPage ? hireId : '')
+  const [open, setOpen] = useState(true)
+  if (!hireId || onPage || !hire || !usesInAppMonthlyBilling(hire)) return null
+  return (
+    <MonthlyBillingDialog
+      hireId={hire.id}
+      counterpartName={formatDisplayName(hire.supervisee)}
+      open={open}
+      onOpenChange={setOpen}
+      focusPeriodId={periodId}
+    />
+  )
 }
+
+// Pending requests are handled (accepted/declined) on Supervision Requests, so
+// this page doesn't offer a Pending filter.
+type SuperviseeListGroup = Exclude<HireListGroupFilter, 'pending'>
+
+const SUPERVISEE_LIST_GROUPS: readonly SuperviseeListGroup[] = [
+  'all',
+  'needs_action',
+  'active',
+  'completed',
+  'closed',
+]
 
 // ─── Detail cell ──────────────────────────────────────────────────────────────
 
@@ -130,37 +183,59 @@ function SuperviseesSkeleton() {
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
-function SuperviseesEmpty({ tab, isMdClients }: { tab: TabStatus; isMdClients: boolean }) {
-  const messages: Record<TabStatus, { title: string; body: string }> = isMdClients
+function SuperviseesEmpty({
+  group,
+  isMdClients,
+}: {
+  group: SuperviseeListGroup
+  isMdClients: boolean
+}) {
+  const messages: Record<SuperviseeListGroup, { title: string; body: string }> = isMdClients
     ? {
-        ALL: {
+        all: {
           title: 'No medical director clients yet',
           body: 'Once someone hires you as their Medical Director and you accept, they will appear here.',
         },
-        ACCEPTED: {
-          title: 'No accepted clients',
-          body: 'Clients whose requests you have accepted will appear here.',
+        needs_action: {
+          title: "You're all caught up",
+          body: 'Accepted clients still waiting for an agreement from you will appear here.',
         },
-        COMPLETED: {
+        active: {
+          title: 'No active clients',
+          body: 'Clients whose requests you have accepted, including engagements in progress, will appear here.',
+        },
+        completed: {
           title: 'No completed engagements',
           body: 'Engagements that have been marked as completed will appear here.',
         },
+        closed: {
+          title: 'No closed requests',
+          body: 'Requests that were declined or canceled will appear here.',
+        },
       }
     : {
-        ALL: {
+        all: {
           title: 'No supervisees yet',
           body: 'Once supervisees request your supervision and you accept, they will appear here.',
         },
-        ACCEPTED: {
-          title: 'No accepted supervisees',
-          body: 'Supervisees whose requests you have accepted will appear here.',
+        needs_action: {
+          title: "You're all caught up",
+          body: 'Accepted supervisees still waiting for an agreement from you will appear here.',
         },
-        COMPLETED: {
+        active: {
+          title: 'No active supervisees',
+          body: 'Supervisees whose requests you have accepted, including supervision in progress, will appear here.',
+        },
+        completed: {
           title: 'No completed supervisions',
           body: 'Supervisions that have been marked as completed will appear here.',
         },
+        closed: {
+          title: 'No closed requests',
+          body: 'Requests that were declined or canceled will appear here.',
+        },
       }
-  const { title, body } = messages[tab]
+  const { title, body } = messages[group]
 
   return (
     <Card className="border-dashed shadow-sm">
@@ -297,7 +372,7 @@ function SuperviseeDetailsDialog({
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogTitle>Supervisee Details</DialogTitle>
 
         <section className="mt-5">
@@ -331,7 +406,7 @@ function SuperviseeDetailsDialog({
             />
             <DetailItem
               label="Start Date"
-              value={formatDate(hire.startDate ?? hire.preferredStartDate)}
+              value={formatDateOnly(hire.startDate ?? hire.preferredStartDate)}
             />
             {hire.supervisionHours != null && (
               <DetailItem
@@ -403,15 +478,28 @@ function RowActions({
   hire,
   review,
   onViewAgreement,
+  onSendAgreement,
+  onOpenBilling,
+  onOpenActivity,
 }: {
   hire: HireListItem
   review?: Review
   onViewAgreement: () => void
+  onSendAgreement: () => void
+  /** In-app monthly hires: opens the monthly billing dialog. */
+  onOpenBilling?: () => void
+  /** Signed Medical Director hires: opens the activity log. */
+  onOpenActivity?: () => void
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
-  const [sendAgreementOpen, setSendAgreementOpen] = useState(false)
+  const [endOpen, setEndOpen] = useState(false)
   const { showSuccess, showError } = useUserSnackbar()
   const remindMutation = useRemindAgreement()
+  // A monthly hire one side already ended (it runs out with its paid month)
+  // can't be ended again; a fixed term's own end date can still be cut short.
+  const canEnd =
+    (hire.status === 'ACCEPTED' || hire.status === 'ACTIVE') &&
+    !(hire.scheduledEndAt && hire.scheduledEndBy !== 'TERM')
 
   const agreementStage = getAgreementStage(hire)
   const canSendAgreement = hire.status === 'ACCEPTED' && agreementStage === 'NOT_SENT'
@@ -443,20 +531,30 @@ function RowActions({
             <DropdownMenuPopup>
               <DropdownMenuItem onClick={() => setDetailsOpen(true)}>View Details</DropdownMenuItem>
               {canSendAgreement && (
-                <DropdownMenuItem onClick={() => setSendAgreementOpen(true)}>
-                  Send Agreement
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onSendAgreement}>Send Agreement</DropdownMenuItem>
               )}
               {canEditAgreement && (
-                <DropdownMenuItem onClick={() => setSendAgreementOpen(true)}>
-                  Edit Agreement
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onSendAgreement}>Edit Agreement</DropdownMenuItem>
               )}
               {canEditAgreement && (
                 <DropdownMenuItem onClick={handleRemind}>Send Sign Reminder</DropdownMenuItem>
               )}
               {hasAgreement && (
                 <DropdownMenuItem onClick={onViewAgreement}>View Agreement</DropdownMenuItem>
+              )}
+              {onOpenBilling && (
+                <DropdownMenuItem onClick={onOpenBilling}>Monthly Billing</DropdownMenuItem>
+              )}
+              {onOpenActivity && (
+                <DropdownMenuItem onClick={onOpenActivity}>Activity Log</DropdownMenuItem>
+              )}
+              {canEnd && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem destructive onClick={() => setEndOpen(true)}>
+                    End Supervision
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuPopup>
           </DropdownMenuPositioner>
@@ -470,20 +568,43 @@ function RowActions({
         onOpenChange={setDetailsOpen}
       />
 
-      {(canSendAgreement || canEditAgreement) && (
-        <SendAgreementModal
-          open={sendAgreementOpen}
-          onOpenChange={setSendAgreementOpen}
-          hire={hire}
-        />
-      )}
+      {canEnd && <EndSupervisionDialog hire={hire} open={endOpen} onOpenChange={setEndOpen} />}
     </>
   )
 }
 
+/** Deep link from the post-accept dialog: /supervisees?hire=<id>&agreement=send */
+const SEND_AGREEMENT_PARAM = 'agreement'
+const SEND_AGREEMENT_VALUE = 'send'
+
+function isSendAgreementDeepLink(hireId: string): boolean {
+  if (typeof window === 'undefined') return false
+  const params = new URLSearchParams(window.location.search)
+  return params.get('hire') === hireId && params.get(SEND_AGREEMENT_PARAM) === SEND_AGREEMENT_VALUE
+}
+
+/** Drop the one-shot deep-link params so a refresh doesn't reopen the form. */
+function clearSendAgreementDeepLink() {
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  if (url.searchParams.get(SEND_AGREEMENT_PARAM) !== SEND_AGREEMENT_VALUE) return
+  url.searchParams.delete(SEND_AGREEMENT_PARAM)
+  url.searchParams.delete('hire')
+  window.history.replaceState(window.history.state, '', url.toString())
+}
+
 // ─── Supervisee card ──────────────────────────────────────────────────────────
 
-function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review }) {
+function SuperviseeCard({
+  hire,
+  review,
+  layout = 'card',
+}: {
+  hire: HireListItem
+  review?: Review
+  /** 'list' renders a compact row (inside a list container) instead of a card. */
+  layout?: 'card' | 'list'
+}) {
   // Deep link: agreement notifications/emails point to /supervisees?hire=<id>,
   // which auto-opens this card's agreement dialog. Lazy init only (no effect); the
   // dialog renders in a portal, so SSR/hydration output is unaffected.
@@ -495,7 +616,65 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
   )
   const superviseeName = formatDisplayName(hire.supervisee)
   const hasAgreement = hire.agreement != null
-  const isAgreementSigned = hasAgreement && getAgreementStage(hire) === 'SIGNED'
+  const agreementStage = getAgreementStage(hire)
+  const isAgreementSigned = hasAgreement && agreementStage === 'SIGNED'
+  const canSendAgreement = hire.status === 'ACCEPTED' && agreementStage === 'NOT_SENT'
+  const canEditAgreement = hire.status === 'ACCEPTED' && agreementStage === 'AWAITING_SIGNATURE'
+  // Deep link from the post-accept dialog (?hire=<id>&agreement=send) opens the
+  // Send Agreement form straight away. Lazy init only, like the dialogs above.
+  const [sendAgreementOpen, setSendAgreementOpen] = useState(
+    () => canSendAgreement && isSendAgreementDeepLink(hire.id),
+  )
+
+  function handleSendAgreementOpenChange(open: boolean) {
+    setSendAgreementOpen(open)
+    if (!open) clearSendAgreementDeepLink()
+  }
+  // Signed hourly agreement: the supervisor logs sessions in the app.
+  const hasSessions =
+    IN_APP_PAYMENTS_ENABLED && isAgreementSigned && hire.agreement?.hourlyRateCents != null
+  // Signed in-app monthly agreement (Medical Director retainers): months in the billing dialog.
+  const hasMonthlyBilling = usesInAppMonthlyBilling(hire) && isAgreementSigned
+  // Signed, but the supervisee hasn't saved a card: no billing weeks (or months) until they do.
+  const awaitingPaymentSetup =
+    (hasSessions || hasMonthlyBilling) && hire.paymentMethodSavedAt == null
+  // Deep link: monthly billing notifications point to …?billing=<id> (lazy init, as above).
+  const [billingOpen, setBillingOpen] = useState(
+    () =>
+      hasMonthlyBilling &&
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('billing') === hire.id,
+  )
+  // …and `&period=<id>` lands on that month inside the dialog — once: closing the
+  // dialog forgets it, so reopening it by hand doesn't jump back to that month.
+  const [linkedPeriodId, setLinkedPeriodId] = useState(() =>
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('billing') === hire.id
+      ? new URLSearchParams(window.location.search).get('period')
+      : null,
+  )
+  // Signed Medical Director agreement (billed in the app or not): the activity log.
+  const isMedicalDirectorHire = hiredListPath(hire) === '/hired-medical-directors'
+  const hasActivityLog = ACTIVITY_LOG_ENABLED && isAgreementSigned && isMedicalDirectorHire
+  // Medical Director hires have a workroom; its tabs replace the Billing /
+  // Activity dialogs on the card (the dialogs stay for deep links and hourly).
+  const workroomHref = isMedicalDirectorHire ? `/medical-director-clients/${hire.id}` : null
+  // Deep link: activity-log reminders point to …?activity=<id> (lazy init, as above).
+  const [activityOpen, setActivityOpen] = useState(
+    () =>
+      hasActivityLog &&
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('activity') === hire.id,
+  )
+  // End Supervision offered from the billing dialog after 7 days unpaid.
+  const [endForNonPaymentOpen, setEndForNonPaymentOpen] = useState(false)
+  // Deep link: session notifications point to /supervisees?sessions=<id> (lazy init, as above).
+  const [sessionsOpen, setSessionsOpen] = useState(
+    () =>
+      hasSessions &&
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('sessions') === hire.id,
+  )
   const occupation = hire.supervisee.occupation?.name?.trim()
   const specialty = hire.supervisee.specialty?.name?.trim()
   const occupationDisplay =
@@ -505,80 +684,273 @@ function SuperviseeCard({ hire, review }: { hire: HireListItem; review?: Review 
 
   const locationRaw = formatLocation(hire.supervisee.city, hire.supervisee.state)
   const formatRaw = formatSupervisionFormat(hire.preferredFormat)
-  const startDateRaw = formatDate(hire.startDate ?? hire.preferredStartDate)
+  const startDateRaw = formatDateOnly(hire.startDate ?? hire.preferredStartDate)
   const goalsRaw = hire.goals?.trim() || 'Not specified'
+
+  const actionsMenu = (
+    <RowActions
+      hire={hire}
+      review={review}
+      onViewAgreement={() => setViewAgreementOpen(true)}
+      onSendAgreement={() => setSendAgreementOpen(true)}
+      onOpenBilling={hasMonthlyBilling ? () => setBillingOpen(true) : undefined}
+      onOpenActivity={hasActivityLog ? () => setActivityOpen(true) : undefined}
+    />
+  )
+
+  const badges = (
+    <>
+      <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
+      <AgreementStageBadge hire={hire} />
+      {awaitingPaymentSetup && (
+        <Badge
+          variant="outline"
+          className="border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-50"
+        >
+          Payment not set up
+        </Badge>
+      )}
+      {hire.scheduledEndAt && (hire.status === 'ACCEPTED' || hire.status === 'ACTIVE') && (
+        <Badge
+          variant="outline"
+          className="border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-50"
+        >
+          Ends {scheduledLastDayLabel(hire.scheduledEndAt)}
+        </Badge>
+      )}
+      {review && (
+        <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+          <Star className="size-2.5 fill-amber-500 text-amber-500" aria-hidden />
+          {review.rating}/5
+        </span>
+      )}
+    </>
+  )
+
+  // List rows show the one action that matters most right now; the rest stay in the menu.
+  const rowAction = canSendAgreement ? (
+    <Button size="sm" onClick={() => setSendAgreementOpen(true)}>
+      <FileSignature className="size-3.5" aria-hidden />
+      Send Agreement
+    </Button>
+  ) : hasSessions ? (
+    <Button variant="outline" size="sm" onClick={() => setSessionsOpen(true)}>
+      <CalendarClock className="size-3.5" aria-hidden />
+      Sessions
+    </Button>
+  ) : hasMonthlyBilling ? (
+    <Button variant="outline" size="sm" onClick={() => setBillingOpen(true)}>
+      <Receipt className="size-3.5" aria-hidden />
+      Billing
+    </Button>
+  ) : null
 
   return (
     <>
-      <Card className="gap-0 overflow-hidden rounded-xl py-0 shadow-sm">
-        <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
-          <div className="flex min-w-0 flex-1 gap-3">
+      {layout === 'list' ? (
+        <div
+          className={cn(
+            'flex flex-col gap-3 px-4 py-3',
+            HIRE_LIST_GRID,
+            canSendAgreement && 'bg-amber-50/60',
+          )}
+        >
+          <div className="flex min-w-0 items-center gap-3">
             <UserAvatar
               src={hire.supervisee.profilePhotoUrl}
               name={superviseeName}
               alt={`Profile photo of ${superviseeName}`}
-              size="lg"
-              className="mt-0.5 shrink-0"
+              size="md"
+              className="shrink-0"
             />
-            <div className="min-w-0 flex-1">
-              <h3 className="truncate text-sm font-semibold leading-tight tracking-tight text-foreground">
-                {superviseeName}
-              </h3>
-              <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                {occupationDisplay}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-foreground">{superviseeName}</p>
+              <p className="truncate text-xs text-muted-foreground">{occupationDisplay}</p>
+              <p className="truncate text-xs text-muted-foreground lg:hidden">
+                {formatRaw} · Starts {startDateRaw}
               </p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <HireStatusBadge status={hire.status} completedAt={hire.completedAt} />
-                <AgreementStageBadge hire={hire} />
-                {review && (
-                  <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
-                    <Star className="size-2.5 fill-amber-500 text-amber-500" aria-hidden />
-                    {review.rating}/5
-                  </span>
-                )}
-              </div>
             </div>
           </div>
-          <div className="flex shrink-0 self-start">
-            <RowActions
-              hire={hire}
-              review={review}
-              onViewAgreement={() => setViewAgreementOpen(true)}
-            />
+          <div className="flex flex-wrap items-center gap-1.5">{badges}</div>
+          <p className="hidden truncate text-sm text-foreground lg:block">{formatRaw}</p>
+          <p className="hidden truncate text-sm text-foreground lg:block">{startDateRaw}</p>
+          <div className="flex items-center justify-end gap-2">
+            {rowAction}
+            {actionsMenu}
           </div>
         </div>
+      ) : (
+        <Card
+          className={cn(
+            'gap-0 overflow-hidden rounded-xl py-0 shadow-sm',
+            hire.status === 'ACTIVE' && 'border-primary/40',
+          )}
+        >
+          {/* Active supervision gets a green accent so it stands out from accepted-but-not-started. */}
+          {hire.status === 'ACTIVE' && <div className="h-1 bg-primary" aria-hidden />}
+          <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
+            <div className="flex min-w-0 flex-1 gap-3">
+              <UserAvatar
+                src={hire.supervisee.profilePhotoUrl}
+                name={superviseeName}
+                alt={`Profile photo of ${superviseeName}`}
+                size="lg"
+                className="mt-0.5 shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate text-sm font-semibold leading-tight tracking-tight text-foreground">
+                  {superviseeName}
+                </h3>
+                <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                  {occupationDisplay}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">{badges}</div>
+              </div>
+            </div>
+            <div className="flex shrink-0 self-start">{actionsMenu}</div>
+          </div>
 
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/50 px-5 py-4">
-          <DetailCell label="Format" value={formatRaw} icon={Monitor} />
-          <DetailCell label="Start Date" value={startDateRaw} icon={CalendarDays} />
-          <DetailCell label="Location" value={locationRaw} icon={MapPin} />
-          <DetailCell label="Goals" value={goalsRaw} icon={Target} />
-        </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/50 px-5 py-4">
+            <DetailCell label="Format" value={formatRaw} icon={Monitor} />
+            <DetailCell label="Start Date" value={startDateRaw} icon={CalendarDays} />
+            <DetailCell label="Location" value={locationRaw} icon={MapPin} />
+            <DetailCell label="Goals" value={goalsRaw} icon={Target} />
+          </div>
 
-        {isAgreementSigned && (
-          <div className="flex justify-end border-t border-border/50 px-5 py-3">
-            {hire.agreement?.fileUrl ? (
-              <a
-                href={hire.agreement.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          {canSendAgreement && (
+            <div className="flex flex-col gap-3 border-t border-amber-200 bg-amber-50 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-2">
+                <FileSignature className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden />
+                <p className="text-sm text-amber-900">
+                  <span className="font-semibold">Send an agreement to start supervision.</span>{' '}
+                  Supervision doesn&apos;t begin until {superviseeName} signs.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                className="shrink-0 self-stretch sm:self-center"
+                onClick={() => setSendAgreementOpen(true)}
               >
-                <FileText className="size-3.5" aria-hidden />
-                View Signed Agreement
-              </a>
-            ) : (
-              <Button variant="outline" size="sm" onClick={() => setViewAgreementOpen(true)}>
-                <FileText className="size-3.5" aria-hidden />
-                View Signed Agreement
+                <FileSignature className="size-3.5" aria-hidden />
+                Send Agreement
               </Button>
-            )}
-          </div>
-        )}
-      </Card>
+            </div>
+          )}
+
+          {isAgreementSigned && (
+            <div className="flex justify-end gap-2 border-t border-border/50 px-5 py-3">
+              {hasSessions && (
+                <Button size="sm" onClick={() => setSessionsOpen(true)}>
+                  <CalendarClock className="size-3.5" aria-hidden />
+                  Sessions
+                </Button>
+              )}
+              {workroomHref && (
+                <Link href={workroomHref} className={buttonVariants({ size: 'sm' })}>
+                  <LayoutDashboard className="size-3.5" aria-hidden />
+                  Workroom
+                </Link>
+              )}
+              {hasMonthlyBilling &&
+                (workroomHref ? (
+                  <Link
+                    href={`${workroomHref}?tab=billing`}
+                    className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                  >
+                    <Receipt className="size-3.5" aria-hidden />
+                    Billing
+                  </Link>
+                ) : (
+                  <Button size="sm" onClick={() => setBillingOpen(true)}>
+                    <Receipt className="size-3.5" aria-hidden />
+                    Billing
+                  </Button>
+                ))}
+              {hasActivityLog &&
+                (workroomHref ? (
+                  <Link
+                    href={`${workroomHref}?tab=activity`}
+                    className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                  >
+                    <NotebookPen className="size-3.5" aria-hidden />
+                    Activity Log
+                  </Link>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => setActivityOpen(true)}>
+                    <NotebookPen className="size-3.5" aria-hidden />
+                    Activity Log
+                  </Button>
+                ))}
+              {hire.agreement?.fileUrl ? (
+                <a
+                  href={hire.agreement.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                >
+                  <FileText className="size-3.5" aria-hidden />
+                  View Signed Agreement
+                </a>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => setViewAgreementOpen(true)}>
+                  <FileText className="size-3.5" aria-hidden />
+                  View Signed Agreement
+                </Button>
+              )}
+            </div>
+          )}
+        </Card>
+      )}
 
       {hasAgreement && (
         <AgreementDialog hire={hire} open={viewAgreementOpen} onOpenChange={setViewAgreementOpen} />
+      )}
+
+      {(canSendAgreement || canEditAgreement) && (
+        <SendAgreementModal
+          open={sendAgreementOpen}
+          onOpenChange={handleSendAgreementOpenChange}
+          hire={hire}
+        />
+      )}
+
+      {hasSessions && (
+        <HireSessionsDialog
+          hireId={hire.id}
+          counterpartName={superviseeName}
+          open={sessionsOpen}
+          onOpenChange={setSessionsOpen}
+        />
+      )}
+
+      {hasActivityLog && (
+        <ActivityLogDialog
+          hireId={hire.id}
+          clientName={superviseeName}
+          open={activityOpen}
+          onOpenChange={setActivityOpen}
+        />
+      )}
+
+      {hasMonthlyBilling && (
+        <>
+          <MonthlyBillingDialog
+            hireId={hire.id}
+            counterpartName={superviseeName}
+            open={billingOpen}
+            onOpenChange={(open) => {
+              setBillingOpen(open)
+              if (!open) setLinkedPeriodId(null)
+            }}
+            onEndSupervision={() => setEndForNonPaymentOpen(true)}
+            focusPeriodId={linkedPeriodId}
+          />
+          <EndSupervisionDialog
+            hire={hire}
+            open={endForNonPaymentOpen}
+            onOpenChange={setEndForNonPaymentOpen}
+          />
+        </>
       )}
     </>
   )
@@ -590,21 +962,27 @@ export type SuperviseesPageMode = 'supervisors' | 'medical-directors'
 
 export function SuperviseesPage({ mode = 'supervisors' }: { mode?: SuperviseesPageMode }) {
   const isMdClients = mode === 'medical-directors'
-  const [activeTab, setActiveTab] = useState<TabStatus>('ACCEPTED')
+  // Opens on Active, as before the filters existed: the current supervision work.
+  const [group, setGroup] = useState<SuperviseeListGroup>('active')
   const [page, setPage] = useState(1)
-
-  const isCompletedTab = activeTab === 'COMPLETED'
-  /** Completed tab loads all hires and filters/paginates on the client; other tabs use API filters. */
-  const apiPage = isCompletedTab ? 1 : page
-  const apiLimit = isCompletedTab ? 0 : PAGE_SIZE
-  const apiStatus = activeTab === 'ACCEPTED' ? ('ACCEPTED' satisfies HireStatus) : undefined
+  const [search, setSearch] = useState('')
+  const [view, setView] = useHireListView(
+    isMdClients ? 'medical-director-clients:view' : 'supervisees:view',
+  )
+  const debouncedSearch = useDebouncedValue(search)
 
   const { data, isLoading, isError } = useHiresList(
-    apiPage,
-    apiLimit,
-    apiStatus,
+    page,
+    PAGE_SIZE,
+    undefined,
     // Scoped by the role they hired this supervisor for (hire snapshot)
     isMdClients ? 'medicalDirectors' : 'supervisors',
+    {
+      search: debouncedSearch,
+      group: group === 'all' ? undefined : group,
+      // Requests awaiting a decision live on Supervision Requests (Accept/Decline).
+      excludePending: true,
+    },
   )
   // Reviews received by the authenticated supervisor (role-scoped on the backend),
   // joined to hires client-side — same pattern as the supervisee's /hired-supervisors page.
@@ -620,62 +998,49 @@ export function SuperviseesPage({ mode = 'supervisors' }: { mode?: SuperviseesPa
     [reviewsData?.items],
   )
 
-  const rawItems = useMemo(() => data?.items ?? [], [data?.items])
+  const items = data?.items ?? []
+  const totalCount = data?.totalCount ?? 0
+  const totalPages = Math.max(1, data?.totalPages ?? 1)
+  const isSearching = debouncedSearch.trim() !== ''
 
-  const completedMatches = useMemo(() => rawItems.filter(isCompletedTabHire), [rawItems])
+  function handleGroupChange(next: SuperviseeListGroup) {
+    setGroup(next)
+    setPage(1)
+  }
 
-  const items = useMemo(() => {
-    if (!isCompletedTab) {
-      return rawItems
-    }
-    const start = (page - 1) * PAGE_SIZE
-    return completedMatches.slice(start, start + PAGE_SIZE)
-  }, [isCompletedTab, rawItems, completedMatches, page])
+  function handleSearchChange(value: string) {
+    setSearch(value)
+    setPage(1)
+  }
 
-  const totalCount = isCompletedTab ? completedMatches.length : (data?.totalCount ?? 0)
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
-
-  function handleTabChange(tab: TabStatus) {
-    setActiveTab(tab)
+  function clearFilters() {
+    setSearch('')
+    setGroup('all')
     setPage(1)
   }
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          {isMdClients ? 'Medical Director Clients' : 'My Supervisees'}
-        </h2>
+      {/* The page title is in the top bar; only its description here. */}
+      <div>
         <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
           {isMdClients
-            ? 'Everyone who has hired you as their Medical Director is listed here. Use the tabs to filter by status, and open the menu on any card to view full profile and engagement details.'
-            : 'Everyone who has requested your supervision is listed here. Use the tabs to filter by status, and open the menu on any card to view full profile and supervision details.'}
+            ? 'Clients you’ve accepted as their Medical Director are listed here, including completed and closed engagements. New requests are on Supervision Requests. Search by name or filter by status, and open the menu on any client to view full profile and engagement details.'
+            : 'Supervisees you’ve accepted are listed here, including completed and closed supervisions. New requests are on Supervision Requests. Search by name or filter by status, and open the menu on any supervisee to view full profile and supervision details.'}
         </p>
       </div>
 
-      {/* Status filter tabs */}
-      <div
-        className="flex flex-wrap gap-2"
-        role="tablist"
-        aria-label="Filter supervisees by status"
-      >
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            onClick={() => handleTabChange(tab.id)}
-            className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-border bg-background text-foreground hover:bg-muted'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <HireListToolbar
+        search={search}
+        onSearchChange={handleSearchChange}
+        searchPlaceholder={isMdClients ? 'Search clients by name' : 'Search supervisees by name'}
+        group={group}
+        onGroupChange={(next) => handleGroupChange(next as SuperviseeListGroup)}
+        groups={SUPERVISEE_LIST_GROUPS}
+        view={view}
+        onViewChange={setView}
+        groupLabel={isMdClients ? 'Filter clients by status' : 'Filter supervisees by status'}
+      />
 
       {/* ── Content ──────────────────────────────────────────────────── */}
       {isLoading ? (
@@ -683,14 +1048,33 @@ export function SuperviseesPage({ mode = 'supervisors' }: { mode?: SuperviseesPa
       ) : isError ? (
         <SuperviseesError />
       ) : items.length === 0 ? (
-        <SuperviseesEmpty tab={activeTab} isMdClients={isMdClients} />
+        isSearching ? (
+          <HireListNoResults onClear={clearFilters} />
+        ) : (
+          <SuperviseesEmpty group={group} isMdClients={isMdClients} />
+        )
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {items.map((hire) => (
-              <SuperviseeCard key={hire.id} hire={hire} review={reviewsByHireId.get(hire.id)} />
-            ))}
-          </div>
+          <DeepLinkedBillingDialog items={items} />
+          {view === 'list' ? (
+            <Card className="gap-0 divide-y divide-border/60 overflow-hidden rounded-xl py-0 shadow-sm">
+              <HireListHeader detailLabel="Format" dateLabel="Start date" />
+              {items.map((hire) => (
+                <SuperviseeCard
+                  key={hire.id}
+                  hire={hire}
+                  review={reviewsByHireId.get(hire.id)}
+                  layout="list"
+                />
+              ))}
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {items.map((hire) => (
+                <SuperviseeCard key={hire.id} hire={hire} review={reviewsByHireId.get(hire.id)} />
+              ))}
+            </div>
+          )}
 
           {totalPages > 1 && (
             <Pagination

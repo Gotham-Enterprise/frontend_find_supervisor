@@ -12,6 +12,7 @@ import { DisabledWithTooltip } from '@/components/ui/tooltip'
 import { isSupervisorRole } from '@/lib/auth/roles'
 import { useConversations, useSupervisorProfile, useUser } from '@/lib/hooks'
 import { useCheckConnectionAvailability } from '@/lib/hooks/useConnections'
+import { pickConversation } from '@/lib/utils/chat-rooms'
 import { formatPronouns, getVisiblePronounLabels } from '@/lib/utils/identity-display'
 import { getMakeConnectionAccess } from '@/lib/utils/make-connection-access'
 import {
@@ -139,7 +140,8 @@ export function SuperviseeProfileHero({ profile }: SuperviseeProfileHeroProps) {
   // Shown only when the supervisee opted in (the API strips it for other viewers anyway).
   const pronouns = formatPronouns(getVisiblePronounLabels(user))
 
-  const existingConversation = conversations?.find((c) => c.superviseeId === user.id)
+  // One room per hire: open the current hire's room with this supervisee.
+  const existingConversation = pickConversation(conversations, (c) => c.superviseeId === user.id)
   const isInMyHireList = profile.isInMyHireList ?? false
 
   const connectionAccess = useMemo(

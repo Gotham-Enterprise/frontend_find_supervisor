@@ -1,14 +1,28 @@
 'use client'
 
 import {
+  AlertTriangle,
+  Banknote,
   BellRing,
   Calendar,
+  CalendarCheck,
+  CalendarPlus,
+  CalendarX,
   CheckCircle2,
+  ClipboardCheck,
+  CreditCard,
   Eye,
   FileCheck2,
   FileSignature,
+  Flag,
+  Landmark,
+  Lock,
+  LockOpen,
   MessageCircle,
   MinusCircle,
+  RotateCcw,
+  Scale,
+  Unlink,
   UserCheck,
   XCircle,
 } from 'lucide-react'
@@ -82,6 +96,54 @@ const TYPE_CONFIG: Record<NotificationType, TypeConfig> = {
     iconColor: 'text-amber-600',
     iconBg: 'bg-amber-50',
   },
+  // Money in, money out: green; problems: red; things to review: amber.
+  completed_hire: { icon: CheckCircle2, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50' },
+  supervision_ended: { icon: MinusCircle, iconColor: 'text-muted-foreground', iconBg: 'bg-muted' },
+  prepay_paid: { icon: CreditCard, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50' },
+  prepay_failed: {
+    icon: AlertTriangle,
+    iconColor: 'text-destructive',
+    iconBg: 'bg-destructive/10',
+  },
+  prepay_refunded: { icon: RotateCcw, iconColor: 'text-blue-500', iconBg: 'bg-blue-50' },
+  week_paid: { icon: Banknote, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50' },
+  payout_paid: { icon: Landmark, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50' },
+  payout_failed: {
+    icon: AlertTriangle,
+    iconColor: 'text-destructive',
+    iconBg: 'bg-destructive/10',
+  },
+  payouts_disconnected: {
+    icon: Unlink,
+    iconColor: 'text-destructive',
+    iconBg: 'bg-destructive/10',
+  },
+  sessions_review: { icon: ClipboardCheck, iconColor: 'text-amber-600', iconBg: 'bg-amber-50' },
+  sessions_approved: { icon: CheckCircle2, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50' },
+  sessions_disputed: { icon: Flag, iconColor: 'text-destructive', iconBg: 'bg-destructive/10' },
+  dispute_resolved: { icon: Scale, iconColor: 'text-violet-500', iconBg: 'bg-violet-50' },
+  late_session_added: { icon: CalendarPlus, iconColor: 'text-amber-600', iconBg: 'bg-amber-50' },
+  late_session_approved: {
+    icon: CalendarCheck,
+    iconColor: 'text-emerald-600',
+    iconBg: 'bg-emerald-50',
+  },
+  late_session_rejected: {
+    icon: CalendarX,
+    iconColor: 'text-muted-foreground',
+    iconBg: 'bg-muted',
+  },
+  late_entry_request_dismissed: {
+    icon: CalendarX,
+    iconColor: 'text-muted-foreground',
+    iconBg: 'bg-muted',
+  },
+  billing_hold_started: {
+    icon: Lock,
+    iconColor: 'text-destructive',
+    iconBg: 'bg-destructive/10',
+  },
+  billing_hold_lifted: { icon: LockOpen, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50' },
 }
 
 /** Label shown after the user takes an inline CTA action */

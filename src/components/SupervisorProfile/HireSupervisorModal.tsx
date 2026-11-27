@@ -258,7 +258,7 @@ export function HireSupervisorModal({
 
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh]">
+      <DialogContent className="max-w-2xl max-h-[90vh]">
         <DialogTitle className="mb-1">
           {hireContext === 'medical-director' ? 'Hire as Medical Director' : 'Hire as Supervisor'}
         </DialogTitle>

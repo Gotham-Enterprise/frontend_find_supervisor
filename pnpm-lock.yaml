@@ -17,6 +17,12 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.71.2(react@19.2.3))
+      '@stripe/connect-js':
+        specifier: ^3.4.6
+        version: 3.4.6
+      '@stripe/react-connect-js':
+        specifier: ^3.4.4
+        version: 3.4.4(@stripe/connect-js@3.4.6)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@stripe/react-stripe-js':
         specifier: ^6.1.0
         version: 6.2.0(@stripe/stripe-js@9.2.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -928,6 +934,16 @@ packages:
 
   '@standard-schema/utils@0.3.0':
     resolution: {integrity: sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g==}
+
+  '@stripe/connect-js@3.4.6':
+    resolution: {integrity: sha512-fuC/U/ONDBMKwTBxKAnEBQH+m0x+Tze62/bV1ZDLT7oRnsJgddEnRi7FzdwIxz9pmFZhOJpSaikLIBw9g/1o1w==}
+
+  '@stripe/react-connect-js@3.4.4':
+    resolution: {integrity: sha512-LUtVcGwnkOU9SO1t6j/kAhc89tMCPpFzXz+LU+fhJkOVSDFy8lnidd+t0vNmkVvVU3o8wNVvWgUMxRHL/d1QhQ==}
+    peerDependencies:
+      '@stripe/connect-js': '>=3.4.6'
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
 
   '@stripe/react-stripe-js@6.2.0':
     resolution: {integrity: sha512-GSCErjljZEQv9LaxP30xGOwstcMyyUzb5JyihXwvjOU95yrfhbiPG4K2KkwxYxn+WY0/AyHsRhPPoGRw7urBzg==}
@@ -4667,6 +4683,14 @@ snapshots:
   '@standard-schema/spec@1.1.0': {}
 
   '@standard-schema/utils@0.3.0': {}
+
+  '@stripe/connect-js@3.4.6': {}
+
+  '@stripe/react-connect-js@3.4.4(@stripe/connect-js@3.4.6)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      '@stripe/connect-js': 3.4.6
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
 
   '@stripe/react-stripe-js@6.2.0(@stripe/stripe-js@9.2.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
     dependencies:

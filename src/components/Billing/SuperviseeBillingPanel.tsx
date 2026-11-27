@@ -1,0 +1,878 @@
+'use client'
+
+import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
+import {
+  AlertCircle,
+  ChevronDown,
+  CreditCard,
+  Download,
+  ExternalLink,
+  Lock,
+  Plus,
+  Receipt,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
+
+import { OverCapBadge } from '@/components/HireSessions/OverCapBadge'
+import { SuperviseeRouteGuard } from '@/components/Layout/SuperviseeRouteGuard'
+import { MonthlyPaymentsCard } from '@/components/MonthlyBilling/MonthlyPaymentsCard'
+import { Badge } from '@/components/ui/badge'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { DialogContent, DialogRoot, DialogTitle } from '@/components/ui/dialog'
+import { Skeleton } from '@/components/ui/skeleton'
+import { exportSuperviseePayments, getSuperviseeReceiptUrl } from '@/lib/api/supervision'
+import { IN_APP_PAYMENTS_ENABLED } from '@/lib/constants/feature-flags'
+import {
+  useCreateSuperviseeCardSetupIntent,
+  useRefreshSuperviseeCards,
+  useRemoveSuperviseeCard,
+  useSuperviseeCards,
+  useSuperviseePayments,
+  useUserSnackbar,
+} from '@/lib/hooks'
+import { stripePromise } from '@/lib/stripe/client'
+import {
+  formatCalendarDate,
+  formatDuration,
+  formatEasternDate,
+  formatEasternDateTime,
+  formatWeekRange,
+  toEasternISODate,
+} from '@/lib/utils/date'
+import { parseApiError } from '@/lib/utils/error-parser'
+import {
+  chargeFailureText,
+  chargeRoundText,
+  MAX_CHARGE_ROUNDS,
+  overCapMinutesOf,
+  superviseeHoldText,
+} from '@/lib/utils/hourly-billing'
+import { formatUsdCents } from '@/lib/utils/money'
+import type { SuperviseePaymentWeek, SuperviseeSavedCard } from '@/types/payouts'
+
+import { SuperviseeWeekCard } from './SuperviseeWeekCard'
+
+const PAGE_SIZE = 10
+
+function cardLabel(card: SuperviseeSavedCard): string {
+  const brand = card.brand ? card.brand[0].toUpperCase() + card.brand.slice(1) : 'Card'
+  return `${brand} •••• ${card.last4 ?? '????'}`
+}
+
+function cardExpiry(card: SuperviseeSavedCard): string | null {
+  return card.expMonth && card.expYear
+    ? `Expires ${String(card.expMonth).padStart(2, '0')}/${String(card.expYear).slice(-2)}`
+    : null
+}
+
+// ─── Add card dialog ──────────────────────────────────────────────────────────
+
+function AddCardFields({ onSaved }: { onSaved: () => void }) {
+  const stripe = useStripe()
+  const elements = useElements()
+  const [isConfirming, setIsConfirming] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit() {
+    if (!stripe || !elements) return
+    setIsConfirming(true)
+    setError(null)
+    const result = await stripe.confirmSetup({
+      elements,
+      confirmParams: { return_url: window.location.href },
+      redirect: 'if_required',
+    })
+    setIsConfirming(false)
+    if (result.error) {
+      setError(result.error.message ?? 'We could not save this card. Please try another.')
+      return
+    }
+    onSaved()
+  }
+
+  return (
+    <div className="space-y-3">
+      <PaymentElement
+        options={{
+          layout: 'tabs',
+          wallets: { link: 'never' },
+          defaultValues: { billingDetails: { address: { country: 'US' } } },
+        }}
+      />
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        Nothing is charged when you save a card. You choose which saved card pays for each
+        supervision agreement when you sign it.
+      </p>
+      <Button className="w-full" disabled={!stripe || isConfirming} onClick={handleSubmit}>
+        {isConfirming ? 'Saving…' : 'Save Card'}
+      </Button>
+    </div>
+  )
+}
+
+function AddCardDialog({
+  open,
+  onOpenChange,
+  onSaved,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSaved: () => void
+}) {
+  const { mutateAsync: createSetupIntent } = useCreateSuperviseeCardSetupIntent()
+  const { showError } = useUserSnackbar()
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
+
+  // Fresh SetupIntent each time the dialog opens; a used one can't be confirmed again.
+  useEffect(() => {
+    if (!open) {
+      setClientSecret(null)
+      return
+    }
+    let cancelled = false
+    createSetupIntent()
+      .then(({ clientSecret: secret }) => {
+        if (!cancelled) setClientSecret(secret)
+      })
+      .catch((err) => {
+        showError(parseApiError(err))
+        onOpenChange(false)
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per open
+  }, [open])
+
+  return (
+    <DialogRoot open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[min(92vh,1000px)] max-w-2xl">
+        <DialogTitle>Add a card</DialogTitle>
+        <p className="mb-4 mt-1 text-sm text-muted-foreground">
+          Saved to your account for your weekly supervision payments.
+        </p>
+        {!clientSecret || !stripePromise ? (
+          <div className="space-y-3">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ) : (
+          <Elements
+            stripe={stripePromise}
+            options={{
+              clientSecret,
+              appearance: {
+                theme: 'flat',
+                variables: { colorPrimary: '#006d36', borderRadius: '10px', fontSizeBase: '14px' },
+              },
+            }}
+          >
+            <AddCardFields onSaved={onSaved} />
+          </Elements>
+        )}
+      </DialogContent>
+    </DialogRoot>
+  )
+}
+
+// ─── Saved cards ──────────────────────────────────────────────────────────────
+
+function SavedCardsCard() {
+  const { data, isLoading, isError, refetch } = useSuperviseeCards()
+  const refreshCards = useRefreshSuperviseeCards()
+  const removeMutation = useRemoveSuperviseeCard()
+  const { showSuccess, showError } = useUserSnackbar()
+  const [addOpen, setAddOpen] = useState(false)
+  const [removing, setRemoving] = useState<SuperviseeSavedCard | null>(null)
+
+  function handleSaved() {
+    setAddOpen(false)
+    void refreshCards()
+    showSuccess('Card saved.', {
+      description: 'You can pick it when you sign your next agreement.',
+    })
+  }
+
+  function handleRemove() {
+    if (!removing) return
+    removeMutation.mutate(removing.id, {
+      onSuccess: () => {
+        showSuccess('Card removed.')
+        setRemoving(null)
+      },
+      onError: (err) => {
+        showError(parseApiError(err))
+        setRemoving(null)
+      },
+    })
+  }
+
+  const cards = data?.cards ?? []
+
+  return (
+    <Card>
+      <CardHeader className="border-b">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <CreditCard className="size-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle>Saved cards</CardTitle>
+              <CardDescription className="mt-0.5">
+                Cards for your weekly supervision payments. One card can pay for several
+                supervisors.
+              </CardDescription>
+            </div>
+          </div>
+          <Button size="sm" className="shrink-0" onClick={() => setAddOpen(true)}>
+            <Plus className="size-3.5" aria-hidden />
+            Add card
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-4">
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
+          </div>
+        ) : isError ? (
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">We couldn&apos;t load your cards.</p>
+            <Button variant="outline" size="sm" onClick={() => void refetch()}>
+              <RefreshCw className="mr-2 size-4" />
+              Retry
+            </Button>
+          </div>
+        ) : cards.length === 0 ? (
+          <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
+            No saved cards yet. You&apos;ll be asked for one when you sign an hourly supervision
+            agreement, or add one now.
+          </p>
+        ) : (
+          <ul className="divide-y rounded-lg border">
+            {cards.map((card) => {
+              const inUse = card.inUseBy.length > 0
+              // A backup card can be removed: the backend just clears those backups.
+              const backupFor = card.backupFor ?? []
+              const expiry = cardExpiry(card)
+              return (
+                <li key={card.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">{cardLabel(card)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {expiry}
+                      {inUse && (
+                        <>
+                          {expiry ? ' · ' : ''}
+                          Pays for{' '}
+                          {card.inUseBy
+                            .map((hire) => hire.supervisorName ?? 'a supervisor')
+                            .join(', ')}
+                        </>
+                      )}
+                      {backupFor.length > 0 && (
+                        <>
+                          {expiry || inUse ? ' · ' : ''}
+                          Backup for{' '}
+                          {backupFor
+                            .map((hire) => hire.supervisorName ?? 'a supervisor')
+                            .join(', ')}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {inUse && (
+                      <Badge
+                        variant="outline"
+                        className="border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-50"
+                      >
+                        In use
+                      </Badge>
+                    )}
+                    {backupFor.map((hire) => (
+                      <Badge
+                        key={hire.hireId}
+                        variant="outline"
+                        className="border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-50"
+                      >
+                        Backup for {hire.supervisorName ?? 'a supervisor'}
+                      </Badge>
+                    ))}
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Remove ${cardLabel(card)}`}
+                      disabled={inUse || removeMutation.isPending}
+                      title={
+                        inUse
+                          ? 'Change the card on that supervision first, then remove this one.'
+                          : undefined
+                      }
+                      onClick={() => setRemoving(card)}
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                    </Button>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+        <p className="mt-3 text-xs text-muted-foreground">
+          Cards are stored securely by Stripe. Your full card number is never stored by Find a
+          Supervisor.
+        </p>
+      </CardContent>
+
+      <AddCardDialog open={addOpen} onOpenChange={setAddOpen} onSaved={handleSaved} />
+
+      <ConfirmDialog
+        open={removing != null}
+        onOpenChange={(open) => !open && setRemoving(null)}
+        title="Remove this card?"
+        description={
+          removing
+            ? `${cardLabel(removing)} will be removed from your account.${
+                (removing.backupFor ?? []).length > 0
+                  ? ` It's the backup card for ${removing.backupFor.map((h) => h.supervisorName ?? 'a supervisor').join(', ')}; that backup is cleared.`
+                  : ''
+              } You can add it again later.`
+            : ''
+        }
+        confirmLabel="Remove card"
+        destructive
+        isPending={removeMutation.isPending}
+        onConfirm={handleRemove}
+      />
+    </Card>
+  )
+}
+
+// ─── Payment history ──────────────────────────────────────────────────────────
+
+/** Where the week stands for the payer, with the date that matters next. */
+function weekState(week: SuperviseePaymentWeek): { text: string; className: string } {
+  if (week.prepayStatus === 'FAILED') {
+    return {
+      text:
+        week.chargeAttempts >= MAX_CHARGE_ROUNDS
+          ? `Payment failed ${chargeRoundText(week.chargeAttempts)} · Pay now`
+          : `Payment failed (${chargeRoundText(week.chargeAttempts)}) · trying again`,
+      className: 'text-destructive',
+    }
+  }
+  if (week.status === 'SETTLED' && week.prepayStatus === 'CANCELED') {
+    // Closed at $0 while unpaid: nothing was ever charged for this week.
+    return { text: 'Closed · nothing charged', className: 'text-muted-foreground' }
+  }
+  if (week.status === 'SETTLED') {
+    const when = week.settledAt ? ` ${formatEasternDate(week.settledAt)}` : ''
+    return { text: `Settled${when}`, className: 'text-muted-foreground' }
+  }
+  if (week.status === 'DISPUTED')
+    return { text: 'Disputed · with Gotham support', className: 'text-destructive' }
+  if (week.status === 'IN_REVIEW')
+    return {
+      text: `Review by ${formatEasternDate(week.reviewEndsAt)}`,
+      className: 'text-amber-700',
+    }
+  if (week.status === 'APPROVED')
+    return { text: 'Approved · settling', className: 'text-muted-foreground' }
+  if (week.prepayStatus === 'PENDING' && week.status !== 'OPEN')
+    return { text: 'Charging your card', className: 'text-muted-foreground' }
+  return {
+    text: `Logging until ${formatEasternDate(week.logDeadlineAt)} · charged ${formatCalendarDate(week.chargeDate)}`,
+    className: 'text-muted-foreground',
+  }
+}
+
+function approvedByText(week: SuperviseePaymentWeek): string {
+  switch (week.approvedBy) {
+    case 'SUPERVISEE':
+      return 'by you'
+    case 'SUPPORT':
+      return 'by Gotham support'
+    case 'AUTO':
+      return 'automatically after the review'
+    default:
+      return ''
+  }
+}
+
+/** Opens Stripe's receipt in a new tab once the link is fetched (tab opened in the click). */
+function ReceiptButton({ weekId }: { weekId: string }) {
+  const [loading, setLoading] = useState(false)
+  const { showError } = useUserSnackbar()
+  async function open() {
+    const tab = window.open('', '_blank')
+    setLoading(true)
+    try {
+      const url = await getSuperviseeReceiptUrl(weekId)
+      if (tab) tab.location.href = url
+      else window.location.assign(url)
+    } catch (err) {
+      tab?.close()
+      showError(parseApiError(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+  return (
+    <Button variant="outline" size="sm" disabled={loading} onClick={() => void open()}>
+      <ExternalLink className="size-3.5" />
+      {loading ? 'Opening…' : 'View receipt'}
+    </Button>
+  )
+}
+
+/** The week's money from the payer's side, its timeline, and what they can do about it. */
+function WeekDetails({ week }: { week: SuperviseePaymentWeek }) {
+  const charged = week.prepayStatus === 'PAID'
+  const latePaid = week.lateEntries.filter((l) => l.chargeStatus === 'PAID')
+  const lateCents = latePaid.reduce((sum, l) => sum + l.totalCents, 0)
+
+  const timeline: { label: string; value: string }[] = []
+  timeline.push({ label: 'Logging deadline', value: formatEasternDateTime(week.logDeadlineAt) })
+  if (week.paidAt) timeline.push({ label: 'Charged', value: formatEasternDate(week.paidAt) })
+  else if (week.prepayStatus === 'FAILED')
+    timeline.push({
+      label: 'Payment',
+      value: `Didn't go through${week.failedAt ? ` ${formatEasternDate(week.failedAt)}` : ''} (${chargeRoundText(week.chargeAttempts)})`,
+    })
+  else if (week.prepayStatus === 'PENDING')
+    timeline.push({ label: 'Charged', value: formatCalendarDate(week.chargeDate) })
+  if (week.disputedAt)
+    timeline.push({ label: 'Disputed', value: formatEasternDate(week.disputedAt) })
+  if (week.approvedAt) {
+    timeline.push({
+      label: 'Approved',
+      value: `${formatEasternDate(week.approvedAt)} ${approvedByText(week)}`.trim(),
+    })
+  } else if (week.status !== 'SETTLED') {
+    timeline.push({ label: 'Review ends', value: formatEasternDateTime(week.reviewEndsAt) })
+  }
+  if (week.settledAt) timeline.push({ label: 'Settled', value: formatEasternDate(week.settledAt) })
+
+  return (
+    <div className="grid gap-4 border-t bg-muted/20 px-4 py-3 sm:grid-cols-2">
+      <div>
+        <p className="text-xs font-medium text-foreground">
+          {week.estimated ? 'Estimated cost' : 'Your cost'}
+        </p>
+        <dl className="mt-1.5 space-y-1 text-sm">
+          <div className="flex justify-between gap-4">
+            <dt className="text-muted-foreground">
+              Supervision ({formatDuration(week.billedMinutes)} ×{' '}
+              {formatUsdCents(week.hourlyRateCents)}/h)
+            </dt>
+            <dd className="tabular-nums text-foreground">
+              {formatUsdCents(week.hoursChargeCents)}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-muted-foreground">Service fee</dt>
+            <dd className="tabular-nums text-foreground">{formatUsdCents(week.serviceFeeCents)}</dd>
+          </div>
+          {lateCents > 0 && (
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">Late sessions, charged separately</dt>
+              <dd className="tabular-nums text-foreground">{formatUsdCents(lateCents)}</dd>
+            </div>
+          )}
+          <div className="flex justify-between gap-4 border-t pt-1 font-medium">
+            <dt className="text-foreground">Your cost</dt>
+            <dd className="tabular-nums text-foreground">
+              {week.estimated ? '≈ ' : ''}
+              {formatUsdCents(week.costCents)}
+            </dd>
+          </div>
+        </dl>
+        {week.estimated && week.approvedMinutes == null && (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Based on the hours logged so far; your card is charged for them after Friday&apos;s
+            cutoff, and you review them over the weekend.
+          </p>
+        )}
+        {charged && (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {formatUsdCents(week.totalCents)} was charged
+            {week.paidAt ? ` on ${formatEasternDate(week.paidAt)}` : ''} for{' '}
+            {formatDuration(week.loggedMinutes)} logged + service fee.{' '}
+            {week.status === 'SETTLED'
+              ? week.refundCents
+                ? `${formatUsdCents(week.refundCents)} went back to your card${week.settledAt ? ` on ${formatEasternDate(week.settledAt)}` : ''} after the review lowered the hours. The service fee isn't returned.`
+                : null
+              : week.expectedRefundCents > 0
+                ? `${week.estimated ? 'About ' : ''}${formatUsdCents(week.expectedRefundCents)} for the hours goes back to your card once the week settles. The service fee isn't returned.`
+                : "If a problem report lowers the hours, the difference for those hours goes back to your card. The service fee isn't returned."}
+          </p>
+        )}
+        {week.prepayStatus === 'PENDING' && week.status === 'OPEN' && (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {week.loggedMinutes > 0
+              ? `About ${formatUsdCents(week.totalCents)} for ${formatDuration(week.loggedMinutes)} so far · charged after Friday's cutoff (${formatCalendarDate(week.chargeDate)}).`
+              : `Nothing logged yet · charged after Friday's cutoff (${formatCalendarDate(week.chargeDate)}) for the hours logged, or nothing if none.`}
+          </p>
+        )}
+        {week.prepayStatus === 'FAILED' && (
+          <p className="mt-1.5 text-xs text-destructive">
+            {chargeFailureText(week.chargeAttempts)}
+          </p>
+        )}
+        {latePaid.length > 0 && (
+          <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+            {latePaid.map((l) => (
+              <li key={l.id}>
+                {formatCalendarDate(l.sessionDate)} · {formatDuration(l.durationMinutes)} ·{' '}
+                {formatUsdCents(l.totalCents)}
+                {l.paidAt ? ` · charged ${formatEasternDate(l.paidAt)}` : ''}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div>
+        <p className="text-xs font-medium text-foreground">Timeline</p>
+        <dl className="mt-1.5 space-y-1 text-sm">
+          {timeline.map((row) => (
+            <div key={row.label} className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">{row.label}</dt>
+              <dd className="text-right text-foreground">{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="mt-3 flex flex-wrap justify-end gap-2">
+          {week.hasReceipt && <ReceiptButton weekId={week.id} />}
+          {week.canPayNow && (
+            <Link href={week.sessionsPath} className={buttonVariants({ size: 'sm' })}>
+              Pay now
+            </Link>
+          )}
+          {week.canReview ? (
+            <Link href={week.sessionsPath} className={buttonVariants({ size: 'sm' })}>
+              Review sessions
+            </Link>
+          ) : (
+            <Link
+              href={week.sessionsPath}
+              className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+            >
+              View sessions
+            </Link>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PaymentHistoryCard() {
+  const [page, setPage] = useState(1)
+  const [openWeekId, setOpenWeekId] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const { showError } = useUserSnackbar()
+  const { data, isLoading, isError, refetch } = useSuperviseePayments(page)
+  const totalPages = data ? Math.max(Math.ceil(data.totalCount / PAGE_SIZE), 1) : 1
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const blob = await exportSuperviseePayments()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `supervision-payments-${toEasternISODate()}.csv`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      showError(parseApiError(err))
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="border-b">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <Receipt className="size-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle>Payment History</CardTitle>
+              <CardDescription className="mt-0.5">
+                Weekly payments across all your supervisors. Your card is charged after each
+                Friday&apos;s cutoff for the hours logged.
+              </CardDescription>
+            </div>
+          </div>
+          {data && data.totalCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              disabled={exporting}
+              onClick={() => void handleExport()}
+            >
+              <Download className="size-3.5" />
+              {exporting ? 'Exporting…' : 'Export CSV'}
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="pt-4">
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ) : isError || !data ? (
+          <div className="flex items-center justify-between gap-4">
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <AlertCircle className="size-4" aria-hidden />
+              We couldn&apos;t load your payments.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => void refetch()}>
+              Retry
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* What they actually spent leads; what went back to the card is a footnote. */}
+            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border bg-primary/5 px-4 py-3">
+                <dt className="text-xs text-muted-foreground">Total spent</dt>
+                <dd className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
+                  {formatUsdCents(data.totals.netPaidCents)}
+                </dd>
+                <dd className="text-xs text-muted-foreground">what you&apos;ve paid so far</dd>
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <dt className="text-xs text-muted-foreground">Charged to your card</dt>
+                <dd className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
+                  {formatUsdCents(data.totals.chargedCents)}
+                </dd>
+                {data.totals.refundedCents > 0 && (
+                  <dd className="text-xs text-muted-foreground">
+                    {formatUsdCents(data.totals.refundedCents)} back to your card
+                  </dd>
+                )}
+              </div>
+              <div className="rounded-lg border bg-muted/30 px-4 py-3">
+                <dt className="text-xs text-muted-foreground">Charged this month</dt>
+                <dd className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">
+                  {formatUsdCents(data.totals.chargedThisMonthCents)}
+                </dd>
+                {data.totals.refundedThisMonthCents > 0 && (
+                  <dd className="text-xs text-muted-foreground">
+                    {formatUsdCents(data.totals.refundedThisMonthCents)} back to your card
+                  </dd>
+                )}
+              </div>
+            </dl>
+
+            {data.items.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No payments yet. Weeks show up here once a supervisor logs sessions under a signed
+                hourly agreement.
+              </p>
+            ) : (
+              <ul className="divide-y rounded-lg border">
+                {data.items.map((week) => {
+                  const state = weekState(week)
+                  const open = openWeekId === week.id
+                  return (
+                    <li key={week.id}>
+                      <button
+                        type="button"
+                        onClick={() => setOpenWeekId(open ? null : week.id)}
+                        aria-expanded={open}
+                        className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-muted/40"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground">
+                            {formatWeekRange(week.startDate, week.endDate)}
+                            <span className="font-normal text-muted-foreground">
+                              {' '}
+                              · {week.supervisorName ?? 'Supervisor'}
+                            </span>
+                          </p>
+                          <p className="flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground">
+                            <span>
+                              {formatDuration(week.billedMinutes)}
+                              {week.approvedMinutes != null ? ' approved' : ' logged'} ·{' '}
+                              <span className={state.className}>{state.text}</span>
+                            </span>
+                            <OverCapBadge
+                              overCapMinutes={overCapMinutesOf(
+                                week.loggedMinutes,
+                                week.weeklyCapMinutes,
+                              )}
+                              prominent={week.canReview}
+                            />
+                          </p>
+                          {week.failureMessage && (
+                            <p className="text-xs text-destructive">{week.failureMessage}</p>
+                          )}
+                        </div>
+                        <span className="flex shrink-0 items-center gap-2">
+                          <span className="text-right">
+                            {/* Leads with the week's cost; the full charge is secondary. */}
+                            <span className="block text-sm font-semibold tabular-nums text-foreground">
+                              {week.prepayStatus === 'FAILED' ||
+                              week.prepayStatus === 'CANCELED' ? (
+                                'Not charged'
+                              ) : (
+                                <>
+                                  {week.estimated ? '≈ ' : ''}
+                                  {formatUsdCents(week.costCents)}
+                                </>
+                              )}
+                            </span>
+                            {week.prepayStatus === 'PAID' && (
+                              <span className="block text-xs tabular-nums text-muted-foreground">
+                                {week.estimated ? 'your cost so far' : 'your cost'}
+                              </span>
+                            )}
+                            {week.prepayStatus === 'PENDING' && (
+                              <span className="block text-xs tabular-nums text-muted-foreground">
+                                {week.status === 'OPEN' ? 'so far · not charged yet' : 'charging'}
+                              </span>
+                            )}
+                          </span>
+                          <ChevronDown
+                            className={`size-4 text-muted-foreground transition-transform ${
+                              open ? 'rotate-180' : ''
+                            }`}
+                            aria-hidden
+                          />
+                        </span>
+                      </button>
+                      {open && <WeekDetails week={week} />}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  Previous
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Page {page} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// ─── Account hold ─────────────────────────────────────────────────────────────
+
+/**
+ * Red banner while a week left unpaid after the three charge rounds holds the
+ * account. Pay now goes to that week's sessions (the hold lifts the moment it's
+ * paid); when the week isn't on the first history page, the row below has it.
+ */
+function HoldBanner() {
+  const { data } = useSuperviseePayments(1, IN_APP_PAYMENTS_ENABLED)
+  if (!data?.onHold) return null
+  const heldWeek = data.items.find((week) => week.id === data.holdWeekId) ?? null
+  return (
+    <div
+      role="alert"
+      className="flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <p className="flex items-start gap-2 text-sm text-foreground">
+        <Lock className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
+        <span>
+          <span className="font-semibold">{superviseeHoldText(heldWeek?.startDate ?? null)}</span>{' '}
+          {heldWeek
+            ? 'The hold lifts the moment the week is paid.'
+            : 'Find the unpaid week in Payment History below and tap Pay now; the hold lifts the moment it’s paid.'}
+        </span>
+      </p>
+      {heldWeek && (
+        <Link
+          href={heldWeek.sessionsPath}
+          className={buttonVariants({ size: 'sm', className: 'shrink-0' })}
+        >
+          Pay now
+        </Link>
+      )}
+    </div>
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+function SuperviseeBillingContent() {
+  return (
+    <div className="flex flex-col gap-8">
+      {/* The page title is in the top bar; only its description here. */}
+      <p className="text-base text-muted-foreground">
+        Your saved cards and what you&apos;ve paid for supervision.
+      </p>
+
+      {IN_APP_PAYMENTS_ENABLED ? (
+        <div className="flex flex-col gap-6">
+          <HoldBanner />
+          <SuperviseeWeekCard />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+            <div className="flex flex-col gap-6 lg:col-span-3">
+              <PaymentHistoryCard />
+              <MonthlyPaymentsCard role="supervisee" />
+            </div>
+            <div className="flex flex-col gap-6 lg:col-span-2">
+              <SavedCardsCard />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <p className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+          In-app payments aren&apos;t available yet. Supervision fees are arranged directly with
+          your supervisor.
+        </p>
+      )}
+    </div>
+  )
+}
+
+export function SuperviseeBillingPanel() {
+  return (
+    <SuperviseeRouteGuard>
+      <SuperviseeBillingContent />
+    </SuperviseeRouteGuard>
+  )
+}

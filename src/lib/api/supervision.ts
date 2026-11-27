@@ -5,6 +5,7 @@ import { requiresSupervisionHours } from '@/lib/utils/profile-formatters'
 import type { ApiResponse } from '@/types/api'
 import type {
   AgreementRecord,
+  HireListItem,
   HireListResponse,
   HireRecord,
   HireStatus,
@@ -16,6 +17,23 @@ import type {
   UpcomingSessionItem,
 } from '@/types/hire'
 import type { PastClientHire } from '@/types/past-clients'
+import type {
+  HirePaymentInfo,
+  HourlyQuote,
+  PayoutRemovalCheck,
+  PayoutStatus,
+  StripeLink,
+  SuperviseeCards,
+  SuperviseePayments,
+  SuperviseeWeekSummary,
+} from '@/types/payouts'
+import type {
+  HireBillingWeeks,
+  HireSessionInput,
+  PayNowIntent,
+  SupervisorEarnings,
+  SupervisorWeekSummary,
+} from '@/types/sessions'
 import type {
   PurchaseSubscriptionResponse,
   Subscription,
@@ -36,6 +54,20 @@ export async function getCurrentSubscription(): Promise<Subscription | null> {
     '/supervision/payments/current-subscription',
   )
   return data.data ?? null
+}
+
+/**
+ * POST /supervision/payments/sync-subscription — brings the latest checkout up to
+ * date from Stripe. `activated` is true once the plan just paid for is active.
+ */
+export async function syncSubscription(): Promise<{
+  activated: boolean
+  subscription: Subscription | null
+}> {
+  const { data } = await apiClient.post<
+    ApiResponse<{ activated: boolean; subscription: Subscription | null }>
+  >('/supervision/payments/sync-subscription')
+  return data.data
 }
 
 /**
@@ -62,6 +94,336 @@ export async function cancelSubscription(): Promise<Subscription> {
 export async function reactivateSubscription(): Promise<Subscription> {
   const { data } = await apiClient.post<ApiResponse<Subscription>>(
     '/supervision/payments/reactivate-subscription',
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/connect/status — supervisor payout account status (auth: supervisor). */
+export async function getPayoutStatus(): Promise<PayoutStatus> {
+  const { data } = await apiClient.get<ApiResponse<PayoutStatus>>(
+    '/supervision/payments/connect/status',
+  )
+  return data.data
+}
+
+/**
+ * POST /supervision/payments/connect/onboarding-link
+ *
+ * Creates the supervisor's Stripe Express account on first use and returns a
+ * single-use Stripe-hosted onboarding URL. Stripe redirects back to
+ * /billing?payouts=return (done) or /billing?payouts=refresh (link expired).
+ */
+export async function createPayoutOnboardingLink(): Promise<StripeLink> {
+  const { data } = await apiClient.post<ApiResponse<StripeLink>>(
+    '/supervision/payments/connect/onboarding-link',
+  )
+  return data.data
+}
+
+/**
+ * POST /supervision/payments/connect/account-session — client secret for the
+ * embedded account management component (bank account, personal details).
+ */
+export async function createPayoutAccountSession(): Promise<{ clientSecret: string }> {
+  const { data } = await apiClient.post<ApiResponse<{ clientSecret: string }>>(
+    '/supervision/payments/connect/account-session',
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/connect/removal-check — what still depends on the payout account. */
+export async function getPayoutRemovalCheck(): Promise<PayoutRemovalCheck> {
+  const { data } = await apiClient.get<ApiResponse<PayoutRemovalCheck>>(
+    '/supervision/payments/connect/removal-check',
+  )
+  return data.data
+}
+
+/** DELETE /supervision/payments/connect/account — deletes the payout account (409 while in use). */
+export async function removePayoutAccount(): Promise<{ removed: boolean }> {
+  const { data } = await apiClient.delete<ApiResponse<{ removed: boolean }>>(
+    '/supervision/payments/connect/account',
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/quote — weekly maximum/payout breakdown for prospective hourly terms. */
+export async function getHourlyQuote(
+  hourlyRate: number,
+  maxHoursPerWeek: number,
+): Promise<HourlyQuote> {
+  const { data } = await apiClient.get<ApiResponse<HourlyQuote>>('/supervision/payments/quote', {
+    params: { hourlyRate, maxHoursPerWeek },
+  })
+  return data.data
+}
+
+/** GET /supervision/hires/:hireId/payment — hourly billing summary (supervisor or supervisee). */
+export async function getHirePayment(hireId: string): Promise<HirePaymentInfo> {
+  const { data } = await apiClient.get<ApiResponse<HirePaymentInfo>>(
+    `/supervision/hires/${hireId}/payment`,
+  )
+  return data.data
+}
+
+/** POST /supervision/hires/:hireId/payment/setup-intent — SetupIntent for saving a new card. */
+export async function createHirePaymentSetupIntent(
+  hireId: string,
+): Promise<{ clientSecret: string }> {
+  const { data } = await apiClient.post<ApiResponse<{ clientSecret: string }>>(
+    `/supervision/hires/${hireId}/payment/setup-intent`,
+  )
+  return data.data
+}
+
+/**
+ * PUT /supervision/hires/:hireId/payment/card — saves (or replaces) the card
+ * the weekly charges go to. Nothing is charged here.
+ */
+export async function saveHirePaymentMethod(
+  hireId: string,
+  paymentMethodId: string,
+): Promise<HirePaymentInfo> {
+  const { data } = await apiClient.put<ApiResponse<HirePaymentInfo>>(
+    `/supervision/hires/${hireId}/payment/card`,
+    { paymentMethodId },
+  )
+  return data.data
+}
+
+/**
+ * PUT /supervision/hires/:hireId/payment/backup-card — sets (a payment method
+ * id) or removes (null) the optional backup card. When the primary card
+ * declines in a charge round, the backup is tried right away in that round.
+ * Nothing is charged here.
+ */
+export async function setHireBackupCard(
+  hireId: string,
+  paymentMethodId: string | null,
+): Promise<HirePaymentInfo> {
+  const { data } = await apiClient.put<ApiResponse<HirePaymentInfo>>(
+    `/supervision/hires/${hireId}/payment/backup-card`,
+    { paymentMethodId },
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/earnings — the supervisor's in-app earnings across hires. */
+export async function getSupervisorEarnings(
+  page = 1,
+  limit = 10,
+  hireId?: string | null,
+): Promise<SupervisorEarnings> {
+  const { data } = await apiClient.get<ApiResponse<SupervisorEarnings>>(
+    '/supervision/payments/earnings',
+    { params: { page, limit, ...(hireId ? { hireId } : {}) } },
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/earnings/week — hours per day per supervisee for one week. */
+export async function getSupervisorWeekSummary(
+  start?: string | null,
+): Promise<SupervisorWeekSummary> {
+  const { data } = await apiClient.get<ApiResponse<SupervisorWeekSummary>>(
+    '/supervision/payments/earnings/week',
+    { params: start ? { start } : {} },
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/earnings/export — the same earnings as a CSV file. */
+export async function exportSupervisorEarnings(): Promise<Blob> {
+  const { data } = await apiClient.get<Blob>('/supervision/payments/earnings/export', {
+    responseType: 'blob',
+  })
+  return data
+}
+
+/** GET /supervision/payments/cards — the supervisee's saved cards and which hires use them. */
+export async function getSuperviseeCards(): Promise<SuperviseeCards> {
+  const { data } = await apiClient.get<ApiResponse<SuperviseeCards>>('/supervision/payments/cards')
+  return data.data
+}
+
+/** POST /supervision/payments/cards/setup-intent — SetupIntent for adding an account-level card. */
+export async function createSuperviseeCardSetupIntent(): Promise<{ clientSecret: string }> {
+  const { data } = await apiClient.post<ApiResponse<{ clientSecret: string }>>(
+    '/supervision/payments/cards/setup-intent',
+  )
+  return data.data
+}
+
+/** DELETE /supervision/payments/cards/:paymentMethodId — detach a card no active hire uses. */
+export async function removeSuperviseeCard(paymentMethodId: string): Promise<SuperviseeCards> {
+  const { data } = await apiClient.delete<ApiResponse<SuperviseeCards>>(
+    `/supervision/payments/cards/${encodeURIComponent(paymentMethodId)}`,
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/history — the supervisee's weekly charges and refunds across hires. */
+export async function getSuperviseePayments(page = 1, limit = 10): Promise<SuperviseePayments> {
+  const { data } = await apiClient.get<ApiResponse<SuperviseePayments>>(
+    '/supervision/payments/history',
+    { params: { page, limit } },
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/history/week — hours per day per supervisor for one week. */
+export async function getSuperviseeWeekSummary(
+  start?: string | null,
+): Promise<SuperviseeWeekSummary> {
+  const { data } = await apiClient.get<ApiResponse<SuperviseeWeekSummary>>(
+    '/supervision/payments/history/week',
+    { params: start ? { start } : {} },
+  )
+  return data.data
+}
+
+/** GET /supervision/payments/history/:weekId/receipt — Stripe's receipt page for the week's charge. */
+export async function getSuperviseeReceiptUrl(weekId: string): Promise<string> {
+  const { data } = await apiClient.get<ApiResponse<{ url: string }>>(
+    `/supervision/payments/history/${weekId}/receipt`,
+  )
+  return data.data.url
+}
+
+/** GET /supervision/payments/history/export — the same payments as a CSV file. */
+export async function exportSuperviseePayments(): Promise<Blob> {
+  const { data } = await apiClient.get<Blob>('/supervision/payments/history/export', {
+    responseType: 'blob',
+  })
+  return data
+}
+
+/** GET /supervision/hires/:hireId/billing-weeks — sessions and weekly review state (both parties). */
+export async function getHireBillingWeeks(hireId: string): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.get<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/billing-weeks`,
+  )
+  return data.data
+}
+
+/** POST /supervision/hires/:hireId/sessions — supervisor logs a session. */
+/**
+ * POST /supervision/hires/:hireId/late-entry-requests — ask support to add a
+ * session to a closed week. Returns the refreshed billing weeks, with the
+ * request listed under its week.
+ */
+export async function requestLateEntry(
+  hireId: string,
+  input: HireSessionInput,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/late-entry-requests`,
+    input,
+  )
+  return data.data
+}
+
+export async function logHireSession(
+  hireId: string,
+  input: HireSessionInput,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/sessions`,
+    input,
+  )
+  return data.data
+}
+
+/** PUT /supervision/hires/:hireId/sessions/:sessionId — while its week is open. */
+export async function updateHireSession(
+  hireId: string,
+  sessionId: string,
+  input: HireSessionInput,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.put<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/sessions/${sessionId}`,
+    input,
+  )
+  return data.data
+}
+
+/** DELETE /supervision/hires/:hireId/sessions/:sessionId — while its week is open. */
+export async function deleteHireSession(
+  hireId: string,
+  sessionId: string,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.delete<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/sessions/${sessionId}`,
+  )
+  return data.data
+}
+
+/**
+ * POST /supervision/hires/:hireId/sessions/:sessionId/approve | reject — the
+ * supervisee answers a late session added by Gotham support. Approving one on
+ * a settled week charges it (hours × rate + service fee) right away.
+ */
+export async function respondToLateSession(
+  hireId: string,
+  sessionId: string,
+  approve: boolean,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/sessions/${sessionId}/${approve ? 'approve' : 'reject'}`,
+  )
+  return data.data
+}
+
+/** POST /supervision/hires/:hireId/billing-weeks/:weekId/approve — supervisee approves a week. */
+export async function approveBillingWeek(
+  hireId: string,
+  weekId: string,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/billing-weeks/${weekId}/approve`,
+  )
+  return data.data
+}
+
+/** POST /supervision/hires/:hireId/billing-weeks/:weekId/dispute — supervisee disputes a week. */
+export async function disputeBillingWeek(
+  hireId: string,
+  weekId: string,
+  reason: string,
+  attachments: File[] = [],
+): Promise<HireBillingWeeks> {
+  // multipart: the reason plus up to 3 evidence images
+  const form = new FormData()
+  form.append('reason', reason)
+  attachments.forEach((file) => form.append('attachments', file))
+  // Unset the client's JSON default so axios sends real multipart/form-data
+  // (with the JSON content type it would serialise the FormData and drop the files).
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/billing-weeks/${weekId}/dispute`,
+    form,
+    { headers: { 'Content-Type': undefined } },
+  )
+  return data.data
+}
+
+/**
+ * POST /supervision/hires/:hireId/billing-weeks/:weekId/pay-now — starts paying
+ * an unpaid week with the saved card; Stripe.js confirms the returned intent.
+ */
+export async function payNowBillingWeek(hireId: string, weekId: string): Promise<PayNowIntent> {
+  const { data } = await apiClient.post<ApiResponse<PayNowIntent>>(
+    `/supervision/hires/${hireId}/billing-weeks/${weekId}/pay-now`,
+  )
+  return data.data
+}
+
+/** POST …/pay-now/sync — refreshes the week after Stripe.js confirmed the payment. */
+export async function syncPayNowBillingWeek(
+  hireId: string,
+  weekId: string,
+): Promise<HireBillingWeeks> {
+  const { data } = await apiClient.post<ApiResponse<HireBillingWeeks>>(
+    `/supervision/hires/${hireId}/billing-weeks/${weekId}/pay-now/sync`,
   )
   return data.data
 }
@@ -119,11 +481,23 @@ export async function hireSupervisor(payload: HireSupervisorRequestInput): Promi
 /** GET /api/supervision/hires — paginated hire list for the authenticated user (supervisor or supervisee). */
 export type HiresListMode = 'supervisors' | 'medicalDirectors'
 
+/** Status groups behind the hire list filters (server-side). */
+export type HireListGroup = 'needs_action' | 'pending' | 'active' | 'completed' | 'closed'
+
+export interface HireListFilters {
+  /** Name search on the other party. */
+  search?: string
+  group?: HireListGroup
+  /** Leave out requests still awaiting the supervisor's decision (PENDING, REVIEWED). */
+  excludePending?: boolean
+}
+
 export async function listHires(
   page = 1,
   limit = 10,
   status?: HireStatus | HireStatus[],
   mode?: HiresListMode,
+  filters: HireListFilters = {},
 ): Promise<HireListResponse> {
   const statusParam =
     status === undefined
@@ -132,9 +506,23 @@ export async function listHires(
           status: Array.isArray(status) ? status.join(',') : status,
         }
   const modeParam = mode ? { mode } : {}
+  const search = filters.search?.trim()
+  const filterParams = {
+    ...(search ? { search } : {}),
+    ...(filters.group ? { group: filters.group } : {}),
+    ...(filters.excludePending ? { excludePending: 'true' } : {}),
+  }
   const { data } = await apiClient.get<ApiResponse<HireListResponse>>('/supervision/hires', {
-    params: { page, limit, ...statusParam, ...modeParam },
+    params: { page, limit, ...statusParam, ...modeParam, ...filterParams },
   })
+  return data.data
+}
+
+/** GET /api/supervision/hires/:hireId — one hire, shaped like a hire list item (the hire's workroom). */
+export async function getHire(hireId: string): Promise<HireListItem> {
+  const { data } = await apiClient.get<ApiResponse<HireListItem>>(
+    `/supervision/hires/${encodeURIComponent(hireId)}`,
+  )
   return data.data
 }
 
@@ -185,6 +573,19 @@ export async function cancelHire(hireId: string): Promise<void> {
   await apiClient.patch(`/supervision/hires/${hireId}/cancel`)
 }
 
+export type EndSupervisionOutcome = 'completed' | 'ended_early'
+
+/**
+ * PATCH /supervision/hires/:hireId/end — the supervisor ends an accepted or
+ * active supervision: completed (→ COMPLETED) or ended early (→ CANCELED).
+ */
+export async function endSupervision(
+  hireId: string,
+  payload: { outcome: EndSupervisionOutcome; reason?: string },
+): Promise<void> {
+  await apiClient.patch(`/supervision/hires/${hireId}/end`, payload)
+}
+
 /** PATCH /supervision/hires/:hireId/complete — mark a hire as completed (supervisor or supervisee). */
 export async function markHireAsCompleted(hireId: string): Promise<void> {
   await apiClient.patch(`/supervision/hires/${hireId}/complete`)
@@ -196,8 +597,16 @@ function buildAgreementFormData(input: ProposeAgreementInput): FormData {
   const formData = new FormData()
   formData.append('source', input.source)
   formData.append('startDate', input.startDate)
-  formData.append('supervisionMonths', String(input.supervisionMonths))
-  formData.append('monthlyAmount', String(input.monthlyAmount))
+  // Monthly or hourly terms, whichever the form collected (hourly for in-app billed hires).
+  if (input.supervisionMonths != null) {
+    formData.append('supervisionMonths', String(input.supervisionMonths))
+  }
+  if (input.monthlyAmount != null) formData.append('monthlyAmount', String(input.monthlyAmount))
+  if (input.hourlyRate != null) formData.append('hourlyRate', String(input.hourlyRate))
+  if (input.maxHoursPerWeek != null) {
+    formData.append('maxHoursPerWeek', String(input.maxHoursPerWeek))
+  }
+  if (input.totalHours != null) formData.append('totalHours', String(input.totalHours))
   formData.append('signatureName', input.signatureName.trim())
   if (input.source === 'UPLOADED' && input.file) {
     formData.append('file', input.file)
